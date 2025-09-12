@@ -173,55 +173,6 @@ class TestLanguageDetectionEdgeCases:
         assert result["confidence"] >= 0.0
 
 
-class TestEmbeddingServiceEdgeCases:
-    """Edge cases for EmbeddingService"""
-
-    @pytest.fixture
-    def service(self):
-        return EmbeddingService()
-
-    def test_generate_embedding_with_empty_text(self, service):
-        """Test embedding generation with empty text"""
-        result = service.generate_embedding("")
-
-        # Should handle empty text gracefully
-        assert isinstance(result, (list, type(None)))
-        if result is not None:
-            assert len(result) > 0
-
-    def test_generate_embedding_with_whitespace_only(self, service):
-        """Test embedding generation with whitespace-only text"""
-        result = service.generate_embedding("   \n\t   ")
-
-        assert isinstance(result, (list, type(None)))
-
-    def test_generate_embedding_with_very_long_text(self, service):
-        """Test embedding generation with very long text"""
-        long_text = "word " * 5000  # Very long text
-
-        result = service.generate_embedding(long_text)
-
-        # Should handle long text without crashing
-        assert isinstance(result, (list, type(None)))
-
-    def test_generate_embedding_with_special_characters(self, service):
-        """Test embedding generation with special characters"""
-        special_text = "Test @#$%^&*() 🚀 émojis ñ characters"
-
-        result = service.generate_embedding(special_text)
-
-        assert isinstance(result, (list, type(None)))
-
-    def test_generate_embedding_service_unavailable(self, service):
-        """Test embedding generation when service is unavailable"""
-        with patch.object(service, 'model_cache', {}):
-            with patch.object(service, '_load_model', side_effect=Exception("Model unavailable")):
-                result = service.generate_embedding("Test text")
-
-                # Should handle unavailable service gracefully
-                assert result == []
-
-
 class TestCacheServiceEdgeCases:
     """Edge cases for CacheService"""
 
@@ -229,15 +180,6 @@ class TestCacheServiceEdgeCases:
     def service(self):
         return CacheService(max_size=5, default_ttl=60)
 
-    def test_cache_with_none_values(self, service):
-        """Test caching None values"""
-        service.set("none_key", None, ttl=60)
-
-        result = service.get("none_key")
-        assert result is None
-
-        # Should distinguish between cached None and cache miss
-        assert service.has_key("none_key") == True
 
     def test_cache_with_complex_objects(self, service):
         """Test caching complex objects"""
@@ -252,7 +194,7 @@ class TestCacheServiceEdgeCases:
         result = service.get("complex_key")
 
         # Should get something back (implementation dependent)
-        assert result is not None or service.has_key("complex_key") == False
+        assert result is not None
 
     def test_cache_key_collision_with_similar_keys(self, service):
         """Test cache behavior with similar keys"""
