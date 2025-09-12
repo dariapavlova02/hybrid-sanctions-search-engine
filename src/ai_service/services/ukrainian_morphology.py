@@ -59,7 +59,7 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
         """Initialize pymorphy3 analyzer"""
         try:
             import pymorphy3
-            return pymorphy3.MorphAnalyzer()
+            return pymorphy3.MorphAnalyzer(lang='uk')
         except ImportError:
             self.logger.warning("pymorphy3 not available, using fallback methods")
             return None

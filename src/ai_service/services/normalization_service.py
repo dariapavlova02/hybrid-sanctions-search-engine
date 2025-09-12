@@ -740,7 +740,7 @@ class NormalizationService:
             else:
                 # Try morphological normalization to see if it matches a known name
                 morph_form = self._morph_nominal(base, language)
-                if morph_form in {name.lower() for name in lang_names}:
+                if morph_form and morph_form.lower() in {name.lower() for name in lang_names}:
                     return 'given'
             
             # Check for surname patterns (Ukrainian/Russian)
@@ -877,24 +877,30 @@ class NormalizationService:
                 # Use name parses if available, otherwise use all parses
                 target_parses = name_parses if name_parses else other_parses
                 
-                # Find the best parse with nominative case
+                # Find the best parse - prefer parses with better normal forms
                 best_parse = None
                 for parse in target_parses:
-                    if hasattr(parse.tag, 'case') and 'nomn' in str(parse.tag.case):
+                    # Prefer parses that don't match the original word (indicating proper normalization)
+                    if parse.normal_form != parse.word:
                         best_parse = parse
                         break
+                    elif best_parse is None:
+                        best_parse = parse
                 
-                # If no nominative found, use the first parse
+                # If no nominative found, try to inflect any parse to nominative
+                if not best_parse:
+                    for parse in target_parses:
+                        nom_inflection = parse.inflect({'nomn'})
+                        if nom_inflection:
+                            best_parse = parse
+                            break
+                
+                # If still no nominative found, use the first parse
                 if not best_parse:
                     best_parse = target_parses[0] if target_parses else parses[0]
                 
-                # Try to inflect to nominative case
-                nom_inflection = best_parse.inflect({'nomn'})
-                if nom_inflection:
-                    result = self._normalize_characters(nom_inflection.word)
-                else:
-                    # Use normal form as fallback
-                    result = self._normalize_characters(best_parse.normal_form)
+                # Use normal form directly for better results
+                result = self._normalize_characters(best_parse.normal_form)
                 
                 # Preserve original case for proper nouns
                 if token.isupper() and result.islower():
@@ -1247,10 +1253,11 @@ class NormalizationService:
                                     rule = 'morph'
                 else:
                     # For non-given names, use morphed form
-                    if morphed and morphed[0].isupper():
-                        normalized = morphed
+                    if morphed:
+                        # Always capitalize the first letter for proper nouns
+                        normalized = morphed.capitalize()
                     else:
-                        normalized = morphed.capitalize() if morphed else base.capitalize()
+                        normalized = base.capitalize()
                     rule = 'morph'
                 
                 # Gender adjustment for surnames (including compound surnames)
