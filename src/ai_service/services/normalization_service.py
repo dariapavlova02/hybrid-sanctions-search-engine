@@ -408,8 +408,43 @@ class NormalizationService:
                 continue  # Skip stop words
             filtered_tokens.append(token)
         
-        # Simple processing - just return filtered tokens
-        return filtered_tokens
+        # Handle quoted phrases - group tokens between quotes
+        result_tokens = []
+        i = 0
+        while i < len(filtered_tokens):
+            token = filtered_tokens[i]
+            
+            # Check if token starts with quote
+            if token.startswith("'"):
+                # Find the end of quoted phrase
+                quoted_tokens = []
+                if token.endswith("'"):
+                    # Single token in quotes
+                    quoted_tokens = [token[1:-1]]  # Remove quotes
+                else:
+                    # Multi-token quoted phrase
+                    quoted_tokens = [token[1:]]  # Remove opening quote
+                    i += 1
+                    while i < len(filtered_tokens) and not filtered_tokens[i].endswith("'"):
+                        quoted_tokens.append(filtered_tokens[i])
+                        i += 1
+                    if i < len(filtered_tokens):
+                        # Remove closing quote
+                        last_token = filtered_tokens[i]
+                        if last_token.endswith("'"):
+                            quoted_tokens.append(last_token[:-1])
+                
+                # Join quoted tokens and split into individual names
+                if quoted_tokens:
+                    quoted_phrase = " ".join(quoted_tokens)
+                    # Split quoted phrase into individual tokens
+                    individual_tokens = quoted_phrase.split()
+                    result_tokens.extend(individual_tokens)
+            else:
+                result_tokens.append(token)
+            i += 1
+        
+        return result_tokens
 
     def _looks_like_name(self, token: str, language: str) -> bool:
         """Check if token looks like a name even if lowercase"""
@@ -730,6 +765,22 @@ class NormalizationService:
             
             if any(re.match(pattern, base, re.IGNORECASE) for pattern in surname_patterns):
                 return 'surname'
+        
+        # Check for English names in Ukrainian context
+        if language == 'uk':
+            # Check if token looks like English name
+            if base.isalpha() and base[0].isupper() and len(base) >= 2:
+                # Check against English names first
+                from ..data.dicts.english_names import ENGLISH_NAMES
+                if base.lower() in {name.lower() for name in ENGLISH_NAMES}:
+                    return 'given'
+                # Check against English nicknames
+                from ..data.dicts.english_nicknames import ENGLISH_NICKNAMES
+                if base.lower() in {name.lower() for name in ENGLISH_NICKNAMES}:
+                    return 'given'
+                # For English surnames, use simple pattern matching
+                if len(base) >= 3 and base[0].isupper() and base[1:].islower():
+                    return 'surname'
         
         # Check for English surname patterns
         if language == 'en':
@@ -1232,12 +1283,23 @@ class NormalizationService:
                 
             else:
                 morphed = None  # Initialize morphed variable
+                rule = 'unknown'  # Initialize rule variable
+                normalized = None  # Initialize normalized variable
                 if enable_advanced_features:
                 # Morphological normalization
                     morphed = self._morph_nominal(base, language)
                 
                 # Apply diminutive mapping if it's a given name
                 if role == 'given' and enable_advanced_features:
+                    # Check for English nicknames in Ukrainian context
+                    if language == 'uk':
+                        from ..data.dicts.english_nicknames import ENGLISH_NICKNAMES
+                        if base.lower() in ENGLISH_NICKNAMES:
+                            normalized = ENGLISH_NICKNAMES[base.lower()].capitalize()
+                            rule = 'english_nickname'
+                        elif morphed and morphed.lower() in ENGLISH_NICKNAMES:
+                            normalized = ENGLISH_NICKNAMES[morphed.lower()].capitalize()
+                            rule = 'english_nickname'
                     # First try comprehensive diminutive dictionaries
                     if language in self.dim2full_maps:
                         token_lower = base.lower()
@@ -1276,6 +1338,11 @@ class NormalizationService:
                     else:
                         normalized = base.capitalize()
                     rule = 'morph'
+                
+                # Ensure normalized is set
+                if normalized is None:
+                    normalized = base.capitalize()
+                    rule = 'fallback_capitalize'
                 
                 # Gender adjustment for surnames (including compound surnames)
                 if role == 'surname' and enable_advanced_features:
@@ -1324,6 +1391,7 @@ class NormalizationService:
         traces = []
         
         for token, role in tagged_tokens:
+            rule = 'unknown'  # Default rule
             base, is_quoted = self._strip_quoted(token)
             
             # Handle legal forms - completely ignore
