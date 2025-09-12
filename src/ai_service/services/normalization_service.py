@@ -408,57 +408,8 @@ class NormalizationService:
                 continue  # Skip stop words
             filtered_tokens.append(token)
         
-        # Apply capitalization heuristic - keep only tokens that started with uppercase
-        # or if entire text was uppercase/lowercase, title-case them
-        original_case_tokens = []
-        has_mixed_case = any(c.isupper() for c in text) and any(c.islower() for c in text)
-        all_upper = text.isupper()
-        
-        # First, handle quoted phrases by grouping consecutive quoted tokens
-        i = 0
-        while i < len(filtered_tokens):
-            token = filtered_tokens[i]
-            
-            # Handle quoted tokens specially when preserve_names=True
-            if preserve_names and token.startswith("'") and token.endswith("'"):
-                # Extract the content between quotes and mark it as quoted
-                inner_token = token[1:-1]
-                if inner_token and inner_token[0].isupper():
-                    # Mark as quoted by adding a special prefix
-                    original_case_tokens.append(f"__QUOTED__{inner_token}")
-                elif self._looks_like_name(inner_token, language):
-                    original_case_tokens.append(f"__QUOTED__{inner_token.title()}")
-                i += 1
-                continue
-            
-            # Handle quoted phrases (multiple tokens in quotes)
-            if preserve_names and token.startswith("'") and not token.endswith("'"):
-                # Start of quoted phrase - collect all tokens until closing quote
-                quoted_tokens = [token[1:]]  # Remove opening quote
-                i += 1
-                while i < len(filtered_tokens) and not filtered_tokens[i].endswith("'"):
-                    quoted_tokens.append(filtered_tokens[i])
-                    i += 1
-                if i < len(filtered_tokens):
-                    # Found closing quote
-                    last_token = filtered_tokens[i]
-                    if last_token.endswith("'"):
-                        quoted_tokens.append(last_token[:-1])  # Remove closing quote
-                    i += 1
-                    # Join quoted tokens and mark as quoted
-                    quoted_phrase = " ".join(quoted_tokens)
-                    original_case_tokens.append(f"__QUOTED__{quoted_phrase}")
-                else:
-                    # No closing quote found, treat as regular tokens
-                    for t in quoted_tokens:
-                        original_case_tokens.append(t)
-                continue
-            
-            # Regular token
-            original_case_tokens.append(token)
-            i += 1
-        
-        return original_case_tokens
+        # Simple processing - just return filtered tokens
+        return filtered_tokens
 
     def _looks_like_name(self, token: str, language: str) -> bool:
         """Check if token looks like a name even if lowercase"""
@@ -706,19 +657,19 @@ class NormalizationService:
         if token_lower in non_name_words:
             return 'unknown'
             
-        # Check diminutives first (higher priority than other checks)
+            # Check diminutives first (higher priority than other checks)
         if language in self.dim2full_maps:
             if token_lower in self.dim2full_maps[language]:
                 return 'given'
         if language in self.diminutive_maps:
             if token_lower in self.diminutive_maps[language]:
                 return 'given'
-        
+            
         # Check for patronymic patterns (Ukrainian/Russian) - higher priority
         if language in ['ru', 'uk']:
             patronymic_patterns = [
                 r'.*(?:ович|евич|йович|ійович|інович|инович)(?:а|у|ем|і|и|е|ом|им|ім|ою|ію|ої|ії|ою|ію|ої|ії)?$',  # Male patronymics with cases
-                r'.*(?:ич)(?:\s|$)',  # Short patronymics
+                r'.*(?:ич|ыч)$',  # Short patronymics
                 r'.*(?:івна|ївна|инична|овна|евна|іївна)$',  # Female patronymics nominative
                 r'.*(?:івни|ївни|овни|евни|іївни)$',  # Female patronymics genitive case
                 r'.*(?:івну|ївну|овну|евну|іївну)$',  # Female patronymics accusative case
@@ -729,56 +680,56 @@ class NormalizationService:
             
             if any(re.match(pattern, base, re.IGNORECASE) for pattern in patronymic_patterns):
                 return 'patronymic'
-            
-            # Check against name dictionaries (including morphological forms)
-            token_lower = base.lower()
-            lang_names = self.name_dictionaries.get(language, set())
-            
-            # First check direct match
-            if token_lower in {name.lower() for name in lang_names}:
+        
+        # Check against name dictionaries (including morphological forms)
+        token_lower = base.lower()
+        lang_names = self.name_dictionaries.get(language, set())
+        
+        # First check direct match
+        if token_lower in {name.lower() for name in lang_names}:
+            return 'given'
+        else:
+            # Try morphological normalization to see if it matches a known name
+            morph_form = self._morph_nominal(base, language)
+            if morph_form and morph_form.lower() in {name.lower() for name in lang_names}:
                 return 'given'
-            else:
-                # Try morphological normalization to see if it matches a known name
-                morph_form = self._morph_nominal(base, language)
-                if morph_form and morph_form.lower() in {name.lower() for name in lang_names}:
-                    return 'given'
             
-            # Check for surname patterns (Ukrainian/Russian)
-            if language in ['ru', 'uk']:
-                surname_patterns = [
-                    # Ukrainian -enko endings with cases
-                    r'.*(?:енко|енка|енку|енком|енці|енкою|енцію|енкою|енцію|енкою|енцію|енкою|енцію)$',
-                    
-                    # -ov/-ova endings with all cases (most common Russian surnames)
-                    r'.*(?:ов|ова|ову|овим|овій|ові|ових|ого|овы|овой|овою|овым|овыми)$',
-                    
-                    # -ev/-eva endings with all cases
-                    r'.*(?:ев|ева|еву|евим|евій|еві|евих|его|евы|евой|евою|евою|евою|евою|евою|евою)$',
-                    
-                    # -in/-ina endings with all cases (like Пушкин/Пушкина)
-                    r'.*(?:ин|ина|ину|иным|иной|ине|иных|ине|ины|иною|иною|иною|иною|иною|иною)$',
-                    
-                    # -sky endings with cases
-                    r'.*(?:ський|ська|ську|ським|ській|ські|ських|ского|ская|скую|ским|ской|ские|ских|ською|ською|ською|ською|ською|ською)$',
-                    
-                    # -tsky endings with cases  
-                    r'.*(?:цький|цька|цьку|цьким|цькій|цькі|цьких|цкого|цкая|цкую|цким|цкой|цкие|цких|цькою|цькою|цькою|цькою|цькою|цькою)$',
-                    
-                    # Other common Russian surname endings
-                    r'.*(?:чук|юк|ак|ик|ич|ича|енок|ёнок|анов|янов|анова|янова)$',
-                    
-                    # Armenian surnames ending in -ян with cases (broader pattern)
-                    r'.*[а-яё]ян(?:а|у|ом|е|ы|ой|ей|ами|ах|и)?$',
-                    
-                    # Georgian surnames ending in -дзе
-                    r'.*(?:дзе|дзею|дзе|дзем|дзех|дземи)$',
-                    
-                    # Additional Russian patterns for surnames ending in consonants + case endings
-                    r'.*(?:[бвгджзклмнпрстфхцчшщ])(?:а|у|ом|е|ы|ой|ей|ами|ах|и)$',
-                ]
+        # Check for surname patterns (Ukrainian/Russian)
+        if language in ['ru', 'uk']:
+            surname_patterns = [
+                # Ukrainian -enko endings with cases
+                r'.*(?:енко|енка|енку|енком|енці|енкою|енцію|енкою|енцію|енкою|енцію|енкою|енцію)$',
                 
-                if any(re.match(pattern, base, re.IGNORECASE) for pattern in surname_patterns):
-                    return 'surname'
+                # -ov/-ova endings with all cases (most common Russian surnames)
+                r'.*(?:ов|ова|ову|овим|овій|ові|ових|ого|овы|овой|овою|овым|овыми)$',
+                
+                # -ev/-eva endings with all cases
+                r'.*(?:ев|ева|еву|евим|евій|еві|евих|его|евы|евой|евою|евою|евою|евою|евою|евою)$',
+                
+                # -in/-ina endings with all cases (like Пушкин/Пушкина)
+                r'.*(?:ин|ина|ину|иным|иной|ине|иных|ине|ины|иною|иною|иною|иною|иною|иною)$',
+                
+                # -sky endings with cases
+                r'.*(?:ський|ська|ську|ським|ській|ські|ських|ского|ская|скую|ским|ской|ские|ских|ською|ською|ською|ською|ською|ською)$',
+                
+                # -tsky endings with cases  
+                r'.*(?:цький|цька|цьку|цьким|цькій|цькі|цьких|цкого|цкая|цкую|цким|цкой|цкие|цких|цькою|цькою|цькою|цькою|цькою|цькою)$',
+                
+                # Other common Russian surname endings
+                r'.*(?:чук|юк|ак|ик|ич|ича|енок|ёнок|анов|янов|анова|янова)$',
+                
+                # Armenian surnames ending in -ян with cases (broader pattern)
+                r'.*[а-яё]ян(?:а|у|ом|е|ы|ой|ей|ами|ах|и)?$',
+                
+                # Georgian surnames ending in -дзе
+                r'.*(?:дзе|дзею|дзе|дзем|дзех|дземи)$',
+                
+                # Additional Russian patterns for surnames ending in consonants + case endings
+                r'.*(?:[бвгджзклмнпрстфхцчшщ])(?:а|у|ом|е|ы|ой|ей|ами|ах|и)$',
+            ]
+            
+            if any(re.match(pattern, base, re.IGNORECASE) for pattern in surname_patterns):
+                return 'surname'
         
         # Check for English surname patterns
         if language == 'en':
@@ -855,6 +806,14 @@ class NormalizationService:
             result = self._ukrainian_surname_normalization(token)
             if result:
                 return result
+        
+        # Special handling for patronymics - don't normalize to masculine form
+        if self._is_patronymic(token, primary_lang):
+            return token  # Keep original patronymic form
+        
+        # Special handling for surnames - preserve gender form
+        if self._is_surname(token, primary_lang):
+            return token  # Keep original surname form
         
         try:
             if hasattr(morph_analyzer, 'morph_analyzer'):
@@ -934,6 +893,60 @@ class NormalizationService:
         except Exception as e:
             self.logger.warning(f"Morphological analysis failed for '{token}': {e}")
             return self._normalize_characters(token)
+
+    def _is_surname(self, token: str, language: str) -> bool:
+        """
+        Check if token is a surname based on patterns
+        """
+        token_lower = token.lower()
+        
+        # Russian surname patterns
+        if language == 'ru':
+            surname_patterns = [
+                r'.*(?:ов|ев|ин|ын|ский|ская|цкий|цкая|ской|ской|цкой|цкой)$',  # Common Russian surname endings
+                r'.*(?:ова|ева|ина|ына|ская|цкая|ской|цкой)$',  # Female forms
+            ]
+        # Ukrainian surname patterns  
+        elif language == 'uk':
+            surname_patterns = [
+                r'.*(?:енко|ко|ук|юк|чук|ський|ська|цький|цька|ов|ев|ин|ын)$',  # Common Ukrainian surname endings
+                r'.*(?:ова|ева|ина|ына|ська|цька)$',  # Female forms
+            ]
+        else:
+            return False
+        
+        import re
+        for pattern in surname_patterns:
+            if re.match(pattern, token_lower):
+                return True
+        return False
+
+    def _is_patronymic(self, token: str, language: str) -> bool:
+        """
+        Check if token is a patronymic based on patterns
+        """
+        token_lower = token.lower()
+        
+        # Russian patronymic patterns
+        if language == 'ru':
+            patronymic_patterns = [
+                r'.*(?:ович|евич|йович|ич|ыч)$',  # Male patronymics
+                r'.*(?:овна|евна|йовна|ична|ычна)$',  # Female patronymics
+            ]
+        # Ukrainian patronymic patterns  
+        elif language == 'uk':
+            patronymic_patterns = [
+                r'.*(?:ович|евич|йович|ич)$',  # Male patronymics
+                r'.*(?:івна|ївна|овна|евна|ична)$',  # Female patronymics
+            ]
+        else:
+            return False
+        
+        import re
+        for pattern in patronymic_patterns:
+            if re.match(pattern, token_lower):
+                return True
+        return False
 
     def _ukrainian_surname_normalization(self, token: str) -> Optional[str]:
         """Special normalization for Ukrainian surnames that get misanalyzed"""
@@ -1023,6 +1036,10 @@ class NormalizationService:
         First normalize to base masculine form, then adjust based on gender
         """
         normalized_lower = normalized.lower()
+        
+        # If the surname is already in the correct form, don't change it
+        if normalized == original_token:
+            return normalized
         
         # Step 1: Convert to base masculine form
         base_form = normalized
@@ -1216,7 +1233,7 @@ class NormalizationService:
             else:
                 morphed = None  # Initialize morphed variable
                 if enable_advanced_features:
-                    # Morphological normalization
+                # Morphological normalization
                     morphed = self._morph_nominal(base, language)
                 
                 # Apply diminutive mapping if it's a given name
@@ -1244,13 +1261,13 @@ class NormalizationService:
                                     canonical = diminutive_map[morphed.lower()]
                                     normalized = canonical.capitalize()
                                     rule = 'diminutive_dict'
+                            else:
+                                # Use morphed form
+                                if morphed and morphed[0].isupper():
+                                    normalized = morphed
                                 else:
-                                    # Use morphed form
-                                    if morphed and morphed[0].isupper():
-                                        normalized = morphed
-                                    else:
-                                        normalized = morphed.capitalize() if morphed else base.capitalize()
-                                    rule = 'morph'
+                                    normalized = morphed.capitalize() if morphed else base.capitalize()
+                                rule = 'morph'
                 else:
                     # For non-given names, use morphed form
                     if morphed:
