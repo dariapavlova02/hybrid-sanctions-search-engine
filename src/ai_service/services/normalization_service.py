@@ -15,6 +15,12 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Set, Any
 
+# Legal company acronyms that should never be treated as person names
+ORG_ACRONYMS = {
+    "ооо","зао","оао","пао","ао","ип","чп","фоп","тов","пп","кс",
+    "ooo","llc","ltd","inc","corp","co","gmbh","srl","s.a.","s.r.l.","s.p.a.","bv","nv","oy","ab","as","sa","ag"
+}
+
 try:
     import pymorphy3
     _PYMORPHY3_AVAILABLE = True
@@ -349,6 +355,17 @@ class NormalizationService:
         all_upper = text.isupper()
         
         for token in filtered_tokens:
+            # Handle quoted tokens specially when preserve_names=True
+            if preserve_names and token.startswith("'") and token.endswith("'"):
+                # Extract the content between quotes and mark it as quoted
+                inner_token = token[1:-1]
+                if inner_token and inner_token[0].isupper():
+                    # Mark as quoted by adding a special prefix
+                    original_case_tokens.append(f"__QUOTED__{inner_token}")
+                elif self._looks_like_name(inner_token, language):
+                    original_case_tokens.append(f"__QUOTED__{inner_token.title()}")
+                continue
+            
             if has_mixed_case:
                 # If original text had mixed case, prefer uppercase tokens
                 # but also check if lowercase tokens might be names (surname patterns, diminutives)
@@ -458,6 +475,24 @@ class NormalizationService:
         for i, token in enumerate(tokens):
             role = 'unknown'
             
+            # Handle quoted tokens - they should be 'unknown' unless they're known names
+            if token.startswith("__QUOTED__"):
+                inner_token = token[10:]  # Remove "__QUOTED__" prefix
+                # Check if it's a known name, otherwise mark as unknown
+                if (self._looks_like_name(inner_token, language) or 
+                    inner_token.lower() in self.diminutive_maps.get(language, {})):
+                    role = 'given'
+                else:
+                    role = 'unknown'
+                # Keep the prefix to identify quoted tokens in normalization
+                tagged.append((token, role))  # Store with the prefix
+                continue
+            
+            # High-priority check: Legal company acronyms should always be 'unknown'
+            if token.casefold() in ORG_ACRONYMS:
+                tagged.append((token, 'unknown'))
+                continue  # Skip all other checks for this token
+            
             # Check if it's an initial
             if self._is_initial(token):
                 # For concatenated initials like "С.В.", keep them as one token
@@ -554,7 +589,10 @@ class NormalizationService:
                 
                 if any(re.match(pattern, token_lower, re.IGNORECASE) for pattern in contextual_patterns):
                     role = 'unknown'
-                # Apply fallback heuristics for multi-token sequences
+                # Check for legal company acronyms - these should never be treated as person names
+                elif token.casefold() in ORG_ACRONYMS:
+                    role = 'unknown'
+                # Apply fallback heuristics for multi-token sequences (only if not a company acronym)
                 elif len(tokens) >= 2:
                     if i == 0:  # First token -> likely given name  
                         role = 'given'
@@ -577,6 +615,11 @@ class NormalizationService:
         improved = []
         for i, (token, role) in enumerate(tagged):
             new_role = role
+            
+            # Skip positional heuristics for company acronyms - they should remain unknown
+            if token.casefold() in ORG_ACRONYMS:
+                improved.append((token, role))
+                continue
             
             # First token: if it morphologically resolves to a known given name, tag as given
             if i == 0 and role in ['surname', 'unknown']:
@@ -867,6 +910,18 @@ class NormalizationService:
         person_gender = self._get_person_gender(tagged_tokens, language)
         
         for token, role in tagged_tokens:
+            # Skip ORG_ACRONYMS completely - they should never appear in normalized output
+            if token.casefold() in ORG_ACRONYMS:
+                continue
+            
+            # Skip quoted tokens that are marked as 'unknown' - they should not appear in normalized output
+            if role == 'unknown' and token.startswith("__QUOTED__"):
+                continue
+            
+            # Strip the quoted prefix if present
+            if token.startswith("__QUOTED__"):
+                token = token[10:]  # Remove "__QUOTED__" prefix
+            
             # Don't skip potential names even if marked as 'unknown'
             if role == 'unknown' and not (len(token) == 1 and token.isalpha() or 
                                           self._is_likely_name_by_length_and_chars(token)):
@@ -997,6 +1052,18 @@ class NormalizationService:
         traces = []
         
         for token, role in tagged_tokens:
+            # Skip ORG_ACRONYMS completely - they should never appear in normalized output
+            if token.casefold() in ORG_ACRONYMS:
+                continue
+            
+            # Skip quoted tokens that are marked as 'unknown' - they should not appear in normalized output
+            if role == 'unknown' and token.startswith("__QUOTED__"):
+                continue
+            
+            # Strip the quoted prefix if present
+            if token.startswith("__QUOTED__"):
+                token = token[10:]  # Remove "__QUOTED__" prefix
+            
             # Don't skip unknown tokens for English - they might be middle names
             # if role == 'unknown':
             #     continue
