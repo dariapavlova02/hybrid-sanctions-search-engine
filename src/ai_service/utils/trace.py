@@ -9,24 +9,26 @@ import json
 
 class TokenTrace(BaseModel):
     """Trace for a single token's normalization"""
-    original: str
+    token: str
     role: str
     rule: str
-    language: Optional[str] = None
-    intermediate_form: Optional[str] = None
-    final: str
-    metadata: Optional[Dict[str, Any]] = None
-    timestamp: Optional[datetime] = None
+    morph_lang: Optional[str] = None
+    normal_form: Optional[str] = None
+    output: str
+    fallback: bool = False
+    notes: Optional[str] = None
 
 
 class NormalizationResult(BaseModel):
     """Result of text normalization with full traceability"""
+    model_config = {"extra": "allow"}
+    
     normalized: str
     tokens: List[str]
     trace: List[TokenTrace]
     errors: List[str] = []
 
-    # Additional fields expected by pipeline
+    # Required metadata fields
     language: Optional[str] = None
     confidence: Optional[float] = None
     original_length: Optional[int] = None
@@ -73,24 +75,25 @@ class TraceCollector:
 
     def add_token_trace(
         self,
-        original: str,
+        token: str,
         role: str,
         rule: str,
-        final: str,
-        language: Optional[str] = None,
-        intermediate_form: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        output: str,
+        morph_lang: Optional[str] = None,
+        normal_form: Optional[str] = None,
+        fallback: bool = False,
+        notes: Optional[str] = None
     ) -> None:
         """Add a token trace to the collection"""
         trace = TokenTrace(
-            original=original,
+            token=token,
             role=role,
             rule=rule,
-            language=language,
-            intermediate_form=intermediate_form,
-            final=final,
-            metadata=metadata,
-            timestamp=datetime.now()
+            morph_lang=morph_lang,
+            normal_form=normal_form,
+            output=output,
+            fallback=fallback,
+            notes=notes
         )
         self.traces.append(trace)
 
@@ -109,7 +112,8 @@ class TraceCollector:
         normalized: str,
         tokens: List[str],
         language: Optional[str] = None,
-        confidence: Optional[float] = None
+        confidence: Optional[float] = None,
+        original_length: Optional[int] = None
     ) -> NormalizationResult:
         """Create a NormalizationResult from collected traces"""
         return NormalizationResult(
@@ -119,7 +123,7 @@ class TraceCollector:
             errors=self.errors.copy(),
             language=language,
             confidence=confidence,
-            original_length=len(" ".join(tokens)) if tokens else 0,
+            original_length=original_length or len(" ".join(tokens)) if tokens else 0,
             normalized_length=len(normalized),
             token_count=len(tokens),
             processing_time=self.get_processing_time(),

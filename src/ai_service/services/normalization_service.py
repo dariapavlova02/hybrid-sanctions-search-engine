@@ -800,12 +800,14 @@ class NormalizationService:
                 normalized = self._cleanup_initial(token)
                 normalized_tokens.append(normalized)
                 traces.append(TokenTrace(
-                    original=token,
+                    token=token,
                     role=role,
                     rule='initial_cleanup',
-                    language=language,
-                    intermediate_form=None,
-                    final=normalized
+                    morph_lang=language,
+                    normal_form=None,
+                    output=normalized,
+                    fallback=False,
+                    notes=None
                 ))
             
             elif role == 'unknown':
@@ -813,12 +815,14 @@ class NormalizationService:
                 normalized = token.capitalize()
                 normalized_tokens.append(normalized)
                 traces.append(TokenTrace(
-                    original=token,
+                    token=token,
                     role=role,
                     rule='capitalize',
-                    language=language,
-                    intermediate_form=None,
-                    final=normalized
+                    morph_lang=language,
+                    normal_form=None,
+                    output=normalized,
+                    fallback=False,
+                    notes=None
                 ))
                 
             else:
@@ -866,12 +870,14 @@ class NormalizationService:
                 
                 normalized_tokens.append(normalized)
                 traces.append(TokenTrace(
-                    original=token,
+                    token=token,
                     role=role,
                     rule=rule,
-                    language=language,
-                    intermediate_form=morphed if rule != 'morph' else None,
-                    final=normalized
+                    morph_lang=language,
+                    normal_form=morphed if rule != 'morph' else None,
+                    output=normalized,
+                    fallback=False,
+                    notes=None
                 ))
         
         return normalized_tokens, traces
@@ -893,12 +899,14 @@ class NormalizationService:
                 normalized = self._cleanup_initial(token)
                 normalized_tokens.append(normalized)
                 traces.append(TokenTrace(
-                    original=token,
+                    token=token,
                     role=role,
                     rule='initial_cleanup',
-                    language=language,
-                    intermediate_form=None,
-                    final=normalized
+                    morph_lang=language,
+                    normal_form=None,
+                    output=normalized,
+                    fallback=False,
+                    notes=None
                 ))
                 
             else:
@@ -914,12 +922,14 @@ class NormalizationService:
                 
                 normalized_tokens.append(normalized)
                 traces.append(TokenTrace(
-                    original=token,
+                    token=token,
                     role=role,
                     rule=rule,
-                    language=language,
-                    intermediate_form=token_lower if rule == 'english_nickname' else None,
-                    final=normalized
+                    morph_lang=language,
+                    normal_form=token_lower if rule == 'english_nickname' else None,
+                    output=normalized,
+                    fallback=False,
+                    notes=None
                 ))
         
         return normalized_tokens, traces
