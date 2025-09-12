@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Unit tests for ORG_ACRONYMS filter in normalization service.
+Unit tests for ORG_LEGAL_FORMS filter in normalization service.
 """
 
 import pytest
-from ai_service.services.normalization_service import NormalizationService, ORG_ACRONYMS
+from ai_service.services.normalization_service import NormalizationService, ORG_LEGAL_FORMS
 
 
 class TestOrgAcronymsFilter:
@@ -16,7 +16,7 @@ class TestOrgAcronymsFilter:
         return NormalizationService()
     
     def test_org_acronyms_are_tagged_as_unknown(self, service):
-        """Test that ORG_ACRONYMS are tagged as 'unknown' and excluded from positional fallbacks."""
+        """Test that ORG_LEGAL_FORMS are tagged as 'unknown' and excluded from positional fallbacks."""
         # Test with the specific input from the requirements
         text = "OOO 'Тест' переводит средства Ивану Петрову"
         
@@ -38,7 +38,7 @@ class TestOrgAcronymsFilter:
         assert test_role == "unknown", f"Expected Тест to be tagged as 'unknown', got '{test_role}'"
     
     def test_org_acronyms_not_in_normalized_output(self, service):
-        """Test that ORG_ACRONYMS do not appear in the final normalized string."""
+        """Test that ORG_LEGAL_FORMS do not appear in the final normalized string."""
         text = "OOO 'Тест' переводит средства Ивану Петрову"
         result = service._normalize_sync(text, language="ru")
         
@@ -60,7 +60,7 @@ class TestOrgAcronymsFilter:
         assert "петров" in normalized_text, f"Expected 'Петров' to survive, but not found in: {result.normalized}"
     
     def test_various_org_acronyms_are_filtered(self, service):
-        """Test that various ORG_ACRONYMS are properly filtered."""
+        """Test that various ORG_LEGAL_FORMS are properly filtered."""
         test_cases = [
             ("LLC Company", "en"),
             ("GmbH Test", "en"), 
@@ -76,11 +76,11 @@ class TestOrgAcronymsFilter:
             
             # Check that company acronyms are tagged as unknown
             for token, role in tagged_tokens:
-                if token.casefold() in ORG_ACRONYMS:
+                if token.casefold() in ORG_LEGAL_FORMS:
                     assert role == "unknown", f"Expected {token} to be tagged as 'unknown', got '{role}'"
     
     def test_org_acronyms_case_insensitive(self, service):
-        """Test that ORG_ACRONYMS filtering is case insensitive."""
+        """Test that ORG_LEGAL_FORMS filtering is case insensitive."""
         test_cases = [
             ("ooo", "ru"),
             ("LLC", "en"),
@@ -95,11 +95,11 @@ class TestOrgAcronymsFilter:
             
             # Check that the token is tagged as unknown
             for token, role in tagged_tokens:
-                if token.casefold() in ORG_ACRONYMS:
+                if token.casefold() in ORG_LEGAL_FORMS:
                     assert role == "unknown", f"Expected {token} to be tagged as 'unknown', got '{role}'"
     
     def test_org_acronyms_excluded_from_positional_fallbacks(self, service):
-        """Test that ORG_ACRONYMS are excluded from positional fallback rules."""
+        """Test that ORG_LEGAL_FORMS are excluded from positional fallback rules."""
         # Test with OOO at the beginning (should not become 'given')
         text = "OOO переводит средства"
         result = service._normalize_sync(text, language="ru")
@@ -136,14 +136,14 @@ class TestOrgAcronymsFilter:
         assert "llc" not in normalized_text, f"Expected 'LLC' to be filtered out, but found in: {result.normalized}"
     
     def test_org_acronyms_constant_contains_expected_values(self, service):
-        """Test that ORG_ACRONYMS constant contains the expected values."""
+        """Test that ORG_LEGAL_FORMS constant contains the expected values."""
         expected_acronyms = {
             "ооо", "зао", "оао", "пао", "ао", "ип", "чп", "фоп", "тов", "пп", "кс",
             "ooo", "llc", "ltd", "inc", "corp", "co", "gmbh", "srl", "s.a.", "s.r.l.", "s.p.a.", "bv", "nv", "oy", "ab", "as", "sa", "ag"
         }
         
-        assert ORG_ACRONYMS == expected_acronyms, f"ORG_ACRONYMS constant does not match expected values"
+        assert ORG_LEGAL_FORMS == expected_acronyms, f"ORG_LEGAL_FORMS constant does not match expected values"
         
         # Test that all expected acronyms are present
         for acronym in expected_acronyms:
-            assert acronym in ORG_ACRONYMS, f"Expected acronym '{acronym}' not found in ORG_ACRONYMS"
+            assert acronym in ORG_LEGAL_FORMS, f"Expected acronym '{acronym}' not found in ORG_LEGAL_FORMS"

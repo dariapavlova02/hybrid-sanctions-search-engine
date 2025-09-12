@@ -297,8 +297,8 @@ class NormalizationService:
                 else:
                     person_tokens.append(token)
             
-            # Step 5: Reconstruct personal text
-            normalized_text = self._reconstruct_text(person_tokens, traces)
+            # Step 5: Reconstruct personal text with multiple persons detection
+            normalized_text = self._reconstruct_text_with_multiple_persons(person_tokens, traces, language)
             
             # Step 6: Group organization tokens into phrases
             organizations = []
@@ -392,7 +392,15 @@ class NormalizationService:
         tokens = []
         for token in text.split():
             if len(token) >= 1:
-                tokens.append(token)
+                if preserve_names:
+                    tokens.append(token)
+                else:
+                    # When preserve_names=False, split on separators within tokens
+                    # Split on apostrophes and hyphens
+                    sub_tokens = re.split(r'[\'\-]', token)
+                    for sub_token in sub_tokens:
+                        if sub_token.strip():  # Only add non-empty tokens
+                            tokens.append(sub_token.strip())
         
         # Filter out stopwords (if enabled)
         filtered_tokens = []
@@ -644,7 +652,13 @@ class NormalizationService:
 
     def _classify_personal_role(self, base: str, language: str) -> str:
         """Classify token as personal name role (given/surname/patronymic/unknown)"""
-        # Check for common non-name words first (highest priority)
+        # Check for initials first (highest priority)
+        if len(base) == 1 and base.isalpha():
+            # But not if it's a conjunction
+            if base.lower() not in ['и', 'and', 'i']:
+                return 'initial'
+        
+        # Check for common non-name words
         token_lower = base.lower()
         non_name_words = {
             # Ukrainian
@@ -720,6 +734,20 @@ class NormalizationService:
             morph_form = self._morph_nominal(base, language)
             if morph_form and morph_form.lower() in {name.lower() for name in lang_names}:
                 return 'given'
+        
+        # Check for English names with apostrophes (O'Brien, D'Angelo, etc.)
+        if "'" in base and len(base) > 2:
+            # Extract the part after the apostrophe
+            parts = base.split("'")
+            if len(parts) == 2 and len(parts[1]) > 1:
+                # Check if the part after apostrophe is a known English name
+                english_names = self.name_dictionaries.get('en', set())
+                if parts[1].lower() in {name.lower() for name in english_names}:
+                    return 'given'
+                # If not in dictionary, check if it looks like an English name (contains only Latin letters)
+                elif re.match(r'^[a-zA-Z]+$', parts[1]) and len(parts[1]) >= 2:
+                    return 'given'
+        
             
         # Check for surname patterns (Ukrainian/Russian)
         if language in ['ru', 'uk']:
@@ -1080,9 +1108,7 @@ class NormalizationService:
         """
         normalized_lower = normalized.lower()
         
-        # If the surname is already in the correct form, don't change it
-        if normalized == original_token:
-            return normalized
+        # Always try to adjust surname for gender, even if normalized == original_token
         
         # Step 1: Convert to base masculine form
         base_form = normalized
@@ -1110,7 +1136,7 @@ class NormalizationService:
             base_form = normalized[:-1] + 'цький'
         
         # Step 2: If person is female, convert to feminine form
-        if person_gender == 'femn':
+        if person_gender == 'femn' or person_gender == 'female':
             base_lower = base_form.lower()
             if base_lower.endswith('ов'):
                 return base_form + 'а'
@@ -1124,6 +1150,12 @@ class NormalizationService:
                 return base_form[:-2] + 'а'
             elif base_lower.endswith('цький'):
                 return base_form[:-2] + 'а'
+        
+        # Step 3: If no gender specified, check if the original token is already feminine
+        # and preserve it
+        original_lower = original_token.lower()
+        if original_lower.endswith('ова') or original_lower.endswith('ева') or original_lower.endswith('ська'):
+            return original_token  # Keep original feminine form
         
         # For male or unknown gender, return base form
         return base_form
@@ -1232,17 +1264,25 @@ class NormalizationService:
                 continue
             
             # Skip all unknown tokens - they should not appear in normalized output
-            if role == 'unknown':
+            # But keep conjunctions for multiple persons detection
+            if role == 'unknown' and token.lower() not in ['и', 'and']:
                 continue
             
             if role == 'initial':
                 # Normalize initial
-                normalized = self._cleanup_initial(base)
+                if enable_advanced_features:
+                    normalized = self._cleanup_initial(base)
+                    rule = 'initial_cleanup'
+                else:
+                    # When advanced features are disabled, just capitalize
+                    normalized = base.capitalize()
+                    rule = 'basic_capitalize'
+                
                 normalized_tokens.append(normalized)
                 traces.append(TokenTrace(
                     token=token,
                     role=role,
-                    rule='initial_cleanup',
+                    rule=rule,
                     morph_lang=language,
                     normal_form=None,
                     output=normalized,
@@ -1278,8 +1318,11 @@ class NormalizationService:
                 rule = 'unknown'  # Initialize rule variable
                 normalized = None  # Initialize normalized variable
                 if enable_advanced_features:
-                # Morphological normalization
+                    # Morphological normalization
                     morphed = self._morph_nominal(base, language)
+                else:
+                    # When advanced features are disabled, just use the original token
+                    morphed = base
                 
                 # Apply diminutive mapping if it's a given name
                 if role == 'given' and enable_advanced_features:
@@ -1323,13 +1366,15 @@ class NormalizationService:
                                     normalized = morphed.capitalize() if morphed else base.capitalize()
                                 rule = 'morph'
                 else:
-                    # For non-given names, use morphed form
-                    if morphed:
+                    # For non-given names, use morphed form or basic approach
+                    if enable_advanced_features and morphed:
                         # Always capitalize the first letter for proper nouns
                         normalized = morphed.capitalize()
+                        rule = 'morph'
                     else:
+                        # When advanced features are disabled, just capitalize
                         normalized = base.capitalize()
-                    rule = 'morph'
+                        rule = 'basic_capitalize'
                 
                 # Ensure normalized is set
                 if normalized is None:
@@ -1411,17 +1456,25 @@ class NormalizationService:
                 continue
             
             # Skip all unknown tokens - they should not appear in normalized output
-            if role == 'unknown':
+            # But keep conjunctions for multiple persons detection
+            if role == 'unknown' and token.lower() not in ['и', 'and']:
                 continue
             
             if role == 'initial':
                 # Normalize initial
-                normalized = self._cleanup_initial(base)
+                if enable_advanced_features:
+                    normalized = self._cleanup_initial(base)
+                    rule = 'initial_cleanup'
+                else:
+                    # When advanced features are disabled, just capitalize
+                    normalized = base.capitalize()
+                    rule = 'basic_capitalize'
+                
                 normalized_tokens.append(normalized)
                 traces.append(TokenTrace(
                     token=token,
                     role=role,
-                    rule='initial_cleanup',
+                    rule=rule,
                     morph_lang=language,
                     normal_form=None,
                     output=normalized,
@@ -1475,6 +1528,81 @@ class NormalizationService:
         # Simple approach - just join with spaces
         # This preserves the tokenization structure
         return ' '.join(tokens)
+    
+    def _reconstruct_text_with_multiple_persons(self, tokens: List[str], traces: List[TokenTrace], language: str) -> str:
+        """Reconstruct text with multiple persons detection and proper gender agreement"""
+        if not tokens:
+            return ""
+        
+        # Detect multiple persons pattern: [given1, "и", given2, surname]
+        # Only apply if we have exactly 4 tokens and the second is a conjunction
+        if len(tokens) == 4 and tokens[1].lower() in ['и', 'and', 'i']:
+            # Check if we have two given names followed by a surname
+            given_names = []
+            surname = None
+            
+            for i, token in enumerate(tokens):
+                # Find corresponding trace - look for original token or normalized form
+                trace = None
+                for t in traces:
+                    if t.token.lower() == token.lower() or t.output.lower() == token.lower():
+                        trace = t
+                        break
+                
+                if trace and trace.role == 'given':
+                    given_names.append(token)
+                elif trace and trace.role == 'surname':
+                    surname = token
+                    break
+            
+            # If we found two given names and a surname, create proper combinations
+            if len(given_names) >= 2 and surname:
+                # Determine gender for each given name
+                person_combinations = []
+                
+                for given_name in given_names:
+                    # Determine gender based on name
+                    gender = self._determine_gender_from_name(given_name, language)
+                    
+                    # Adjust surname for gender
+                    if gender == 'female':
+                        adjusted_surname = self._gender_adjust_surname(surname, surname, gender)
+                    else:  # male or unknown
+                        adjusted_surname = surname
+                    
+                    person_combinations.append(f"{given_name} {adjusted_surname}")
+                
+                return " ".join(person_combinations)
+        
+        # Fallback to simple reconstruction
+        return " ".join(tokens)
+    
+    def _determine_gender_from_name(self, name: str, language: str) -> str:
+        """Determine gender from given name"""
+        name_lower = name.lower()
+        
+        # Common female names in Russian/Ukrainian
+        female_names = {
+            'анна', 'елена', 'мария', 'наталья', 'ольга', 'татьяна', 'ирина', 'светлана',
+            'галина', 'людмила', 'валентина', 'надежда', 'раиса', 'лидия', 'зоя', 'валерия',
+            'дарья', 'екатерина', 'юлия', 'александра', 'виктория', 'ксения', 'вероника',
+            'алена', 'анастасия', 'полина', 'марина', 'ирина', 'елена', 'татьяна'
+        }
+        
+        # Common male names in Russian/Ukrainian  
+        male_names = {
+            'владимир', 'александр', 'сергей', 'андрей', 'дмитрий', 'николай', 'михаил',
+            'алексей', 'иван', 'максим', 'артем', 'игорь', 'денис', 'евгений', 'павел',
+            'роман', 'владислав', 'кирилл', 'станислав', 'олег', 'юрий', 'василий',
+            'петр', 'александр', 'сергей', 'андрей', 'дмитрий', 'николай', 'михаил'
+        }
+        
+        if name_lower in female_names:
+            return 'female'
+        elif name_lower in male_names:
+            return 'male'
+        else:
+            return 'unknown'
 
     def _create_error_result(self, text: str, errors: List[str], start_time: float) -> NormalizationResult:
         """Create error result for failed normalization"""
