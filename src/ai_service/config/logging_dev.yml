@@ -1,0 +1,69 @@
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  standard:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+  
+  detailed:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(module)s:%(funcName)s:%(lineno)d - %(message)s'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: detailed
+    stream: ext://sys.stdout
+
+loggers:
+  ai_service:
+    level: DEBUG
+    handlers: [console]
+    propagate: false
+  
+  ai_service.services:
+    level: DEBUG
+    handlers: [console]
+    propagate: false
+  
+  # Third-party libraries
+  langdetect:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+  
+  spacy:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+  
+  pymorphy3:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+  
+  sentence_transformers:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+  
+  transformers:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+  
+  uvicorn:
+    level: INFO
+    handlers: [console]
+    propagate: false
+  
+  fastapi:
+    level: INFO
+    handlers: [console]
+    propagate: false
+
+root:
+  level: INFO
+  handlers: [console]

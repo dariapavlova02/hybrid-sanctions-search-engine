@@ -1,0 +1,45 @@
+# Normalization service configuration
+
+# Language settings
+languages:
+  ru:
+    name: "Russian"
+    code: "ru"
+    stemmer: "snowball_russian"
+    stop_words: "russian"
+    transliteration: "gost_2000"
+    
+  uk:
+    name: "Ukrainian"
+    code: "uk"
+    stemmer: "snowball_russian"  # Fallback to Russian
+    stop_words: "russian"        # Fallback to Russian
+    transliteration: "uk_standard"
+
+# Processing settings
+processing:
+  max_text_length: 10000
+  min_word_length: 2
+  preserve_case: false
+  remove_punctuation: true
+  normalize_whitespace: true
+  
+# Stemming settings
+stemming:
+  enabled: true
+  min_word_length: 3
+  preserve_original: true
+  
+# Stop words
+stop_words:
+  enabled: true
+  custom_words: []
+  
+# Transliteration
+transliteration:
+  enabled: true
+  standards:
+    - "gost_2000"
+    - "iso_9"
+    - "uk_standard"
+    - "ru_standard"

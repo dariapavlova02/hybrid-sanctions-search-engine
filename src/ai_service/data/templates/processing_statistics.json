@@ -1,0 +1,19 @@
+{
+  "total_templates": 26053,
+  "total_patterns": 26674,
+  "total_variants": 1635732,
+  "average_complexity": 0.20849885916259484,
+  "language_distribution": {
+    "uk": 20292,
+    "ru": 702,
+    "en": 5059
+  },
+  "pattern_type_distribution": {
+    "full_name": 5985,
+    "surname_only": 10342,
+    "name_only": 10342,
+    "payment_context": 5
+  },
+  "processing_timestamp": "2025-08-27T08:26:08.807565",
+  "total_entities": 26053
+}

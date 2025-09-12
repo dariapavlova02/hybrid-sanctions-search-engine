@@ -1,0 +1,22 @@
+# Application configuration
+
+# Service settings
+service_name: "AI Service"
+version: "1.0.0"
+environment: "development"
+
+# API settings
+api_prefix: "/v1"
+host: "0.0.0.0"
+port: 8000
+
+# Elasticsearch mode
+es_mode: "pull"   # pull: ES calls /v1/embed itself
+
+# Logging
+log_level: "INFO"
+log_format: "json"
+
+# Performance
+max_workers: 4
+timeout: 30

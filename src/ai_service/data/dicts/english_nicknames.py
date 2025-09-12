@@ -1,0 +1,129 @@
+# -*- coding: utf-8 -*-
+
+"""
+English nicknames to formal names mapping
+"""
+
+ENGLISH_NICKNAMES = {
+    # Male nicknames
+    'bill': 'William',
+    'billy': 'William', 
+    'will': 'William',
+    'willy': 'William',
+    'willie': 'William',
+    
+    'mike': 'Michael',
+    'mickey': 'Michael',
+    'micky': 'Michael',
+    
+    'bob': 'Robert',
+    'bobby': 'Robert',
+    'rob': 'Robert',
+    'robbie': 'Robert',
+    'robby': 'Robert',
+    
+    'jim': 'James',
+    'jimmy': 'James',
+    'jamie': 'James',
+    
+    'john': 'John',  # Keep as is
+    'johnny': 'John',
+    'jack': 'John',  # Often a nickname for John
+    
+    'dick': 'Richard',
+    'rick': 'Richard', 
+    'ricky': 'Richard',
+    'richie': 'Richard',
+    
+    'tom': 'Thomas',
+    'tommy': 'Thomas',
+    
+    'joe': 'Joseph',
+    'joey': 'Joseph',
+    
+    'steve': 'Stephen',
+    'stevie': 'Stephen',
+    
+    'dave': 'David',
+    'davie': 'David',
+    
+    'chris': 'Christopher',
+    'christy': 'Christopher',
+    
+    'ben': 'Benjamin',
+    'benny': 'Benjamin',
+    
+    'sam': 'Samuel',
+    'sammy': 'Samuel',
+    
+    'dan': 'Daniel',
+    'danny': 'Daniel',
+    
+    'matt': 'Matthew',
+    'matty': 'Matthew',
+    
+    'alex': 'Alexander',
+    
+    # Names with accents and international variants
+    'josé': 'José',
+    'jose': 'José', 
+    'café': 'Café',
+    'naïve': 'Naïve',
+    'naive': 'Naive',
+    'rené': 'René',
+    'andre': 'Andre',
+    'andré': 'André',
+    'francois': 'Francois', 
+    'françois': 'François',
+    
+    # Female nicknames
+    'liz': 'Elizabeth',
+    'lizzy': 'Elizabeth',
+    'lizzie': 'Elizabeth',
+    'betty': 'Elizabeth',
+    'beth': 'Elizabeth',
+    'betsy': 'Elizabeth',
+    
+    'sue': 'Susan',
+    'susie': 'Susan',
+    'suzy': 'Susan',
+    
+    'kate': 'Katherine',
+    'kathy': 'Katherine',
+    'katie': 'Katherine',
+    'cathy': 'Catherine',
+    'catherine': 'Catherine',
+    'katherine': 'Katherine',
+    
+    'pam': 'Pamela',
+    'pammy': 'Pamela',
+    
+    'jen': 'Jennifer',
+    'jenny': 'Jennifer',
+    'jenn': 'Jennifer',
+    
+    'kim': 'Kimberly',
+    'kimmy': 'Kimberly',
+    
+    'chris': 'Christina',
+    'christy': 'Christina',
+    'christie': 'Christina',
+    
+    'debbie': 'Deborah',
+    'debby': 'Deborah',
+    'deb': 'Deborah',
+    
+    'patty': 'Patricia', 
+    'pat': 'Patricia',
+    'tricia': 'Patricia',
+    
+    'nancy': 'Nancy',  # Keep as is
+    'nan': 'Nancy',
+    
+    'mary': 'Mary',  # Keep as is
+    'marie': 'Marie',
+    
+    'joanna': 'Joanna',  # Keep as is
+    'jo': 'Joanna',
+    'joan': 'Joan',
+}

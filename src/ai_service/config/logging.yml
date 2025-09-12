@@ -1,0 +1,91 @@
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  standard:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+  
+  detailed:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(module)s:%(funcName)s:%(lineno)d - %(message)s'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+  
+  json:
+    format: '{"timestamp": "%(asctime)s", "logger": "%(name)s", "level": "%(levelname)s", "module": "%(module)s", "function": "%(funcName)s", "line": %(lineno)d, "message": "%(message)s"}'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: standard
+    stream: ext://sys.stdout
+  
+  file:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: detailed
+    filename: logs/ai_service.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 5
+    encoding: utf8
+  
+  error_file:
+    class: logging.handlers.RotatingFileHandler
+    level: ERROR
+    formatter: detailed
+    filename: logs/ai_service_errors.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 5
+    encoding: utf8
+
+loggers:
+  ai_service:
+    level: DEBUG
+    handlers: [console, file, error_file]
+    propagate: false
+  
+  ai_service.services:
+    level: DEBUG
+    handlers: [console, file, error_file]
+    propagate: false
+  
+  # Third-party libraries
+  langdetect:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+  
+  spacy:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+  
+  pymorphy3:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+  
+  sentence_transformers:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+  
+  transformers:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+  
+  uvicorn:
+    level: INFO
+    handlers: [console, file]
+    propagate: false
+  
+  fastapi:
+    level: INFO
+    handlers: [console, file]
+    propagate: false
+
+root:
+  level: INFO
+  handlers: [console, file]

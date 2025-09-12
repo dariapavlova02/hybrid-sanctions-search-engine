@@ -1,0 +1,332 @@
+"""
+Text normalization service using SpaCy and NLTK
+for text preparation for search
+"""
+
+import re
+import logging
+import os
+from pathlib import Path
+from typing import Dict, List, Optional, Union, Any, Set, Tuple
+from dataclasses import dataclass
+
+import spacy
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer, SnowballStemmer
+from nltk.tokenize import word_tokenize
+
+from ..config import SERVICE_CONFIG
+from ..exceptions import NormalizationError, LanguageDetectionError
+from ..utils import get_logger
+from .language_detection_service import LanguageDetectionService
+from .unicode_service import UnicodeService
+from .ukrainian_morphology import UkrainianMorphologyAnalyzer
+from .russian_morphology import RussianMorphologyAnalyzer
+
+# Import dictionaries for name classification
+try:
+    from ..data.dicts import (
+        english_names, russian_names, ukrainian_names,
+        asian_names, arabic_names, indian_names,
+        european_names, scandinavian_names
+    )
+    DICTIONARIES_AVAILABLE = True
+except ImportError:
+    DICTIONARIES_AVAILABLE = False
+
+# Configure logging
+logger = get_logger(__name__)
+
+# Load SpaCy models
+try:
+    nlp_en = spacy.load("en_core_web_sm")
+    nlp_ru = spacy.load("ru_core_news_sm")
+    nlp_uk = spacy.load("uk_core_news_sm")
+    SPACY_AVAILABLE = True
+except OSError:
+    logger.warning("SpaCy models not available, falling back to NLTK")
+    SPACY_AVAILABLE = False
+
+# Load NLTK data
+try:
+    import nltk
+    import os
+    
+    # Set NLTK data path if not already set
+    if 'NLTK_DATA' not in os.environ:
+        # Check if we're running in Docker or locally
+        if os.path.exists('/app'):
+            os.environ['NLTK_DATA'] = '/app/nltk_data'
+        else:
+            # Local development - use current directory
+            os.environ['NLTK_DATA'] = str(Path.cwd() / 'nltk_data')
+    
+    NLTK_AVAILABLE = True
+except Exception as e:
+    logger.warning(f"NLTK not available: {e}")
+    NLTK_AVAILABLE = False
+
+# Initialize stemmers
+if NLTK_AVAILABLE:
+    porter_stemmer = PorterStemmer()
+    snowball_ru = SnowballStemmer('russian')
+    try:
+        snowball_uk = SnowballStemmer('ukrainian')
+    except ValueError:
+        logger.warning("Ukrainian stemmer not available, using Russian as fallback")
+        snowball_uk = snowball_ru
+else:
+    porter_stemmer = None
+    snowball_ru = None
+    snowball_uk = None
+
+@dataclass
+class NormalizationResult:
+    """Normalization result"""
+    normalized: str
+    tokens: List[str]
+    language: str
+    confidence: float
+    original_length: int
+    normalized_length: int
+    token_count: int
+    processing_time: float
+    success: bool
+    errors: List[str] = None
+
+
+class NormalizationService:
+    """Service for text normalization before search"""
+    
+    def __init__(self):
+        """
+        Initialize normalization service
+        """
+        self.logger = get_logger(__name__)
+        try:
+            self.language_service = LanguageDetectionService()
+            self.unicode_service = UnicodeService()
+            self.uk_morph = UkrainianMorphologyAnalyzer() if DICTIONARIES_AVAILABLE else None
+            self.ru_morph = RussianMorphologyAnalyzer() if DICTIONARIES_AVAILABLE else None
+            self.name_dictionaries = self._load_name_dictionaries()
+            self.diminutive_maps = self._create_diminutive_maps()
+
+            self.patronymic_patterns = [
+                r'\b[А-ЯІЇЄҐ][а-яіїєґ]*(?:ович|евич|йович|ійович|інович|инович)\b',
+                r'\b[А-ЯІЇЄҐ][а-яіїєґ]*(?:ич)(?:\s|$)',
+                r'\b[А-ЯІЇЄҐ][а-яіїєґ]*(?:івна|ївна|инична|овна|евна)\b',
+            ]
+            
+            self.language_configs = {
+                'en': {
+                    'stop_words': set(stopwords.words('english')) if NLTK_AVAILABLE else set(),
+                    'stemmer': porter_stemmer,
+                    'spacy_model': nlp_en,
+                    'first_names': self.name_dictionaries.get('english', set())
+                },
+                'ru': {
+                    'stop_words': set(stopwords.words('russian')) if NLTK_AVAILABLE else set(),
+                    'stemmer': snowball_ru,
+                    'spacy_model': nlp_ru,
+                    'first_names': self.name_dictionaries.get('russian', set())
+                },
+                'uk': {
+                    'stop_words': set(stopwords.words('russian')) if NLTK_AVAILABLE else set(),
+                    'stemmer': snowball_uk,
+                    'spacy_model': nlp_uk,
+                    'first_names': self.name_dictionaries.get('ukrainian', set())
+                }
+            }
+            self.logger.info("NormalizationService initialized")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize NormalizationService: {e}")
+            raise NormalizationError(f"Service initialization failed: {str(e)}")
+
+    def _load_name_dictionaries(self) -> Dict[str, Set[str]]:
+        dictionaries = {}
+        if DICTIONARIES_AVAILABLE:
+            try:
+                dictionaries = {
+                    'english': set(english_names.ALL_ENGLISH_NAMES.keys()),
+                    'russian': set(russian_names.RUSSIAN_NAMES.keys()),
+                    'ukrainian': set(ukrainian_names.UKRAINIAN_NAMES.keys()),
+                    'asian': set(asian_names.ASIAN_NAMES),
+                    'arabic': set(arabic_names.ARABIC_NAMES),
+                    'indian': set(indian_names.INDIAN_NAMES),
+                    'european': set(european_names.EUROPEAN_NAMES),
+                    'scandinavian': set(scandinavian_names.SCANDINAVIAN_NAMES)
+                }
+            except AttributeError as e:
+                self.logger.error(f"Dictionary loading failed: {e}.")
+                dictionaries = {lang: set() for lang in ['english', 'russian', 'ukrainian']}
+        return dictionaries
+
+    def _create_diminutive_maps(self) -> Dict[str, Dict[str, str]]:
+        maps = {'uk': {}, 'ru': {}}
+        if not DICTIONARIES_AVAILABLE:
+            return maps
+        for name, properties in ukrainian_names.UKRAINIAN_NAMES.items():
+            for diminutive in properties.get('diminutives', []):
+                maps['uk'][diminutive.lower()] = name
+        for name, properties in russian_names.RUSSIAN_NAMES.items():
+            for diminutive in properties.get('diminutives', []):
+                maps['ru'][diminutive.lower()] = name
+        return maps
+
+    async def normalize(self, text: str, language: str = 'auto', preserve_names: bool = True, **kwargs) -> NormalizationResult:
+        import time
+        start_time = time.time()
+        try:
+            if language == 'auto':
+                language = self.language_service.detect_language(text).get('language', 'en')
+
+            if not preserve_names:
+                cleaned_text = self.basic_cleanup(text, preserve_names=False)
+                tokens = self.tokenize_text(cleaned_text, language)
+            else:
+                tokens = self._extract_name_tokens(text, language)
+                classified_parts = self._classify_name_parts(tokens, language)
+                tokens = self._normalize_parts(classified_parts, language)
+
+            normalized_text = ' '.join(tokens)
+            return NormalizationResult(
+                normalized=normalized_text, tokens=tokens, language=language, confidence=1.0,
+                original_length=len(text), normalized_length=len(normalized_text),
+                token_count=len(tokens), processing_time=time.time() - start_time, success=True
+            )
+        except Exception as e:
+            self.logger.error(f"Text normalization failed: {e}")
+            return NormalizationResult(
+                normalized=text, tokens=[text], language=language, confidence=0.0,
+                original_length=len(text), normalized_length=len(text), token_count=1,
+                processing_time=time.time() - start_time, success=False, errors=[str(e)]
+            )
+
+    def _extract_name_tokens(self, text: str, language: str) -> List[str]:
+        if not text or not self.SPACY_AVAILABLE:
+            return self.tokenize_text(text, language)
+        
+        domain_stop_words = {'оплата', 'платіж', 'переказ', 'from', 'to', 'за', 'від', 'для', 'послуги', 'платник', 'ремонт', 'групи', 'творчість', 'зустріч', 'подарунок', 'розмовляв', 'квитки', 'океан', 'ельзи', 'перевод', 'средств', 'с', 'отправлено', 'зачисление', 'payment', 'transfer', 'services', 'mr', 'ms', 'baker', 'st', 'refund', 'charity', 'former', 'pm', 'corp', 'invoice'}
+        nlp = self.language_configs.get(language, {}).get('spacy_model')
+        if not nlp:
+            return self.tokenize_text(text, language)
+
+        cleaned_text = self.basic_cleanup(text, preserve_names=True)
+        doc = nlp(cleaned_text)
+        
+        name_tokens = []
+        for token in doc:
+            if token.is_punct or token.is_space or token.text.lower() in domain_stop_words:
+                continue
+            if token.pos_ in ('PROPN', 'NOUN') or token.text.istitle():
+                name_tokens.append(token.text)
+        return name_tokens
+
+    def _classify_name_parts(self, tokens: List[str], language: str) -> List[Tuple[str, str]]:
+        classified_parts = []
+        first_names_set = self.language_configs.get(language, {}).get('first_names', set())
+        for token in tokens:
+            if len(token) <= 2 and token.isupper():
+                classified_parts.append((token, 'INITIAL'))
+            elif language in ['ru', 'uk'] and any(re.fullmatch(p, token) for p in self.patronymic_patterns):
+                classified_parts.append((token, 'PATRONYMIC'))
+            elif token.lower() in first_names_set:
+                classified_parts.append((token, 'FIRST_NAME'))
+            else:
+                classified_parts.append((token, 'LAST_NAME'))
+        return classified_parts
+
+    def _normalize_parts(self, parts: List[Tuple[str, str]], language: str) -> List[str]:
+        gender_context = None
+        for token, role in parts:
+            if role == 'FIRST_NAME':
+                morph = self.uk_morph if language == 'uk' else self.ru_morph
+                if morph:
+                    analysis = morph.analyze_word(token)
+                    if analysis:
+                        for a in analysis:
+                            if hasattr(a, 'gender') and a.gender:
+                                gender_context = a.gender
+                                break
+                if gender_context:
+                    break
+        
+        normalized_tokens = [self._get_normalized_form(token, role, language, gender_context) for token, role in parts]
+
+        if gender_context == 'masc' and language in ['uk', 'ru']:
+            corrected_tokens = []
+            for i, (token, role) in enumerate(parts):
+                if role == 'LAST_NAME' and (token.lower().endswith('ова') or token.lower().endswith('ева')):
+                    base = normalized_tokens[i][:-1]
+                    if base and base.endswith('ь'):
+                        base = base[:-1]
+                    corrected_tokens.append(base + 'в')
+                else:
+                    corrected_tokens.append(normalized_tokens[i])
+            return corrected_tokens
+
+        return normalized_tokens
+
+    def _get_normalized_form(self, token: str, role: str, language: str, gender_context: Optional[str]) -> str:
+        if role == 'INITIAL':
+            return token.upper()
+
+        original_token_capitalized = token.capitalize()
+        token_lower = token.lower()
+
+        if language in ['uk', 'ru']:
+            morph = self.uk_morph if language == 'uk' else self.ru_morph
+            if not morph:
+                return original_token_capitalized
+
+            if role == 'FIRST_NAME':
+                diminutive_map = self.diminutive_maps.get(language, {})
+                canonical_name = diminutive_map.get(token_lower)
+                if canonical_name:
+                    return canonical_name.capitalize()
+
+            normal_form = morph.get_lemma(token_lower)
+            if not normal_form:
+                return original_token_capitalized
+            
+            if role == 'FIRST_NAME':
+                diminutive_map = self.diminutive_maps.get(language, {})
+                canonical_name = diminutive_map.get(normal_form)
+                if canonical_name:
+                    return canonical_name.capitalize()
+
+            return normal_form.capitalize()
+
+        return original_token_capitalized
+
+    def basic_cleanup(self, text: str, preserve_names: bool = True) -> str:
+        if not text: return ""
+        text = str(text)
+        if preserve_names:
+            text = re.sub(r'[^\w\s\.\-\"]', ' ', text)
+        else:
+            text = re.sub(r'[^\w\s]', ' ', text)
+        return re.sub(r'\s+', ' ', text).strip()
+
+    def tokenize_text(self, text: str, language: str = 'en') -> List[str]:
+        if not text: return []
+        try:
+            if self.SPACY_AVAILABLE and language in self.language_configs:
+                nlp = self.language_configs[language]['spacy_model']
+                if nlp:
+                    doc = nlp(text)
+                    return [token.text for token in doc if not token.is_space]
+        except Exception as e:
+            self.logger.warning(f"SpaCy tokenization failed: {e}")
+        if NLTK_AVAILABLE:
+            try:
+                return [token for token in word_tokenize(text) if token.strip()]
+            except Exception as e:
+                self.logger.warning(f"NLTK tokenization failed: {e}")
+        return text.split()
+
+    def get_supported_languages(self) -> List[str]:
+        return list(self.language_configs.keys())
+    
+    def is_language_supported(self, language: str) -> bool:
+        return language in self.language_configs
