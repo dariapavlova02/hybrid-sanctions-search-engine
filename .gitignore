@@ -271,3 +271,5 @@ tmp/
 # Large data files (generated/processed)
 src/ai_service/data/processed_sanctioned_persons_*.json
 src/ai_service/data/templates/*.json
+src/ai_service/data/templates/*.txt
+src/ai_service/data/sanctioned_*.json
