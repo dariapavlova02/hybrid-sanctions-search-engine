@@ -223,3 +223,21 @@ class TestExtendedRoleTagging:
         # Organization tokens should be handled by org logic
         assert roles.get("ТОВ") == "legal_form"
         # ТЕСТ might be org or unknown depending on context
+    
+    def test_sentence_with_org_and_people(self):
+        """Test complex sentence with organizations and people names."""
+        s = NormalizationService()
+        res = s._normalize_sync('П.І. Коваленко, ТОВ "ПРИВАТБАНК" та Петросян працюють разом', language="uk")
+        
+        # Check normalized text contains only personal names
+        assert res.normalized == "П. І. Коваленко Петросян"
+        
+        # Check organizations are extracted separately
+        assert res.organizations == ["ПРИВАТБАНК"]
+        
+        # Check that non-name words are filtered out
+        assert "Та" not in res.normalized
+        assert "Працюють" not in res.normalized
+        assert "Разом" not in res.normalized
+        assert "ТОВ" not in res.normalized
+        assert "ТОВ" not in res.organizations

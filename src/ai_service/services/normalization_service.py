@@ -643,9 +643,48 @@ class NormalizationService:
 
     def _classify_personal_role(self, base: str, language: str) -> str:
         """Classify token as personal name role (given/surname/patronymic/unknown)"""
+        # Check for common non-name words first (highest priority)
+        token_lower = base.lower()
+        non_name_words = {
+            # Ukrainian
+            'та', 'і', 'або', 'але', 'щоб', 'як', 'що', 'хто', 'де', 'коли', 'чому', 'як', 'який', 'яка', 'яке',
+            'працюють', 'працює', 'працюю', 'працюємо', 'працюєте', 'працюють', 'працювати', 'працював', 'працювала',
+            'разом', 'окремо', 'тут', 'там', 'тепер', 'зараз', 'раніше', 'пізніше', 'завжди', 'ніколи',
+            'дуже', 'досить', 'майже', 'зовсім', 'повністю', 'частково', 'трохи', 'багато', 'мало',
+            'добре', 'погано', 'добре', 'погано', 'краще', 'гірше', 'найкраще', 'найгірше',
+            'великий', 'маленький', 'велика', 'маленька', 'велике', 'маленьке', 'великі', 'маленькі',
+            'новий', 'старий', 'нова', 'стара', 'нове', 'старе', 'нові', 'старі',
+            'перший', 'другий', 'третій', 'останній', 'наступний', 'попередній',
+            'може', 'можна', 'можливо', 'ймовірно', 'звичайно', 'звичайно', 'звичайно',
+            'так', 'ні', 'можливо', 'звичайно', 'звичайно', 'звичайно',
+            # Russian
+            'и', 'или', 'но', 'чтобы', 'как', 'что', 'кто', 'где', 'когда', 'почему', 'какой', 'какая', 'какое',
+            'работают', 'работает', 'работаю', 'работаем', 'работаете', 'работают', 'работать', 'работал', 'работала',
+            'вместе', 'отдельно', 'здесь', 'там', 'теперь', 'сейчас', 'раньше', 'позже', 'всегда', 'никогда',
+            'очень', 'довольно', 'почти', 'совсем', 'полностью', 'частично', 'немного', 'много', 'мало',
+            'хорошо', 'плохо', 'лучше', 'хуже', 'лучший', 'худший',
+            'большой', 'маленький', 'большая', 'маленькая', 'большое', 'маленькое', 'большие', 'маленькие',
+            'новый', 'старый', 'новая', 'старая', 'новое', 'старое', 'новые', 'старые',
+            'первый', 'второй', 'третий', 'последний', 'следующий', 'предыдущий',
+            'может', 'можно', 'возможно', 'вероятно', 'обычно', 'обычно', 'обычно',
+            'да', 'нет', 'возможно', 'обычно', 'обычно', 'обычно',
+            # English
+            'and', 'or', 'but', 'so', 'if', 'when', 'where', 'why', 'how', 'what', 'who', 'which',
+            'work', 'works', 'working', 'worked', 'together', 'separately', 'here', 'there', 'now', 'then',
+            'very', 'quite', 'almost', 'completely', 'partially', 'little', 'much', 'many', 'few',
+            'good', 'bad', 'better', 'worse', 'best', 'worst',
+            'big', 'small', 'large', 'tiny', 'huge', 'little',
+            'new', 'old', 'young', 'fresh', 'ancient', 'modern',
+            'first', 'second', 'third', 'last', 'next', 'previous',
+            'can', 'could', 'may', 'might', 'should', 'would', 'must',
+            'yes', 'no', 'maybe', 'perhaps', 'probably', 'usually',
+        }
+        
+        if token_lower in non_name_words:
+            return 'unknown'
+        
         # Check diminutives first (higher priority than other checks)
         if language in self.diminutive_maps:
-            token_lower = base.lower()
             if token_lower in self.diminutive_maps[language]:
                 return 'given'
         
@@ -1068,10 +1107,8 @@ class NormalizationService:
             if role == 'unknown' and is_quoted:
                 continue
             
-            # Don't skip potential names even if marked as 'unknown'
-            if role == 'unknown' and not (len(base) == 1 and base.isalpha() or 
-                                          self._is_likely_name_by_length_and_chars(base)):
-                # Skip unknown tokens unless they're single letters or look like names
+            # Skip all unknown tokens - they should not appear in normalized output
+            if role == 'unknown':
                 continue
             
             if role == 'initial':
@@ -1224,9 +1261,9 @@ class NormalizationService:
             if role == 'unknown' and is_quoted:
                 continue
             
-            # Don't skip unknown tokens for English - they might be middle names
-            # if role == 'unknown':
-            #     continue
+            # Skip all unknown tokens - they should not appear in normalized output
+            if role == 'unknown':
+                continue
             
             if role == 'initial':
                 # Normalize initial
