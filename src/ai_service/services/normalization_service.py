@@ -15,11 +15,14 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Set, Any
 
-# Legal company acronyms that should never be treated as person names
-ORG_ACRONYMS = {
+# Legal company forms that should be dropped (not treated as person names or org cores)
+ORG_LEGAL_FORMS = {
     "ооо","зао","оао","пао","ао","ип","чп","фоп","тов","пп","кс",
-    "ooo","llc","ltd","inc","corp","co","gmbh","srl","s.a.","s.r.l.","s.p.a.","bv","nv","oy","ab","as","sa","ag"
+    "ooo","llc","ltd","inc","corp","co","gmbh","srl","spa","s.a.","s.r.l.","s.p.a.","bv","nv","oy","ab","as","sa","ag"
 }
+
+# Organization core/acronym pattern: 2-40 chars, mainly caps/digits/symbols, allow cyrillic/latin
+ORG_TOKEN_RE = re.compile(r"^(?:[A-ZА-ЯЁІЇЄҐ0-9][A-ZА-ЯЁІЇЄҐ0-9\-\&\.\']{1,39})$", re.U)
 
 try:
     import pymorphy3
@@ -258,24 +261,56 @@ class NormalizationService:
             else:
                 normalized_tokens, traces = self._normalize_slavic_tokens(tagged_tokens, language, enable_advanced_features)
             
-            # Step 4: Reconstruct result  
-            normalized_text = self._reconstruct_text(normalized_tokens, traces)
+            # Step 4: Separate personal and organization tokens
+            person_tokens = []
+            org_tokens = []
+            
+            for token in normalized_tokens:
+                if token.startswith("__ORG__"):
+                    org_tokens.append(token[7:])  # Remove "__ORG__" prefix
+                else:
+                    person_tokens.append(token)
+            
+            # Step 5: Reconstruct personal text
+            normalized_text = self._reconstruct_text(person_tokens, traces)
+            
+            # Step 6: Group organization tokens into phrases
+            organizations = []
+            if org_tokens:
+                # Group consecutive org tokens into phrases
+                current_org = []
+                for token in org_tokens:
+                    if token:  # Skip empty tokens
+                        current_org.append(token)
+                    else:
+                        # End of current organization
+                        if current_org:
+                            organizations.append(" ".join(current_org))
+                            current_org = []
+                if current_org:
+                    organizations.append(" ".join(current_org))
             
             processing_time = time.time() - start_time
             
-            return NormalizationResult(
+            result = NormalizationResult(
                 normalized=normalized_text,
-                tokens=normalized_tokens,
+                tokens=person_tokens,
                 trace=traces,
                 errors=errors,
                 language=language,
                 confidence=confidence,
                 original_length=len(text),
                 normalized_length=len(normalized_text),
-                token_count=len(normalized_tokens),
+                token_count=len(person_tokens),
                 processing_time=processing_time,
                 success=len(errors) == 0
             )
+            
+            # Add organization fields
+            result.organizations = organizations
+            result.org_core = " ".join(organizations) if organizations else ""
+            
+            return result
             
         except Exception as e:
             self.logger.error(f"Normalization failed: {e}")
@@ -354,7 +389,11 @@ class NormalizationService:
         has_mixed_case = any(c.isupper() for c in text) and any(c.islower() for c in text)
         all_upper = text.isupper()
         
-        for token in filtered_tokens:
+        # First, handle quoted phrases by grouping consecutive quoted tokens
+        i = 0
+        while i < len(filtered_tokens):
+            token = filtered_tokens[i]
+            
             # Handle quoted tokens specially when preserve_names=True
             if preserve_names and token.startswith("'") and token.endswith("'"):
                 # Extract the content between quotes and mark it as quoted
@@ -364,31 +403,37 @@ class NormalizationService:
                     original_case_tokens.append(f"__QUOTED__{inner_token}")
                 elif self._looks_like_name(inner_token, language):
                     original_case_tokens.append(f"__QUOTED__{inner_token.title()}")
+                i += 1
                 continue
             
-            if has_mixed_case:
-                # If original text had mixed case, prefer uppercase tokens
-                # but also check if lowercase tokens might be names (surname patterns, diminutives)
-                if token and token[0].isupper():
-                    original_case_tokens.append(token)
-                elif self._looks_like_name(token, language):
-                    original_case_tokens.append(token.title())
-            elif all_upper:
-                # If all uppercase, title-case the token
-                original_case_tokens.append(token.title())
-            else:
-                # For all lowercase or mixed case, be more permissive
-                if token and len(token) >= 1:
-                    # Check if token looks like a name or is short (like initials)
-                    if (token[0].isupper() or 
-                        len(token) <= 3 or  # Keep initials and short tokens
-                        self._looks_like_name(token, language) or 
-                        self._is_likely_name_by_length_and_chars(token)):  # More permissive name detection
-                        # Preserve original case if it starts with uppercase, otherwise title case
-                        if token[0].isupper():
-                            original_case_tokens.append(token)
-                        else:
-                            original_case_tokens.append(token.title())
+            # Handle quoted phrases (multiple tokens in quotes)
+            if preserve_names and token.startswith("'") and not token.endswith("'"):
+                # Start of quoted phrase - collect all tokens until closing quote
+                quoted_tokens = [token[1:]]  # Remove opening quote
+                i += 1
+                while i < len(filtered_tokens) and not filtered_tokens[i].endswith("'"):
+                    quoted_tokens.append(filtered_tokens[i])
+                    i += 1
+                if i < len(filtered_tokens):
+                    # Found closing quote
+                    last_token = filtered_tokens[i]
+                    if last_token.endswith("'"):
+                        quoted_tokens.append(last_token[:-1])  # Remove closing quote
+                    i += 1
+                else:
+                    # No closing quote found, treat as regular tokens
+                    for t in quoted_tokens:
+                        original_case_tokens.append(t)
+                    continue
+                
+                # Join quoted tokens and mark as quoted
+                quoted_phrase = " ".join(quoted_tokens)
+                original_case_tokens.append(f"__QUOTED__{quoted_phrase}")
+                continue
+            
+            # Regular token
+            original_case_tokens.append(token)
+            i += 1
         
         return original_case_tokens
 
@@ -403,13 +448,17 @@ class NormalizationService:
         # Check surname patterns 
         if language in ['ru', 'uk']:
             surname_patterns = [
-                r'.*(?:енко|енка|енку|енком|енці)$',
-                r'.*(?:ов|ова|ову|овим|овій|ові|ових|ого)$',
-                r'.*(?:ев|ева|еву|евим|евій|еві|евих|его)$',
-                r'.*(?:ин|іна|іну|іним|іній|іні|іних|іна)$',
-                r'.*(?:ський|ська|ську|ським|ській|ські|ських|ського)$',
-                r'.*(?:цький|цька|цьку|цьким|цькій|цькі|цьких|цького)$',
-                r'.*(?:чук|юк|ак|ик|ич|ича)$',
+                r'.*(?:енко|енка|енку|енком|енці|енкою|енцію|енкою|енцію|енкою|енцію|енкою|енцію)$',
+                r'.*(?:ов|ова|ову|овим|овій|ові|ових|ого|овы|овой|овою|овым|овыми)$',
+                r'.*(?:ев|ева|еву|евим|евій|еві|евих|его|евы|евой|евою|евою|евою|евою|евою|евою)$',
+                r'.*(?:ин|іна|іну|іним|іній|іні|іних|іна|іною|іною|іною|іною|іною|іною)$',
+                r'.*(?:ський|ська|ську|ським|ській|ські|ських|ського|ською|ською|ською|ською|ською|ською)$',
+                r'.*(?:цький|цька|цьку|цьким|цькій|цькі|цьких|цького|цькою|цькою|цькою|цькою|цькою|цькою)$',
+                r'.*(?:чук|юк|ак|ик|ич|ича|енок|ёнок|анов|янов|анова|янова)$',
+                
+                # Armenian surnames ending in -ян with cases (broader pattern)
+                r'.*[а-яё]ян(?:а|у|ом|е|ы|ой|ей|ами|ах|и)?$',
+                r'.*(?:дзе|дзею|дзе|дзем|дзех|дземи)$',
             ]
             
             if any(re.match(pattern, token_lower, re.IGNORECASE) for pattern in surname_patterns):
@@ -454,11 +503,73 @@ class NormalizationService:
             
         return text
 
+    def _strip_quoted(self, token: str) -> Tuple[str, bool]:
+        """Strip quoted prefix and return (base_token, is_quoted)"""
+        if token.startswith("__QUOTED__"):
+            return token[len("__QUOTED__"):], True
+        return token, False
+
+    def _is_legal_form(self, base_cf: str) -> bool:
+        """Check if token is a legal company form"""
+        return base_cf in ORG_LEGAL_FORMS
+
+    def _looks_like_org(self, base: str) -> bool:
+        """Check if token looks like organization core/acronym"""
+        # Not initials, not number, matches org pattern
+        if self._is_initial(base):
+            return False
+        if base.isdigit():
+            return False
+        
+        # First check if it's a personal name (any language)
+        for lang in ['ru', 'uk', 'en']:
+            if self._classify_personal_role(base, lang) != 'unknown':
+                return False
+        
+        # Exclude common words that are not company names
+        common_non_org_words = {
+            'НЕИЗВЕСТНО', 'СТРАННОЕ', 'СЛОВО', 'ЧТО', 'КТО', 'ГДЕ', 'КОГДА', 'ПОЧЕМУ', 'КАК',
+            'UNKNOWN', 'STRANGE', 'WORD', 'WHAT', 'WHO', 'WHERE', 'WHEN', 'WHY', 'HOW',
+            'ДА', 'НЕТ', 'YES', 'NO', 'MAYBE', 'ВОЗМОЖНО'
+        }
+        if base in common_non_org_words:
+            return False
+        
+        # Check if it matches org pattern or looks like a company name
+        if ORG_TOKEN_RE.match(base):
+            return True
+        
+        # Additional check for company-like names (3+ chars, mostly uppercase)
+        if len(base) >= 3 and base.isupper() and not base.isdigit():
+            return True
+        
+        # Check for multi-word company names (like "ИВАНОВ И ПАРТНЁРЫ")
+        if ' ' in base and len(base) >= 5:
+            # Check if it contains mostly uppercase words
+            words = base.split()
+            uppercase_words = sum(1 for word in words if word.isupper() and len(word) >= 2)
+            if uppercase_words >= len(words) * 0.7:  # At least 70% uppercase words
+                return True
+        return False
+
     def _is_initial(self, token: str) -> bool:
         """Check if token is an initial (like 'А.' or 'P.')"""
         # Pattern: one or more letters each followed by a dot
         pattern = r'^[A-Za-zА-ЯІЇЄҐ]\.(?:[A-Za-zА-ЯІЇЄҐ]\.)*$'
         return bool(re.match(pattern, token))
+
+    def _split_multi_initial(self, token: str) -> List[str]:
+        """Split multi-initial token like 'П.І.' into ['П.', 'І.']"""
+        if not self._is_initial(token):
+            return [token]
+        
+        # Split by dots and reconstruct individual initials
+        parts = token.split('.')
+        initials = []
+        for part in parts:
+            if part.strip():  # Skip empty parts
+                initials.append(part.strip() + '.')
+        return initials
 
     def _cleanup_initial(self, token: str) -> str:
         """Normalize initial format (uppercase + dot)"""
@@ -468,156 +579,177 @@ class NormalizationService:
 
     def _tag_roles(self, tokens: List[str], language: str) -> List[Tuple[str, str]]:
         """
-        Tag each token with its role: 'given', 'surname', 'patronymic', 'initial', 'unknown'
+        Tag each token with its role: 'given', 'surname', 'patronymic', 'initial', 'org', 'legal_form', 'unknown'
         """
         tagged = []
         
         for i, token in enumerate(tokens):
-            role = 'unknown'
+            base, is_quoted = self._strip_quoted(token)
+            cf = base.casefold()
             
-            # Handle quoted tokens - they should be 'unknown' unless they're known names
-            if token.startswith("__QUOTED__"):
-                inner_token = token[10:]  # Remove "__QUOTED__" prefix
-                # Check if it's a known name, otherwise mark as unknown
-                if (self._looks_like_name(inner_token, language) or 
-                    inner_token.lower() in self.diminutive_maps.get(language, {})):
-                    role = 'given'
-                else:
-                    role = 'unknown'
-                # Keep the prefix to identify quoted tokens in normalization
-                tagged.append((token, role))  # Store with the prefix
+            # 1) Legal form (drop) - both quoted and unquoted
+            if self._is_legal_form(cf):
+                tagged.append((token, "legal_form"))
                 continue
             
-            # High-priority check: Legal company acronyms should always be 'unknown'
-            if token.casefold() in ORG_ACRONYMS:
-                tagged.append((token, 'unknown'))
-                continue  # Skip all other checks for this token
+            # 2) Organization core/acronym in quotes or outside
+            if is_quoted and self._looks_like_org(base):
+                # For quoted tokens, prioritize organization detection over personal names
+                # unless it's clearly a single personal name
+                if ' ' not in base:  # Single word - check if it's a personal name
+                    personal_role = self._classify_personal_role(base, language)
+                    if personal_role != "unknown":
+                        tagged.append((token, personal_role))
+                    else:
+                        tagged.append((token, "org"))
+                else:  # Multi-word - treat as organization
+                    tagged.append((token, "org"))
+                continue
+            if not is_quoted and self._looks_like_org(base) and cf not in ORG_LEGAL_FORMS:
+                # Preliminary org - will be confirmed if not overridden by personal name rules
+                prelim_org = True
+            else:
+                prelim_org = False
             
-            # Check if it's an initial
-            if self._is_initial(token):
-                # For concatenated initials like "С.В.", keep them as one token
-                role = 'initial'
+            # 3) Initials - split multi-initials
+            if self._is_initial(base):
+                # Split multi-initials like "П.І." into separate initials
+                split_initials = self._split_multi_initial(base)
+                for initial in split_initials:
+                    tagged.append((initial, "initial"))
+                continue
             
-            # Check diminutives first (higher priority than other checks)
-            elif language in self.diminutive_maps:
-                token_lower = token.lower()
-                if token_lower in self.diminutive_maps[language]:
-                    role = 'given'
+            # 4) Personal name classification (existing logic)
+            role = self._classify_personal_role(base, language)
             
-            # Check for patronymic patterns (Ukrainian/Russian) - higher priority
-            if role == 'unknown' and language in ['ru', 'uk']:
-                patronymic_patterns = [
-                    r'.*(?:ович|евич|йович|ійович|інович|инович)(?:а|у|ем|і|и|е)?$',  # Male patronymics with cases
-                    r'.*(?:ич)(?:\s|$)',  # Short patronymics
-                    r'.*(?:івна|ївна|инична|овна|евна|іївна)(?:а|и|у|ю|ої|ей|і|е)?$',  # Female patronymics with cases
-                    r'.*(?:борисовн|алексеевн|михайловн|владимировн|сергеевн|николаевн|петровн|ивановн).*$',  # Common patronymic roots
-                ]
-                
-                if any(re.match(pattern, token, re.IGNORECASE) for pattern in patronymic_patterns):
-                    role = 'patronymic'
+            if role != "unknown":
+                tagged.append((token, role))
+                continue
             
-            # Check against name dictionaries (including morphological forms)
-            if role == 'unknown':
-                token_lower = token.lower()
-                lang_names = self.name_dictionaries.get(language, set())
-                
-                # First check direct match
-                if token_lower in {name.lower() for name in lang_names}:
-                    role = 'given'
-                else:
-                    # Try morphological normalization to see if it matches a known name
-                    morph_form = self._morph_nominal(token, language)
-                    if morph_form in {name.lower() for name in lang_names}:
-                        role = 'given'
+            # 5) If preliminary org - confirm as org
+            if prelim_org:
+                tagged.append((token, "org"))
+                continue
             
-            # Check for surname patterns (Ukrainian/Russian)
-            if role == 'unknown' and language in ['ru', 'uk']:
-                surname_patterns = [
-                    # Ukrainian -enko endings with cases
-                    r'.*(?:енко|енка|енку|енком|енці)$',
-                    
-                    # -ov/-ova endings with all cases (most common Russian surnames)
-                    r'.*(?:ов|ова|ову|овим|овій|ові|ових|ого|овы|овой)$',
-                    
-                    # -ev/-eva endings with all cases
-                    r'.*(?:ев|ева|еву|евим|евій|еві|евих|его|евы|евой)$',
-                    
-                    # -in/-ina endings with all cases (like Пушкин/Пушкина)
-                    r'.*(?:ин|ина|ину|иным|иной|ине|иных|ине|ины)$',
-                    
-                    # -sky endings with cases
-                    r'.*(?:ський|ська|ську|ським|ській|ські|ських|ского|ская|скую|ским|ской|ские|ских)$',
-                    
-                    # -tsky endings with cases  
-                    r'.*(?:цький|цька|цьку|цьким|цькій|цькі|цьких|цкого|цкая|цкую|цким|цкой|цкие|цких)$',
-                    
-                    # Other common Russian surname endings
-                    r'.*(?:чук|юк|ак|ик|ич|ича|енок|ёнок|анов|янов|анова|янова)$',
-                    
-                    # Additional Russian patterns for surnames ending in consonants + case endings
-                    r'.*(?:[бвгджзклмнпрстфхцчшщ])(?:а|у|ом|е|ы|ой|ей|ами|ах|и)$',
-                ]
-                
-                if any(re.match(pattern, token, re.IGNORECASE) for pattern in surname_patterns):
-                    role = 'surname'
-            
-            # Handle compound surnames (with hyphens)
-            if role == 'unknown' and '-' in token:
-                # Split and check if parts look like surnames
-                parts = token.split('-')
-                if len(parts) == 2 and all(len(part) > 2 for part in parts):
-                    role = 'surname'
-            
-            # Check for common contextual words that are definitely not names
-            if role == 'unknown':
-                token_lower = token.lower()
-                # Common Ukrainian/Russian contextual words patterns
-                contextual_patterns = [
-                    r'^(подарунок|подарок)$',  # gift
-                    r'^(зустріч|встреча)$',    # meeting  
-                    r'^(розмовляв|разговаривал)$',  # talked
-                    r'^(квитки|билеты)$',      # tickets
-                    r'^(ремонт)$',             # repair
-                    r'^(творчість|творчество)$',  # creativity
-                    r'^(групи|группы)$',       # group
-                    r'^(океан|елізи|ельзи)$',  # band names
-                    r'^(колишній|бывший|former)$',  # former
-                    r'^(прем\'єр|премьер|pm)$',  # PM
-                    r'^(корпорація|corp)$',    # corp
-                    r'^o\.torvald$',           # specific band name
-                ]
-                
-                if any(re.match(pattern, token_lower, re.IGNORECASE) for pattern in contextual_patterns):
-                    role = 'unknown'
-                # Check for legal company acronyms - these should never be treated as person names
-                elif token.casefold() in ORG_ACRONYMS:
-                    role = 'unknown'
-                # Apply fallback heuristics for multi-token sequences (only if not a company acronym)
-                elif len(tokens) >= 2:
-                    if i == 0:  # First token -> likely given name  
-                        role = 'given'
-                    elif i == len(tokens) - 1:  # Last token -> likely surname
-                        role = 'surname'
-            
-            tagged.append((token, role))
+            # 6) Otherwise - unknown (positional defaults will be applied later)
+            tagged.append((token, "unknown"))
         
-        # Post-processing: Use positional heuristics to improve tagging
-        if len(tagged) >= 2:
-            tagged = self._apply_positional_heuristics(tagged, language)
+        # 7) Apply positional defaults for personal tokens only
+        person_indices = [i for i, (_, role) in enumerate(tagged) 
+                         if role in {"unknown", "given", "surname", "patronymic", "initial"}]
+        tagged = self._apply_positional_heuristics(tagged, language, person_indices)
         
         return tagged
 
-    def _apply_positional_heuristics(self, tagged: List[Tuple[str, str]], language: str) -> List[Tuple[str, str]]:
-        """Apply positional heuristics to improve role tagging"""
+    def _classify_personal_role(self, base: str, language: str) -> str:
+        """Classify token as personal name role (given/surname/patronymic/unknown)"""
+        # Check diminutives first (higher priority than other checks)
+        if language in self.diminutive_maps:
+            token_lower = base.lower()
+            if token_lower in self.diminutive_maps[language]:
+                return 'given'
+        
+        # Check for patronymic patterns (Ukrainian/Russian) - higher priority
+        if language in ['ru', 'uk']:
+            patronymic_patterns = [
+                r'.*(?:ович|евич|йович|ійович|інович|инович)(?:а|у|ем|і|и|е|ом|им|ім|ою|ію|ої|ії|ою|ію|ої|ії)?$',  # Male patronymics with cases
+                r'.*(?:ич)(?:\s|$)',  # Short patronymics
+                r'.*(?:івна|ївна|инична|овна|евна|іївна)$',  # Female patronymics nominative
+                r'.*(?:івни|ївни|овни|евни|іївни)$',  # Female patronymics genitive case
+                r'.*(?:івну|ївну|овну|евну|іївну)$',  # Female patronymics accusative case
+                r'.*(?:івною|ївною|овною|евною|іївною)$',  # Female patronymics instrumental case
+                r'.*(?:івні|ївні|овні|евні|іївні)$',  # Female patronymics prepositional/dative case
+                r'.*(?:борисовн|алексеевн|михайловн|владимировн|сергеевн|николаевн|петровн|ивановн).*$',  # Common patronymic roots
+            ]
+            
+            if any(re.match(pattern, base, re.IGNORECASE) for pattern in patronymic_patterns):
+                return 'patronymic'
+        
+        # Check against name dictionaries (including morphological forms)
+        token_lower = base.lower()
+        lang_names = self.name_dictionaries.get(language, set())
+        
+        # First check direct match
+        if token_lower in {name.lower() for name in lang_names}:
+            return 'given'
+        else:
+            # Try morphological normalization to see if it matches a known name
+            morph_form = self._morph_nominal(base, language)
+            if morph_form in {name.lower() for name in lang_names}:
+                return 'given'
+        
+        # Check for surname patterns (Ukrainian/Russian)
+        if language in ['ru', 'uk']:
+            surname_patterns = [
+                # Ukrainian -enko endings with cases
+                r'.*(?:енко|енка|енку|енком|енці|енкою|енцію|енкою|енцію|енкою|енцію|енкою|енцію)$',
+                
+                # -ov/-ova endings with all cases (most common Russian surnames)
+                r'.*(?:ов|ова|ову|овим|овій|ові|ових|ого|овы|овой|овою|овым|овыми)$',
+                
+                # -ev/-eva endings with all cases
+                r'.*(?:ев|ева|еву|евим|евій|еві|евих|его|евы|евой|евою|евою|евою|евою|евою|евою)$',
+                
+                # -in/-ina endings with all cases (like Пушкин/Пушкина)
+                r'.*(?:ин|ина|ину|иным|иной|ине|иных|ине|ины|иною|иною|иною|иною|иною|иною)$',
+                
+                # -sky endings with cases
+                r'.*(?:ський|ська|ську|ським|ській|ські|ських|ского|ская|скую|ским|ской|ские|ских|ською|ською|ською|ською|ською|ською)$',
+                
+                # -tsky endings with cases
+                r'.*(?:цький|цька|цьку|цьким|цькій|цькі|цьких|цкого|цкая|цкую|цким|цкой|цкие|цких|цькою|цькою|цькою|цькою|цькою|цькою)$',
+                
+                # Other common Russian surname endings
+                r'.*(?:чук|юк|ак|ик|ич|ича|енок|ёнок|анов|янов|анова|янова)$',
+                
+                # Armenian surnames ending in -ян with cases (broader pattern)
+                r'.*[а-яё]ян(?:а|у|ом|е|ы|ой|ей|ами|ах|и)?$',
+                
+                # Georgian surnames ending in -дзе
+                r'.*(?:дзе|дзею|дзе|дзем|дзех|дземи)$',
+                
+                # Additional Russian patterns for surnames ending in consonants + case endings
+                r'.*(?:[бвгджзклмнпрстфхцчшщ])(?:а|у|ом|е|ы|ой|ей|ами|ах|и)$',
+            ]
+            
+            if any(re.match(pattern, base, re.IGNORECASE) for pattern in surname_patterns):
+                return 'surname'
+        
+        # Check for English surname patterns
+        elif language == 'en':
+            # Common English surname patterns
+            english_surname_patterns = [
+                r'^[A-Z][a-z]+$',  # Capitalized word (like Smith, Johnson, Brown)
+                r'^[A-Z][a-z]+-[A-Z][a-z]+$',  # Hyphenated surnames (like Smith-Jones)
+            ]
+            
+            if any(re.match(pattern, base) for pattern in english_surname_patterns):
+                return 'surname'
+        
+        # Handle compound surnames (with hyphens)
+        if '-' in base:
+            # Split and check if parts look like surnames
+            parts = base.split('-')
+            if len(parts) == 2 and all(len(part) > 2 for part in parts):
+                return 'surname'
+        
+        return 'unknown'
+
+    def _apply_positional_heuristics(self, tagged: List[Tuple[str, str]], language: str, person_indices: Optional[List[int]] = None) -> List[Tuple[str, str]]:
+        """Apply positional heuristics to improve role tagging for personal tokens only"""
         if len(tagged) < 2:
             return tagged
+        
+        # If person_indices not provided, use all tokens (backward compatibility)
+        if person_indices is None:
+            person_indices = list(range(len(tagged)))
             
         improved = []
         for i, (token, role) in enumerate(tagged):
             new_role = role
             
-            # Skip positional heuristics for company acronyms - they should remain unknown
-            if token.casefold() in ORG_ACRONYMS:
+            # Only apply positional heuristics to personal tokens
+            if i not in person_indices:
                 improved.append((token, role))
                 continue
             
@@ -910,27 +1042,41 @@ class NormalizationService:
         person_gender = self._get_person_gender(tagged_tokens, language)
         
         for token, role in tagged_tokens:
-            # Skip ORG_ACRONYMS completely - they should never appear in normalized output
-            if token.casefold() in ORG_ACRONYMS:
+            base, is_quoted = self._strip_quoted(token)
+            
+            # Handle legal forms - completely ignore
+            if role == "legal_form":
+                continue
+            
+            # Handle organization cores - mark for separate collection
+            if role == "org":
+                # Mark as organization token for separate collection
+                normalized_tokens.append("__ORG__" + base)
+                traces.append(TokenTrace(
+                    token=token,
+                    role=role,
+                    rule="org-pass",
+                    morph_lang=language,
+                    normal_form=None,
+                    output=base,
+                    fallback=False,
+                    notes="quoted" if is_quoted else ""
+                ))
                 continue
             
             # Skip quoted tokens that are marked as 'unknown' - they should not appear in normalized output
-            if role == 'unknown' and token.startswith("__QUOTED__"):
+            if role == 'unknown' and is_quoted:
                 continue
             
-            # Strip the quoted prefix if present
-            if token.startswith("__QUOTED__"):
-                token = token[10:]  # Remove "__QUOTED__" prefix
-            
             # Don't skip potential names even if marked as 'unknown'
-            if role == 'unknown' and not (len(token) == 1 and token.isalpha() or 
-                                          self._is_likely_name_by_length_and_chars(token)):
+            if role == 'unknown' and not (len(base) == 1 and base.isalpha() or 
+                                          self._is_likely_name_by_length_and_chars(base)):
                 # Skip unknown tokens unless they're single letters or look like names
                 continue
             
             if role == 'initial':
                 # Normalize initial
-                normalized = self._cleanup_initial(token)
+                normalized = self._cleanup_initial(base)
                 normalized_tokens.append(normalized)
                 traces.append(TokenTrace(
                     token=token,
@@ -946,13 +1092,13 @@ class NormalizationService:
             elif role == 'unknown':
                 # Handle unknown tokens - just capitalize them
                 if enable_advanced_features:
-                    normalized = token.capitalize()
+                    normalized = base.capitalize()
                     rule = 'capitalize'
                 else:
-                    if token[0].isupper():
-                        normalized = token
+                    if base[0].isupper():
+                        normalized = base
                     else:
-                        normalized = token.capitalize()
+                        normalized = base.capitalize()
                     rule = 'basic_capitalize'
                 normalized_tokens.append(normalized)
                 traces.append(TokenTrace(
@@ -970,13 +1116,13 @@ class NormalizationService:
                 morphed = None  # Initialize morphed variable
                 if enable_advanced_features:
                     # Morphological normalization
-                    morphed = self._morph_nominal(token, language)
+                    morphed = self._morph_nominal(base, language)
                     
                     # Apply diminutive mapping if it's a given name
                     if role == 'given' and language in self.diminutive_maps:
                         diminutive_map = self.diminutive_maps[language]
                         # Check both the original token and morphed form
-                        token_lower = token.lower()
+                        token_lower = base.lower()
                         if token_lower in diminutive_map:
                             canonical = diminutive_map[token_lower]
                             normalized = canonical
@@ -1052,17 +1198,31 @@ class NormalizationService:
         traces = []
         
         for token, role in tagged_tokens:
-            # Skip ORG_ACRONYMS completely - they should never appear in normalized output
-            if token.casefold() in ORG_ACRONYMS:
+            base, is_quoted = self._strip_quoted(token)
+            
+            # Handle legal forms - completely ignore
+            if role == "legal_form":
+                continue
+            
+            # Handle organization cores - mark for separate collection
+            if role == "org":
+                # Mark as organization token for separate collection
+                normalized_tokens.append("__ORG__" + base)
+                traces.append(TokenTrace(
+                    token=token,
+                    role=role,
+                    rule="org-pass",
+                    morph_lang=language,
+                    normal_form=None,
+                    output=base,
+                    fallback=False,
+                    notes="quoted" if is_quoted else ""
+                ))
                 continue
             
             # Skip quoted tokens that are marked as 'unknown' - they should not appear in normalized output
-            if role == 'unknown' and token.startswith("__QUOTED__"):
+            if role == 'unknown' and is_quoted:
                 continue
-            
-            # Strip the quoted prefix if present
-            if token.startswith("__QUOTED__"):
-                token = token[10:]  # Remove "__QUOTED__" prefix
             
             # Don't skip unknown tokens for English - they might be middle names
             # if role == 'unknown':
@@ -1070,7 +1230,7 @@ class NormalizationService:
             
             if role == 'initial':
                 # Normalize initial
-                normalized = self._cleanup_initial(token)
+                normalized = self._cleanup_initial(base)
                 normalized_tokens.append(normalized)
                 traces.append(TokenTrace(
                     token=token,
@@ -1087,24 +1247,24 @@ class NormalizationService:
                 morphed = None  # Initialize morphed variable
                 if enable_advanced_features:
                     # Check for English nicknames first
-                    token_lower = token.lower()
+                    token_lower = base.lower()
                     if token_lower in ENGLISH_NICKNAMES:
                         normalized = ENGLISH_NICKNAMES[token_lower]
                         rule = 'english_nickname'
                         morphed = token_lower  # Store original for trace
                     else:
                         # Just capitalize properly, but preserve existing capitalization
-                        if token[0].isupper():
-                            normalized = token
+                        if base[0].isupper():
+                            normalized = base
                         else:
-                            normalized = token.capitalize()
+                            normalized = base.capitalize()
                         rule = 'capitalize'
                 else:
                     # Basic normalization only - preserve existing capitalization
-                    if token[0].isupper():
-                        normalized = token
+                    if base[0].isupper():
+                        normalized = base
                     else:
-                        normalized = token.capitalize()
+                        normalized = base.capitalize()
                     rule = 'basic_capitalize'
                 
                 normalized_tokens.append(normalized)
