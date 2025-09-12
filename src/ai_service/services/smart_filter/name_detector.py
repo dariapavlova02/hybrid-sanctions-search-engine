@@ -6,7 +6,7 @@ It uses simple heuristics like capitalization and dictionary lookups.
 """
 
 import re
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Any
 
 from ...utils.logging_config import get_logger
 
@@ -68,3 +68,44 @@ class NameDetector:
 
         self.logger.debug(f"Detected potential names in fallback: {potential_names}")
         return potential_names
+    
+    def detect_name_signals(self, text: str) -> Dict[str, Any]:
+        """
+        Detects name-related signals in text for smart filtering.
+        Returns a dictionary with signal information.
+        """
+        if not text:
+            return {
+                "has_names": False,
+                "name_count": 0,
+                "names": [],
+                "confidence": 0.0
+            }
+        
+        # Detect names using existing method
+        detected_names = self.detect_names(text)
+        
+        # Calculate confidence based on name count and text length
+        name_count = len(detected_names)
+        text_length = len(text.split())
+        
+        # Simple confidence calculation
+        if name_count == 0:
+            confidence = 0.0
+        elif name_count == 1:
+            confidence = 0.3
+        elif name_count >= 2:
+            confidence = 0.7
+        else:
+            confidence = 0.0
+        
+        # Adjust confidence based on text length
+        if text_length > 10 and name_count > 0:
+            confidence *= 0.8  # Reduce confidence for long texts with few names
+        
+        return {
+            "has_names": name_count > 0,
+            "name_count": name_count,
+            "names": detected_names,
+            "confidence": min(confidence, 1.0)
+        }

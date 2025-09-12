@@ -29,7 +29,7 @@ def check_python_version():
         logger.error("Python 3.12 or higher required")
         logger.error(f"Current version: {sys.version}")
         return False
-    
+
     logger.info(f"Python version: {sys.version.split()[0]}")
     return True
 
@@ -43,7 +43,7 @@ def check_poetry():
             return True
     except FileNotFoundError:
         pass
-    
+
     logger.error("Poetry not found")
     logger.info("Install Poetry: https://python-poetry.org/docs/#installation")
     return False
@@ -68,11 +68,11 @@ def check_spacy_models():
     """Check SpaCy models"""
     models = ['en_core_web_sm', 'ru_core_news_sm']
     missing_models = []
-    
+
     if spacy is None:
         logger.error("SpaCy not installed")
         return False
-    
+
     for model in models:
         try:
             nlp = spacy.load(model)
@@ -80,12 +80,12 @@ def check_spacy_models():
         except OSError:
             missing_models.append(model)
             logger.warning(f"SpaCy model {model} not found")
-    
+
     if missing_models:
         logger.info("Install missing models:")
         for model in missing_models:
             logger.info(f"  poetry run post-install")
-        
+
         # Try to install automatically
         logger.info("Automatic model installation...")
         for model in missing_models:
@@ -99,62 +99,62 @@ def check_spacy_models():
                     logger.error(f"Error installing {model}")
             except Exception as e:
                 logger.error(f"Error: {e}")
-    
+
     return len(missing_models) == 0
 
 
 def run_service():
     """Run service"""
     logger.info("Starting AI Service...")
-    
+
     # Handle both real file path and mocked __file__ in tests
     try:
         service_path = Path(__file__).parent / "src" / "ai_service" / "main.py"
     except (TypeError, AttributeError):
         # Fallback for tests where __file__ is mocked
         service_path = Path("src") / "ai_service" / "main.py"
-    
+
     if not service_path.exists():
         logger.error(f"Service file not found: {service_path}")
         return False
-    
+
     try:
         logger.info(f"Service path: {service_path}")
         logger.info("Service will be available at: http://localhost:8000")
         logger.info("API documentation: http://localhost:8000/docs")
         logger.info("Press Ctrl+C to stop")
-        
+
         # Starting service
         subprocess.run([
             'poetry', 'run', 'python', str(service_path)
         ])
-        
+
     except KeyboardInterrupt:
         logger.info("Service stopped")
     except Exception as e:
         logger.error(f"Error starting service: {e}")
         return False
-    
+
     return True
 
 
 def main():
     """Main function"""
     logger.info("Checking dependencies for AI Service...")
-    
+
     checks = [
         ("Python Version", check_python_version),
         ("Poetry", check_poetry),
         ("Dependencies", check_dependencies),
         ("SpaCy Models", check_spacy_models),
     ]
-    
+
     all_passed = True
     for check_name, check_func in checks:
         logger.info(f"--- {check_name} ---")
         if not check_func():
             all_passed = False
-    
+
     if all_passed:
         logger.info("All checks passed successfully!")
         run_service()

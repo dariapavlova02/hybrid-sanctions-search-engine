@@ -12,8 +12,8 @@ languages:
   uk:
     name: "Ukrainian"
     code: "uk"
-    stemmer: "snowball_russian"  # Fallback to Russian
-    stop_words: "russian"        # Fallback to Russian
+    stemmer: "pymorphy3_ukrainian"  # Use pymorphy3 for Ukrainian
+    stop_words: "russian"           # Fallback to Russian
     transliteration: "uk_standard"
 
 # Processing settings

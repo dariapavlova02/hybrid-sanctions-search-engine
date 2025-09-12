@@ -267,3 +267,7 @@ tmp/
 .env.development
 .env.test
 .env.production
+
+# Large data files (generated/processed)
+src/ai_service/data/processed_sanctioned_persons_*.json
+src/ai_service/data/templates/*.json

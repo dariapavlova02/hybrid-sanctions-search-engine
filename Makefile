@@ -1,53 +1,72 @@
-.PHONY: help install install-dev test test-cov lint clean docker-build docker-run docker-dev docker-stop
+.PHONY: help build run test clean deploy update logs
 
 help: ## Show this help message
-	@echo "Available commands:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $1, $2}'
+	@echo 'Usage: make [target]'
+	@echo ''
+	@echo 'Targets:'
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-install: ## Install production dependencies
-	poetry install --no-dev
+build: ## Build Docker image
+	docker build -t ai-service:latest .
 
-install-dev: ## Install all dependencies including development
-	poetry install
+run: ## Run container locally
+	docker-compose up -d
+
+stop: ## Stop container
+	docker-compose down
 
 test: ## Run tests
-	poetry run pytest -v
+	poetry run python -m pytest tests/ -v
 
-test-cov: ## Run tests with coverage
-	poetry run pytest --cov=src --cov-report=html --cov-report=term
+clean: ## Clean up containers and images
+	docker-compose down -v
+	docker rmi ai-service:latest || true
 
-lint: ## Run linting checks
-	poetry run flake8 src/ tests/
-	poetry run black --check src/ tests/
-	poetry run isort --check-only src/ tests/
+deploy: ## Deploy to server
+	@echo "Deploying to server..."
+	git push origin main
+	ssh user@server "cd /path/to/project && git pull && make update"
 
-format: ## Format code
-	poetry run black src/ tests/
-	poetry run isort src/ tests/
-
-clean: ## Clean up temporary files
-	find . -type d -name "__pycache__" -exec rm -rf {} +
-	find . -type f -name "*.pyc" -delete
-	find . -type f -name "*.pyo" -delete
-	find . -type f -name "*.pyd" -delete
-	rm -rf .coverage htmlcov/ .pytest_cache/ .mypy_cache/
-
-docker-build: ## Build Docker image
-	docker build -t ai-service .
-
-docker-run: ## Run production Docker container
-	docker run -d --name ai-service -p 8000:8000 ai-service
-
-docker-dev: ## Run development Docker container
-	docker-compose --profile dev up --build ai-service-dev
-
-docker-stop: ## Stop all Docker containers
+update: ## Update running container
+	@echo "Updating container..."
 	docker-compose down
-	docker stop ai-service || true
-	docker rm ai-service || true
+	docker-compose build --no-cache
+	docker-compose up -d
 
-start: ## Start the service locally
-	poetry run python run_local.py
+logs: ## Show container logs
+	docker-compose logs -f ai-service
 
-start-prod: ## Start the service in production mode
-	APP_ENV=production poetry run uvicorn src.ai_service.main:app --host 0.0.0.0 --port 8000 --workers 2
+status: ## Show container status
+	docker-compose ps
+
+health: ## Check service health
+	curl -f http://localhost:8000/health || echo "Service not healthy"
+
+install-deps: ## Install dependencies
+	poetry install
+
+download-models: ## Download SpaCy models
+	poetry run python -m spacy download en_core_web_sm
+	poetry run python -m spacy download ru_core_news_sm
+	poetry run python -m spacy download uk_core_news_sm
+
+setup: install-deps download-models ## Setup development environment
+	@echo "Development environment ready!"
+
+dev: ## Run in development mode
+	docker-compose --profile dev up -d ai-service-dev
+
+prod: ## Run in production mode
+	docker-compose up -d ai-service
+
+restart: ## Restart service
+	docker-compose restart ai-service
+
+shell: ## Access container shell
+	docker-compose exec ai-service /bin/bash
+
+backup: ## Backup data directory
+	tar -czf backup-$(shell date +%Y%m%d-%H%M%S).tar.gz data/
+
+restore: ## Restore from backup (usage: make restore BACKUP_FILE=backup-20231201-120000.tar.gz)
+	tar -xzf $(BACKUP_FILE) -C ./

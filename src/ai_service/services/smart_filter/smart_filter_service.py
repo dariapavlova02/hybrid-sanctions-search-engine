@@ -165,9 +165,7 @@ class SmartFilterService:
             company_signals = self.company_detector.detect_company_signals(
                 original_text
             )
-            name_signals = self.name_detector.detect_name_signals_with_context(
-                original_text, context_signals
-            )
+            name_signals = self.name_detector.detect_name_signals(original_text)
 
             # Combine results
             all_signals = {
