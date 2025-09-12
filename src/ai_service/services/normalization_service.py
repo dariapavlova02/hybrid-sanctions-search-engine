@@ -81,6 +81,9 @@ class NormalizationService:
         # Create diminutive mappings
         self.diminutive_maps = self._create_diminutive_maps()
         
+        # Load comprehensive diminutive dictionaries
+        self.dim2full_maps = self._load_dim2full_maps()
+        
         self.logger.info("NormalizationService initialized")
 
     def _load_name_dictionaries(self) -> Dict[str, Set[str]]:
@@ -174,6 +177,28 @@ class NormalizationService:
                         
         except Exception as e:
             self.logger.warning(f"Failed to create diminutive maps: {e}")
+            
+        return maps
+    
+    def _load_dim2full_maps(self) -> Dict[str, Dict[str, str]]:
+        """Load comprehensive diminutive to full name mappings"""
+        maps = {'uk': {}, 'ru': {}, 'en': {}}
+        
+        try:
+            # Load Russian diminutives
+            from ..data.dicts.russian_diminutives import RUSSIAN_DIMINUTIVES
+            maps['ru'] = RUSSIAN_DIMINUTIVES
+            
+            # Load Ukrainian diminutives
+            from ..data.dicts.ukrainian_diminutives import UKRAINIAN_DIMINUTIVES
+            maps['uk'] = UKRAINIAN_DIMINUTIVES
+            
+            # Load English nicknames
+            from ..data.dicts.english_nicknames import ENGLISH_NICKNAMES
+            maps['en'] = {k.lower(): v for k, v in ENGLISH_NICKNAMES.items()}
+            
+        except ImportError as e:
+            self.logger.warning(f"Could not load diminutive dictionaries: {e}")
             
         return maps
 
@@ -420,15 +445,13 @@ class NormalizationService:
                     if last_token.endswith("'"):
                         quoted_tokens.append(last_token[:-1])  # Remove closing quote
                     i += 1
+                    # Join quoted tokens and mark as quoted
+                    quoted_phrase = " ".join(quoted_tokens)
+                    original_case_tokens.append(f"__QUOTED__{quoted_phrase}")
                 else:
                     # No closing quote found, treat as regular tokens
                     for t in quoted_tokens:
                         original_case_tokens.append(t)
-                    continue
-                
-                # Join quoted tokens and mark as quoted
-                quoted_phrase = " ".join(quoted_tokens)
-                original_case_tokens.append(f"__QUOTED__{quoted_phrase}")
                 continue
             
             # Regular token
@@ -682,8 +705,11 @@ class NormalizationService:
         
         if token_lower in non_name_words:
             return 'unknown'
-        
+            
         # Check diminutives first (higher priority than other checks)
+        if language in self.dim2full_maps:
+            if token_lower in self.dim2full_maps[language]:
+                return 'given'
         if language in self.diminutive_maps:
             if token_lower in self.diminutive_maps[language]:
                 return 'given'
@@ -703,59 +729,59 @@ class NormalizationService:
             
             if any(re.match(pattern, base, re.IGNORECASE) for pattern in patronymic_patterns):
                 return 'patronymic'
-        
-        # Check against name dictionaries (including morphological forms)
-        token_lower = base.lower()
-        lang_names = self.name_dictionaries.get(language, set())
-        
-        # First check direct match
-        if token_lower in {name.lower() for name in lang_names}:
-            return 'given'
-        else:
-            # Try morphological normalization to see if it matches a known name
-            morph_form = self._morph_nominal(base, language)
-            if morph_form in {name.lower() for name in lang_names}:
-                return 'given'
-        
-        # Check for surname patterns (Ukrainian/Russian)
-        if language in ['ru', 'uk']:
-            surname_patterns = [
-                # Ukrainian -enko endings with cases
-                r'.*(?:енко|енка|енку|енком|енці|енкою|енцію|енкою|енцію|енкою|енцію|енкою|енцію)$',
-                
-                # -ov/-ova endings with all cases (most common Russian surnames)
-                r'.*(?:ов|ова|ову|овим|овій|ові|ових|ого|овы|овой|овою|овым|овыми)$',
-                
-                # -ev/-eva endings with all cases
-                r'.*(?:ев|ева|еву|евим|евій|еві|евих|его|евы|евой|евою|евою|евою|евою|евою|евою)$',
-                
-                # -in/-ina endings with all cases (like Пушкин/Пушкина)
-                r'.*(?:ин|ина|ину|иным|иной|ине|иных|ине|ины|иною|иною|иною|иною|иною|иною)$',
-                
-                # -sky endings with cases
-                r'.*(?:ський|ська|ську|ським|ській|ські|ських|ского|ская|скую|ским|ской|ские|ских|ською|ською|ською|ською|ською|ською)$',
-                
-                # -tsky endings with cases
-                r'.*(?:цький|цька|цьку|цьким|цькій|цькі|цьких|цкого|цкая|цкую|цким|цкой|цкие|цких|цькою|цькою|цькою|цькою|цькою|цькою)$',
-                
-                # Other common Russian surname endings
-                r'.*(?:чук|юк|ак|ик|ич|ича|енок|ёнок|анов|янов|анова|янова)$',
-                
-                # Armenian surnames ending in -ян with cases (broader pattern)
-                r'.*[а-яё]ян(?:а|у|ом|е|ы|ой|ей|ами|ах|и)?$',
-                
-                # Georgian surnames ending in -дзе
-                r'.*(?:дзе|дзею|дзе|дзем|дзех|дземи)$',
-                
-                # Additional Russian patterns for surnames ending in consonants + case endings
-                r'.*(?:[бвгджзклмнпрстфхцчшщ])(?:а|у|ом|е|ы|ой|ей|ами|ах|и)$',
-            ]
             
-            if any(re.match(pattern, base, re.IGNORECASE) for pattern in surname_patterns):
-                return 'surname'
+            # Check against name dictionaries (including morphological forms)
+            token_lower = base.lower()
+            lang_names = self.name_dictionaries.get(language, set())
+            
+            # First check direct match
+            if token_lower in {name.lower() for name in lang_names}:
+                return 'given'
+            else:
+                # Try morphological normalization to see if it matches a known name
+                morph_form = self._morph_nominal(base, language)
+                if morph_form in {name.lower() for name in lang_names}:
+                    return 'given'
+            
+            # Check for surname patterns (Ukrainian/Russian)
+            if language in ['ru', 'uk']:
+                surname_patterns = [
+                    # Ukrainian -enko endings with cases
+                    r'.*(?:енко|енка|енку|енком|енці|енкою|енцію|енкою|енцію|енкою|енцію|енкою|енцію)$',
+                    
+                    # -ov/-ova endings with all cases (most common Russian surnames)
+                    r'.*(?:ов|ова|ову|овим|овій|ові|ових|ого|овы|овой|овою|овым|овыми)$',
+                    
+                    # -ev/-eva endings with all cases
+                    r'.*(?:ев|ева|еву|евим|евій|еві|евих|его|евы|евой|евою|евою|евою|евою|евою|евою)$',
+                    
+                    # -in/-ina endings with all cases (like Пушкин/Пушкина)
+                    r'.*(?:ин|ина|ину|иным|иной|ине|иных|ине|ины|иною|иною|иною|иною|иною|иною)$',
+                    
+                    # -sky endings with cases
+                    r'.*(?:ський|ська|ську|ським|ській|ські|ських|ского|ская|скую|ским|ской|ские|ских|ською|ською|ською|ською|ською|ською)$',
+                    
+                    # -tsky endings with cases  
+                    r'.*(?:цький|цька|цьку|цьким|цькій|цькі|цьких|цкого|цкая|цкую|цким|цкой|цкие|цких|цькою|цькою|цькою|цькою|цькою|цькою)$',
+                    
+                    # Other common Russian surname endings
+                    r'.*(?:чук|юк|ак|ик|ич|ича|енок|ёнок|анов|янов|анова|янова)$',
+                    
+                    # Armenian surnames ending in -ян with cases (broader pattern)
+                    r'.*[а-яё]ян(?:а|у|ом|е|ы|ой|ей|ами|ах|и)?$',
+                    
+                    # Georgian surnames ending in -дзе
+                    r'.*(?:дзе|дзею|дзе|дзем|дзех|дземи)$',
+                    
+                    # Additional Russian patterns for surnames ending in consonants + case endings
+                    r'.*(?:[бвгджзклмнпрстфхцчшщ])(?:а|у|ом|е|ы|ой|ей|ами|ах|и)$',
+                ]
+                
+                if any(re.match(pattern, base, re.IGNORECASE) for pattern in surname_patterns):
+                    return 'surname'
         
         # Check for English surname patterns
-        elif language == 'en':
+        if language == 'en':
             # Common English surname patterns
             english_surname_patterns = [
                 r'^[A-Z][a-z]+$',  # Capitalized word (like Smith, Johnson, Brown)
@@ -764,13 +790,13 @@ class NormalizationService:
             
             if any(re.match(pattern, base) for pattern in english_surname_patterns):
                 return 'surname'
-        
-        # Handle compound surnames (with hyphens)
-        if '-' in base:
-            # Split and check if parts look like surnames
-            parts = base.split('-')
-            if len(parts) == 2 and all(len(part) > 2 for part in parts):
-                return 'surname'
+            
+            # Handle compound surnames (with hyphens)
+            if '-' in base:
+                # Split and check if parts look like surnames
+                parts = base.split('-')
+                if len(parts) == 2 and all(len(part) > 2 for part in parts):
+                    return 'surname'
         
         return 'unknown'
 
@@ -813,11 +839,12 @@ class NormalizationService:
         """Get morphological analyzer for language"""
         return self.morph_analyzers.get(language)
 
-    @lru_cache(maxsize=1000)
+    @lru_cache(maxsize=10000)
     @monitor_performance("morph_nominal")
     def _morph_nominal(self, token: str, primary_lang: str) -> str:
         """
-        Get nominative form of a token using morphological analysis
+        Get nominative form of a token using morphological analysis.
+        Prioritizes Name/Surn parts of speech and nominative case.
         """
         morph_analyzer = self._get_morph(primary_lang)
         if not morph_analyzer:
@@ -836,40 +863,43 @@ class NormalizationService:
                 if not parses:
                     return token  # Preserve original case
                 
-                # Try to inflect the best parse to nominative case
-                best_parse = parses[0]
+                # Prefer Name/Surn parts of speech for proper nouns
+                name_parses = []
+                other_parses = []
+                
+                for parse in parses:
+                    pos = str(parse.tag.POS) if hasattr(parse.tag, 'POS') else ''
+                    if pos in ['Name', 'Surn']:
+                        name_parses.append(parse)
+                    else:
+                        other_parses.append(parse)
+                
+                # Use name parses if available, otherwise use all parses
+                target_parses = name_parses if name_parses else other_parses
+                
+                # Find the best parse with nominative case
+                best_parse = None
+                for parse in target_parses:
+                    if hasattr(parse.tag, 'case') and 'nomn' in str(parse.tag.case):
+                        best_parse = parse
+                        break
+                
+                # If no nominative found, use the first parse
+                if not best_parse:
+                    best_parse = target_parses[0] if target_parses else parses[0]
+                
+                # Try to inflect to nominative case
                 nom_inflection = best_parse.inflect({'nomn'})
                 if nom_inflection:
                     result = self._normalize_characters(nom_inflection.word)
-                    if token[0].isupper() and result[0].islower():
-                        # Preserve original case for proper nouns
-                        if '-' in result:
-                            # Handle compound words - capitalize each part
-                            parts = result.split('-')
-                            capitalized_parts = [part[0].upper() + part[1:] for part in parts]
-                            result = '-'.join(capitalized_parts)
-                        else:
-                            result = result[0].upper() + result[1:]
-                    return result
+                else:
+                    # Use normal form as fallback
+                    result = self._normalize_characters(best_parse.normal_form)
                 
-                # If already nominative or can't inflect, return normal form
-                if hasattr(best_parse.tag, 'case') and 'nomn' in str(best_parse.tag.case):
-                    result = self._normalize_characters(best_parse.word)
-                    if token[0].isupper() and result[0].islower():
-                        # Preserve original case for proper nouns
-                        if '-' in result:
-                            # Handle compound words - capitalize each part
-                            parts = result.split('-')
-                            capitalized_parts = [part[0].upper() + part[1:] for part in parts]
-                            result = '-'.join(capitalized_parts)
-                        else:
-                            result = result[0].upper() + result[1:]
-                    return result
-                
-                # Fallback to normal form, but preserve original case if it was uppercase
-                result = self._normalize_characters(best_parse.normal_form)
-                if token[0].isupper() and result[0].islower():
-                    # Preserve original case for proper nouns
+                # Preserve original case for proper nouns
+                if token.isupper() and result.islower():
+                    result = result.upper()
+                elif token[0].isupper() and result[0].islower():
                     if '-' in result:
                         # Handle compound words - capitalize each part
                         parts = result.split('-')
@@ -877,6 +907,7 @@ class NormalizationService:
                         result = '-'.join(capitalized_parts)
                     else:
                         result = result[0].upper() + result[1:]
+                
                 return result
             
             else:
@@ -902,21 +933,40 @@ class NormalizationService:
         """Special normalization for Ukrainian surnames that get misanalyzed"""
         token_lower = token.lower()
         
-        # Handle -ська/-ський surnames (masculine/feminine forms)
-        if token_lower.endswith('ської'):  # genitive feminine
-            return token_lower[:-5] + 'ський'  # nominative masculine
-        elif token_lower.endswith('ська'):  # nominative feminine
-            return token_lower[:-4] + 'ський'  # nominative masculine
-        elif token_lower.endswith('ському'):  # dative masculine
-            return token_lower[:-5] + 'ський'  # nominative masculine
-        elif token_lower.endswith('ського'):  # genitive masculine
-            return token_lower[:-6] + 'ський'  # nominative masculine
+        # Keep -енко surnames indeclinable (they don't change by gender)
+        if token_lower.endswith('енко'):
+            return token  # Keep as is
         
-        # Handle -цька/-цький surnames
+        # Handle -ський/-ська surnames (masculine/feminine forms)
+        if token_lower.endswith('ської'):  # genitive feminine
+            result = token_lower[:-5] + 'ський'  # nominative masculine
+            return result.capitalize() if token[0].isupper() else result
+        elif token_lower.endswith('ська'):  # nominative feminine
+            result = token_lower[:-4] + 'ський'  # nominative masculine
+            return result.capitalize() if token[0].isupper() else result
+        elif token_lower.endswith('ському'):  # dative masculine
+            result = token_lower[:-6] + 'ський'  # nominative masculine
+            return result.capitalize() if token[0].isupper() else result
+        elif token_lower.endswith('ського'):  # genitive masculine
+            result = token_lower[:-6] + 'ський'  # nominative masculine
+            return result.capitalize() if token[0].isupper() else result
+        elif token_lower.endswith('ським'):  # instrumental masculine
+            result = token_lower[:-4] + 'ський'  # nominative masculine
+            return result.capitalize() if token[0].isupper() else result
+        elif token_lower.endswith('ськім'):  # locative masculine
+            result = token_lower[:-4] + 'ський'  # nominative masculine
+            return result.capitalize() if token[0].isupper() else result
+        elif token_lower.endswith('ські'):  # nominative plural
+            result = token_lower[:-3] + 'ський'  # nominative masculine
+            return result.capitalize() if token[0].isupper() else result
+        
+        # Handle -цький/-цька surnames
         elif token_lower.endswith('цької'):  # genitive feminine
-            return token_lower[:-5] + 'цький'  # nominative masculine
+            result = token_lower[:-5] + 'цький'  # nominative masculine
+            return result.capitalize() if token[0].isupper() else result
         elif token_lower.endswith('цька'):  # nominative feminine
-            return token_lower[:-4] + 'цький'  # nominative masculine
+            result = token_lower[:-4] + 'цький'  # nominative masculine
+            return result.capitalize() if token[0].isupper() else result
         elif token_lower.endswith('цькому'):  # dative masculine
             return token_lower[:-5] + 'цький'  # nominative masculine
         elif token_lower.endswith('цького'):  # genitive masculine
@@ -924,26 +974,33 @@ class NormalizationService:
         
         # Handle -ова/-ов surnames
         elif token_lower.endswith('ової'):  # genitive feminine
-            return token_lower[:-4] + 'ов'  # nominative masculine
+            result = token_lower[:-4] + 'ов'  # nominative masculine
+            return result.capitalize() if token[0].isupper() else result
         elif token_lower.endswith('ова'):  # nominative feminine
-            return token_lower[:-3] + 'ов'  # nominative masculine
+            result = token_lower[:-3] + 'ов'  # nominative masculine
+            return result.capitalize() if token[0].isupper() else result
         elif token_lower.endswith('овому'):  # dative masculine
-            return token_lower[:-5] + 'ов'  # nominative masculine
+            result = token_lower[:-5] + 'ов'  # nominative masculine
+            return result.capitalize() if token[0].isupper() else result
         elif token_lower.endswith('іва'):  # alternative feminine form
-            return token_lower[:-3] + 'ов'  # nominative masculine
+            result = token_lower[:-3] + 'ов'  # nominative masculine
+            return result.capitalize() if token[0].isupper() else result
         
         # Handle -енко surnames (they don't change)
         elif token_lower.endswith('енка'):  # genitive
-            return token_lower[:-1] + 'о'  # nominative
+            result = token_lower[:-1] + 'о'  # nominative
+            return result.capitalize() if token[0].isupper() else result
         elif token_lower.endswith('енком'):  # instrumental
-            return token_lower[:-2] + 'о'  # nominative
+            result = token_lower[:-2] + 'о'  # nominative
+            return result.capitalize() if token[0].isupper() else result
         elif token_lower.endswith('енці'):  # locative
-            return token_lower[:-2] + 'о'  # nominative
+            result = token_lower[:-2] + 'о'  # nominative
+            return result.capitalize() if token[0].isupper() else result
         
         # Handle other common surname patterns
         elif token_lower.endswith('ич') or token_lower.endswith('юк') or token_lower.endswith('ук'):
             # These don't usually change in Ukrainian
-            return token_lower
+            return token
         
         return None
 
@@ -1082,6 +1139,7 @@ class NormalizationService:
         
         for token, role in tagged_tokens:
             base, is_quoted = self._strip_quoted(token)
+            normalized = None  # Initialize normalized variable
             
             # Handle legal forms - completely ignore
             if role == "legal_form":
@@ -1154,58 +1212,65 @@ class NormalizationService:
                 if enable_advanced_features:
                     # Morphological normalization
                     morphed = self._morph_nominal(base, language)
-                    
-                    # Apply diminutive mapping if it's a given name
-                    if role == 'given' and language in self.diminutive_maps:
-                        diminutive_map = self.diminutive_maps[language]
-                        # Check both the original token and morphed form
+                
+                # Apply diminutive mapping if it's a given name
+                if role == 'given' and enable_advanced_features:
+                    # First try comprehensive diminutive dictionaries
+                    if language in self.dim2full_maps:
                         token_lower = base.lower()
-                        if token_lower in diminutive_map:
-                            canonical = diminutive_map[token_lower]
-                            normalized = canonical
+                        if token_lower in self.dim2full_maps[language]:
+                            canonical = self.dim2full_maps[language][token_lower]
+                            normalized = canonical.capitalize()
                             rule = 'diminutive_dict'
-                        elif morphed in diminutive_map:
-                            canonical = diminutive_map[morphed]
-                            normalized = canonical
+                        elif morphed and morphed.lower() in self.dim2full_maps[language]:
+                            canonical = self.dim2full_maps[language][morphed.lower()]
+                            normalized = canonical.capitalize()
                             rule = 'diminutive_dict'
                         else:
-                            # Preserve existing capitalization if it starts with uppercase
-                            if morphed[0].isupper():
-                                normalized = morphed
-                            else:
-                                normalized = morphed.capitalize()
-                            rule = 'morph'
-                    else:
-                        # Preserve existing capitalization if it starts with uppercase
-                        if morphed[0].isupper():
-                            normalized = morphed
-                        else:
-                            normalized = morphed.capitalize()
-                        rule = 'morph'
-                    
-                    # Gender adjustment for surnames (including compound surnames)
-                    if role == 'surname':
-                        if '-' in normalized:
-                            # Handle compound surnames
-                            parts = normalized.split('-')
-                            adjusted_parts = []
-                            for part in parts:
-                                # Capitalize each part properly
-                                part_capitalized = part.capitalize()
-                                adjusted_part = self._gender_adjust_surname(part_capitalized, part_capitalized, person_gender)
-                                adjusted_parts.append(adjusted_part)
-                            adjusted = '-'.join(adjusted_parts)
-                        else:
-                            adjusted = self._gender_adjust_surname(normalized, token, person_gender)
-                        
-                        if adjusted != normalized:
-                            normalized = adjusted
-                            rule = 'morph_gender_adjusted'
+                            # Fallback to old diminutive maps
+                            if language in self.diminutive_maps:
+                                diminutive_map = self.diminutive_maps[language]
+                                if token_lower in diminutive_map:
+                                    canonical = diminutive_map[token_lower]
+                                    normalized = canonical.capitalize()
+                                    rule = 'diminutive_dict'
+                                elif morphed and morphed.lower() in diminutive_map:
+                                    canonical = diminutive_map[morphed.lower()]
+                                    normalized = canonical.capitalize()
+                                    rule = 'diminutive_dict'
+                                else:
+                                    # Use morphed form
+                                    if morphed and morphed[0].isupper():
+                                        normalized = morphed
+                                    else:
+                                        normalized = morphed.capitalize() if morphed else base.capitalize()
+                                    rule = 'morph'
                 else:
-                    # Basic normalization only - just capitalize
-                    normalized = token.capitalize()
-                    rule = 'basic_capitalize'
-                    morphed = None  # No morphological form for basic normalization
+                    # For non-given names, use morphed form
+                    if morphed and morphed[0].isupper():
+                        normalized = morphed
+                    else:
+                        normalized = morphed.capitalize() if morphed else base.capitalize()
+                    rule = 'morph'
+                
+                # Gender adjustment for surnames (including compound surnames)
+                if role == 'surname' and enable_advanced_features:
+                    if '-' in normalized:
+                        # Handle compound surnames
+                        parts = normalized.split('-')
+                        adjusted_parts = []
+                        for part in parts:
+                            # Capitalize each part properly
+                            part_capitalized = part.capitalize()
+                            adjusted_part = self._gender_adjust_surname(part_capitalized, part_capitalized, person_gender)
+                            adjusted_parts.append(adjusted_part)
+                        adjusted = '-'.join(adjusted_parts)
+                    else:
+                        adjusted = self._gender_adjust_surname(normalized, token, person_gender)
+                    
+                    if adjusted != normalized:
+                        normalized = adjusted
+                        rule = 'morph_gender_adjusted'
                 
                 normalized_tokens.append(normalized)
                 traces.append(TokenTrace(
