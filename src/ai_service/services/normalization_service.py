@@ -279,6 +279,7 @@ class NormalizationService:
             
             # Step 2: Tag roles
             tagged_tokens = self._tag_roles(tokens, language)
+            original_tagged_tokens = tagged_tokens.copy()  # Keep original for organization processing
             
             # Step 3: Normalize by role
             if language == 'en':
@@ -302,30 +303,10 @@ class NormalizationService:
             # Step 6: Group organization tokens into phrases
             organizations = []
             if org_tokens:
-                # Split organizations by legal forms in original text
-                original_tagged = self._tag_roles(tokens, language)
-                current_org = []
-                
-                print(f"DEBUG: Processing {len(original_tagged)} tagged tokens")
-                for token, role in original_tagged:
-                    print(f"DEBUG: {token} -> {role}")
-                    if role == 'org':
-                        current_org.append(token)
-                        print(f"DEBUG: Added to current_org: {current_org}")
-                    elif role == 'legal_form':
-                        # End of current organization
-                        print(f"DEBUG: Legal form found, ending current org: {current_org}")
-                        if current_org:
-                            organizations.append(" ".join(current_org))
-                            current_org = []
-                            print(f"DEBUG: Organizations so far: {organizations}")
-                
-                # Add final organization if exists
-                if current_org:
-                    organizations.append(" ".join(current_org))
-                    print(f"DEBUG: Final organization: {current_org}")
-                
-                print(f"DEBUG: Final organizations: {organizations}")
+                # Treat each org token as a separate organization
+                for token in org_tokens:
+                    if token:  # Skip empty tokens
+                        organizations.append(token)
             
             processing_time = time.time() - start_time
             
