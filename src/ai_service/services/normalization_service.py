@@ -302,18 +302,30 @@ class NormalizationService:
             # Step 6: Group organization tokens into phrases
             organizations = []
             if org_tokens:
-                # Group consecutive org tokens into phrases
+                # Split organizations by legal forms in original text
+                original_tagged = self._tag_roles(tokens, language)
                 current_org = []
-                for token in org_tokens:
-                    if token:  # Skip empty tokens
+                
+                print(f"DEBUG: Processing {len(original_tagged)} tagged tokens")
+                for token, role in original_tagged:
+                    print(f"DEBUG: {token} -> {role}")
+                    if role == 'org':
                         current_org.append(token)
-                    else:
+                        print(f"DEBUG: Added to current_org: {current_org}")
+                    elif role == 'legal_form':
                         # End of current organization
+                        print(f"DEBUG: Legal form found, ending current org: {current_org}")
                         if current_org:
                             organizations.append(" ".join(current_org))
                             current_org = []
+                            print(f"DEBUG: Organizations so far: {organizations}")
+                
+                # Add final organization if exists
                 if current_org:
                     organizations.append(" ".join(current_org))
+                    print(f"DEBUG: Final organization: {current_org}")
+                
+                print(f"DEBUG: Final organizations: {organizations}")
             
             processing_time = time.time() - start_time
             
@@ -596,13 +608,12 @@ class NormalizationService:
             base, is_quoted = self._strip_quoted(token)
             cf = base.casefold()
             
-            # 1) Legal form (drop) - both quoted and unquoted
+            # 1) Legal form - mark but don't skip
             if self._is_legal_form(cf):
                 tagged.append((token, "legal_form"))
                 continue
-            
             # 2) Organization core/acronym in quotes or outside
-            if is_quoted and self._looks_like_org(base):
+            elif is_quoted and self._looks_like_org(base):
                 # For quoted tokens, prioritize organization detection over personal names
                 # unless it's clearly a single personal name
                 if ' ' not in base:  # Single word - check if it's a personal name
@@ -614,7 +625,7 @@ class NormalizationService:
                 else:  # Multi-word - treat as organization
                     tagged.append((token, "org"))
                 continue
-            if not is_quoted and self._looks_like_org(base) and cf not in ORG_LEGAL_FORMS:
+            elif not is_quoted and self._looks_like_org(base) and cf not in ORG_LEGAL_FORMS:
                 # Preliminary org - will be confirmed if not overridden by personal name rules
                 prelim_org = True
             else:
