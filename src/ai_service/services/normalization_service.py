@@ -175,26 +175,38 @@ class NormalizationService:
     # Also create the method with the signature used in tests
     @monitor_performance("normalize")
     @monitor_memory_usage
-    async def normalize(self, text: str, language: str = 'auto') -> NormalizationResult:
+    async def normalize(self, text: str, language: str = 'auto', 
+                       remove_stop_words: bool = True, 
+                       preserve_names: bool = True, 
+                       enable_advanced_features: bool = True) -> NormalizationResult:
         """
         Normalize name text using morphological pipeline
         
         Args:
             text: Input text containing person names
             language: Language code or 'auto' for detection
+            remove_stop_words: If False, skip STOP_ALL filtering
+            preserve_names: If False, be more aggressive with separators
+            enable_advanced_features: If False, skip morphology and advanced features
             
         Returns:
             NormalizationResult with normalized text and trace
         """
-        return self._normalize_sync(text, language)
+        return self._normalize_sync(text, language, remove_stop_words, preserve_names, enable_advanced_features)
 
-    def _normalize_sync(self, text: str, language: str = 'auto') -> NormalizationResult:
+    def _normalize_sync(self, text: str, language: str = 'auto', 
+                       remove_stop_words: bool = True, 
+                       preserve_names: bool = True, 
+                       enable_advanced_features: bool = True) -> NormalizationResult:
         """
         Normalize name text using morphological pipeline
         
         Args:
             text: Input text containing person names
             language: Language code or 'auto' for detection
+            remove_stop_words: If False, skip STOP_ALL filtering
+            preserve_names: If False, be more aggressive with separators
+            enable_advanced_features: If False, skip morphology and advanced features
             
         Returns:
             NormalizationResult with normalized text and trace
@@ -229,16 +241,16 @@ class NormalizationService:
                 confidence = 1.0
             
             # Step 1: Strip noise and tokenize
-            tokens = self._strip_noise_and_tokenize(text, language)
+            tokens = self._strip_noise_and_tokenize(text, language, remove_stop_words, preserve_names)
             
             # Step 2: Tag roles
             tagged_tokens = self._tag_roles(tokens, language)
             
             # Step 3: Normalize by role
             if language == 'en':
-                normalized_tokens, traces = self._normalize_english_tokens(tagged_tokens, language)
+                normalized_tokens, traces = self._normalize_english_tokens(tagged_tokens, language, enable_advanced_features)
             else:
-                normalized_tokens, traces = self._normalize_slavic_tokens(tagged_tokens, language)
+                normalized_tokens, traces = self._normalize_slavic_tokens(tagged_tokens, language, enable_advanced_features)
             
             # Step 4: Reconstruct result  
             normalized_text = self._reconstruct_text(normalized_tokens, traces)
@@ -281,9 +293,17 @@ class NormalizationService:
                 success=False
             )
 
-    def _strip_noise_and_tokenize(self, text: str, language: str = 'uk') -> List[str]:
+    def _strip_noise_and_tokenize(self, text: str, language: str = 'uk', 
+                                 remove_stop_words: bool = True, 
+                                 preserve_names: bool = True) -> List[str]:
         """
         Clean text and tokenize, preserving only potential name tokens
+        
+        Args:
+            text: Input text to tokenize
+            language: Language code for processing
+            remove_stop_words: If False, skip STOP_ALL filtering
+            preserve_names: If False, be more aggressive with separators
         """
         if not text:
             return []
@@ -299,7 +319,14 @@ class NormalizationService:
         
         # Remove obvious non-name elements (digits, some punctuation)
         text = re.sub(r'\d+', ' ', text)  # Remove digits
-        text = re.sub(r'[^\w\s\.\-\'\u0400-\u04FF\u0370-\u03FF]', ' ', text)  # Keep letters, dots, hyphens, apostrophes, Cyrillic, Greek
+        
+        if preserve_names:
+            # Keep letters, dots, hyphens, apostrophes, Cyrillic, Greek
+            text = re.sub(r'[^\w\s\.\-\'\u0400-\u04FF\u0370-\u03FF]', ' ', text)
+        else:
+            # Be more aggressive - split on separators and remove them
+            text = re.sub(r'[^\w\s\u0400-\u04FF\u0370-\u03FF]', ' ', text)  # Remove dots, hyphens, apostrophes
+        
         text = re.sub(r'\s+', ' ', text).strip()
         
         # Tokenize (simple whitespace split, but preserve punctuation in tokens)
@@ -308,11 +335,12 @@ class NormalizationService:
             if len(token) >= 1:
                 tokens.append(token)
         
-        # Filter out stopwords
+        # Filter out stopwords (if enabled)
         filtered_tokens = []
         for token in tokens:
-            if token.lower() not in STOP_ALL:
-                filtered_tokens.append(token)
+            if remove_stop_words and token.lower() in STOP_ALL:
+                continue  # Skip stop words
+            filtered_tokens.append(token)
         
         # Apply capitalization heuristic - keep only tokens that started with uppercase
         # or if entire text was uppercase/lowercase, title-case them
@@ -339,7 +367,11 @@ class NormalizationService:
                         len(token) <= 3 or  # Keep initials and short tokens
                         self._looks_like_name(token, language) or 
                         self._is_likely_name_by_length_and_chars(token)):  # More permissive name detection
-                        original_case_tokens.append(token.title())
+                        # Preserve original case if it starts with uppercase, otherwise title case
+                        if token[0].isupper():
+                            original_case_tokens.append(token)
+                        else:
+                            original_case_tokens.append(token.title())
         
         return original_case_tokens
 
@@ -575,7 +607,7 @@ class NormalizationService:
         """
         morph_analyzer = self._get_morph(primary_lang)
         if not morph_analyzer:
-            return token.lower()
+            return token  # Preserve original case
         
         # Special handling for Ukrainian surnames that get misanalyzed
         if primary_lang == 'uk':
@@ -588,29 +620,69 @@ class NormalizationService:
                 # Use pymorphy3 directly
                 parses = morph_analyzer.morph_analyzer.parse(token)
                 if not parses:
-                    return token.lower()
+                    return token  # Preserve original case
                 
                 # Try to inflect the best parse to nominative case
                 best_parse = parses[0]
                 nom_inflection = best_parse.inflect({'nomn'})
                 if nom_inflection:
-                    return self._normalize_characters(nom_inflection.word.lower())
+                    result = self._normalize_characters(nom_inflection.word)
+                    if token[0].isupper() and result[0].islower():
+                        # Preserve original case for proper nouns
+                        if '-' in result:
+                            # Handle compound words - capitalize each part
+                            parts = result.split('-')
+                            capitalized_parts = [part[0].upper() + part[1:] for part in parts]
+                            result = '-'.join(capitalized_parts)
+                        else:
+                            result = result[0].upper() + result[1:]
+                    return result
                 
                 # If already nominative or can't inflect, return normal form
                 if hasattr(best_parse.tag, 'case') and 'nomn' in str(best_parse.tag.case):
-                    return self._normalize_characters(best_parse.word.lower())
+                    result = self._normalize_characters(best_parse.word)
+                    if token[0].isupper() and result[0].islower():
+                        # Preserve original case for proper nouns
+                        if '-' in result:
+                            # Handle compound words - capitalize each part
+                            parts = result.split('-')
+                            capitalized_parts = [part[0].upper() + part[1:] for part in parts]
+                            result = '-'.join(capitalized_parts)
+                        else:
+                            result = result[0].upper() + result[1:]
+                    return result
                 
-                # Fallback to normal form
-                return self._normalize_characters(best_parse.normal_form.lower())
+                # Fallback to normal form, but preserve original case if it was uppercase
+                result = self._normalize_characters(best_parse.normal_form)
+                if token[0].isupper() and result[0].islower():
+                    # Preserve original case for proper nouns
+                    if '-' in result:
+                        # Handle compound words - capitalize each part
+                        parts = result.split('-')
+                        capitalized_parts = [part[0].upper() + part[1:] for part in parts]
+                        result = '-'.join(capitalized_parts)
+                    else:
+                        result = result[0].upper() + result[1:]
+                return result
             
             else:
                 # Use analyzer's lemma method if available
                 lemma = morph_analyzer.get_lemma(token)
-                return self._normalize_characters(lemma.lower()) if lemma else self._normalize_characters(token.lower())
+                result = self._normalize_characters(lemma) if lemma else self._normalize_characters(token)
+                if token[0].isupper() and result[0].islower():
+                    # Preserve original case for proper nouns
+                    if '-' in result:
+                        # Handle compound words - capitalize each part
+                        parts = result.split('-')
+                        capitalized_parts = [part[0].upper() + part[1:] for part in parts]
+                        result = '-'.join(capitalized_parts)
+                    else:
+                        result = result[0].upper() + result[1:]
+                return result
                 
         except Exception as e:
             self.logger.warning(f"Morphological analysis failed for '{token}': {e}")
-            return self._normalize_characters(token.lower())
+            return self._normalize_characters(token)
 
     def _ukrainian_surname_normalization(self, token: str) -> Optional[str]:
         """Special normalization for Ukrainian surnames that get misanalyzed"""
@@ -778,9 +850,15 @@ class NormalizationService:
                 return 'femn'
             return 'masc'
 
-    def _normalize_slavic_tokens(self, tagged_tokens: List[Tuple[str, str]], language: str) -> Tuple[List[str], List[TokenTrace]]:
+    def _normalize_slavic_tokens(self, tagged_tokens: List[Tuple[str, str]], language: str, 
+                                enable_advanced_features: bool = True) -> Tuple[List[str], List[TokenTrace]]:
         """
         Normalize tokens by role and create traces
+        
+        Args:
+            tagged_tokens: List of (token, role) tuples
+            language: Language code
+            enable_advanced_features: If False, skip morphology and advanced features
         """
         normalized_tokens = []
         traces = []
@@ -812,12 +890,20 @@ class NormalizationService:
             
             elif role == 'unknown':
                 # Handle unknown tokens - just capitalize them
-                normalized = token.capitalize()
+                if enable_advanced_features:
+                    normalized = token.capitalize()
+                    rule = 'capitalize'
+                else:
+                    if token[0].isupper():
+                        normalized = token
+                    else:
+                        normalized = token.capitalize()
+                    rule = 'basic_capitalize'
                 normalized_tokens.append(normalized)
                 traces.append(TokenTrace(
                     token=token,
                     role=role,
-                    rule='capitalize',
+                    rule=rule,
                     morph_lang=language,
                     normal_form=None,
                     output=normalized,
@@ -826,47 +912,62 @@ class NormalizationService:
                 ))
                 
             else:
-                # Morphological normalization
-                morphed = self._morph_nominal(token, language)
-                
-                # Apply diminutive mapping if it's a given name
-                if role == 'given' and language in self.diminutive_maps:
-                    diminutive_map = self.diminutive_maps[language]
-                    # Check both the original token and morphed form
-                    token_lower = token.lower()
-                    if token_lower in diminutive_map:
-                        canonical = diminutive_map[token_lower]
-                        normalized = canonical
-                        rule = 'diminutive_dict'
-                    elif morphed in diminutive_map:
-                        canonical = diminutive_map[morphed]
-                        normalized = canonical
-                        rule = 'diminutive_dict'
-                    else:
-                        normalized = morphed.capitalize()
-                        rule = 'morph'
-                else:
-                    normalized = morphed.capitalize()
-                    rule = 'morph'
-                
-                # Gender adjustment for surnames (including compound surnames)
-                if role == 'surname':
-                    if '-' in normalized:
-                        # Handle compound surnames
-                        parts = normalized.split('-')
-                        adjusted_parts = []
-                        for part in parts:
-                            # Capitalize each part properly
-                            part_capitalized = part.capitalize()
-                            adjusted_part = self._gender_adjust_surname(part_capitalized, part_capitalized, person_gender)
-                            adjusted_parts.append(adjusted_part)
-                        adjusted = '-'.join(adjusted_parts)
-                    else:
-                        adjusted = self._gender_adjust_surname(normalized, token, person_gender)
+                morphed = None  # Initialize morphed variable
+                if enable_advanced_features:
+                    # Morphological normalization
+                    morphed = self._morph_nominal(token, language)
                     
-                    if adjusted != normalized:
-                        normalized = adjusted
-                        rule = 'morph_gender_adjusted'
+                    # Apply diminutive mapping if it's a given name
+                    if role == 'given' and language in self.diminutive_maps:
+                        diminutive_map = self.diminutive_maps[language]
+                        # Check both the original token and morphed form
+                        token_lower = token.lower()
+                        if token_lower in diminutive_map:
+                            canonical = diminutive_map[token_lower]
+                            normalized = canonical
+                            rule = 'diminutive_dict'
+                        elif morphed in diminutive_map:
+                            canonical = diminutive_map[morphed]
+                            normalized = canonical
+                            rule = 'diminutive_dict'
+                        else:
+                            # Preserve existing capitalization if it starts with uppercase
+                            if morphed[0].isupper():
+                                normalized = morphed
+                            else:
+                                normalized = morphed.capitalize()
+                            rule = 'morph'
+                    else:
+                        # Preserve existing capitalization if it starts with uppercase
+                        if morphed[0].isupper():
+                            normalized = morphed
+                        else:
+                            normalized = morphed.capitalize()
+                        rule = 'morph'
+                    
+                    # Gender adjustment for surnames (including compound surnames)
+                    if role == 'surname':
+                        if '-' in normalized:
+                            # Handle compound surnames
+                            parts = normalized.split('-')
+                            adjusted_parts = []
+                            for part in parts:
+                                # Capitalize each part properly
+                                part_capitalized = part.capitalize()
+                                adjusted_part = self._gender_adjust_surname(part_capitalized, part_capitalized, person_gender)
+                                adjusted_parts.append(adjusted_part)
+                            adjusted = '-'.join(adjusted_parts)
+                        else:
+                            adjusted = self._gender_adjust_surname(normalized, token, person_gender)
+                        
+                        if adjusted != normalized:
+                            normalized = adjusted
+                            rule = 'morph_gender_adjusted'
+                else:
+                    # Basic normalization only - just capitalize
+                    normalized = token.capitalize()
+                    rule = 'basic_capitalize'
+                    morphed = None  # No morphological form for basic normalization
                 
                 normalized_tokens.append(normalized)
                 traces.append(TokenTrace(
@@ -882,9 +983,15 @@ class NormalizationService:
         
         return normalized_tokens, traces
 
-    def _normalize_english_tokens(self, tagged_tokens: List[Tuple[str, str]], language: str) -> Tuple[List[str], List[TokenTrace]]:
+    def _normalize_english_tokens(self, tagged_tokens: List[Tuple[str, str]], language: str, 
+                                 enable_advanced_features: bool = True) -> Tuple[List[str], List[TokenTrace]]:
         """
         Normalize English tokens by role and create traces
+        
+        Args:
+            tagged_tokens: List of (token, role) tuples
+            language: Language code
+            enable_advanced_features: If False, skip advanced features
         """
         normalized_tokens = []
         traces = []
@@ -910,15 +1017,28 @@ class NormalizationService:
                 ))
                 
             else:
-                # Check for English nicknames first
-                token_lower = token.lower()
-                if token_lower in ENGLISH_NICKNAMES:
-                    normalized = ENGLISH_NICKNAMES[token_lower]
-                    rule = 'english_nickname'
+                morphed = None  # Initialize morphed variable
+                if enable_advanced_features:
+                    # Check for English nicknames first
+                    token_lower = token.lower()
+                    if token_lower in ENGLISH_NICKNAMES:
+                        normalized = ENGLISH_NICKNAMES[token_lower]
+                        rule = 'english_nickname'
+                        morphed = token_lower  # Store original for trace
+                    else:
+                        # Just capitalize properly, but preserve existing capitalization
+                        if token[0].isupper():
+                            normalized = token
+                        else:
+                            normalized = token.capitalize()
+                        rule = 'capitalize'
                 else:
-                    # Just capitalize properly
-                    normalized = token.capitalize()
-                    rule = 'capitalize'
+                    # Basic normalization only - preserve existing capitalization
+                    if token[0].isupper():
+                        normalized = token
+                    else:
+                        normalized = token.capitalize()
+                    rule = 'basic_capitalize'
                 
                 normalized_tokens.append(normalized)
                 traces.append(TokenTrace(
@@ -926,7 +1046,7 @@ class NormalizationService:
                     role=role,
                     rule=rule,
                     morph_lang=language,
-                    normal_form=token_lower if rule == 'english_nickname' else None,
+                    normal_form=morphed,
                     output=normalized,
                     fallback=False,
                     notes=None
