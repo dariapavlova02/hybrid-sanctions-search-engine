@@ -658,6 +658,12 @@ class NormalizationService:
             if base.lower() not in ['и', 'and', 'i']:
                 return 'initial'
         
+        # Check for ASCII names in Cyrillic context (ru/uk)
+        if language in ['ru', 'uk'] and base.isascii() and base.isalpha() and len(base) > 1:
+            # ASCII names in Cyrillic context should be treated as potential names
+            # Allow positional inference to work
+            return 'given'  # Will be adjusted by positional heuristics later
+        
         # Check for common non-name words
         token_lower = base.lower()
         non_name_words = {
@@ -841,17 +847,28 @@ class NormalizationService:
                 continue
             
             # First token: if it morphologically resolves to a known given name, tag as given
-            if i == 0 and role in ['surname', 'unknown']:
-                morph_form = self._morph_nominal(token, language)
-                if morph_form:
-                    lang_names = self.name_dictionaries.get(language, set())
-                    if morph_form.capitalize() in lang_names:
-                        new_role = 'given'
+            if i == 0:
+                # Special handling for ASCII names in Cyrillic context
+                if language in ['ru', 'uk'] and token.isascii() and token.isalpha():
+                    # ASCII names in first position are likely given names
+                    new_role = 'given'
+                elif role in ['surname', 'unknown']:
+                    morph_form = self._morph_nominal(token, language)
+                    if morph_form:
+                        lang_names = self.name_dictionaries.get(language, set())
+                        if morph_form.capitalize() in lang_names:
+                            new_role = 'given'
             
             # Middle token in 3-token sequence: if it looks like patronymic, tag as such
             elif i == 1 and len(tagged) == 3 and role in ['surname', 'unknown']:
                 if language in ['ru', 'uk'] and any(pattern in token.lower() for pattern in ['овн', 'евн', 'инич']):
                     new_role = 'patronymic'
+            
+            # Last token: if it's ASCII and previous token was given, tag as surname
+            elif i == len(tagged) - 1 and language in ['ru', 'uk'] and token.isascii() and token.isalpha():
+                # Check if previous token was a given name
+                if i > 0 and tagged[i-1][1] == 'given':
+                    new_role = 'surname'
             
             improved.append((token, new_role))
         
