@@ -5,9 +5,15 @@ Centralized logging configuration for AI Service
 import os
 import logging
 import logging.config
-import yaml
 from pathlib import Path
 from typing import Optional
+
+try:
+    import yaml
+    HAS_YAML = True
+except ImportError:
+    yaml = None
+    HAS_YAML = False
 
 
 def setup_logging(
@@ -44,7 +50,7 @@ def setup_logging(
     log_dir.mkdir(exist_ok=True)
     
     # Load configuration
-    if Path(config_path).exists():
+    if Path(config_path).exists() and HAS_YAML:
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
                 config = yaml.safe_load(f)
