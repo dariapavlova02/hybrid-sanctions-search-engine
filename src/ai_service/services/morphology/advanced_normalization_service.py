@@ -416,9 +416,15 @@ class AdvancedNormalizationService:
         
         # Regional variants
         for region, char_map in self.regional_patterns.items():
-            regional_translit = self._apply_regional_transliteration(name, char_map)
-            if regional_translit != name and regional_translit not in transliterations:
-                transliterations.append(regional_translit)
+            if region == 'standards':
+                for std_name, std_map in char_map.items():
+                    regional_translit = self._apply_regional_transliteration(name, std_map)
+                    if regional_translit != name and regional_translit not in transliterations:
+                        transliterations.append(regional_translit)
+            else:
+                regional_translit = self._apply_regional_transliteration(name, char_map)
+                if regional_translit != name and regional_translit not in transliterations:
+                    transliterations.append(regional_translit)
         
         # Phonetic variants
         phonetic_variants = self._generate_phonetic_variants(name)

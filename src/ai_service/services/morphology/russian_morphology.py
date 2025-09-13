@@ -1,5 +1,5 @@
 """
-Ukrainian morphological analyzer
+Russian morphological analyzer
 Inherits from BaseMorphologyAnalyzer
 """
 
@@ -12,8 +12,8 @@ from ..utils import get_logger
 
 
 @dataclass
-class UkrainianMorphologyResult:
-    """Result of Ukrainian morphological analysis"""
+class RussianMorphologyResult:
+    """Result of Russian morphological analysis"""
     lemma: str
     part_of_speech: str
     case: Optional[str] = None
@@ -25,15 +25,15 @@ class UkrainianMorphologyResult:
     voice: Optional[str] = None
     aspect: Optional[str] = None
     confidence: float = 1.0
-    source: str = "ukrainian"
+    source: str = "russian"
 
 
-class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
-    """Ukrainian morphological analyzer"""
+class RussianMorphologyAnalyzer(BaseMorphologyAnalyzer):
+    """Russian morphological analyzer"""
     
     def __init__(self):
-        """Initialize Ukrainian analyzer"""
-        super().__init__('uk')
+        """Initialize Russian analyzer"""
+        super().__init__('ru')
         self.logger = get_logger(__name__)
         
         # Initialize pymorphy3 analyzer
@@ -48,7 +48,7 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
         # Initialize additional resources
         self._initialize_additional_resources()
         
-        self.logger.info("Ukrainian Morphology Analyzer initialized")
+        self.logger.info("Russian Morphology Analyzer initialized")
     
     def _init_language_resources(self):
         """Initialize language-specific resources"""
@@ -70,10 +70,10 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
     def _load_special_names(self) -> Dict[str, Any]:
         """Load special names dictionary"""
         try:
-            from ..data.dicts.ukrainian_names import UKRAINIAN_NAMES
-            return UKRAINIAN_NAMES
+            from ..data.dicts.russian_names import RUSSIAN_NAMES
+            return RUSSIAN_NAMES
         except ImportError:
-            self.logger.warning("Ukrainian names dictionary not available")
+            self.logger.warning("Russian names dictionary not available")
             return {}
     
     def _load_lemmatization_blacklist(self) -> Set[str]:
@@ -87,17 +87,23 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
     
     def _initialize_additional_resources(self):
         """Initialize additional resources (can be overridden)"""
-        # Ukrainian-specific initialization
-        self.ukrainian_specific_patterns = {
-            'patronymic': r'\b[A-ZА-ЯІЇЄҐ][a-zа-яіїєґ]+ович\b|\b[A-ZА-ЯІЇЄҐ][a-zа-яіїєґ]+івна\b',
-            'diminutive': r'\b[A-ZА-ЯІЇЄҐ][a-zа-яіїєґ]+енька\b|\b[A-ZА-ЯІЇЄҐ][a-zа-яіїєґ]+ечка\b',
-            'formal': r'\b[A-ZА-ЯІЇЄҐ][a-zа-яіїєґ]+ич\b|\b[A-ZА-ЯІЇЄҐ][a-zа-яіїєґ]+ична\b'
+        # Russian-specific initialization
+        self.russian_specific_patterns = {
+            'patronymic': r'\b[A-ZА-Я][a-zа-я]+ович\b|\b[A-ZА-Я][a-zа-я]+овна\b',
+            'diminutive': r'\b[A-ZА-Я][a-zа-я]+енька\b|\b[A-ZА-Я][a-zа-я]+ечка\b',
+            'formal': r'\b[A-ZА-Я][a-zа-я]+ич\b|\b[A-ZА-Я][a-zа-я]+ична\b'
         }
         
-        # Ukrainian-specific transliteration patterns
-        self.ukrainian_transliteration = {
-            'і': 'i', 'ї': 'yi', 'є': 'ye', 'ґ': 'g',
-            'І': 'I', 'Ї': 'Yi', 'Є': 'Ye', 'Ґ': 'G'
+        # Regional transliterations for Russia
+        self.regional_transliterations = {
+            'ru_standard': {
+                'ё': 'e', 'ъ': '', 'ь': '',
+                'Ё': 'E', 'Ъ': '', 'Ь': ''
+            },
+            'ru_passport': {
+                'ё': 'e', 'ъ': '', 'ь': '',
+                'Ё': 'E', 'Ъ': '', 'Ь': ''
+            }
         }
     
     def analyze_word(self, word: str) -> List[MorphologicalAnalysis]:
@@ -119,7 +125,7 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
                 lemma=word,
                 part_of_speech='UNKN',
                 confidence=0.1,
-                source='ukrainian_short'
+                source='russian_short'
             )]
         
         try:
@@ -141,7 +147,7 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
                     voice=analysis.get('voice'),
                     aspect=analysis.get('aspect'),
                     confidence=analysis.get('confidence', 1.0),
-                    source='ukrainian_pymorphy'
+                    source='russian_pymorphy'
                 ))
             
             return results
@@ -165,7 +171,7 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
             return {}
         
         # Simple tokenization
-        words = re.findall(r'\b[A-ZА-ЯІЇЄҐa-zа-яіїєґ]+\b', text)
+        words = re.findall(r'\b[A-ZА-Яa-zа-я]+\b', text)
         
         results = {}
         for word in words:
@@ -189,19 +195,24 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
         
         # Check blacklist
         if word.lower() in self.lemmatization_blacklist:
-            return word.lower()  # Return lowercase version
+            return word
         
         try:
             if self.morph_analyzer:
                 parses = self.morph_analyzer.parse(word)
                 if parses:
                     best_parse = max(parses, key=lambda p: p.score)
-                    return best_parse.normal_form.lower()  # Normalize to lowercase
+                    return best_parse.normal_form
+            
+            # Fallback: check special names
+            if word in self.special_names:
+                return self.special_names[word].get('lemma', word)
+            
+            return word
+            
         except Exception as e:
             self.logger.warning(f"Error getting lemma for '{word}': {e}")
-        
-        # Fallback: return word in lowercase
-        return word.lower()
+            return word
     
     def get_pos_tags(self, word: str) -> List[str]:
         """
@@ -249,7 +260,7 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
             results = []
             for parse in parses:
                 analysis = {
-                    'lemma': parse.normal_form.lower(),  # Normalize to lowercase
+                    'lemma': word,  # Preserve original case
                     'pos': str(parse.tag.POS) if hasattr(parse.tag, 'POS') else 'UNKN',
                     'case': str(parse.tag.case) if hasattr(parse.tag, 'case') else None,
                     'number': str(parse.tag.number) if hasattr(parse.tag, 'number') else None,
@@ -275,11 +286,11 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
         if word in self.special_names:
             name_info = self.special_names[word]
             return MorphologicalAnalysis(
-                lemma=name_info.get('lemma', word.lower()),  # Normalize to lowercase
+                lemma=name_info.get('lemma', word),
                 part_of_speech=name_info.get('pos', 'NOUN'),
                 gender=name_info.get('gender'),
                 confidence=0.8,
-                source='ukrainian_special_names'
+                source='russian_special_names'
             )
         
         # Basic analysis based on endings
@@ -287,11 +298,11 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
         gender = self._guess_gender_by_endings(word)
         
         return MorphologicalAnalysis(
-            lemma=word.lower(),  # Normalize to lowercase
+            lemma=word,
             part_of_speech=pos,
             gender=gender,
             confidence=0.3,
-            source='ukrainian_fallback'
+            source='russian_fallback'
         )
     
     def _guess_pos_by_endings(self, word: str) -> str:
@@ -302,19 +313,19 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
         word_lower = word.lower()
         
         # Noun endings
-        noun_endings = ['ість', 'ство', 'ння', 'ання', 'ення', 'іння', 'ування']
+        noun_endings = ['ость', 'ство', 'ние', 'ание', 'ение', 'иние', 'ование']
         for ending in noun_endings:
             if word_lower.endswith(ending):
                 return 'NOUN'
         
         # Adjective endings
-        adj_endings = ['ий', 'ий', 'а', 'е', 'і', 'і']
+        adj_endings = ['ый', 'ой', 'ая', 'ое', 'ые', 'ие']
         for ending in adj_endings:
             if word_lower.endswith(ending):
                 return 'ADJF'
         
         # Verb endings
-        verb_endings = ['ти', 'ться', 'в', 'ла', 'ло', 'ли']
+        verb_endings = ['ть', 'ться', 'л', 'ла', 'ло', 'ли']
         for ending in verb_endings:
             if word_lower.endswith(ending):
                 return 'VERB'
@@ -329,7 +340,7 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
         word_lower = word.lower()
         
         # Masculine endings (only specific ones)
-        masc_endings = ['ий', 'ой', 'ій']
+        masc_endings = ['ий', 'ой', 'ый']
         for ending in masc_endings:
             if word_lower.endswith(ending):
                 return 'masc'
@@ -341,7 +352,7 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
                 return 'femn'
         
         # Neuter endings
-        neut_endings = ['е', 'е', 'е']
+        neut_endings = ['е', 'ое', 'ее']
         for ending in neut_endings:
             if word_lower.endswith(ending):
                 return 'neut'
@@ -390,12 +401,12 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
             self.logger.warning(f"Error getting word forms for '{lemma}': {e}")
             return [lemma]
     
-    def transliterate_ukrainian(self, text: str) -> str:
+    def transliterate_russian(self, text: str) -> str:
         """
-        Transliterate Ukrainian text to Latin
+        Transliterate Russian text to Latin
         
         Args:
-            text: Ukrainian text to transliterate
+            text: Russian text to transliterate
             
         Returns:
             Transliterated text
@@ -403,11 +414,242 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
         if not text:
             return text
         
-        result = text
-        for ukr_char, lat_char in self.ukrainian_transliteration.items():
-            result = result.replace(ukr_char, lat_char)
+        # Russian transliteration mapping
+        ru_to_latin = {
+            'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
+            'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+            'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+            'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+            'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+        }
+        
+        result = ''
+        for char in text:
+            if char.lower() in ru_to_latin:
+                if char.isupper():
+                    result += ru_to_latin[char.lower()].upper()
+                else:
+                    result += ru_to_latin[char.lower()]
+            else:
+                result += char
         
         return result
+    
+    def analyze_name(self, name: str) -> Dict[str, Any]:
+        """
+        Аналіз імені з детальною інформацією
+        
+        Args:
+            name: Ім'я для аналізу
+            
+        Returns:
+            Словник з результатами аналізу імені
+        """
+        if not name:
+            return {
+                'name': '',
+                'language': 'ru',
+                'gender': 'unknown',
+                'total_forms': 0,
+                'declensions': [],
+                'diminutives': [],
+                'variants': [],
+                'transliterations': []
+            }
+        
+        name = name.strip()
+        if len(name) < 2:
+            return {
+                'name': name,
+                'language': 'ru',
+                'gender': 'unknown',
+                'total_forms': 1,
+                'declensions': [name],
+                'diminutives': [name],
+                'variants': [name],
+                'transliterations': [name]
+            }
+        
+        try:
+            # Analysis through pymorphy3
+            morph_analysis = self._analyze_with_pymorphy(name)
+        except Exception as e:
+            self.logger.warning(f"Pymorphy analysis failed for '{name}': {e}")
+            morph_analysis = [{'gender': 'unknown'}]
+        
+        # Variant generation
+        diminutives = self._generate_diminutives(name)
+        variants = self._generate_variants(name)
+        transliterations = self._generate_transliterations(name)
+        
+        # Add dictionary declensions if available
+        dict_declensions = []
+        if name in self.special_names:
+            dict_declensions = self.special_names[name].get('declensions', [])
+        
+        # Get declensions from pymorphy3
+        pymorphy_declensions = []
+        if morph_analysis and len(morph_analysis) > 0:
+            # Get all possible word forms
+            pymorphy_declensions = self.get_word_forms(name)
+        
+        # Combine declensions from pymorphy3 and dictionary
+        all_declensions = list(set(pymorphy_declensions + dict_declensions))
+        
+        # Determine gender
+        gender = 'unknown'
+        if morph_analysis and len(morph_analysis) > 0:
+            gender = morph_analysis[0].get('gender', 'unknown')
+        
+        if gender == 'unknown':
+            gender = self._analyze_gender_by_endings(name)
+        
+        # Count total number of forms
+        total_forms = len(set(all_declensions + diminutives + variants + transliterations))
+        
+        return {
+            'name': name,
+            'language': 'ru',
+            'gender': gender,
+            'total_forms': total_forms,
+            'declensions': all_declensions,
+            'diminutives': diminutives,
+            'variants': variants,
+            'transliterations': transliterations
+        }
+    
+    def _generate_diminutives(self, name: str) -> List[str]:
+        """Generate diminutive forms"""
+        if not name or len(name) < 2:
+            return [name]
+        
+        # Check special names dictionary
+        if name in self.special_names:
+            return self.special_names[name].get('diminutives', [])
+        
+        # Basic logic for Russian names
+        diminutives = []
+        name_lower = name.lower()
+        
+        # Add common diminutive endings
+        if name_lower.endswith('й'):
+            diminutives.append(name[:-1] + 'енька')
+            diminutives.append(name[:-1] + 'ик')
+        elif name_lower.endswith('а'):
+            diminutives.append(name[:-1] + 'енька')
+            diminutives.append(name[:-1] + 'уся')
+        
+        return list(set(diminutives + [name]))
+    
+    def _generate_variants(self, name: str) -> List[str]:
+        """Generate writing variants"""
+        if not name:
+            return []
+        
+        variants = [name]
+        
+        # Check special names dictionary
+        if name in self.special_names:
+            variants.extend(self.special_names[name].get('variants', []))
+        
+        # Add phonetic variants (placeholder)
+        phonetic_variants = []
+        variants.extend(phonetic_variants)
+        
+        return list(set(variants))
+    
+    def _generate_transliterations(self, name: str) -> List[str]:
+        """Generate transliterations"""
+        if not name:
+            return []
+        
+        transliterations = []
+        
+        # Check special names dictionary
+        if name in self.special_names:
+            transliterations.extend(self.special_names[name].get('transliterations', []))
+        
+        # Add standard transliteration
+        standard_translit = self.transliterate_russian(name)
+        if standard_translit != name:
+            transliterations.append(standard_translit)
+        
+        # Add regional variants
+        for region, mapping in self.regional_transliterations.items():
+            translit = name
+            for ru_char, lat_char in mapping.items():
+                translit = translit.replace(ru_char, lat_char)
+            if translit != name:
+                transliterations.append(translit)
+        
+        return list(set(transliterations + [name]))
+    
+    def is_russian_name(self, name: str) -> bool:
+        """Check if name is Russian"""
+        if not name:
+            return False
+        
+        # Check special names dictionary
+        if name in self.special_names:
+            return True
+        
+        # Check endings
+        name_lower = name.lower()
+        russian_endings = ['ов', 'ев', 'ин', 'ын', 'ий', 'ой', 'ая', 'яя']
+        
+        for ending in russian_endings:
+            if name_lower.endswith(ending):
+                return True
+        
+        return False
+    
+    def get_name_complexity(self, name: str) -> Dict[str, Any]:
+        """Analyze name complexity"""
+        if not name:
+            return {'name': '', 'complexity': 0, 'factors': []}
+        
+        factors = []
+        complexity = 0
+        
+        # Name length
+        if len(name) > 10:
+            complexity += 2
+            factors.append('long_name')
+        elif len(name) > 6:
+            complexity += 1
+            factors.append('medium_name')
+        
+        # Presence of special characters
+        if any(char in name for char in 'ёъь'):
+            complexity += 1
+            factors.append('special_chars')
+        
+        # Presence of rare letters
+        rare_letters = ['ф', 'щ', 'э']
+        if any(letter in name.lower() for letter in rare_letters):
+            complexity += 1
+            factors.append('rare_letters')
+        
+        return {
+            'name': name,
+            'complexity': complexity,
+            'factors': factors
+        }
+    
+    def get_all_forms(self, name: str) -> List[str]:
+        """Get all name forms"""
+        if not name:
+            return []
+        
+        result = self.analyze_name(name)
+        all_forms = []
+        
+        all_forms.extend(result.get('declensions', []))
+        all_forms.extend(result.get('diminutives', []))
+        all_forms.extend(result.get('variants', []))
+        all_forms.extend(result.get('transliterations', []))
+        
+        return list(set(all_forms))
     
     def get_analysis_statistics(self) -> Dict[str, Any]:
         """Get analyzer statistics"""
@@ -416,7 +658,7 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
             'pymorphy_available': self.morph_analyzer is not None,
             'special_names_count': len(self.special_names),
             'blacklist_count': len(self.lemmatization_blacklist),
-            'ukrainian_patterns': list(self.ukrainian_specific_patterns.keys()),
+            'russian_patterns': list(self.russian_specific_patterns.keys()),
             'transliteration_support': True
         })
         return stats
