@@ -15,9 +15,9 @@ except ImportError:
     detect = None
     LangDetectException = Exception
 
-from ..config import SERVICE_CONFIG
-from ..exceptions import LanguageDetectionError
-from ..utils import get_logger
+from ...config import SERVICE_CONFIG
+from ...exceptions import LanguageDetectionError
+from ...utils import get_logger
 
 # Import name dictionaries for verification
 class LanguageDetectionService:

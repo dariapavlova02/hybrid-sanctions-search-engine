@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass
 from enum import Enum
 
-from ..utils import get_logger
+from ...utils import get_logger
 
 
 class WordType(Enum):
@@ -47,7 +47,7 @@ class WordNormalizer:
     def _load_diminutives(self) -> Dict[str, str]:
         """Load diminutives dictionary (diminutive -> full name)"""
         try:
-            from ..data.dicts.diminutives_extra import EXTRA_DIMINUTIVES_UK, EXTRA_DIMINUTIVES_RU
+            from ...data.dicts.diminutives_extra import EXTRA_DIMINUTIVES_UK, EXTRA_DIMINUTIVES_RU
             
             diminutives = {}
             

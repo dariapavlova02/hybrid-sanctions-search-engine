@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 
-from ..utils import get_logger
+from ...utils import get_logger
 
 
 @dataclass

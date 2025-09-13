@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass
 
 from .base_morphology import BaseMorphologyAnalyzer, MorphologicalAnalysis
-from ..utils import get_logger
+from ...utils import get_logger
 
 
 @dataclass
@@ -70,7 +70,7 @@ class RussianMorphologyAnalyzer(BaseMorphologyAnalyzer):
     def _load_special_names(self) -> Dict[str, Any]:
         """Load special names dictionary"""
         try:
-            from ..data.dicts.russian_names import RUSSIAN_NAMES
+            from ...data.dicts.russian_names import RUSSIAN_NAMES
             return RUSSIAN_NAMES
         except ImportError:
             self.logger.warning("Russian names dictionary not available")
@@ -79,7 +79,7 @@ class RussianMorphologyAnalyzer(BaseMorphologyAnalyzer):
     def _load_lemmatization_blacklist(self) -> Set[str]:
         """Load lemmatization blacklist"""
         try:
-            from ..data.dicts.lemmatization_blacklist import LEMMATIZATION_BLACKLIST
+            from ...data.dicts.lemmatization_blacklist import LEMMATIZATION_BLACKLIST
             return set(LEMMATIZATION_BLACKLIST)
         except ImportError:
             self.logger.warning("Lemmatization blacklist not available")

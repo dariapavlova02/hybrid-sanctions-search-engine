@@ -75,16 +75,18 @@ class NormalizationServiceStage(ProcessingStageInterface):
             # Detect language if not already detected
             language = context.language or "auto"
             
+            # Prepare flags for normalize_async
+            flags = {
+                "remove_stop_words": self.remove_stop_words,
+                "preserve_names": self.preserve_names,
+                "enable_advanced_features": self.enable_advanced_features,
+            }
+            
             # Normalize text using NormalizationService
             result = await self.normalization_service.normalize_async(
                 text=text,
                 language=language,
-                remove_stop_words=self.remove_stop_words,
-                apply_stemming=self.apply_stemming,
-                apply_lemmatization=self.apply_lemmatization,
-                clean_unicode=self.clean_unicode,
-                preserve_names=self.preserve_names,
-                enable_advanced_features=self.enable_advanced_features,
+                **flags
             )
 
             # Update context with normalized text

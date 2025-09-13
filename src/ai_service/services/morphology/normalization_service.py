@@ -31,21 +31,21 @@ except ImportError:
     pymorphy3 = None
     _PYMORPHY3_AVAILABLE = False
 
-from ..config import SERVICE_CONFIG
-from ..exceptions import NormalizationError, LanguageDetectionError
-from ..utils import get_logger
-from .language_detection_service import LanguageDetectionService
-from .unicode_service import UnicodeService
+from ...config import SERVICE_CONFIG
+from ...exceptions import NormalizationError, LanguageDetectionError
+from ...utils import get_logger
+from ..language_detection_service import LanguageDetectionService
+from ..unicode_service import UnicodeService
 from .ukrainian_morphology import UkrainianMorphologyAnalyzer
 from .russian_morphology import RussianMorphologyAnalyzer
-from .stopwords import STOP_ALL
-from ..utils.trace import TokenTrace, NormalizationResult
-from ..utils.performance import monitor_performance, monitor_memory_usage
+from ..stopwords import STOP_ALL
+from ...utils.trace import TokenTrace, NormalizationResult
+from ...utils.performance import monitor_performance, monitor_memory_usage
 
 # Import name dictionaries
 try:
-    from ..data.dicts import russian_names, ukrainian_names, english_names
-    from ..data.dicts.english_nicknames import ENGLISH_NICKNAMES
+    from ...data.dicts import russian_names, ukrainian_names, english_names
+    from ...data.dicts.english_nicknames import ENGLISH_NICKNAMES
     DICTIONARIES_AVAILABLE = True
 except ImportError:
     DICTIONARIES_AVAILABLE = False
@@ -186,15 +186,15 @@ class NormalizationService:
         
         try:
             # Load Russian diminutives
-            from ..data.dicts.russian_diminutives import RUSSIAN_DIMINUTIVES
+            from ...data.dicts.russian_diminutives import RUSSIAN_DIMINUTIVES
             maps['ru'] = RUSSIAN_DIMINUTIVES
             
             # Load Ukrainian diminutives
-            from ..data.dicts.ukrainian_diminutives import UKRAINIAN_DIMINUTIVES
+            from ...data.dicts.ukrainian_diminutives import UKRAINIAN_DIMINUTIVES
             maps['uk'] = UKRAINIAN_DIMINUTIVES
             
             # Load English nicknames
-            from ..data.dicts.english_nicknames import ENGLISH_NICKNAMES
+            from ...data.dicts.english_nicknames import ENGLISH_NICKNAMES
             maps['en'] = {k.lower(): v for k, v in ENGLISH_NICKNAMES.items()}
             
         except ImportError as e:
@@ -227,6 +227,27 @@ class NormalizationService:
             NormalizationResult with normalized text and trace
         """
         return self._normalize_sync(text, language, remove_stop_words, preserve_names, enable_advanced_features)
+
+    async def normalize_async(self, text: str, language: str = 'auto', 
+                             remove_stop_words: bool = True, 
+                             preserve_names: bool = True, 
+                             enable_advanced_features: bool = True, 
+                             **kwargs) -> NormalizationResult:
+        """
+        Async wrapper for normalize method with universal kwargs support
+        
+        Args:
+            text: Input text containing person names
+            language: Language code or 'auto' for detection
+            remove_stop_words: If False, skip STOP_ALL filtering
+            preserve_names: If False, be more aggressive with separators
+            enable_advanced_features: If False, skip morphology and advanced features
+            **kwargs: Additional arguments (ignored for compatibility)
+            
+        Returns:
+            NormalizationResult with normalized text and trace
+        """
+        return await self.normalize(text, language, remove_stop_words, preserve_names, enable_advanced_features)
 
     def _normalize_sync(self, text: str, language: str = 'auto', 
                        remove_stop_words: bool = True, 
@@ -386,13 +407,15 @@ class NormalizationService:
             # Be more aggressive - split on separators and remove them
             text = re.sub(r'[^\w\s\u0400-\u04FF\u0370-\u03FF]', ' ', text)  # Remove dots, hyphens, apostrophes
         
+        # Normalize whitespace but keep spaces for tokenization
         text = re.sub(r'\s+', ' ', text).strip()
         
-        # Tokenize (simple whitespace split, but preserve punctuation in tokens)
+        # Tokenize by splitting on whitespace
         tokens = []
         for token in text.split():
             if len(token) >= 1:
                 if preserve_names:
+                    # When preserve_names=True, keep tokens as-is (including separators)
                     tokens.append(token)
                 else:
                     # When preserve_names=False, split on separators within tokens
@@ -797,11 +820,11 @@ class NormalizationService:
             # Check if token looks like English name
             if base.isalpha() and base[0].isupper() and len(base) >= 2:
                 # Check against English names first
-                from ..data.dicts.english_names import ENGLISH_NAMES
+                from ...data.dicts.english_names import ENGLISH_NAMES
                 if base.lower() in {name.lower() for name in ENGLISH_NAMES}:
                     return 'given'
                 # Check against English nicknames
-                from ..data.dicts.english_nicknames import ENGLISH_NICKNAMES
+                from ...data.dicts.english_nicknames import ENGLISH_NICKNAMES
                 if base.lower() in {name.lower() for name in ENGLISH_NICKNAMES}:
                     return 'given'
                 # For English surnames, use simple pattern matching
@@ -1352,6 +1375,11 @@ class NormalizationService:
                         elif morphed and morphed.lower() in ENGLISH_NICKNAMES:
                             normalized = ENGLISH_NICKNAMES[morphed.lower()].capitalize()
                             rule = 'english_nickname'
+                        # Special handling for English names with apostrophes (like O'Brien)
+                        elif "'" in base and re.match(r'^[A-Za-z]+\'[A-Za-z]+$', base):
+                            # Keep original case for English names with apostrophes
+                            normalized = base
+                            rule = 'english_name_apostrophe'
                     # First try comprehensive diminutive dictionaries
                     if language in self.dim2full_maps:
                         token_lower = base.lower()

@@ -8,7 +8,7 @@ import unicodedata
 from typing import Dict, List, Optional, Union, Any
 from datetime import datetime
 
-from ..utils import get_logger
+from ...utils import get_logger
 
 
 class UnicodeService:

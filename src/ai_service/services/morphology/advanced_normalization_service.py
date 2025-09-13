@@ -808,12 +808,12 @@ class AdvancedNormalizationService:
         """Import dictionaries from files"""
         try:
             # Import regional patterns
-            from ..data.dicts.regional_patterns import REGIONAL_PATTERNS, ALL_BASE_PATTERNS
+            from ...data.dicts.regional_patterns import REGIONAL_PATTERNS, ALL_BASE_PATTERNS
             self.regional_patterns = REGIONAL_PATTERNS
             self.base_transliteration = ALL_BASE_PATTERNS
             
             # Import phonetic patterns
-            from ..data.dicts.phonetic_patterns import ALL_PHONETIC_PATTERNS
+            from ...data.dicts.phonetic_patterns import ALL_PHONETIC_PATTERNS
             self.phonetic_patterns = ALL_PHONETIC_PATTERNS
             
             logger.info("Dictionaries imported successfully from files")
