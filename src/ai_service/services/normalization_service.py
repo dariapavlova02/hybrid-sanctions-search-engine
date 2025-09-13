@@ -210,14 +210,14 @@ class NormalizationService:
     
     def remove_stop_words(self, tokens: List[str], language: str = 'en') -> List[str]:
         """Remove stop words"""
-        if not tokens or language not in self.language_configs:
+        if not tokens:
             return tokens
         
-        stop_words = self.language_configs[language]['stop_words']
-        if not stop_words:
-            return tokens
+        # Import STOP_ALL from stopwords module
+        from .stopwords import STOP_ALL
         
-        return [token for token in tokens if token.lower() not in stop_words]
+        # Use STOP_ALL as the primary stop words list
+        return [token for token in tokens if token.lower() not in STOP_ALL]
     
     def apply_stemming(self, tokens: List[str], language: str = 'en') -> List[str]:
         """Apply stemming"""
@@ -300,8 +300,13 @@ class NormalizationService:
             # Tokenization
             tokens = self.tokenize_text(cleaned_text, language)
             
-            # For names, DON'T remove stop words and DON'T apply stemming
-            # This can lead to loss of important information
+            # Remove stop words if requested
+            if remove_stop_words:
+                tokens = self.remove_stop_words(tokens, language)
+            
+            # Apply stemming if requested
+            if apply_stemming:
+                tokens = self.apply_stemming(tokens, language)
             
             # Lemmatization (useful for names)
             if apply_lemmatization:
