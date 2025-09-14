@@ -319,4 +319,35 @@ class EmbeddingConfig(BaseModel):
             "enable_index": self.enable_index,
             "extra_models": self.extra_models
         }
+
+
+class DecisionConfig(BaseModel):
+    """Decision engine configuration settings"""
+    
+    model_config = {"validate_assignment": True}
+    
+    # Weights for different components
+    w_smartfilter: float = 0.25
+    w_person: float = 0.3
+    w_org: float = 0.15
+    w_similarity: float = 0.25
+    bonus_date_match: float = 0.07
+    bonus_id_match: float = 0.15
+    
+    # Thresholds for risk levels
+    thr_high: float = 0.85
+    thr_medium: float = 0.65
+    
+    def model_dump(self) -> Dict[str, Any]:
+        """Return model as dictionary"""
+        return {
+            "w_smartfilter": self.w_smartfilter,
+            "w_person": self.w_person,
+            "w_org": self.w_org,
+            "w_similarity": self.w_similarity,
+            "bonus_date_match": self.bonus_date_match,
+            "bonus_id_match": self.bonus_id_match,
+            "thr_high": self.thr_high,
+            "thr_medium": self.thr_medium
+        }
     

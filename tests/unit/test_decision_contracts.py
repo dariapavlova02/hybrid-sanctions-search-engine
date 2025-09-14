@@ -251,27 +251,26 @@ class TestDecisionConfig:
     def test_decision_config_defaults(self):
         """Test DecisionConfig default values"""
         config = DecisionConfig()
-        assert config.high_risk_threshold == 0.8
-        assert config.medium_risk_threshold == 0.5
-        assert config.low_risk_threshold == 0.2
-        assert config.person_confidence_weight == 0.4
-        assert config.org_confidence_weight == 0.3
-        assert config.similarity_weight == 0.2
-        assert config.smartfilter_weight == 0.1
+        assert config.thr_high == 0.85
+        assert config.thr_medium == 0.65
+        assert config.w_person == 0.3
+        assert config.w_org == 0.15
+        assert config.w_similarity == 0.25
+        assert config.w_smartfilter == 0.25
+        assert config.bonus_date_match == 0.07
+        assert config.bonus_id_match == 0.15
     
     def test_decision_config_custom_values(self):
         """Test DecisionConfig with custom values"""
         config = DecisionConfig(
-            high_risk_threshold=0.9,
-            medium_risk_threshold=0.6,
-            low_risk_threshold=0.3,
-            person_confidence_weight=0.5
+            thr_high=0.9,
+            thr_medium=0.6,
+            w_person=0.5
         )
-        assert config.high_risk_threshold == 0.9
-        assert config.medium_risk_threshold == 0.6
-        assert config.low_risk_threshold == 0.3
-        assert config.person_confidence_weight == 0.5
-        assert config.org_confidence_weight == 0.3  # default
+        assert config.thr_high == 0.9
+        assert config.thr_medium == 0.6
+        assert config.w_person == 0.5
+        assert config.w_org == 0.15  # default
 
 
 class TestDecisionEngine:
@@ -281,14 +280,14 @@ class TestDecisionEngine:
         """Test DecisionEngine initialization with default config"""
         engine = DecisionEngine()
         assert isinstance(engine.config, DecisionConfig)
-        assert engine.config.high_risk_threshold == 0.8
+        assert engine.config.thr_high == 0.85
     
     def test_decision_engine_with_custom_config(self):
         """Test DecisionEngine initialization with custom config"""
-        config = DecisionConfig(high_risk_threshold=0.9, person_confidence_weight=0.6)
+        config = DecisionConfig(thr_high=0.9, w_person=0.6)
         engine = DecisionEngine(config)
-        assert engine.config.high_risk_threshold == 0.9
-        assert engine.config.person_confidence_weight == 0.6
+        assert engine.config.thr_high == 0.9
+        assert engine.config.w_person == 0.6
     
     def test_decision_engine_decide_stub(self):
         """Test DecisionEngine decide method (stub implementation)"""
