@@ -35,11 +35,10 @@ class TestNightmareScenario:
         }
         
         # Act
-        result = await orchestrator_service.process_text(
+        result = await orchestrator_service.process(
             text=distorted_input,
             generate_variants=True,
-            generate_embeddings=False,  # Disable for speed
-            cache_result=False  # Don't cache test data
+            generate_embeddings=False  # Disable for speed
         )
         
         # Assert
@@ -97,7 +96,7 @@ class TestNightmareScenario:
         multilingual_text = "Jean-Baptiste Müller встретил Олександра Петренко-Сміт в кафе 'Zürcher Straße'"
         
         # Act
-        result = await orchestrator_service.process_text(
+        result = await orchestrator_service.process(
             text=multilingual_text,
             generate_variants=True,
             generate_embeddings=False
@@ -139,7 +138,7 @@ class TestNightmareScenario:
         
         # Act & Assert
         for i, corrupted_text in enumerate(corrupted_texts):
-            result = await orchestrator_service.process_text(
+            result = await orchestrator_service.process(
                 text=corrupted_text,
                 generate_variants=True,
                 generate_embeddings=False
@@ -174,7 +173,7 @@ class TestNightmareScenario:
         import time
         start_time = time.time()
         
-        result = await orchestrator_service.process_text(
+        result = await orchestrator_service.process(
             text=complex_text,
             generate_variants=True,
             generate_embeddings=False
@@ -239,7 +238,7 @@ class TestNightmareScenario:
         
         # Act & Assert
         for i, edge_case in enumerate(edge_cases):
-            result = await orchestrator_service.process_text(
+            result = await orchestrator_service.process(
                 text=edge_case,
                 generate_variants=True,
                 generate_embeddings=False
@@ -270,7 +269,7 @@ class TestNightmareScenario:
         import time
         
         start_time = time.time()
-        result1 = await orchestrator_service.process_text(
+        result1 = await orchestrator_service.process(
             text=test_text,
             generate_variants=True,
             cache_result=True
@@ -279,7 +278,7 @@ class TestNightmareScenario:
         
         # Act - second request (cache hit)
         start_time = time.time()
-        result2 = await orchestrator_service.process_text(
+        result2 = await orchestrator_service.process(
             text=test_text,
             generate_variants=True,
             cache_result=True

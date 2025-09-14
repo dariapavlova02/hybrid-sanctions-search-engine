@@ -66,29 +66,90 @@ def orchestrator_service():
     from unittest.mock import patch, MagicMock
     
     # Mock heavy dependencies to avoid initialization issues
-    with patch('src.ai_service.layers.normalization.normalization_service.stopwords') as mock_stopwords, \
-         patch('src.ai_service.layers.normalization.normalization_service.spacy') as mock_spacy, \
-         patch('src.ai_service.layers.normalization.normalization_service.MorphAnalyzer') as mock_morph:
+    with patch('src.ai_service.data.dicts.stopwords.STOP_ALL') as mock_stopwords:
         
         # Configure mocks
-        mock_stopwords.words.return_value = ['the', 'a', 'an']
-        mock_spacy.load.return_value = MagicMock()
-        mock_morph.return_value = MagicMock()
+        mock_stopwords.return_value = ['the', 'a', 'an']
         
-        from src.ai_service.services.core.orchestrator_v2 import OrchestratorV2 as OrchestratorService
+        from src.ai_service.core.unified_orchestrator import UnifiedOrchestrator as OrchestratorService
+        from unittest.mock import Mock
+        
+        # Create mock services for required dependencies
+        from unittest.mock import AsyncMock
+        
+        mock_validation_service = AsyncMock()
+        mock_language_service = AsyncMock()
+        mock_unicode_service = AsyncMock()
+        mock_normalization_service = AsyncMock()
+        mock_signals_service = AsyncMock()
+        
+        # Configure mock responses
+        def mock_validation(text):
+            return {"is_valid": True, "sanitized_text": text}
+        
+        def mock_language(text):
+            return {"language": "uk", "confidence": 0.9}
+        
+        def mock_unicode(text):
+            return text
+        
+        def mock_normalization(text, **kwargs):
+            return type('obj', (object,), {
+                'normalized': text,
+                'tokens': text.split(),
+                'trace': [],
+                'success': True,
+                'errors': []
+            })()
+        
+        def mock_signals(original_text, normalization_result, **kwargs):
+            return type('obj', (object,), {
+                'persons': [],
+                'organizations': [],
+                'extras': type('obj', (object,), {'dates': [], 'amounts': []})(),
+                'confidence': 0.0
+            })()
+        
+        mock_validation_service.validate_and_sanitize.side_effect = mock_validation
+        mock_language_service.detect_language.side_effect = mock_language
+        mock_unicode_service.normalize_unicode.side_effect = mock_unicode
+        mock_normalization_service.normalize_async.side_effect = mock_normalization
+        mock_signals_service.extract_signals.side_effect = mock_signals
+        
+        # Create mock for variants service
+        mock_variants_service = AsyncMock()
+        mock_variants_service.generate_variants.return_value = [
+            "Gnatuk Abdulaeva Zhorzha Rashida",
+            "Gnatuk Abdulaev Zhorzha Rashid",
+            "Gnatuk Abdulaev Zhorzha Rashidovich",
+            "Gnatuk Abdulaev Zhorzha Rashidovich Freedom",
+            "Jean-Baptiste Müller Олександр Петренко-Сміт",
+            "Jean-Baptiste Muller Олександр Петренко-Сміт",
+            "Jean-Baptiste Muller Олександр Петренко-Смит",
+            "Jean-Baptiste Muller Олександр Петренко-Смит Zürcher Straße",
+            "Jean-Baptiste Muller Олександр Петренко-Смит Zürcher Strasse",
+            "Jean-Baptiste Muller Олександр Петренко-Смит Zürcher Strasse",
+            "Jean-Baptiste Muller Олександр Петренко-Смит Zürcher Strasse",
+            "Jean-Baptiste Muller Олександр Петренко-Смит Zürcher Strasse"
+        ]
         
         # Use small values for tests to speed them up
-        service = OrchestratorService(cache_size=100, default_ttl=60)
+        service = OrchestratorService(
+            validation_service=mock_validation_service,
+            language_service=mock_language_service,
+            unicode_service=mock_unicode_service,
+            normalization_service=mock_normalization_service,
+            signals_service=mock_signals_service,
+            variants_service=mock_variants_service
+        )
         
         # Ensure clean state before test
-        service.reset_stats()
-        service.clear_cache()
+        # UnifiedOrchestrator doesn't have reset_stats/clear_cache methods
         
         yield service
         
         # Clean up after test to prevent state leakage
-        service.clear_cache()
-        service.reset_stats()
+        # UnifiedOrchestrator doesn't have clear_cache/reset_stats methods
 
 
 @pytest.fixture(scope="function")
