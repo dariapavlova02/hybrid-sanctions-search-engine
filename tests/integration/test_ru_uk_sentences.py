@@ -3,7 +3,7 @@ Integration tests for Russian and Ukrainian sentence normalization
 """
 
 import pytest
-from src.ai_service.services.normalization_service import NormalizationService
+from src.ai_service.layers.normalization.normalization_service import NormalizationService
 
 
 class TestRussianUkrainianSentences:

@@ -1,5 +1,5 @@
 import pytest
-from src.ai_service.services.normalization_service import NormalizationService
+from src.ai_service.layers.normalization.normalization_service import NormalizationService
 from tests.integration.test_full_normalization_suite import assert_normalized_name
 
 @pytest.fixture

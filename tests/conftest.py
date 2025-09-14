@@ -66,18 +66,16 @@ def orchestrator_service():
     from unittest.mock import patch, MagicMock
     
     # Mock heavy dependencies to avoid initialization issues
-    with patch('src.ai_service.services.normalization_service.stopwords') as mock_stopwords, \
-         patch('src.ai_service.services.normalization_service.spacy') as mock_spacy, \
-         patch('src.ai_service.services.advanced_normalization_service.spacy') as mock_adv_spacy, \
-         patch('src.ai_service.services.advanced_normalization_service.MorphAnalyzer') as mock_morph:
+    with patch('src.ai_service.layers.normalization.normalization_service.stopwords') as mock_stopwords, \
+         patch('src.ai_service.layers.normalization.normalization_service.spacy') as mock_spacy, \
+         patch('src.ai_service.layers.normalization.normalization_service.MorphAnalyzer') as mock_morph:
         
         # Configure mocks
         mock_stopwords.words.return_value = ['the', 'a', 'an']
         mock_spacy.load.return_value = MagicMock()
-        mock_adv_spacy.load.return_value = MagicMock()
         mock_morph.return_value = MagicMock()
         
-        from src.ai_service.services.orchestrator_service import OrchestratorService
+        from src.ai_service.services.core.orchestrator_v2 import OrchestratorV2 as OrchestratorService
         
         # Use small values for tests to speed them up
         service = OrchestratorService(cache_size=100, default_ttl=60)
@@ -96,42 +94,42 @@ def orchestrator_service():
 @pytest.fixture(scope="function")
 def language_detection_service():
     """Provides a clean instance of LanguageDetectionService for each test"""
-    from src.ai_service.services.language_detection_service import LanguageDetectionService
+    from src.ai_service.layers.language.language_detection_service import LanguageDetectionService
     return LanguageDetectionService()
 
 
 @pytest.fixture(scope="function")
 def advanced_normalization_service():
-    """Provides a clean instance of AdvancedNormalizationService for each test"""
-    from src.ai_service.services.advanced_normalization_service import AdvancedNormalizationService
-    return AdvancedNormalizationService()
+    """Provides a clean instance of NormalizationService for each test"""
+    from src.ai_service.layers.normalization.normalization_service import NormalizationService
+    return NormalizationService()
 
 
 @pytest.fixture(scope="function")
 def variant_generation_service():
     """Provides a clean instance of VariantGenerationService for each test"""
-    from src.ai_service.services.variant_generation_service import VariantGenerationService
+    from src.ai_service.layers.variants.variant_generation_service import VariantGenerationService
     return VariantGenerationService()
 
 
 @pytest.fixture(scope="function")
 def unicode_service():
     """Provides a clean instance of UnicodeService for each test"""
-    from src.ai_service.services.unicode_service import UnicodeService
+    from src.ai_service.layers.unicode.unicode_service import UnicodeService
     return UnicodeService()
 
 
 @pytest.fixture(scope="function")
 def pattern_service():
     """Provides a clean instance of PatternService for each test"""
-    from src.ai_service.services.pattern_service import PatternService
+    from src.ai_service.layers.variants.pattern_service import PatternService
     return PatternService()
 
 
 @pytest.fixture(scope="function")
 def cache_service():
     """Provides a clean instance of CacheService for each test"""
-    from src.ai_service.services.cache_service import CacheService
+    from src.ai_service.services.core.cache_service import CacheService
     service = CacheService(max_size=3, default_ttl=5)  # Small size and TTL for tests
     yield service
     # Clean up after test
@@ -141,5 +139,5 @@ def cache_service():
 @pytest.fixture(scope="function")
 def template_builder():
     """Provides a clean instance of TemplateBuilder for each test"""
-    from src.ai_service.services.template_builder import TemplateBuilder
+    from src.ai_service.services.templates.template_builder import TemplateBuilder
     return TemplateBuilder()
