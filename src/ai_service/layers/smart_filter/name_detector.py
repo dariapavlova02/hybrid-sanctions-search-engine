@@ -17,10 +17,11 @@ from ...utils.logging_config import get_logger
 class NameDetector:
     """A simplified person name detector for fallback purposes."""
 
-    def __init__(self):
+    def __init__(self, smart_filter_service=None):
         """Initialize detector."""
         self.logger = get_logger(__name__)
         self.name_dictionaries = self._load_name_dictionaries()
+        self.smart_filter_service = smart_filter_service
         self.logger.info("Simplified NameDetector initialized.")
 
     def _load_name_dictionaries(self) -> Dict[str, Set[str]]:
@@ -68,6 +69,44 @@ class NameDetector:
         self.logger.debug(f"Detected potential names in fallback: {potential_names}")
         return potential_names
 
+    def _verify_names_with_ac(self, detected_names: List[str]) -> tuple[List[str], float]:
+        """
+        Verify detected names against AC dictionary.
+        
+        Args:
+            detected_names: List of detected name tokens
+            
+        Returns:
+            Tuple of (verified_names, confidence_bonus)
+        """
+        if not self.smart_filter_service:
+            return [], 0.0
+            
+        try:
+            # Create a text with just the detected names for AC search
+            names_text = " ".join(detected_names)
+            
+            # Search for AC matches in the names text
+            ac_result = self.smart_filter_service.search_aho_corasick(names_text)
+            ac_matches = ac_result.get("matches", [])
+            
+            # Extract verified names from AC matches
+            verified_names = []
+            for match in ac_matches:
+                matched_text = match.get("matched_text", "")
+                if matched_text in detected_names:
+                    verified_names.append(matched_text)
+            
+            # Calculate confidence bonus (0.2 per verified name, max 0.4)
+            confidence_bonus = min(len(verified_names) * 0.2, 0.4)
+            
+            self.logger.debug(f"AC verification: {len(verified_names)} names verified out of {len(detected_names)}")
+            return verified_names, confidence_bonus
+            
+        except Exception as e:
+            self.logger.warning(f"AC verification failed: {e}")
+            return [], 0.0
+
     def detect_name_signals(self, text: str) -> Dict[str, Any]:
         """
         Detects name-related signals in text for smart filtering.
@@ -97,9 +136,43 @@ class NameDetector:
         if text_length > 10 and name_count > 0:
             confidence *= 0.8  # Reduce confidence for long texts with few names
 
+        # AC verification step: check detected names against AC dictionary
+        ac_verified_names = []
+        ac_confidence_bonus = 0.0
+        
+        if (detected_names and 
+            self.smart_filter_service and 
+            hasattr(self.smart_filter_service, 'aho_corasick_enabled') and
+            self.smart_filter_service.aho_corasick_enabled):
+            
+            ac_verified_names, ac_confidence_bonus = self._verify_names_with_ac(detected_names)
+            
+            # Apply AC confidence bonus if names were verified
+            if ac_verified_names:
+                confidence = min(confidence + ac_confidence_bonus, 1.0)
+
+        # Check for specific name patterns
+        has_capitals = any(name[0].isupper() and len(name) > 1 for name in detected_names)
+        has_initials = any(re.fullmatch(r"([A-ZА-ЯІЇЄҐ]\.)+", name) for name in detected_names)
+        has_patronymic_endings = any(
+            name.endswith(('ович', 'евич', 'йович', 'ич', 'івна', 'ївна', 'овна', 'евна', 'ична'))
+            for name in detected_names
+        )
+        has_nicknames = any(
+            name.lower() in self.name_dictionaries.get("all", set())
+            for name in detected_names
+        )
+
         return {
             "has_names": name_count > 0,
             "name_count": name_count,
             "names": detected_names,
             "confidence": min(confidence, 1.0),
+            "ac_verified_names": ac_verified_names,
+            "ac_confidence_bonus": ac_confidence_bonus,
+            # Additional fields for compatibility
+            "has_capitals": has_capitals,
+            "has_initials": has_initials,
+            "has_patronymic_endings": has_patronymic_endings,
+            "has_nicknames": has_nicknames,
         }

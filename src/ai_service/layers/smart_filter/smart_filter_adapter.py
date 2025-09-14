@@ -154,17 +154,23 @@ class SmartFilterAdapter(SmartFilterInterface):
         """Extract name-specific signals per CLAUDE.md specification"""
         name_signals = {}
 
-        if "name_detector" in signal_details:
+        # Handle both "names" (real service) and "name_detector" (mock) keys
+        details = None
+        if "names" in signal_details:
+            details = signal_details["names"]
+        elif "name_detector" in signal_details:
             details = signal_details["name_detector"]
+
+        if details:
             name_signals.update(
                 {
-                    "has_capitals": details.get("has_proper_names", False),
+                    "has_capitals": details.get("has_capitals", details.get("has_proper_names", False)),
                     "has_initials": details.get("has_initials", False),
-                    "has_patronymic_endings": details.get(
-                        "has_patronymic_patterns", False
-                    ),
-                    "has_nicknames": details.get("has_diminutives", False),
+                    "has_patronymic_endings": details.get("has_patronymic_endings", details.get("has_patronymic_patterns", False)),
+                    "has_nicknames": details.get("has_nicknames", details.get("has_diminutives", False)),
                     "confidence": details.get("confidence", 0.0),
+                    "ac_verified_names": details.get("ac_verified_names", []),
+                    "ac_confidence_bonus": details.get("ac_confidence_bonus", 0.0),
                 }
             )
 

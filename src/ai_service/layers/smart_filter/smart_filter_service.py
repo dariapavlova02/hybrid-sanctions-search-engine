@@ -92,7 +92,7 @@ class SmartFilterService:
 
             # Initialize detectors
             self.company_detector = CompanyDetector()
-            self.name_detector = NameDetector()
+            self.name_detector = NameDetector(smart_filter_service=self)
             self.document_detector = DocumentDetector()
             if enable_terrorism_detection:
                 self.terrorism_detector = TerrorismDetector()
