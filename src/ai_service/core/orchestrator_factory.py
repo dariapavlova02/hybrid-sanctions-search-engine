@@ -96,7 +96,6 @@ class OrchestratorFactory:
             if language_service is None:
                 try:
                     language_service = LanguageDetectionService()
-                    await language_service.initialize()
                 except Exception as e:
                     logger.error(f"Failed to initialize language service: {e}")
                     raise ServiceInitializationError(f"Language service: {e}")
@@ -105,7 +104,6 @@ class OrchestratorFactory:
             if unicode_service is None:
                 try:
                     unicode_service = UnicodeService()
-                    await unicode_service.initialize()
                 except Exception as e:
                     logger.error(f"Failed to initialize unicode service: {e}")
                     raise ServiceInitializationError(f"Unicode service: {e}")
@@ -114,7 +112,6 @@ class OrchestratorFactory:
             if normalization_service is None:
                 try:
                     normalization_service = NormalizationService()
-                    await normalization_service.initialize()
                 except Exception as e:
                     logger.error(f"Failed to initialize normalization service: {e}")
                     raise ServiceInitializationError(f"Normalization service: {e}")
@@ -123,7 +120,6 @@ class OrchestratorFactory:
             if signals_service is None:
                 try:
                     signals_service = SignalsService()
-                    await signals_service.initialize()
                 except Exception as e:
                     logger.error(f"Failed to initialize signals service: {e}")
                     raise ServiceInitializationError(f"Signals service: {e}")

@@ -13,7 +13,7 @@ import sys
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
-from ai_service.services.template_builder import TemplateBuilder
+from ai_service.layers.variants.template_builder import TemplateBuilder
 
 
 class TestBuildTemplatesScript:

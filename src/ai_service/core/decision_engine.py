@@ -306,10 +306,10 @@ class DecisionEngine(DecisionEngineInterface):
             quality_factors.append("successful_normalization")
 
         # Check signals
-        if result.signals and result.signals.confidence > 0.5:
+        if result.signals and isinstance(result.signals, dict) and result.signals.get('confidence', 0) > 0.5:
             completeness += 0.2
             quality_factors.append("strong_signals")
-        elif result.signals and result.signals.confidence > 0.2:
+        elif result.signals and isinstance(result.signals, dict) and result.signals.get('confidence', 0) > 0.2:
             completeness += 0.1
             quality_factors.append("weak_signals")
 

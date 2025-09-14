@@ -264,12 +264,12 @@ class SignalsService:
         if not organizations or not text:
             return
 
-        # Контекстные паттерны (регионально-нейтральные)
+        # Контекстные паттерны (регионально-нейтральные) с учётом словоформ
         context_patterns = {
-            "financial": r"\b(?:банк|bank|кредит|credit|счет|account|платеж|payment|перевод|transfer)\b",
-            "business": r"\b(?:предприятие|enterprise|компания|company|фирма|firm|организация|organization|корпорация|corporation)\b",
-            "address": r"\b(?:улица|ул\.|проспект|просп\.|город|г\.|офис|office|адрес|address)\b",
-            "activity": r"\b(?:услуги|services|товары|goods|договор|contract|поставка|supply|реализация|implementation)\b"
+            "financial": r"\b(?:банк[а-я]*|bank|кредит[а-я]*|credit|счет[а-я]*|account|платеж[а-я]*|payment|перевод[а-я]*|transfer)\b",
+            "business": r"\b(?:предприяти[а-я]*|enterprise|компани[а-я]*|company|фирм[а-я]*|firm|организаци[а-я]*|organization|корпораци[а-я]*|corporation)\b",
+            "address": r"\b(?:улиц[а-я]*|ул\.|проспект[а-я]*|просп\.|город[а-я]*|г\.|офис[а-я]*|office|адрес[а-я]*|address)\b",
+            "activity": r"\b(?:услуг[а-я]*|services|товар[а-я]*|goods|договор[а-я]*|contract|поставк[а-я]*|supply|реализаци[а-я]*|implementation)\b"
         }
 
         # Компилируем паттерны
@@ -361,7 +361,7 @@ class SignalsService:
 
         # Ищем юридические формы в тексте
         for legal_match in LEGAL_FORM_REGEX.finditer(text):
-            legal_form_raw = legal_match.group("legal_form")
+            legal_form_raw = legal_match.group(0)
             legal_form_normalized = normalize_legal_form(legal_form_raw)
 
             # Позиция юридической формы
@@ -398,7 +398,7 @@ class SignalsService:
             quoted_matches.sort(key=distance_to_legal_form)
 
             for quoted_match in quoted_matches:
-                quoted_core = quoted_match.group("quoted_core").strip()
+                quoted_core = quoted_match.group(1).strip()
 
                 # Проверяем, есть ли это ядро в результатах нормализации
                 if quoted_core.upper() in [org.upper() for org in organizations_core]:

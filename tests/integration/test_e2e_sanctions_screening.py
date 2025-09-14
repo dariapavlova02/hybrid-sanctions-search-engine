@@ -16,12 +16,11 @@ class TestE2ESanctionsScreening:
     """End-to-End тесты для санкционного скрининга"""
 
     @pytest.fixture(scope="class")
-    def orchestrator(self):
+    async def orchestrator(self):
         """Создание полноценного оркестратора для E2E тестов"""
         factory = OrchestratorFactory()
-        return factory.create_unified_orchestrator(
+        return await factory.create_orchestrator(
             enable_decision_engine=True,
-            enable_metrics=True,
             enable_variants=True,
             enable_embeddings=True,
         )

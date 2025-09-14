@@ -1,5 +1,5 @@
 """
-Unit tests for AdvancedNormalizationService using pytest fixtures
+Unit tests for NormalizationService using pytest fixtures
 """
 
 import pytest
@@ -26,12 +26,8 @@ class TestNormalizationService:
     @pytest.fixture(autouse=True)
     def setup_service(self):
         """Set up test fixtures before each test method"""
-        # Create an AdvancedNormalizationService instance
-        self.service = AdvancedNormalizationService()
-        
-        # Mock variant_service if it's None
-        if self.service.variant_service is None:
-            self.service.variant_service = MagicMock()
+        # Create a NormalizationService instance
+        self.service = NormalizationService()
         
         # Mock the slow dependencies
         self._mock_slow_dependencies()
@@ -55,9 +51,9 @@ class TestNormalizationService:
         # Mock variant service
         self.service.variant_service = MagicMock()
 
-    def test_normalize_advanced_aggregates_all_variants(self):
+    def test_normalize_async_aggregates_all_variants(self):
         """
-        Test that normalize_advanced correctly aggregates all variants from morphological analysis
+        Test that normalize_async correctly aggregates all variants from morphological analysis
         """
         # Arrange: Set up mock data and mock methods
         mock_analysis = [
@@ -109,7 +105,7 @@ class TestNormalizationService:
         
         # Act: Call the method under test
         async def run_test():
-            result = await self.service.normalize_advanced(
+            result = await self.service.normalize_async(
                 "Сергій Іванов",
                 language="uk",
                 enable_morphology=True,
@@ -159,9 +155,9 @@ class TestNormalizationService:
         assert 'сергійко' in serhii_analysis['diminutives']
         assert 'serhii' in serhii_analysis['transliterations']
 
-    def test_normalize_advanced_without_morphology(self):
+    def test_normalize_async_without_morphology(self):
         """
-        Test that normalize_advanced works without morphology enabled
+        Test that normalize_async works without morphology enabled
         """
         # Arrange: Mock basic methods
         self.service._clean_text = MagicMock(return_value="Test Text")
@@ -179,7 +175,7 @@ class TestNormalizationService:
         
         # Act: Call the method under test
         async def run_test():
-            result = await self.service.normalize_advanced(
+            result = await self.service.normalize_async(
                 "Test Text",
                 language="en",
                 enable_morphology=False
@@ -213,16 +209,16 @@ class TestNormalizationService:
         assert 'names_analysis' in result
         assert len(result['names_analysis']) == 0
 
-    def test_normalize_advanced_error_handling(self):
+    def test_normalize_async_error_handling(self):
         """
-        Test that normalize_advanced handles errors gracefully
+        Test that normalize_async handles errors gracefully
         """
         # Arrange: Mock methods to throw exceptions
         self.service._clean_text = MagicMock(side_effect=Exception("Clean text error"))
         
         # Act: Call the method under test
         async def run_test():
-            result = await self.service.normalize_advanced(
+            result = await self.service.normalize_async(
                 "Test Text",
                 language="en"
             )
@@ -247,9 +243,9 @@ class TestNormalizationService:
         assert 'token_variants' in result
         assert 'total_variants' in result
 
-    def test_normalize_advanced_empty_text(self):
+    def test_normalize_async_empty_text(self):
         """
-        Test that normalize_advanced handles empty text correctly
+        Test that normalize_async handles empty text correctly
         """
         # Arrange: Mock basic methods
         self.service._clean_text = MagicMock(return_value="")
@@ -259,7 +255,7 @@ class TestNormalizationService:
         
         # Act: Call the method under test
         async def run_test():
-            result = await self.service.normalize_advanced(
+            result = await self.service.normalize_async(
                 "",
                 language="en"
             )
@@ -282,9 +278,9 @@ class TestNormalizationService:
         assert result['total_variants'] == 0
         assert result['names_analysis'] == []
 
-    def test_normalize_advanced_language_detection(self):
+    def test_normalize_async_language_detection(self):
         """
-        Test that normalize_advanced properly detects language
+        Test that normalize_async properly detects language
         """
         # Arrange: Mock methods
         self.service._clean_text = MagicMock(return_value="Сергій Іванов")
@@ -302,7 +298,7 @@ class TestNormalizationService:
         
         # Act: Call the method under test
         async def run_test():
-            result = await self.service.normalize_advanced(
+            result = await self.service.normalize_async(
                 "Сергій Іванов",
                 language="auto"
             )
@@ -326,7 +322,7 @@ class TestNormalizationService:
         assert len(result['tokens']) > 0
         assert result['total_variants'] > 0
 
-    def test_normalize_advanced_token_variants_structure(self):
+    def test_normalize_async_token_variants_structure(self):
         """
         Test that token variants have the correct structure
         """
@@ -346,7 +342,7 @@ class TestNormalizationService:
         
         # Act: Call the method under test
         async def run_test():
-            result = await self.service.normalize_advanced(
+            result = await self.service.normalize_async(
                 "John Smith",
                 language="en"
             )
@@ -385,9 +381,9 @@ class TestNormalizationService:
         assert result['total_variants'] > 0
         assert isinstance(result['total_variants'], int)
 
-    def test_normalize_advanced_morphology_integration(self):
+    def test_normalize_async_morphology_integration(self):
         """
-        Test that normalize_advanced properly integrates with morphology analysis
+        Test that normalize_async properly integrates with morphology analysis
         """
         # Arrange: Mock morphological analysis
         mock_analysis = [
@@ -424,7 +420,7 @@ class TestNormalizationService:
         
         # Act: Call the method under test
         async def run_test():
-            result = await self.service.normalize_advanced(
+            result = await self.service.normalize_async(
                 "Сергій",
                 language="uk",
                 enable_morphology=True

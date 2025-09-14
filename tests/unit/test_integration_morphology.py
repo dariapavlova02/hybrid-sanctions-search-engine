@@ -9,8 +9,8 @@ import os
 # Add path to src for module imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src'))
 
-from ai_service.services.advanced_normalization_service import AdvancedNormalizationService
-from ai_service.services.language_detection_service import LanguageDetectionService
+from ai_service.layers.normalization.normalization_service import NormalizationService
+from ai_service.layers.language.language_detection_service import LanguageDetectionService
 
 
 class TestMorphologyIntegration:

@@ -194,7 +194,7 @@ class UnifiedOrchestrator:
                 logger.debug("Stage 2: Smart Filter")
                 layer_start = time.time()
 
-                filter_result = await self.smart_filter_service.should_process_text_async(
+                filter_result = await self.smart_filter_service.should_process(
                     context.sanitized_text
                 )
                 context.should_process = filter_result.should_process
@@ -224,7 +224,7 @@ class UnifiedOrchestrator:
             layer_start = time.time()
 
             # Language detection EXPECTS unicode-normalized input
-            unicode_result = await self.unicode_service.normalize_unicode(
+            unicode_result = self.unicode_service.normalize_text(
                 context.sanitized_text
             )
             unicode_normalized = unicode_result.get("normalized_text", context.sanitized_text)

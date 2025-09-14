@@ -10,8 +10,8 @@ import os
 # Add the src directory to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src')))
 
-from ai_service.services.smart_filter.smart_filter_service import SmartFilterService
-from ai_service.services.smart_filter.decision_logic import DecisionType, RiskLevel
+from ai_service.layers.smart_filter.smart_filter_service import SmartFilterService
+from ai_service.layers.smart_filter.decision_logic import DecisionType, RiskLevel
 
 
 class TestSmartFilterService(unittest.TestCase):

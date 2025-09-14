@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 from .settings import (
     DatabaseConfig,
     DeploymentConfig,
+    EmbeddingConfig,
     IntegrationConfig,
     LanguageConfig,
     LoggingConfig,
@@ -43,6 +44,7 @@ class Config:
         self.integration = IntegrationConfig()
         self.language = LanguageConfig()
         self.deployment = DeploymentConfig(environment=self.environment)
+        self.embedding = EmbeddingConfig()
 
     def get_all_config(self) -> Dict[str, Any]:
         """Get all configuration as dictionary"""
@@ -55,6 +57,7 @@ class Config:
             "integration": self.integration.to_dict(),
             "language": self.language.to_dict(),
             "deployment": self.deployment.to_dict(),
+            "embedding": self.embedding.model_dump(),
         }
 
     def validate(self) -> bool:

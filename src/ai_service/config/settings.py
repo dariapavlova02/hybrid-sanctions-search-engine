@@ -6,6 +6,7 @@ Structured configuration classes with validation and type hints
 import os
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
+from pydantic import BaseModel
 
 from ..constants import (
     DEFAULT_CACHE_SIZE,
@@ -296,3 +297,12 @@ class DeploymentConfig:
             "enable_uvicorn_logging": self.enable_uvicorn_logging,
             "log_level": self.log_level,
         }
+
+
+class EmbeddingConfig(BaseModel):
+    """Embedding configuration settings"""
+    
+    model_name: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    device: str = "cpu"
+    batch_size: int = 64
+    enable_index: bool = False  # индексацию оставляем как опцию

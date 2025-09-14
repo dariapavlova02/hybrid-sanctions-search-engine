@@ -8,6 +8,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
+from functools import lru_cache
 from typing import Any, Dict, List, Optional, Set, Union
 
 from ...utils.logging_config import get_logger
@@ -414,6 +415,7 @@ class VariantGenerationService:
         include_typo_variants: bool = True,
         max_variants: int = 50,
         prioritize_quality: bool = True,  # NEW OPTION for quality control
+        max_time_ms: int = 100,  # Maximum time in milliseconds
     ) -> Dict[str, Any]:
         """
         Generates comprehensive writing variants for input text.
@@ -475,46 +477,88 @@ class VariantGenerationService:
                 "morphological_variants": set(),
             }
 
-        # 1. Transliteration
-        if include_transliteration:
-            variants.update(comprehensive_result.get("transliterations", set()))
+        # Track time for early stopping
+        import time
+        start_time = time.time()
 
-        # 2. Phonetic variants
-        if include_phonetic:
-            variants.update(comprehensive_result.get("phonetic_variants", set()))
+        def time_limit_reached():
+            return (time.time() - start_time) * 1000 > max_time_ms
 
-        # 3. Visual similarities
-        if include_visual_similarities:
-            variants.update(comprehensive_result.get("visual_similarities", set()))
+        # Early stopping for performance - check if we have enough variants
+        def should_continue():
+            return (len(variants) < max_variants * 2 and  # Generate 2x to allow filtering
+                   not time_limit_reached())  # Don't exceed time limit
 
-        # 4. Typo variants
-        if include_typo_variants:
-            variants.update(comprehensive_result.get("typo_variants", set()))
-
-        # 5. Abbreviation variants
-        if include_abbreviations:
-            abbrev_variants = self._generate_abbreviation_variants(text)
-            variants.update(abbrev_variants)
-
-        # 6. Additional variants
+        # 1. Basic variants (quick and essential)
         additional_variants = self._generate_additional_variants(text)
         variants.update(additional_variants)
 
-        # 7. Automatic morphological variants
-        morphological_variants = self._generate_automatic_morphological_variants(
-            text, language
-        )
-        variants.update(morphological_variants)
+        # 2. Word order variations (important for sanctions matching)
+        word_order_variants = self._generate_word_order_variants(text)
+        variants.update(word_order_variants)
 
-        # 8. Automatic transliterations
-        transliteration_variants = self._generate_automatic_transliteration_variants(
-            text, language
-        )
-        variants.update(transliteration_variants)
+        if not should_continue():
+            # If we already have enough from basic operations, skip expensive ones
+            comprehensive_result = {
+                "transliterations": set(), "phonetic_variants": set(),
+                "visual_similarities": set(), "typo_variants": set(),
+                "morphological_variants": set()
+            }
+            abbrev_variants = set()
+            morphological_variants = set()
+            transliteration_variants = set()
+            diminutive_variants = set()
+            semantic_variants = set()
+        else:
+            # 3. Transliteration (medium cost, high value)
+            if include_transliteration and should_continue():
+                variants.update(comprehensive_result.get("transliterations", set()))
 
-        # 9. Semantically similar names (via embeddings)
-        semantic_variants = self._generate_semantic_similar_names(text, language)
-        variants.update(semantic_variants)
+            # 4. Diminutive variants (medium cost, high value for names)
+            if should_continue():
+                diminutive_variants = self._generate_diminutive_variants(text, language)
+                variants.update(diminutive_variants)
+
+            # 5. Abbreviation variants (low cost)
+            if include_abbreviations and should_continue():
+                abbrev_variants = self._generate_abbreviation_variants(text)
+                variants.update(abbrev_variants)
+
+            # 6. Automatic morphological variants (low cost)
+            if should_continue():
+                morphological_variants = self._generate_automatic_morphological_variants(
+                    text, language
+                )
+                variants.update(morphological_variants)
+
+            # 7. Automatic transliterations (medium cost)
+            if should_continue():
+                transliteration_variants = self._generate_automatic_transliteration_variants(
+                    text, language
+                )
+                variants.update(transliteration_variants)
+
+            # 8. Expensive operations - only if we still need more variants
+            if should_continue():
+                # Phonetic variants
+                if include_phonetic:
+                    variants.update(comprehensive_result.get("phonetic_variants", set()))
+
+                # Visual similarities (can be expensive)
+                if include_visual_similarities and should_continue():
+                    variants.update(comprehensive_result.get("visual_similarities", set()))
+
+                # Typo variants (can be expensive)
+                if include_typo_variants and should_continue():
+                    variants.update(comprehensive_result.get("typo_variants", set()))
+
+                # Semantic variants (most expensive)
+                if should_continue():
+                    semantic_variants = self._generate_semantic_similar_names(text, language)
+                    variants.update(semantic_variants)
+            else:
+                # Set empty defaults for statistics
+                semantic_variants = set()
 
         # PRIORITY SYSTEM for quality variants
         if prioritize_quality:
@@ -540,6 +584,8 @@ class VariantGenerationService:
             ),
             "abbreviations": len(abbrev_variants) if include_abbreviations else 0,
             "basic_variants": len(additional_variants),
+            "word_order_variants": len(word_order_variants),
+            "diminutive_variants": len(diminutive_variants),
         }
 
         return {
@@ -909,6 +955,176 @@ class VariantGenerationService:
         """Automatic generation of transliterations"""
         return self._generate_transliteration_variants(text)
 
+    def _generate_word_order_variants(self, text: str) -> Set[str]:
+        """
+        Generate word order variations for complex names.
+
+        For example:
+        - "Rinat Akhmetov" -> "Akhmetov Rinat"
+        - "John Michael Smith" -> "Smith John Michael", "Michael John Smith", etc.
+
+        This is especially useful for sanctions matching where names might be stored
+        in different orders (given name first vs family name first).
+
+        Args:
+            text: Input text with potentially multiple words
+
+        Returns:
+            Set of word order variations
+        """
+        variants = set()
+
+        if not text or not text.strip():
+            return variants
+
+        # Split into words, filtering out empty strings
+        words = [word.strip() for word in text.split() if word.strip()]
+
+        # Only generate variants for 2-4 words (typical name structures)
+        # More than 4 words creates too many combinations and is unlikely to be a name
+        if len(words) < 2 or len(words) > 4:
+            return variants
+
+        # Check if this looks like a name (capitalized words)
+        if not all(self._is_likely_name_word(word) for word in words):
+            return variants
+
+        # Generate permutations based on number of words
+        if len(words) == 2:
+            # Simple case: "First Last" -> "Last First"
+            variants.add(f"{words[1]} {words[0]}")
+
+        elif len(words) == 3:
+            # Three words: assume "First Middle Last" format
+            # Common variations:
+            # - "Last First Middle" (family name first)
+            # - "First Last Middle" (move middle to end)
+            # - "Middle First Last" (middle name first - less common)
+            variants.add(f"{words[2]} {words[0]} {words[1]}")  # Last First Middle
+            variants.add(f"{words[0]} {words[2]} {words[1]}")  # First Last Middle
+            variants.add(f"{words[1]} {words[0]} {words[2]}")  # Middle First Last
+
+        elif len(words) == 4:
+            # Four words: more complex, limit to most common patterns
+            # Assume "First Middle1 Middle2 Last" or "Title First Middle Last"
+            # Most common: put last word first
+            variants.add(f"{words[3]} {words[0]} {words[1]} {words[2]}")  # Last First Middle1 Middle2
+            variants.add(f"{words[0]} {words[3]} {words[1]} {words[2]}")  # First Last Middle1 Middle2
+
+        # Add variations with different separators
+        original_variants = list(variants)
+        for variant in original_variants:
+            # Add comma-separated version (formal name format)
+            comma_parts = variant.split(' ', 1)
+            if len(comma_parts) == 2:
+                variants.add(f"{comma_parts[0]}, {comma_parts[1]}")
+
+        self.logger.debug(f"Generated {len(variants)} word order variants for '{text}'")
+        return variants
+
+    def _is_likely_name_word(self, word: str) -> bool:
+        """
+        Check if a word is likely part of a name.
+
+        Args:
+            word: Word to check
+
+        Returns:
+            True if word looks like part of a name
+        """
+        if len(word) < 2:
+            return False
+
+        # Names typically start with capital letter
+        if not word[0].isupper():
+            return False
+
+        # Avoid common non-name words that might be capitalized
+        non_name_words = {
+            # English
+            'THE', 'AND', 'OR', 'BUT', 'FOR', 'WITH', 'FROM', 'TO', 'AT', 'BY',
+            'IN', 'ON', 'OF', 'AS', 'IS', 'WAS', 'ARE', 'WERE', 'BE', 'BEEN',
+            'HAVE', 'HAS', 'HAD', 'DO', 'DOES', 'DID', 'WILL', 'WOULD', 'SHALL',
+            # Russian
+            'И', 'ИЛИ', 'НО', 'ДЛЯ', 'С', 'ОТ', 'ДО', 'НА', 'В', 'ПО', 'ЗА',
+            'ПРИ', 'БЕЗ', 'ЧЕРЕЗ', 'ПОСЛЕ', 'ДА', 'НЕТ',
+            # Ukrainian
+            'І', 'АБО', 'АЛЕ', 'ДЛЯ', 'З', 'ВІД', 'ДО', 'НА', 'В', 'ПО', 'ЗА',
+            'ПРИ', 'БЕЗ', 'ЧЕРЕЗ', 'ПІСЛЯ', 'ТАК', 'НІ',
+            # Common organizational terms
+            'LLC', 'INC', 'LTD', 'CORP', 'CO', 'ООО', 'ТОВ', 'ПАТ', 'БАНК'
+        }
+
+        if word.upper() in non_name_words:
+            return False
+
+        # Names typically contain only letters, apostrophes, hyphens
+        if not re.match(r"^[a-zA-Zа-яА-ЯіїєґІЇЄҐ'-]+$", word):
+            return False
+
+        return True
+
+    @lru_cache(maxsize=128)
+    def _generate_diminutive_variants_cached(self, name: str, language: str) -> tuple:
+        """Cached version that returns tuple for hashability"""
+        diminutives = self._generate_diminutive_variants_impl(name, language)
+        return tuple(sorted(diminutives))
+
+    def _generate_diminutive_variants(self, name: str, language: str) -> Set[str]:
+        """Public method that returns Set"""
+        return set(self._generate_diminutive_variants_cached(name, language))
+
+    def _generate_diminutive_variants_impl(self, name: str, language: str) -> Set[str]:
+        """
+        Generate diminutive variants for a given name.
+
+        For example: "Александр" -> ["Саня", "Сашок", "Шура", "Санечка", "Сашенька"]
+
+        Args:
+            name: Full name to generate diminutives for
+            language: Language of the name (ru/uk)
+
+        Returns:
+            Set of diminutive variants
+        """
+        diminutives = set()
+
+        if not name or len(name) < 2:
+            return diminutives
+
+        # Import diminutives dictionaries
+        try:
+            from ...data.dicts.diminutives_extra import (
+                EXTRA_DIMINUTIVES_RU,
+                EXTRA_DIMINUTIVES_UK,
+            )
+
+            # Check both exact match and case-insensitive match
+            diminutives_dict = {}
+            if language == "ru" or language == "auto":
+                diminutives_dict.update(EXTRA_DIMINUTIVES_RU)
+            if language == "uk" or language == "auto":
+                diminutives_dict.update(EXTRA_DIMINUTIVES_UK)
+
+            # Direct match
+            if name in diminutives_dict:
+                diminutives.update(diminutives_dict[name])
+
+            # Case-insensitive match
+            name_lower = name.lower()
+            name_title = name.title()
+            for full_name, diminutives_list in diminutives_dict.items():
+                if full_name.lower() == name_lower or full_name == name_title:
+                    diminutives.update(diminutives_list)
+                    break
+
+            self.logger.debug(f"Generated {len(diminutives)} diminutives for '{name}'")
+
+        except ImportError:
+            self.logger.warning("EXTRA_DIMINUTIVES not available for diminutive generation")
+
+        return diminutives
+
     def _generate_semantic_similar_names(self, text: str, language: str) -> Set[str]:
         """Generation of semantically similar names (placeholder)"""
         # Placeholder - in a real system, this would be the embedding logic
@@ -1204,6 +1420,11 @@ class VariantGenerationService:
                 )
                 analysis["declensions"] = list(morphological_variants)
                 analysis["all_forms"].extend(morphological_variants)
+
+            # Diminutives generation
+            diminutives = self._generate_diminutive_variants(name, language)
+            analysis["diminutives"] = list(diminutives)
+            analysis["all_forms"].extend(diminutives)
 
             # Transliterations
             if self._contains_cyrillic(name):
