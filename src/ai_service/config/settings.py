@@ -41,6 +41,7 @@ class ServiceConfig:
 
     # Feature Flags - управляемые из env
     enable_aho_corasick: bool = field(default_factory=lambda: os.getenv("ENABLE_AHO_CORASICK", "false").lower() == "true")
+    aho_corasick_confidence_bonus: float = field(default_factory=lambda: float(os.getenv("AHO_CORASICK_CONFIDENCE_BONUS", "0.3")))
     prioritize_quality: bool = field(default_factory=lambda: os.getenv("PRIORITIZE_QUALITY", "true").lower() == "true")
     enable_faiss_index: bool = field(default_factory=lambda: os.getenv("ENABLE_FAISS_INDEX", "true").lower() == "true")
     enable_smart_filter: bool = field(default_factory=lambda: os.getenv("ENABLE_SMART_FILTER", "true").lower() == "true")
@@ -63,6 +64,7 @@ class ServiceConfig:
             "preserve_names": self.preserve_names,
             "clean_unicode": self.clean_unicode,
             "enable_aho_corasick": self.enable_aho_corasick,
+            "aho_corasick_confidence_bonus": self.aho_corasick_confidence_bonus,
             "prioritize_quality": self.prioritize_quality,
             "enable_faiss_index": self.enable_faiss_index,
             "enable_smart_filter": self.enable_smart_filter,

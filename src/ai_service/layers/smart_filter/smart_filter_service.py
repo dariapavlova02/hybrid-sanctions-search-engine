@@ -164,6 +164,15 @@ class SmartFilterService:
                     estimated_complexity="very_low",
                 )
 
+            # Tier-0: Aho-Corasick search (if enabled)
+            ac_matches = []
+            ac_confidence_bonus = 0.0
+            if self.aho_corasick_enabled:
+                ac_result = self.search_aho_corasick(original_text)
+                ac_matches = ac_result.get("matches", [])
+                if ac_matches:
+                    ac_confidence_bonus = SERVICE_CONFIG.aho_corasick_confidence_bonus
+
             # Context analysis with payment triggers
             context_signals = self._analyze_payment_context(original_text)
 
@@ -178,10 +187,20 @@ class SmartFilterService:
                 "companies": company_signals,
                 "names": name_signals,
                 "context": context_signals,
+                "aho_corasick_matches": {
+                    "matches": ac_matches,
+                    "total_matches": len(ac_matches),
+                    "confidence_bonus": ac_confidence_bonus,
+                    "enabled": self.aho_corasick_enabled,
+                },
             }
 
             # Calculate total confidence
             total_confidence = self.confidence_scorer.calculate_confidence(all_signals)
+            
+            # Apply AC confidence bonus if matches found
+            if ac_confidence_bonus > 0:
+                total_confidence = min(total_confidence + ac_confidence_bonus, 1.0)
 
             # Determine recommendation
             should_process, recommendation, complexity = self._make_processing_decision(
@@ -196,6 +215,8 @@ class SmartFilterService:
                 detected_signals.append("name")
             if context_signals["confidence"] > 0:
                 detected_signals.append("payment_context")
+            if ac_matches:
+                detected_signals.append("ac_match")
 
             return FilterResult(
                 should_process=should_process,
