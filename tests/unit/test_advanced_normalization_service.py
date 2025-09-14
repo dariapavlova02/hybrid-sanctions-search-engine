@@ -1,5 +1,5 @@
 """
-Unit tests for AdvancedNormalizationService
+Unit tests for NormalizationService
 """
 
 import pytest
@@ -215,7 +215,7 @@ class TestNormalizationService:
         # Should be converted to ASCII
         assert all(ord(c) < 128 for c in result)
     
-    @patch.object(AdvancedNormalizationService, '_analyze_with_pymorphy')
+    @patch.object(NormalizationService, '_analyze_with_pymorphy')
     def test_analyze_single_name_ukrainian(self, mock_pymorphy, advanced_normalization_service):
         """Test Ukrainian name analysis"""
         # Arrange

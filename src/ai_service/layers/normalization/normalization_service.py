@@ -332,6 +332,31 @@ class NormalizationService:
         """Async wrapper for normalize"""
         return self._normalize_sync(text, language)
 
+    def normalize_sync(
+        self,
+        text: str,
+        language: str = "auto",
+        remove_stop_words: bool = True,
+        preserve_names: bool = True,
+        enable_advanced_features: bool = True,
+    ) -> NormalizationResult:
+        """
+        Synchronous normalization for backward compatibility with tests
+
+        Args:
+            text: Input text containing person names
+            language: Language code or 'auto' for detection
+            remove_stop_words: If False, skip STOP_ALL filtering
+            preserve_names: If False, be more aggressive with separators
+            enable_advanced_features: If False, skip morphology and advanced features
+
+        Returns:
+            NormalizationResult with normalized text and trace
+        """
+        return self._normalize_sync(
+            text, language, remove_stop_words, preserve_names, enable_advanced_features
+        )
+
     # Also create the method with the signature used in tests
     @monitor_performance("normalize")
     @monitor_memory_usage

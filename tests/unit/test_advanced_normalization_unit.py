@@ -7,12 +7,12 @@ import asyncio
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
 
 # Mock heavy dependencies before importing
-with patch('ai_service.layers.normalization.normalization_service.spacy') as mock_spacy, \
-     patch('ai_service.layers.normalization.normalization_service.MorphAnalyzer') as mock_morph, \
-     patch('ai_service.layers.normalization.normalization_service.stopwords') as mock_stopwords:
+with patch('spacy.load') as mock_spacy, \
+     patch('pymorphy3.MorphAnalyzer') as mock_morph, \
+     patch('nltk.corpus.stopwords') as mock_stopwords:
     
     # Configure mocks
-    mock_spacy.load.return_value = MagicMock()
+    mock_spacy.return_value = MagicMock()
     mock_morph.return_value = MagicMock()
     mock_stopwords.words.return_value = ['the', 'a', 'an']
     
@@ -20,8 +20,8 @@ with patch('ai_service.layers.normalization.normalization_service.spacy') as moc
     from ai_service.layers.normalization.normalization_service import NormalizationService
 
 
-class TestAdvancedNormalizationService:
-    """Test cases for AdvancedNormalizationService"""
+class TestNormalizationService:
+    """Test cases for NormalizationService"""
 
     @pytest.fixture(autouse=True)
     def setup_service(self):

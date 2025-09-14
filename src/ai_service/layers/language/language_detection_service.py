@@ -211,8 +211,53 @@ class LanguageDetectionService:
                 }
             )
         
+        # Extract alphabetic characters for analysis
+        text_alpha = re.sub(r'[^a-zA-Zа-яёіїєґА-ЯЁІЇЄҐ]', '', text)
+        
+        # Edge case 2: Check for numeric/punctuation dominance (>70%) - check this first
+        total_chars = len(text)
+        non_alpha_chars = len(re.findall(r'[^a-zA-Zа-яёіїєґА-ЯЁІЇЄҐ\s]', text))
+        if total_chars > 0 and (non_alpha_chars / total_chars) >= 0.7:
+            return LanguageDetectionResult(
+                language="unknown",
+                confidence=0.2,
+                details={
+                    "method": "noisy_text",
+                    "cyr_ratio": 0.0,
+                    "lat_ratio": 0.0,
+                    "uk_chars": 0,
+                    "ru_chars": 0,
+                    "total_letters": len(text_alpha),
+                    "bonuses": {},
+                    "reason": "excessive_non_alphabetic_chars"
+                }
+            )
+        
+        # Edge case 1: Check for short text (less than 3 alphabetic characters)
+        if len(text_alpha) < 3:
+            return LanguageDetectionResult(
+                language="unknown",
+                confidence=0.3,
+                details={
+                    "method": "short_text",
+                    "cyr_ratio": 0.0,
+                    "lat_ratio": 0.0,
+                    "uk_chars": 0,
+                    "ru_chars": 0,
+                    "total_letters": len(text_alpha),
+                    "bonuses": {},
+                    "reason": "insufficient_alphabetic_chars"
+                }
+            )
+        
         # Calculate character ratios
         details = self._calculate_character_ratios(text)
+        
+        # Edge case 3: Check for uppercase/acronym dominance
+        uppercase_ratio = len(re.findall(r'[A-ZА-ЯЁІЇЄҐ]', text)) / len(text_alpha) if len(text_alpha) > 0 else 0
+        is_likely_acronym = (uppercase_ratio > 0.9 and 
+                           len(text_alpha) <= 10 and 
+                           re.match(r'^[A-ZА-ЯЁІЇЄҐ]+$', text.strip()))
         
         # Determine primary language based on config thresholds
         language, confidence, reason = self._determine_language_from_ratios(
@@ -223,6 +268,12 @@ class LanguageDetectionService:
         confidence = self._apply_character_bonuses(
             details, confidence, config
         )
+        
+        # Apply uppercase/acronym confidence penalty (after bonuses)
+        if is_likely_acronym:
+            confidence = max(0.1, confidence - 0.4)  # Increased penalty for acronyms
+            details["uppercase_penalty"] = 0.4
+            details["is_likely_acronym"] = True
         
         # Check for mixed language
         if self._is_mixed_language(details, config):

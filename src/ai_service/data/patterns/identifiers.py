@@ -99,7 +99,27 @@ IDENTIFIER_PATTERNS = [
         pattern=r"\b(?:EIN|ein|федеральный\s+налоговый\s+номер)[:\s]*(\d{2}-\d{7})\b",
         description="US Employer Identification Number"
     ),
-    
+
+    # Passport patterns
+    IdentifierPattern(
+        name="PASSPORT_RF_SERIES_NUMBER",
+        type="passport_rf",
+        pattern=r"\b(?:паспорт|серия|passport|series)[:\s]*([А-ЯA-Z]{2}\s*\d{6})\b",
+        description="Russian passport series and number (AA######)"
+    ),
+    IdentifierPattern(
+        name="PASSPORT_RF_GENERIC",
+        type="passport_rf",
+        pattern=r"\b([А-ЯA-Z]{2}\s*\d{6})\b(?=.*(?:паспорт|серия|passport|документ))",
+        description="Russian passport series-number in context"
+    ),
+    IdentifierPattern(
+        name="PASSPORT_UA_GENERIC",
+        type="passport_ua",
+        pattern=r"\b([А-ЯA-Z]{2}\s*\d{6})\b(?=.*(?:паспорт|серія|passport|документ))",
+        description="Ukrainian passport series-number"
+    ),
+
     # Generic patterns (context-free)
     IdentifierPattern(
         name="INN_GENERIC_8",
@@ -189,6 +209,12 @@ def normalize_identifier(value: str, identifier_type: str) -> str:
     elif identifier_type == 'ein':
         # Keep only digits and hyphens
         normalized = re.sub(r'[^\d-]', '', normalized)
+    elif identifier_type in ['passport_rf', 'passport_ua']:
+        # Keep letters and digits, remove spaces between series and number
+        normalized = re.sub(r'[^A-ZА-Я0-9]', '', normalized.upper())
+        # Format as AA######
+        if len(normalized) == 8:  # 2 letters + 6 digits
+            normalized = normalized[:2] + normalized[2:]
     
     return normalized
 
