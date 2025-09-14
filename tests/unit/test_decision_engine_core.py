@@ -69,11 +69,11 @@ class TestDecisionEngineCore:
         assert output.score >= 0.85  # Should be above high threshold
         
         # Verify contributing factors are mentioned in reasons
-        assert any("Person confidence" in reason for reason in output.reasons)
-        assert any("Organization confidence" in reason for reason in output.reasons)
-        assert any("Similarity match" in reason for reason in output.reasons)
-        assert any("ID match bonus applied" in reason for reason in output.reasons)
-        assert any("Date match bonus applied" in reason for reason in output.reasons)
+        assert any("person_evidence_strong" in reason for reason in output.reasons)
+        assert any("org_evidence_strong" in reason for reason in output.reasons)
+        assert any("high_vector_similarity" in reason for reason in output.reasons)
+        assert any("id_exact_match" in reason for reason in output.reasons)
+        assert any("dob_match" in reason for reason in output.reasons)
         
         # Verify details contain weights and thresholds
         assert "calculated_score" in output.details
@@ -111,9 +111,9 @@ class TestDecisionEngineCore:
         assert any("Person confidence" in reason for reason in output.reasons)
         assert any("Organization confidence" in reason for reason in output.reasons)
         assert any("Similarity match" in reason for reason in output.reasons)
-        assert any("Date match bonus applied" in reason for reason in output.reasons)
+        assert any("dob_match" in reason for reason in output.reasons)
         # ID match should not be mentioned since it's False
-        assert not any("ID match bonus applied" in reason for reason in output.reasons)
+        assert not any("id_exact_match" in reason for reason in output.reasons)
     
     def test_low_risk_scenario(self):
         """Test low risk scenario with low confidence signals and no matches"""

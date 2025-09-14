@@ -84,35 +84,85 @@ class DecisionEngine:
         reasons = []
         reasons.append(f"Overall risk score: {score:.3f}")
         
-        # Smart filter contribution
-        if inp.smartfilter.confidence > 0.5:
+        # Smart filter evidence
+        if inp.smartfilter.confidence >= 0.7:
+            reasons.append("strong_smartfilter_signal")
+        elif inp.smartfilter.confidence > 0.5:
             reasons.append(f"Smart filter confidence: {inp.smartfilter.confidence:.3f}")
         
-        # Person signals contribution
-        if inp.signals.person_confidence > 0.3:
+        # Person evidence
+        if inp.signals.person_confidence >= 0.7:
+            reasons.append("person_evidence_strong")
+        elif inp.signals.person_confidence > 0.3:
             reasons.append(f"Person confidence: {inp.signals.person_confidence:.3f}")
         
-        # Organization signals contribution
-        if inp.signals.org_confidence > 0.3:
+        # Organization evidence
+        if inp.signals.org_confidence >= 0.7:
+            reasons.append("org_evidence_strong")
+        elif inp.signals.org_confidence > 0.3:
             reasons.append(f"Organization confidence: {inp.signals.org_confidence:.3f}")
         
-        # Similarity contribution
-        if inp.similarity.cos_top and inp.similarity.cos_top > 0.5:
+        # Similarity evidence
+        if inp.similarity.cos_top and inp.similarity.cos_top >= 0.9:
+            reasons.append("high_vector_similarity")
+        elif inp.similarity.cos_top and inp.similarity.cos_top > 0.5:
             reasons.append(f"Similarity match: {inp.similarity.cos_top:.3f}")
         
-        # Bonus factors
+        # Exact match evidence
         if inp.signals.id_match:
-            reasons.append("ID match bonus applied")
+            reasons.append("id_exact_match")
         if inp.signals.date_match:
-            reasons.append("Date match bonus applied")
+            reasons.append("dob_match")
             
         reasons.append(f"Risk level: {risk.value}")
         return reasons
     
     def _extract_details(self, inp: DecisionInput, score: float) -> Dict[str, Any]:
         """Extract detailed information for debugging and analysis"""
+        
+        # Calculate individual contributions
+        smartfilter_contribution = self.config.w_smartfilter * inp.smartfilter.confidence
+        person_contribution = self.config.w_person * inp.signals.person_confidence
+        org_contribution = self.config.w_org * inp.signals.org_confidence
+        similarity_value = inp.similarity.cos_top if inp.similarity.cos_top is not None else 0.0
+        similarity_contribution = self.config.w_similarity * similarity_value
+        
+        # Calculate bonus contributions
+        date_bonus = self.config.bonus_date_match if inp.signals.date_match else 0.0
+        id_bonus = self.config.bonus_id_match if inp.signals.id_match else 0.0
+        
+        # Normalize features for audit trail
+        normalized_features = {
+            "smartfilter_confidence": inp.smartfilter.confidence,
+            "person_confidence": inp.signals.person_confidence,
+            "org_confidence": inp.signals.org_confidence,
+            "similarity_cos_top": similarity_value,
+            "date_match": inp.signals.date_match,
+            "id_match": inp.signals.id_match
+        }
+        
+        # Evidence strength indicators
+        evidence_strength = {
+            "smartfilter_strong": inp.smartfilter.confidence >= 0.7,
+            "person_strong": inp.signals.person_confidence >= 0.7,
+            "org_strong": inp.signals.org_confidence >= 0.7,
+            "similarity_high": inp.similarity.cos_top and inp.similarity.cos_top >= 0.9,
+            "exact_id_match": inp.signals.id_match,
+            "exact_dob_match": inp.signals.date_match
+        }
+        
         return {
             "calculated_score": score,
+            "score_breakdown": {
+                "smartfilter_contribution": smartfilter_contribution,
+                "person_contribution": person_contribution,
+                "org_contribution": org_contribution,
+                "similarity_contribution": similarity_contribution,
+                "date_bonus": date_bonus,
+                "id_bonus": id_bonus,
+                "total": smartfilter_contribution + person_contribution + org_contribution + 
+                        similarity_contribution + date_bonus + id_bonus
+            },
             "weights_used": {
                 "w_smartfilter": self.config.w_smartfilter,
                 "w_person": self.config.w_person,
@@ -125,6 +175,8 @@ class DecisionEngine:
                 "thr_high": self.config.thr_high,
                 "thr_medium": self.config.thr_medium
             },
+            "normalized_features": normalized_features,
+            "evidence_strength": evidence_strength,
             "input_signals": {
                 "person_confidence": inp.signals.person_confidence,
                 "org_confidence": inp.signals.org_confidence,
