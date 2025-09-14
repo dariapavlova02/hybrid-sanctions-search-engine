@@ -4,7 +4,7 @@ Decision Engine for risk assessment and decision making.
 
 from typing import Any, Dict, List, Optional
 
-from ..contracts.decision_contracts import DecisionInput, DecisionOutput, RiskLevel
+from ..contracts.decision_contracts import DecisionInput, DecisionOutput, RiskLevel, SmartFilterInfo, SignalsInfo, SimilarityInfo
 from ..config.settings import DecisionConfig, DECISION_CONFIG
 
 
@@ -21,9 +21,13 @@ class DecisionEngine:
         Make a decision based on input signals and data.
         
         Implements deterministic scoring with configurable weights and thresholds.
+        Robustly handles None/empty evidence with safe defaults.
         """
+        # Safely extract smart filter info with defaults
+        smartfilter = self._safe_smartfilter(inp.smartfilter)
+        
         # Check if smart filter says to skip processing
-        if not inp.smartfilter.should_process:
+        if not smartfilter.should_process:
             return DecisionOutput(
                 risk=RiskLevel.SKIP,
                 score=0.0,
@@ -31,17 +35,32 @@ class DecisionEngine:
                 details={"smartfilter_should_process": False}
             )
         
+        # Safely extract signals info with defaults
+        signals = self._safe_signals(inp.signals)
+        
+        # Safely extract similarity info with defaults
+        similarity = self._safe_similarity(inp.similarity)
+        
+        # Create safe input for calculation
+        safe_input = DecisionInput(
+            text=inp.text,
+            language=inp.language,
+            smartfilter=smartfilter,
+            signals=signals,
+            similarity=similarity
+        )
+        
         # Calculate weighted score
-        score = self._calculate_weighted_score(inp)
+        score = self._calculate_weighted_score(safe_input)
         
         # Determine risk level based on thresholds
         risk = self._determine_risk_level(score)
         
         # Generate reasons based on contributing factors
-        reasons = self._generate_reasons(inp, score, risk)
+        reasons = self._generate_reasons(safe_input, score, risk)
         
         # Extract details with used features and weights
-        details = self._extract_details(inp, score)
+        details = self._extract_details(safe_input, score)
         
         return DecisionOutput(
             risk=risk,
@@ -195,3 +214,43 @@ class DecisionEngine:
                 "estimated_complexity": inp.smartfilter.estimated_complexity
             }
         }
+    
+    def _safe_smartfilter(self, smartfilter: Optional[SmartFilterInfo]) -> SmartFilterInfo:
+        """Safely extract smart filter info with defaults for None values"""
+        if smartfilter is None:
+            return SmartFilterInfo(should_process=True, confidence=0.0)
+        
+        return SmartFilterInfo(
+            should_process=smartfilter.should_process if smartfilter.should_process is not None else True,
+            confidence=smartfilter.confidence if smartfilter.confidence is not None else 0.0,
+            estimated_complexity=smartfilter.estimated_complexity
+        )
+    
+    def _safe_signals(self, signals: Optional[SignalsInfo]) -> SignalsInfo:
+        """Safely extract signals info with defaults for None values"""
+        if signals is None:
+            return SignalsInfo(
+                person_confidence=0.0,
+                org_confidence=0.0,
+                date_match=False,
+                id_match=False,
+                evidence={}
+            )
+        
+        return SignalsInfo(
+            person_confidence=signals.person_confidence if signals.person_confidence is not None else 0.0,
+            org_confidence=signals.org_confidence if signals.org_confidence is not None else 0.0,
+            date_match=signals.date_match if signals.date_match is not None else False,
+            id_match=signals.id_match if signals.id_match is not None else False,
+            evidence=signals.evidence if signals.evidence is not None else {}
+        )
+    
+    def _safe_similarity(self, similarity: Optional[SimilarityInfo]) -> SimilarityInfo:
+        """Safely extract similarity info with defaults for None values"""
+        if similarity is None:
+            return SimilarityInfo(cos_top=None, cos_p95=None)
+        
+        return SimilarityInfo(
+            cos_top=similarity.cos_top,
+            cos_p95=similarity.cos_p95
+        )
