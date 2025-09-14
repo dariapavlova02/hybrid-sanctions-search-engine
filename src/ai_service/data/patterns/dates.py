@@ -8,6 +8,7 @@ in various formats (DD/MM/YYYY, DD.MM.YYYY, etc.).
 import re
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
+from functools import lru_cache
 
 
 # Date patterns for different formats

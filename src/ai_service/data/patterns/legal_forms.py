@@ -6,6 +6,7 @@ in various languages (Russian, Ukrainian, English).
 """
 
 import re
+from functools import lru_cache
 from typing import Dict, List, Set
 
 
@@ -77,16 +78,31 @@ ALL_LEGAL_FORMS_REGEX = r"\b(?:" + "|".join(ALL_LEGAL_FORMS) + r")\b"
 def get_legal_forms_regex(language: str = "all") -> str:
     """
     Get legal forms regex pattern for specific language or all languages.
-    
+
     Args:
         language: Language code ("ru", "uk", "en") or "all" for combined pattern
-        
+
     Returns:
-        Compiled regex pattern string
+        Regex pattern string (not compiled)
     """
     if language == "all":
         return ALL_LEGAL_FORMS_REGEX
     return LEGAL_FORMS_REGEX.get(language, ALL_LEGAL_FORMS_REGEX)
+
+
+@lru_cache(maxsize=8)
+def get_compiled_legal_forms_regex(language: str = "all") -> re.Pattern:
+    """
+    Get compiled legal forms regex pattern with LRU caching.
+
+    Args:
+        language: Language code ("ru", "uk", "en") or "all" for combined pattern
+
+    Returns:
+        Compiled regex pattern
+    """
+    pattern_str = get_legal_forms_regex(language)
+    return re.compile(pattern_str, re.IGNORECASE)
 
 
 def get_legal_forms_set(language: str = "all") -> Set[str]:

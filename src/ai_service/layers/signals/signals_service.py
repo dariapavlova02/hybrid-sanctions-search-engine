@@ -45,6 +45,8 @@ class ConfidenceScoring:
     NORM_MATCH_BONUS = 0.2
     ADJACENT_NAME_BONUS = 0.1
     ORG_CORE_BONUS = 0.1
+    CONTEXT_BONUS = 0.15  # Bonus for contextual organization signals
+    ADDRESS_BONUS = 0.1   # Bonus for address-like context
 
     # Multi-evidence bonuses
     PERSON_MAX_MULTI_BONUS = 0.2
@@ -244,7 +246,68 @@ class SignalsService:
                     evidence=legal_org["evidence"],
                 )
 
+        # Добавляем контекстные сигналы для улучшения precision
+        self._enrich_with_context_signals(text, list(org_dict.values()))
+
         return list(org_dict.values())
+
+    def _enrich_with_context_signals(self, text: str, organizations: List[OrganizationSignal]):
+        """
+        Обогащает организации контекстными сигналами для улучшения precision.
+
+        Ищет в тексте слова, которые указывают на деловую/организационную активность:
+        - Финансовые термины: банк, кредит, счёт, платеж
+        - Организационные: предприятие, компания, фирма
+        - Адресные: улица, проспект, город, офис
+        - Деятельность: услуги, товары, договор, поставка
+        """
+        if not organizations or not text:
+            return
+
+        # Контекстные паттерны (регионально-нейтральные)
+        context_patterns = {
+            "financial": r"\b(?:банк|bank|кредит|credit|счет|account|платеж|payment|перевод|transfer)\b",
+            "business": r"\b(?:предприятие|enterprise|компания|company|фирма|firm|организация|organization|корпорация|corporation)\b",
+            "address": r"\b(?:улица|ул\.|проспект|просп\.|город|г\.|офис|office|адрес|address)\b",
+            "activity": r"\b(?:услуги|services|товары|goods|договор|contract|поставка|supply|реализация|implementation)\b"
+        }
+
+        # Компилируем паттерны
+        compiled_patterns = {}
+        for category, pattern in context_patterns.items():
+            try:
+                compiled_patterns[category] = re.compile(pattern, re.IGNORECASE)
+            except re.error:
+                continue
+
+        # Проверяем каждую организацию
+        for org in organizations:
+            context_matches = []
+
+            # Ищем контекстные сигналы в тексте
+            for category, pattern in compiled_patterns.items():
+                matches = pattern.findall(text)
+                if matches:
+                    context_matches.extend([(category, match) for match in matches])
+
+            # Добавляем evidence на основе найденных контекстов
+            if context_matches:
+                # Группируем по категориям
+                found_categories = set(match[0] for match in context_matches)
+
+                for category in found_categories:
+                    if category == "financial":
+                        org.evidence.append("financial_context")
+                    elif category == "business":
+                        org.evidence.append("business_context")
+                    elif category == "address":
+                        org.evidence.append("address_context")
+                    elif category == "activity":
+                        org.evidence.append("activity_context")
+
+                self.logger.debug(
+                    f"Organization '{org.core}' enhanced with context signals: {found_categories}"
+                )
 
     def _enrich_with_identifiers(
         self,
@@ -918,6 +981,11 @@ class SignalsService:
                     bonus += ConfidenceScoring.INVALID_ID_BONUS
                 elif ev == "org_core":
                     bonus += ConfidenceScoring.ORG_CORE_BONUS
+                # Новые контекстные бонусы
+                elif ev in ["financial_context", "business_context", "activity_context"]:
+                    bonus += ConfidenceScoring.CONTEXT_BONUS
+                elif ev == "address_context":
+                    bonus += ConfidenceScoring.ADDRESS_BONUS
 
             # Бонус за множественные evidence
             if evidence_count > 1:

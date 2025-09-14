@@ -63,7 +63,13 @@ class IdentifierExtractor(BaseExtractor):
                     continue
 
                 for match in compiled_regex.finditer(text):
-                    raw_value = match.group(1)
+                    # Handle patterns with multiple capture groups (e.g. passport series + number)
+                    if pattern.type in ['passport_rf', 'passport_ua'] and len(match.groups()) > 1:
+                        # Combine multiple groups for passport patterns
+                        raw_value = ''.join(g for g in match.groups() if g is not None)
+                    else:
+                        raw_value = match.group(1) if match.group(1) else match.group(0)
+
                     normalized_value = normalize_identifier(raw_value, pattern.type)
 
                     # Validate if validator exists

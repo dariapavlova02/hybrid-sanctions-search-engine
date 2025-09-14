@@ -102,22 +102,40 @@ IDENTIFIER_PATTERNS = [
 
     # Passport patterns
     IdentifierPattern(
-        name="PASSPORT_RF_SERIES_NUMBER",
+        name="PASSPORT_RF_DIRECT",
         type="passport_rf",
         pattern=r"\b(?:паспорт|серия|passport|series)[:\s]*([А-ЯA-Z]{2}\s*\d{6})\b",
-        description="Russian passport series and number (AA######)"
+        description="Russian passport with direct context"
     ),
     IdentifierPattern(
-        name="PASSPORT_RF_GENERIC",
+        name="PASSPORT_RF_SERIES_NUMBER",
         type="passport_rf",
-        pattern=r"\b([А-ЯA-Z]{2}\s*\d{6})\b(?=.*(?:паспорт|серия|passport|документ))",
-        description="Russian passport series-number in context"
+        pattern=r"\bсерия\s+([А-ЯA-Z]{2})\s+номер\s+(\d{6})\b",
+        description="Russian passport series AA номер ######"
     ),
     IdentifierPattern(
-        name="PASSPORT_UA_GENERIC",
+        name="PASSPORT_RF_CONTEXT",
+        type="passport_rf",
+        pattern=r"(?:паспорт|документ|series|passport).*?([А-ЯA-Z]{2}\s*\d{6})",
+        description="Russian passport in sentence context"
+    ),
+    IdentifierPattern(
+        name="PASSPORT_UA_DIRECT",
         type="passport_ua",
-        pattern=r"\b([А-ЯA-Z]{2}\s*\d{6})\b(?=.*(?:паспорт|серія|passport|документ))",
-        description="Ukrainian passport series-number"
+        pattern=r"\b(?:паспорт|серія|passport)[:\s]*([А-ЯA-Z]{2}\s*\d{6})\b",
+        description="Ukrainian passport series-number (old format)"
+    ),
+    IdentifierPattern(
+        name="PASSPORT_UA_ID_CARD",
+        type="passport_ua",
+        pattern=r"\b(?:ID[\s-]?карт[аи]|айді[\s-]?карт[аи]|паспорт|id[\s-]?card)[:\s]*(\d{9})\b",
+        description="Ukrainian ID card (9 digits)"
+    ),
+    IdentifierPattern(
+        name="PASSPORT_UA_GENERIC_9",
+        type="passport_ua",
+        pattern=r"\b(\d{9})\b(?=.*(?:паспорт|серія|passport|карт|id|документ))",
+        description="Ukrainian ID card number in context"
     ),
 
     # Generic patterns (context-free)
@@ -153,7 +171,7 @@ IDENTIFIER_PATTERNS = [
     ),
 ]
 
-# Compiled patterns cache
+# Compiled patterns cache (set to None to force recompilation)
 _compiled_patterns_cache: List[Tuple[IdentifierPattern, Pattern]] = None
 
 
@@ -212,31 +230,33 @@ def normalize_identifier(value: str, identifier_type: str) -> str:
     elif identifier_type in ['passport_rf', 'passport_ua']:
         # Keep letters and digits, remove spaces between series and number
         normalized = re.sub(r'[^A-ZА-Я0-9]', '', normalized.upper())
-        # Format as AA######
+        # Format as AA###### for series-number format or ######### for ID cards
         if len(normalized) == 8:  # 2 letters + 6 digits
             normalized = normalized[:2] + normalized[2:]
+        elif len(normalized) == 9:  # Ukrainian ID card - just digits
+            normalized = re.sub(r'[^\d]', '', normalized)
     
     return normalized
 
 
-def get_validation_function(identifier_type: str) -> str:
+def get_validation_function(identifier_type: str):
     """
-    Get validation function name for identifier type.
-    
+    Get validation function for identifier type.
+
     Args:
         identifier_type: Type of identifier
-        
+
     Returns:
-        Validation function name or None
+        Validation function callable or None
     """
     validation_functions = {
-        'inn': 'validate_inn',
-        'edrpou': 'validate_edrpou', 
-        'ogrn': 'validate_ogrn',
-        'ogrnip': 'validate_ogrnip',
-        'vat': 'validate_vat',
-        'lei': 'validate_lei',
-        'ein': 'validate_ein',
+        'inn': validate_inn,
+        'edrpou': validate_edrpou,
+        'ogrn': validate_ogrn,
+        'ogrnip': validate_ogrnip,
+        'vat': validate_vat,
+        'lei': validate_lei,
+        'ein': validate_ein,
     }
     return validation_functions.get(identifier_type)
 

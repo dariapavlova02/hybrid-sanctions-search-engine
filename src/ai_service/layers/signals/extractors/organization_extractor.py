@@ -26,12 +26,12 @@ class OrganizationExtractor(BaseExtractor):
             return []
 
         try:
-            from ...data.patterns.legal_forms import get_legal_forms_regex
+            from ...data.patterns.legal_forms import get_compiled_legal_forms_regex
 
-            legal_forms_regex = get_legal_forms_regex()
+            legal_forms_compiled = get_compiled_legal_forms_regex()
             organizations = []
 
-            for match in re.finditer(legal_forms_regex, text, re.IGNORECASE):
+            for match in legal_forms_compiled.finditer(text):
                 org_text = self._extract_org_name_near_legal_form(text, match)
                 if org_text and org_text != "UNNAMED_ORG":
                     organizations.append(org_text.strip().upper())

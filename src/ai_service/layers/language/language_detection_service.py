@@ -201,13 +201,28 @@ class LanguageDetectionService:
                 confidence=0.0,
                 details={
                     "method": "empty_text",
+                    "cyr_chars": 0,
+                    "lat_chars": 0,
                     "cyr_ratio": 0.0,
                     "lat_ratio": 0.0,
                     "uk_chars": 0,
                     "ru_chars": 0,
                     "total_letters": 0,
+                    "digits": 0,
+                    "punct": 0,
+                    "uppercase_chars": 0,
                     "bonuses": {},
-                    "reason": "empty_text"
+                    "reason": "empty_text",
+                    "debug": {
+                        "cyr_ratio": 0.0,
+                        "lat_ratio": 0.0,
+                        "ru_bonus": 0,
+                        "uk_bonus": 0,
+                        "uppercase_ratio": 0.0,
+                        "is_likely_acronym": False,
+                        "total_processing_chars": len(text) if text else 0,
+                        "alphabetic_chars": 0
+                    }
                 }
             )
         
@@ -223,13 +238,28 @@ class LanguageDetectionService:
                 confidence=0.2,
                 details={
                     "method": "noisy_text",
+                    "cyr_chars": 0,
+                    "lat_chars": 0,
                     "cyr_ratio": 0.0,
                     "lat_ratio": 0.0,
                     "uk_chars": 0,
                     "ru_chars": 0,
                     "total_letters": len(text_alpha),
+                    "digits": 0,
+                    "punct": 0,
+                    "uppercase_chars": 0,
                     "bonuses": {},
-                    "reason": "excessive_non_alphabetic_chars"
+                    "reason": "excessive_non_alphabetic_chars",
+                    "debug": {
+                        "cyr_ratio": 0.0,
+                        "lat_ratio": 0.0,
+                        "ru_bonus": 0,
+                        "uk_bonus": 0,
+                        "uppercase_ratio": 0.0,
+                        "is_likely_acronym": False,
+                        "total_processing_chars": len(text),
+                        "alphabetic_chars": len(text_alpha)
+                    }
                 }
             )
         
@@ -240,13 +270,28 @@ class LanguageDetectionService:
                 confidence=0.3,
                 details={
                     "method": "short_text",
+                    "cyr_chars": 0,
+                    "lat_chars": 0,
                     "cyr_ratio": 0.0,
                     "lat_ratio": 0.0,
                     "uk_chars": 0,
                     "ru_chars": 0,
                     "total_letters": len(text_alpha),
+                    "digits": 0,
+                    "punct": 0,
+                    "uppercase_chars": 0,
                     "bonuses": {},
-                    "reason": "insufficient_alphabetic_chars"
+                    "reason": "insufficient_alphabetic_chars",
+                    "debug": {
+                        "cyr_ratio": 0.0,
+                        "lat_ratio": 0.0,
+                        "ru_bonus": 0,
+                        "uk_bonus": 0,
+                        "uppercase_ratio": 0.0,
+                        "is_likely_acronym": False,
+                        "total_processing_chars": len(text),
+                        "alphabetic_chars": len(text_alpha)
+                    }
                 }
             )
         
@@ -254,10 +299,10 @@ class LanguageDetectionService:
         details = self._calculate_character_ratios(text)
         
         # Edge case 3: Check for uppercase/acronym dominance
-        uppercase_ratio = len(re.findall(r'[A-ZА-ЯЁІЇЄҐ]', text)) / len(text_alpha) if len(text_alpha) > 0 else 0
+        uppercase_ratio = details["uppercase_chars"] / len(text_alpha) if len(text_alpha) > 0 else 0
         is_likely_acronym = (uppercase_ratio > 0.9 and 
                            len(text_alpha) <= 10 and 
-                           re.match(r'^[A-ZА-ЯЁІЇЄҐ]+$', text.strip()))
+                           bool(re.match(r'^[A-ZА-ЯЁІЇЄҐ]+$', text.strip())))
         
         # Determine primary language based on config thresholds
         language, confidence, reason = self._determine_language_from_ratios(
@@ -289,13 +334,24 @@ class LanguageDetectionService:
         # Clamp confidence to [0, 1]
         confidence = max(0.0, min(1.0, confidence))
         
-        # Update details with final results
+        # Update details with final results and debug information
         details.update({
             "method": "config_driven",
             "reason": reason,
             "final_confidence": confidence,
             "final_language": language,
-            "config_used": config.to_dict()
+            "config_used": config.to_dict(),
+            # Debug information for performance analysis
+            "debug": {
+                "cyr_ratio": details["cyr_ratio"],
+                "lat_ratio": details["lat_ratio"],
+                "ru_bonus": details["bonuses"].get("ru_chars", 0),
+                "uk_bonus": details["bonuses"].get("uk_chars", 0),
+                "uppercase_ratio": uppercase_ratio,
+                "is_likely_acronym": is_likely_acronym,
+                "total_processing_chars": len(text),
+                "alphabetic_chars": len(text_alpha)
+            }
         })
         
         return LanguageDetectionResult(
@@ -305,16 +361,38 @@ class LanguageDetectionService:
         )
     
     def _calculate_character_ratios(self, text: str) -> Dict[str, Any]:
-        """Calculate character ratios and counts"""
-        # Count different character types
-        cyr_chars = len(re.findall(r"[а-яёіїєґА-ЯЁІЇЄҐ]", text))
-        lat_chars = len(re.findall(r"[a-zA-Z]", text))
-        digits = len(re.findall(r"[0-9]", text))
-        punct = len(re.findall(r"[^\w\s]", text))
+        """Calculate character ratios and counts in single pass for performance"""
+        # Initialize counters
+        cyr_chars = 0
+        lat_chars = 0
+        uk_chars = 0
+        ru_chars = 0
+        digits = 0
+        punct = 0
+        uppercase_chars = 0
         
-        # Count specific characters for bonuses
-        uk_chars = len(re.findall(r"[іїєґІЇЄҐ]", text))
-        ru_chars = len(re.findall(r"[ёъыэЁЪЫЭ]", text))
+        # Single pass through text
+        for char in text:
+            if 'а' <= char <= 'я' or 'А' <= char <= 'Я' or char in 'ёЁіїєґІЇЄҐ':
+                cyr_chars += 1
+                # Check for specific Ukrainian characters
+                if char in 'іїєґІЇЄҐ':
+                    uk_chars += 1
+                # Check for specific Russian characters
+                elif char in 'ёъыэЁЪЫЭ':
+                    ru_chars += 1
+                # Check for uppercase
+                if char.isupper():
+                    uppercase_chars += 1
+            elif 'a' <= char <= 'z' or 'A' <= char <= 'Z':
+                lat_chars += 1
+                # Check for uppercase
+                if char.isupper():
+                    uppercase_chars += 1
+            elif '0' <= char <= '9':
+                digits += 1
+            elif not char.isspace():
+                punct += 1
         
         # Calculate total letters (excluding digits and punctuation)
         total_letters = cyr_chars + lat_chars
@@ -333,6 +411,7 @@ class LanguageDetectionService:
             "total_letters": total_letters,
             "digits": digits,
             "punct": punct,
+            "uppercase_chars": uppercase_chars,
             "bonuses": {}
         }
     
