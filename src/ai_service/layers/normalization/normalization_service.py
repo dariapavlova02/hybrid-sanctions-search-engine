@@ -1489,11 +1489,25 @@ class NormalizationService:
                         rule = 'morph_gender_adjusted'
                 
                 normalized_tokens.append(normalized)
+                
+                # Set morph_lang based on whether morphology was actually applied
+                # ASCII tokens in ru/uk context should not have morph_lang set
+                morph_lang = None
+                if enable_advanced_features and language in ['ru', 'uk'] and token.isascii() and token.isalpha():
+                    # ASCII tokens in Cyrillic context - no morphology applied
+                    morph_lang = None
+                elif rule in ['morph', 'morph_gender_adjusted'] or (morphed and morphed != token):
+                    # Morphology was actually applied
+                    morph_lang = language
+                else:
+                    # No morphology applied
+                    morph_lang = None
+                
                 traces.append(TokenTrace(
                     token=token,
                     role=role,
                     rule=rule,
-                    morph_lang=language,
+                    morph_lang=morph_lang,
                     normal_form=morphed if rule != 'morph' else None,
                     output=normalized,
                     fallback=False,

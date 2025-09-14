@@ -69,7 +69,7 @@ class TestSmartFilterAdapter:
         assert isinstance(result, SmartFilterResult)
         assert result.should_process is True
         assert result.confidence == 0.85
-        assert result.classification == "recommend"
+        assert result.classification == "must_process"  # High confidence (0.85) maps to must_process
         assert "name" in result.detected_signals
         assert "company" in result.detected_signals
 
