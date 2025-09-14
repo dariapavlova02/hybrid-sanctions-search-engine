@@ -37,10 +37,15 @@ from ..contracts.base_contracts import (
     VariantsServiceInterface,
 )
 from ..contracts.decision_contracts import (
-    DecisionEngineInterface,
-    DecisionResult,
-    MatchDecision,
+    DecisionInput,
+    DecisionOutput,
+    RiskLevel,
+    SmartFilterInfo,
+    SignalsInfo,
+    SimilarityInfo,
 )
+from ..core.decision_engine import DecisionEngine
+from ..config.settings import DecisionConfig
 from ..exceptions import InternalServerError, ServiceInitializationError
 from ..utils import get_logger
 from ..monitoring.metrics_service import MetricsService, MetricType, AlertSeverity
@@ -68,7 +73,7 @@ class UnifiedOrchestrator:
         smart_filter_service: Optional[SmartFilterInterface] = None,
         variants_service: Optional[VariantsServiceInterface] = None,
         embeddings_service: Optional[EmbeddingsServiceInterface] = None,
-        decision_engine: Optional[DecisionEngineInterface] = None,
+        decision_engine: Optional[DecisionEngine] = None,
         metrics_service: Optional[MetricsService] = None,
         # Configuration - defaults from SERVICE_CONFIG
         enable_smart_filter: Optional[bool] = None,
@@ -360,23 +365,27 @@ class UnifiedOrchestrator:
             )
 
             # Run decision engine if enabled
+            decision_result = None
             if self.enable_decision_engine:
                 logger.debug("Stage 9: Decision Engine")
                 layer_start = time.time()
                 try:
-                    decision_result = await self.decision_engine.make_decision(
-                        processing_result=temp_processing_result,
-                        candidates=None,  # Could be passed as parameter in future
-                        context=context.metadata.get("decision_context", {})
+                    # Create DecisionInput from processing results
+                    decision_input = self._create_decision_input(
+                        context, temp_processing_result, signals_result
                     )
+                    
+                    # Make decision using our new DecisionEngine
+                    decision_result = self.decision_engine.decide(decision_input)
+                    
                     logger.debug(
-                        f"Decision made: {decision_result.decision.value} "
-                        f"(confidence: {decision_result.confidence:.2f})"
+                        f"Decision made: {decision_result.risk.value} "
+                        f"(score: {decision_result.score:.2f})"
                     )
                     if self.metrics_service:
                         self.metrics_service.record_timer('processing.layer.decision', time.time() - layer_start)
-                        self.metrics_service.record_histogram('decision.confidence', decision_result.confidence)
-                        self.metrics_service.increment_counter(f'decision.result.{decision_result.decision.value.lower()}')
+                        self.metrics_service.record_histogram('decision.score', decision_result.score)
+                        self.metrics_service.increment_counter(f'decision.result.{decision_result.risk.value.lower()}')
                 except Exception as e:
                     logger.warning(f"Decision engine failed: {e}")
                     if self.metrics_service:
@@ -478,6 +487,81 @@ class UnifiedOrchestrator:
             processing_time=time.time() - start_time,
             success=True,
             errors=[],
+        )
+
+    def _create_decision_input(
+        self, 
+        context: ProcessingContext, 
+        processing_result: UnifiedProcessingResult,
+        signals_result: SignalsResult
+    ) -> DecisionInput:
+        """Create DecisionInput from processing results"""
+        
+        # Extract smart filter information
+        smart_filter_info = context.metadata.get("smart_filter", {})
+        smart_filter = SmartFilterInfo(
+            should_process=smart_filter_info.get("should_process", True),
+            confidence=smart_filter_info.get("confidence", 1.0),
+            estimated_complexity=smart_filter_info.get("classification")
+        )
+        
+        # Extract signals information
+        person_confidence = 0.0
+        org_confidence = 0.0
+        date_match = False
+        id_match = False
+        evidence = {}
+        
+        if signals_result.persons:
+            # Use the highest person confidence
+            person_confidence = max(p.confidence for p in signals_result.persons)
+            # Check for ID matches in person data
+            for person in signals_result.persons:
+                if hasattr(person, 'ids') and person.ids:
+                    id_match = True
+                    break
+        
+        if signals_result.organizations:
+            # Use the highest organization confidence
+            org_confidence = max(o.confidence for o in signals_result.organizations)
+            # Check for ID matches in organization data
+            for org in signals_result.organizations:
+                if hasattr(org, 'ids') and org.ids:
+                    id_match = True
+                    break
+        
+        # Check for date matches in extras
+        if hasattr(signals_result, 'extras') and signals_result.extras.dates:
+            date_match = True
+        
+        # Create evidence dict
+        evidence = {
+            "persons_count": len(signals_result.persons),
+            "organizations_count": len(signals_result.organizations),
+            "signals_confidence": signals_result.confidence
+        }
+        
+        signals = SignalsInfo(
+            person_confidence=person_confidence,
+            org_confidence=org_confidence,
+            date_match=date_match,
+            id_match=id_match,
+            evidence=evidence
+        )
+        
+        # Extract similarity information (if embeddings are available)
+        similarity = SimilarityInfo()
+        if processing_result.embeddings:
+            # For now, we don't have similarity search implemented
+            # This would be populated when similarity search is added
+            similarity = SimilarityInfo(cos_top=None, cos_p95=None)
+        
+        return DecisionInput(
+            text=context.original_text,
+            language=context.language,
+            smartfilter=smart_filter,
+            signals=signals,
+            similarity=similarity
         )
 
     # Convenience methods for backward compatibility

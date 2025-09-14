@@ -350,7 +350,8 @@ async def process_text(request: ProcessTextRequest):
             enable_advanced_features=True,
         )
 
-        return {
+        # Prepare base response
+        response = {
             "success": result.success,
             "original_text": result.original_text,
             "normalized_text": result.normalized_text,
@@ -371,6 +372,25 @@ async def process_text(request: ProcessTextRequest):
             "has_embeddings": result.embeddings is not None,
             "errors": result.errors,
         }
+        
+        # Add decision/risk information if available
+        if result.decision:
+            response.update({
+                "risk_level": result.decision.risk.value,
+                "risk_score": result.decision.score,
+                "decision_reasons": result.decision.reasons,
+                "decision_details": result.decision.details,
+            })
+        else:
+            # Provide default values when decision engine is not enabled
+            response.update({
+                "risk_level": "unknown",
+                "risk_score": None,
+                "decision_reasons": ["decision_engine_not_enabled"],
+                "decision_details": {},
+            })
+        
+        return response
     except Exception as e:
         logger.error(f"Error processing text: {e}")
         raise InternalServerError(f"Text processing failed: {str(e)}")

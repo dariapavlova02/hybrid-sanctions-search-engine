@@ -21,6 +21,7 @@ from ..layers.validation.validation_service import ValidationService
 from ..layers.variants.variant_generation_service import VariantGenerationService
 from ..utils import get_logger
 from .decision_engine import DecisionEngine
+from ..config.settings import DecisionConfig
 from .unified_orchestrator import UnifiedOrchestrator
 
 logger = get_logger(__name__)
@@ -164,8 +165,9 @@ class OrchestratorFactory:
             # Decision engine - optional
             if enable_decision_engine and decision_engine is None:
                 try:
-                    decision_engine = DecisionEngine()
-                    logger.info("Decision engine initialized")
+                    decision_config = DecisionConfig()
+                    decision_engine = DecisionEngine(decision_config)
+                    logger.info("Decision engine initialized with default config")
                 except Exception as e:
                     logger.warning(f"Failed to initialize decision engine: {e}")
                     decision_engine = None
