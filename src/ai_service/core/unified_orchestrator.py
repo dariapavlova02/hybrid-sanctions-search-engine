@@ -218,13 +218,28 @@ class UnifiedOrchestrator:
                     )
 
             # ================================================================
-            # Layer 3: Language Detection
+            # Layer 3: Unicode Normalization (MUST come before language detection)
             # ================================================================
-            logger.debug("Stage 3: Language Detection")
+            logger.debug("Stage 3: Unicode Normalization")
             layer_start = time.time()
 
-            lang_result = await self.language_service.detect_language(
+            # Language detection EXPECTS unicode-normalized input
+            unicode_result = await self.unicode_service.normalize_unicode(
                 context.sanitized_text
+            )
+            unicode_normalized = unicode_result.get("normalized_text", context.sanitized_text)
+
+            if self.metrics_service:
+                self.metrics_service.record_timer('processing.layer.unicode_normalization', time.time() - layer_start)
+
+            # ================================================================
+            # Layer 4: Language Detection (on unicode-normalized text)
+            # ================================================================
+            logger.debug("Stage 4: Language Detection")
+            layer_start = time.time()
+
+            lang_result = self.language_service.detect_language(
+                unicode_normalized  # Use unicode-normalized text for language detection
             )
             context.language = language_hint or lang_result.get("language", "en")
             context.language_confidence = lang_result.get("confidence", 0.0)
@@ -233,19 +248,6 @@ class UnifiedOrchestrator:
                 self.metrics_service.record_timer('processing.layer.language_detection', time.time() - layer_start)
                 self.metrics_service.record_histogram('language_detection.confidence', context.language_confidence)
                 self.metrics_service.increment_counter(f'language_detection.detected.{context.language}')
-
-            # ================================================================
-            # Layer 4: Unicode Normalization
-            # ================================================================
-            logger.debug("Stage 4: Unicode Normalization")
-            layer_start = time.time()
-
-            unicode_normalized = await self.unicode_service.normalize_unicode(
-                context.sanitized_text
-            )
-
-            if self.metrics_service:
-                self.metrics_service.record_timer('processing.layer.unicode_normalization', time.time() - layer_start)
 
             # ================================================================
             # Layer 5: Name Normalization (morph) - THE CORE

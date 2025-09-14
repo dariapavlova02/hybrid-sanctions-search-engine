@@ -255,6 +255,13 @@ class UnicodeService:
             result["original"] = text  # Preserve None or empty string
             return result
 
+        # Idempotency check: if string is already NFC/NFKC normalized, return as-is
+        if self._is_already_normalized(text):
+            result = self._create_normalization_result(text, 1.0, 0, 0, 0)
+            result["original"] = text
+            result["idempotent"] = True
+            return result
+
         # Preserve original text before any changes
         original_text = text
         changes_count = 0
@@ -391,6 +398,24 @@ class UnicodeService:
         # Remove other control characters
         text = re.sub(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]", "", text)
 
+        # Remove invisible Unicode characters
+        invisible_chars = [
+            "\u200b",  # Zero-width space
+            "\u200c",  # Zero-width non-joiner
+            "\u200d",  # Zero-width joiner
+            "\ufeff",  # Byte order mark
+            "\u200e",  # Left-to-right mark
+            "\u200f",  # Right-to-left mark
+            "\u202a",  # Left-to-right embedding
+            "\u202b",  # Right-to-left embedding
+            "\u202c",  # Pop directional formatting
+            "\u202d",  # Left-to-right override
+            "\u202e",  # Right-to-left override
+        ]
+        
+        for char in invisible_chars:
+            text = text.replace(char, "")
+
         return text
 
     def _calculate_normalization_confidence(
@@ -497,6 +522,32 @@ class UnicodeService:
             )
 
         return issues
+
+    def _is_already_normalized(self, text: str) -> bool:
+        """
+        Check if text is already in NFC/NFKC normalized form
+        
+        Args:
+            text: Input text to check
+            
+        Returns:
+            True if text is already normalized, False otherwise
+        """
+        try:
+            # Check if text is already in NFC form (most common)
+            nfc_normalized = unicodedata.normalize('NFC', text)
+            if text == nfc_normalized:
+                return True
+            
+            # Check if text is already in NFKC form (compatibility normalization)
+            nfkc_normalized = unicodedata.normalize('NFKC', text)
+            if text == nfkc_normalized:
+                return True
+                
+            return False
+        except Exception:
+            # If normalization fails, assume it needs processing
+            return False
 
     def _create_normalization_result(
         self,
