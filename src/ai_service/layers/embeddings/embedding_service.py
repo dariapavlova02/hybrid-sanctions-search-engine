@@ -9,6 +9,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 
 from ...config import EmbeddingConfig
+from ...services.embedding_preprocessor import EmbeddingPreprocessor
 from ...utils.logging_config import get_logger
 
 
@@ -25,6 +26,7 @@ class EmbeddingService:
         self.logger = get_logger(__name__)
         self.config = config
         self._model: SentenceTransformer = None
+        self.preprocessor = EmbeddingPreprocessor()
 
         self.logger.info(
             f"EmbeddingService initialized with model: {config.model_name}"
@@ -54,13 +56,18 @@ class EmbeddingService:
         if not text or not text.strip():
             return []
 
+        # Preprocess text to remove dates/IDs
+        normalized_text = self.preprocessor.normalize_for_embedding(text)
+        if not normalized_text:
+            return []
+
         try:
             # Load model lazily
             model = self._load_model()
 
             # Generate embedding
             embedding = model.encode(
-                [text],
+                [normalized_text],
                 batch_size=1,
                 show_progress_bar=False,
                 normalize_embeddings=True,
@@ -90,9 +97,15 @@ class EmbeddingService:
         if not texts:
             return []
 
-        # Filter out empty texts
-        valid_texts = [text for text in texts if text and text.strip()]
-        if not valid_texts:
+        # Preprocess texts to remove dates/IDs
+        normalized_texts = []
+        for text in texts:
+            if text and text.strip():
+                normalized = self.preprocessor.normalize_for_embedding(text)
+                if normalized:  # Only include non-empty normalized texts
+                    normalized_texts.append(normalized)
+        
+        if not normalized_texts:
             return []
 
         try:
@@ -101,7 +114,7 @@ class EmbeddingService:
 
             # Generate embeddings
             embeddings = model.encode(
-                valid_texts,
+                normalized_texts,
                 batch_size=self.config.batch_size,
                 show_progress_bar=False,
                 normalize_embeddings=True,
