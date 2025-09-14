@@ -37,11 +37,10 @@ class SmartFilterAdapter(SmartFilterInterface):
         try:
             # Initialize existing service with all detectors
             self._service = SmartFilterService(
-                enable_name_detector=True,
-                enable_company_detector=True,
-                enable_document_detector=True,
-                enable_terrorism_detector=True,
-                confidence_threshold=0.3
+                language_service=None,  # Will use fallback detection
+                signal_service=None,
+                enable_terrorism_detection=True,
+                enable_aho_corasick=False
             )
             logger.info("SmartFilterAdapter initialized successfully")
         except Exception as e:
@@ -71,7 +70,7 @@ class SmartFilterAdapter(SmartFilterInterface):
 
         try:
             # Use existing service for detection
-            filter_result = await self._service.filter(text)
+            filter_result = self._service.should_process_text(text)
 
             # Map existing result to new contract
             classification = self._map_to_classification(
