@@ -8,6 +8,7 @@ implements the exact specification from CLAUDE.md.
 import time
 from typing import Any, Dict
 
+from ...config import SERVICE_CONFIG
 from ...contracts.base_contracts import SmartFilterInterface, SmartFilterResult
 from ...utils import get_logger
 from .smart_filter_service import FilterResult, SmartFilterService
@@ -40,7 +41,7 @@ class SmartFilterAdapter(SmartFilterInterface):
                 language_service=None,  # Will use fallback detection
                 signal_service=None,
                 enable_terrorism_detection=True,
-                enable_aho_corasick=False,
+                enable_aho_corasick=None,  # Use config value
             )
             logger.info("SmartFilterAdapter initialized successfully")
         except Exception as e:

@@ -40,7 +40,7 @@ class ServiceConfig:
     clean_unicode: bool = True
 
     # Feature Flags - управляемые из env
-    enable_aho_corasick: bool = field(default_factory=lambda: os.getenv("ENABLE_AHO_CORASICK", "true").lower() == "true")
+    enable_aho_corasick: bool = field(default_factory=lambda: os.getenv("ENABLE_AHO_CORASICK", "false").lower() == "true")
     prioritize_quality: bool = field(default_factory=lambda: os.getenv("PRIORITIZE_QUALITY", "true").lower() == "true")
     enable_faiss_index: bool = field(default_factory=lambda: os.getenv("ENABLE_FAISS_INDEX", "true").lower() == "true")
     enable_smart_filter: bool = field(default_factory=lambda: os.getenv("ENABLE_SMART_FILTER", "true").lower() == "true")

@@ -51,7 +51,7 @@ class SmartFilterService:
         language_service: Optional[Any] = None,
         signal_service: Optional[Any] = None,
         enable_terrorism_detection: bool = True,
-        enable_aho_corasick: bool = True,  # Now enabled with UnifiedPatternService
+        enable_aho_corasick: Optional[bool] = None,  # Use config if None
         pattern_service: Optional[UnifiedPatternService] = None,
     ):
         """
@@ -61,7 +61,7 @@ class SmartFilterService:
             language_service: Language detection service instance
             signal_service: Signal detection service instance
             enable_terrorism_detection: Enable terrorism detection
-            enable_aho_corasick: Enable Aho-Corasick pattern matching
+            enable_aho_corasick: Enable Aho-Corasick pattern matching (None = use config)
             pattern_service: Unified pattern service for AC integration
 
         Raises:
@@ -78,7 +78,11 @@ class SmartFilterService:
             self.signal_service = signal_service or SignalsService()
 
             # Initialize pattern service for AC integration
-            self.aho_corasick_enabled = enable_aho_corasick
+            # Use config value if enable_aho_corasick is None
+            if enable_aho_corasick is None:
+                self.aho_corasick_enabled = SERVICE_CONFIG.enable_aho_corasick
+            else:
+                self.aho_corasick_enabled = enable_aho_corasick
             self.pattern_service = pattern_service or UnifiedPatternService()
 
             # Initialize main decision module
