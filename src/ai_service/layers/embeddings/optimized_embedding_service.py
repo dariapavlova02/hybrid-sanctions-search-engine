@@ -14,6 +14,11 @@ from collections import deque
 
 import numpy as np
 
+try:
+    import faiss
+except ImportError:
+    faiss = None
+
 from ...utils.logging_config import get_logger
 from .embedding_service import EmbeddingService
 
@@ -41,7 +46,16 @@ class OptimizedEmbeddingService(EmbeddingService):
             thread_pool_size: Size of thread pool for parallel processing
             precompute_common_patterns: Precompute embeddings for common patterns
         """
-        super().__init__(default_model)
+        # Create a mock config object for the parent class
+        from types import SimpleNamespace
+        config = SimpleNamespace(model_name=default_model)
+        super().__init__(config)
+        
+        # Store the default model name
+        self.default_model = default_model
+        
+        # Initialize model cache
+        self.model_cache = {}
 
         self.max_cache_size = max_cache_size
         self.enable_batch_optimization = enable_batch_optimization
@@ -604,6 +618,14 @@ class OptimizedEmbeddingService(EmbeddingService):
             self.find_similar_texts_optimized,
             query, candidates, model_name, threshold, top_k, metric
         )
+
+    def _create_error_result(self, error_message: str) -> dict:
+        """Create error result dictionary"""
+        return {
+            "embeddings": [],
+            "error": error_message,
+            "success": False
+        }
 
     def __del__(self):
         """Cleanup resources"""

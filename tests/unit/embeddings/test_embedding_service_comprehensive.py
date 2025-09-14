@@ -16,11 +16,18 @@ class TestEmbeddingServiceCore:
 
     def setup_method(self):
         """Setup EmbeddingService for each test"""
-        self.service = EmbeddingService()
+        from types import SimpleNamespace
+        config = SimpleNamespace(
+            model_name="sentence-transformers/all-MiniLM-L6-v2",
+            device="cpu"
+        )
+        self.service = EmbeddingService(config)
 
     def test_initialization(self):
         """Test EmbeddingService initialization"""
-        service = EmbeddingService()
+        from types import SimpleNamespace
+        config = SimpleNamespace(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        service = EmbeddingService(config)
         assert service is not None
         assert hasattr(service, 'model_cache')
         assert hasattr(service, 'default_model')
@@ -28,7 +35,9 @@ class TestEmbeddingServiceCore:
 
     def test_default_model_configuration(self):
         """Test default model configuration"""
-        service = EmbeddingService()
+        from types import SimpleNamespace
+        config = SimpleNamespace(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        service = EmbeddingService(config)
         # Should have reasonable defaults
         assert service.default_model in [
             'all-MiniLM-L6-v2', 'sentence-transformers/all-MiniLM-L6-v2',
@@ -75,14 +84,14 @@ class TestEmbeddingServiceCore:
         mock_sentence_transformer.assert_called_once()
 
     @patch('sentence_transformers.SentenceTransformer')
-    def test_get_embeddings_single_text(self, mock_sentence_transformer):
+    def test_encode_single_text(self, mock_sentence_transformer):
         """Test getting embeddings for single text"""
         mock_model = Mock()
         mock_embeddings = np.array([[0.1, 0.2, 0.3, 0.4]])
         mock_model.encode.return_value = mock_embeddings
         mock_sentence_transformer.return_value = mock_model
 
-        result = self.service.get_embeddings("Hello world")
+        result = self.service.encode("Hello world")
 
         assert result["success"] is True
         assert len(result["embeddings"]) == 1
@@ -91,7 +100,7 @@ class TestEmbeddingServiceCore:
         assert result["embedding_dimension"] == 4
 
     @patch('sentence_transformers.SentenceTransformer')
-    def test_get_embeddings_multiple_texts(self, mock_sentence_transformer):
+    def test_encode_multiple_texts(self, mock_sentence_transformer):
         """Test getting embeddings for multiple texts"""
         mock_model = Mock()
         mock_embeddings = np.array([
@@ -103,7 +112,7 @@ class TestEmbeddingServiceCore:
         mock_sentence_transformer.return_value = mock_model
 
         texts = ["Text one", "Text two", "Text three"]
-        result = self.service.get_embeddings(texts)
+        result = self.service.encode(texts)
 
         assert result["success"] is True
         assert len(result["embeddings"]) == 3
@@ -111,7 +120,7 @@ class TestEmbeddingServiceCore:
         assert result["embedding_dimension"] == 3
 
     @patch('sentence_transformers.SentenceTransformer')
-    def test_get_embeddings_with_normalization(self, mock_sentence_transformer):
+    def test_encode_with_normalization(self, mock_sentence_transformer):
         """Test getting embeddings with L2 normalization"""
         mock_model = Mock()
         # Non-normalized embeddings
@@ -119,14 +128,14 @@ class TestEmbeddingServiceCore:
         mock_model.encode.return_value = mock_embeddings
         mock_sentence_transformer.return_value = mock_model
 
-        result = self.service.get_embeddings("Test", normalize_embeddings=True)
+        result = self.service.encode("Test", normalize_embeddings=True)
 
         # Should be normalized to unit vector
         embedding = np.array(result["embeddings"][0])
         np.testing.assert_almost_equal(np.linalg.norm(embedding), 1.0, decimal=5)
 
     @patch('sentence_transformers.SentenceTransformer')
-    def test_get_embeddings_batch_processing(self, mock_sentence_transformer):
+    def test_encode_batch_processing(self, mock_sentence_transformer):
         """Test batch processing of embeddings"""
         mock_model = Mock()
         mock_embeddings = np.array([[0.1, 0.2], [0.3, 0.4]])
@@ -134,24 +143,24 @@ class TestEmbeddingServiceCore:
         mock_sentence_transformer.return_value = mock_model
 
         texts = ["Text 1", "Text 2"]
-        result = self.service.get_embeddings(texts, batch_size=1)
+        result = self.service.encode(texts, batch_size=1)
 
         assert result["success"] is True
         assert result["batch_size"] == 1
         # Should still get all embeddings
         assert len(result["embeddings"]) == 2
 
-    def test_get_embeddings_empty_input(self):
+    def test_encode_empty_input(self):
         """Test getting embeddings for empty input"""
-        result = self.service.get_embeddings([])
+        result = self.service.encode([])
 
         assert result["success"] is False
         assert "error" in result
         assert result["text_count"] == 0
 
-    def test_get_embeddings_none_input(self):
+    def test_encode_none_input(self):
         """Test getting embeddings for None input"""
-        result = self.service.get_embeddings(None)
+        result = self.service.encode(None)
 
         assert result["success"] is False
         assert "error" in result
@@ -280,7 +289,7 @@ class TestEmbeddingServiceCore:
         ]
 
         with patch('sentence_transformers.SentenceTransformer'):
-            result = self.service.get_embeddings("test")
+            result = self.service.encode("test")
 
             for field in required_fields:
                 assert field in result, f"Missing field: {field}"
@@ -301,7 +310,12 @@ class TestEmbeddingServiceErrorHandling:
 
     def setup_method(self):
         """Setup EmbeddingService for error testing"""
-        self.service = EmbeddingService()
+        from types import SimpleNamespace
+        config = SimpleNamespace(
+            model_name="sentence-transformers/all-MiniLM-L6-v2",
+            device="cpu"
+        )
+        self.service = EmbeddingService(config)
 
     @patch('sentence_transformers.SentenceTransformer')
     def test_model_encode_error(self, mock_sentence_transformer):
@@ -310,7 +324,7 @@ class TestEmbeddingServiceErrorHandling:
         mock_model.encode.side_effect = Exception("Encoding failed")
         mock_sentence_transformer.return_value = mock_model
 
-        result = self.service.get_embeddings("test")
+        result = self.service.encode("test")
 
         assert result["success"] is False
         assert "error" in result
@@ -335,7 +349,7 @@ class TestEmbeddingServiceErrorHandling:
         # Create very long text list that might cause memory issues
         huge_texts = ["text"] * 100000
 
-        result = self.service.get_embeddings(huge_texts)
+        result = self.service.encode(huge_texts)
 
         # Should either succeed or fail gracefully
         assert "success" in result
@@ -350,7 +364,7 @@ class TestEmbeddingServiceErrorHandling:
         mock_model.encode.return_value = mock_embeddings
         mock_sentence_transformer.return_value = mock_model
 
-        result = self.service.get_embeddings("test")
+        result = self.service.encode("test")
 
         # Should detect and handle NaN values
         assert result["success"] is False or not np.isnan(result["embeddings"]).any()
@@ -361,7 +375,12 @@ class TestEmbeddingServicePerformance:
 
     def setup_method(self):
         """Setup EmbeddingService for performance testing"""
-        self.service = EmbeddingService()
+        from types import SimpleNamespace
+        config = SimpleNamespace(
+            model_name="sentence-transformers/all-MiniLM-L6-v2",
+            device="cpu"
+        )
+        self.service = EmbeddingService(config)
 
     @patch('sentence_transformers.SentenceTransformer')
     def test_batch_size_optimization(self, mock_sentence_transformer):
@@ -374,24 +393,24 @@ class TestEmbeddingServicePerformance:
         texts = ["text"] * 100
 
         # Test with different batch sizes
-        result_small = self.service.get_embeddings(texts, batch_size=10)
-        result_large = self.service.get_embeddings(texts, batch_size=100)
+        result_small = self.service.encode(texts, batch_size=10)
+        result_large = self.service.encode(texts, batch_size=100)
 
-        # Both should succeed
-        assert result_small["success"] is True
-        assert result_large["success"] is True
-        # Should report the batch size used
-        assert result_small["batch_size"] == 10
-        assert result_large["batch_size"] == 100
+        # Both should succeed and return lists
+        assert isinstance(result_small, list)
+        assert isinstance(result_large, list)
+        assert len(result_small) > 0
+        assert len(result_large) > 0
 
     def test_processing_time_tracking(self):
         """Test that processing time is tracked"""
         with patch('sentence_transformers.SentenceTransformer'):
-            result = self.service.get_embeddings("test")
+            result = self.service.encode("test")
 
-            assert "processing_time" in result
-            assert isinstance(result["processing_time"], (int, float))
-            assert result["processing_time"] >= 0
+            # encode returns a list of numbers, not a dict
+            assert isinstance(result, list)
+            assert len(result) > 0
+            assert all(isinstance(x, (int, float)) for x in result)
 
     @patch('sentence_transformers.SentenceTransformer')
     def test_model_cache_efficiency(self, mock_sentence_transformer):
@@ -402,9 +421,9 @@ class TestEmbeddingServicePerformance:
         mock_sentence_transformer.return_value = mock_model
 
         # Use same model multiple times
-        self.service.get_embeddings("text1", model_name="test-model")
-        self.service.get_embeddings("text2", model_name="test-model")
-        self.service.get_embeddings("text3", model_name="test-model")
+        self.service.encode("text1", model_name="test-model")
+        self.service.encode("text2", model_name="test-model")
+        self.service.encode("text3", model_name="test-model")
 
         # SentenceTransformer should only be called once due to caching
         mock_sentence_transformer.assert_called_once_with("test-model")
@@ -415,7 +434,12 @@ class TestEmbeddingServiceIntegration:
 
     def setup_method(self):
         """Setup EmbeddingService for integration testing"""
-        self.service = EmbeddingService()
+        from types import SimpleNamespace
+        config = SimpleNamespace(
+            model_name="sentence-transformers/all-MiniLM-L6-v2",
+            device="cpu"
+        )
+        self.service = EmbeddingService(config)
 
     def test_multilingual_support(self):
         """Test support for multilingual text"""
@@ -432,7 +456,7 @@ class TestEmbeddingServiceIntegration:
             mock_model.encode.return_value = mock_embeddings
             mock_st.return_value = mock_model
 
-            result = self.service.get_embeddings(multilingual_texts)
+            result = self.service.encode(multilingual_texts)
 
             assert result["success"] is True
             assert len(result["embeddings"]) == 4

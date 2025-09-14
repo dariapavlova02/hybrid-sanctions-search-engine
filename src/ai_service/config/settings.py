@@ -6,7 +6,7 @@ Structured configuration classes with validation and type hints
 import os
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator, model_validator
 
 from ..constants import (
     DEFAULT_CACHE_SIZE,
@@ -302,7 +302,21 @@ class DeploymentConfig:
 class EmbeddingConfig(BaseModel):
     """Embedding configuration settings"""
     
+    model_config = {"validate_assignment": True}
+    
     model_name: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     device: str = "cpu"
     batch_size: int = 64
     enable_index: bool = False  # индексацию оставляем как опцию
+    extra_models: List[str] = []  # опционально разрешённые альтернативы
+    
+    def model_dump(self) -> Dict[str, Any]:
+        """Return model as dictionary"""
+        return {
+            "model_name": self.model_name,
+            "device": self.device,
+            "batch_size": self.batch_size,
+            "enable_index": self.enable_index,
+            "extra_models": self.extra_models
+        }
+    
