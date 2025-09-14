@@ -6,7 +6,7 @@ Structured configuration classes with validation and type hints
 import os
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from ..constants import (
     DEFAULT_CACHE_SIZE,
@@ -322,21 +322,21 @@ class EmbeddingConfig(BaseModel):
 
 
 class DecisionConfig(BaseModel):
-    """Decision engine configuration settings"""
+    """Decision engine configuration settings with ENV override support"""
     
     model_config = {"validate_assignment": True}
     
-    # Weights for different components
-    w_smartfilter: float = 0.25
-    w_person: float = 0.3
-    w_org: float = 0.15
-    w_similarity: float = 0.25
-    bonus_date_match: float = 0.07
-    bonus_id_match: float = 0.15
+    # Weights for different components (with ENV overrides)
+    w_smartfilter: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SMARTFILTER", "0.25")))
+    w_person: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_PERSON", "0.3")))
+    w_org: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_ORG", "0.15")))
+    w_similarity: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SIMILARITY", "0.25")))
+    bonus_date_match: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__BONUS_DATE_MATCH", "0.07")))
+    bonus_id_match: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__BONUS_ID_MATCH", "0.15")))
     
-    # Thresholds for risk levels
-    thr_high: float = 0.85
-    thr_medium: float = 0.65
+    # Thresholds for risk levels (with ENV overrides)
+    thr_high: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_HIGH", "0.85")))
+    thr_medium: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_MEDIUM", "0.65")))
     
     def model_dump(self) -> Dict[str, Any]:
         """Return model as dictionary"""
@@ -350,4 +350,19 @@ class DecisionConfig(BaseModel):
             "thr_high": self.thr_high,
             "thr_medium": self.thr_medium
         }
+
+
+# Unified Configuration System
+# Priority: ENV variables → YAML config → defaults
+
+# Service configuration instances
+SERVICE_CONFIG = ServiceConfig()
+INTEGRATION_CONFIG = IntegrationConfig()
+SECURITY_CONFIG = SecurityConfig()
+DEPLOYMENT_CONFIG = DeploymentConfig()
+LOGGING_CONFIG = LoggingConfig()
+LANGUAGE_CONFIG = LanguageConfig()
+PERFORMANCE_CONFIG = PerformanceConfig()
+EMBEDDING_CONFIG = EmbeddingConfig()
+DECISION_CONFIG = DecisionConfig()  # Now supports ENV overrides
     

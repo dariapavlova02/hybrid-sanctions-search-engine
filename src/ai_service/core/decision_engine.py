@@ -5,7 +5,7 @@ Decision Engine for risk assessment and decision making.
 from typing import Any, Dict, List, Optional
 
 from ..contracts.decision_contracts import DecisionInput, DecisionOutput, RiskLevel
-from ..config.settings import DecisionConfig
+from ..config.settings import DecisionConfig, DECISION_CONFIG
 
 
 class DecisionEngine:
@@ -13,7 +13,8 @@ class DecisionEngine:
     
     def __init__(self, config: Optional[DecisionConfig] = None):
         """Initialize decision engine with configuration."""
-        self.config = config or DecisionConfig()
+        # Use provided config, or fall back to unified config with ENV overrides
+        self.config = config or DECISION_CONFIG
     
     def decide(self, inp: DecisionInput) -> DecisionOutput:
         """
@@ -150,7 +151,7 @@ class DecisionEngine:
             "exact_id_match": inp.signals.id_match,
             "exact_dob_match": inp.signals.date_match
         }
-        
+
         return {
             "calculated_score": score,
             "score_breakdown": {
