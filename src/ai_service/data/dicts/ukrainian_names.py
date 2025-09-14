@@ -496,7 +496,7 @@ UKRAINIAN_NAMES = {
     "Клавдія": {
         "gender": "femn",
         "variants": ["Клавдия"],
-        "diminutives": ["Клава", "Клавдочка", "Клавуня"],
+        "diminutives": ["Клава", "Клавочка", "Клавуня"],
         "transliterations": ["Klavdiia", "Klaudia", "Claudia"],
         "declensions": ["Клавдії", "Клавдії", "Клавдію", "Клавдією", "Клавдії"],
     },

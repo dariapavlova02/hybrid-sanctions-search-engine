@@ -337,7 +337,7 @@ async def process_text(request: ProcessTextRequest):
         InternalServerError: If processing fails
     """
     if not orchestrator:
-        raise ServiceUnavailableError("Orchestrator not initialized")
+        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
 
     try:
         result = await orchestrator.process(
@@ -392,7 +392,7 @@ async def normalize_text(request: TextNormalizationRequest):
         InternalServerError: If normalization fails
     """
     if not orchestrator:
-        raise ServiceUnavailableError("Orchestrator not initialized")
+        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
 
     try:
         # Use unified orchestrator for normalization only

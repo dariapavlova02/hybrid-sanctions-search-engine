@@ -411,6 +411,7 @@ class UnicodeService:
             "\u202c",  # Pop directional formatting
             "\u202d",  # Left-to-right override
             "\u202e",  # Right-to-left override
+            "\u2060",  # Word joiner
         ]
         
         for char in invisible_chars:

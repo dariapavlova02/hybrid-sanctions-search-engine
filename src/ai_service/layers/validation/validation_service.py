@@ -68,7 +68,8 @@ class ValidationService(ValidationServiceInterface):
             }
 
         except Exception as e:
-            logger.error(f"Validation failed for text: {text[:50]}... Error: {e}")
+            text_preview = text[:50] if text else "None"
+            logger.error(f"Validation failed for text: {text_preview}... Error: {e}")
             # Safe fallback: basic sanitization
             sanitized = text.strip()[:1000] if text else ""
 

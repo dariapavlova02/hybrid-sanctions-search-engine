@@ -201,6 +201,48 @@ class SmartFilterService:
             # Apply AC confidence bonus if matches found
             if ac_confidence_bonus > 0:
                 total_confidence = min(total_confidence + ac_confidence_bonus, 1.0)
+            
+            # Apply mixed language bonus if detected
+            language_analysis = self._analyze_language_composition(original_text)
+            if language_analysis.get("is_mixed_language", False):
+                # Add script information to signals for mixed language detection
+                # Extract matches from company signals structure
+                company_matches = []
+                if "signals" in company_signals:
+                    for signal in company_signals["signals"]:
+                        if "matches" in signal:
+                            company_matches.extend(signal["matches"])
+                
+                company_signals["script"] = self._detect_script(company_matches)
+                name_signals["script"] = self._detect_script(name_signals.get("names", []))
+                
+                # Check if we have valid name signals on both scripts
+                has_cyrillic_names = any(
+                    signal.get("confidence", 0) > 0 
+                    for signal in [company_signals, name_signals] 
+                    if signal.get("script", "") == "cyrillic"
+                )
+                has_latin_names = any(
+                    signal.get("confidence", 0) > 0 
+                    for signal in [company_signals, name_signals] 
+                    if signal.get("script", "") == "latin"
+                )
+                has_mixed_names = any(
+                    signal.get("confidence", 0) > 0 
+                    for signal in [company_signals, name_signals] 
+                    if signal.get("script", "") == "mixed"
+                )
+                
+                # Apply bonus if we have signals on different scripts
+                if (has_cyrillic_names and has_latin_names) or (has_cyrillic_names and has_mixed_names) or (has_latin_names and has_mixed_names):
+                    # Bonus for having valid name signals on both scripts
+                    mixed_bonus = 0.25  # Increased bonus for mixed language
+                    total_confidence = min(total_confidence + mixed_bonus, 1.0)
+                    all_signals["mixed_language_bonus"] = {
+                        "applied": True,
+                        "bonus": mixed_bonus,
+                        "reason": "Valid name signals detected on both scripts"
+                    }
 
             # Determine recommendation
             should_process, recommendation, complexity = self._make_processing_decision(
@@ -656,6 +698,51 @@ class SmartFilterService:
             "special_ratio": special_count / total_chars if total_chars > 0 else 0,
             "is_mixed_language": cyrillic_count > 0 and latin_count > 0,
         }
+
+    def _detect_script(self, items: List[str]) -> str:
+        """
+        Detect the primary script (cyrillic, latin, or mixed) from a list of text items.
+        
+        Args:
+            items: List of text items to analyze
+            
+        Returns:
+            Script type: 'cyrillic', 'latin', or 'mixed'
+        """
+        if not items:
+            return "unknown"
+        
+        cyrillic_count = 0
+        latin_count = 0
+        
+        for item in items:
+            if not item:
+                continue
+            # Count Cyrillic characters
+            cyr_chars = len(re.findall(r"[а-яёіїєґ]", item, re.IGNORECASE))
+            # Count Latin characters  
+            lat_chars = len(re.findall(r"[a-z]", item, re.IGNORECASE))
+            
+            if cyr_chars > lat_chars:
+                cyrillic_count += 1
+            elif lat_chars > cyr_chars:
+                latin_count += 1
+            else:
+                # Equal counts or both present - count as mixed
+                if cyr_chars > 0 and lat_chars > 0:
+                    cyrillic_count += 0.5
+                    latin_count += 0.5
+                elif cyr_chars > 0:
+                    cyrillic_count += 1
+                elif lat_chars > 0:
+                    latin_count += 1
+        
+        if cyrillic_count > latin_count:
+            return "cyrillic"
+        elif latin_count > cyrillic_count:
+            return "latin"
+        else:
+            return "mixed"
 
     def _create_empty_result(self) -> FilterResult:
         """Create empty result"""

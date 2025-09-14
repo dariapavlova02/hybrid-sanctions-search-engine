@@ -24,7 +24,7 @@ class BirthdateExtractor(BaseExtractor):
             return []
 
         try:
-            from ...data.patterns.dates import extract_birthdates_from_text
+            from ....data.patterns.dates import extract_birthdates_from_text
 
             birthdates = extract_birthdates_from_text(text)
             self._log_extraction_result(text, len(birthdates), "birthdate")

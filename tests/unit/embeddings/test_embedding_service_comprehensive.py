@@ -35,7 +35,7 @@ class TestEmbeddingServiceCore:
             'all-mpnet-base-v2', 'multilingual-e5-small'
         ]
 
-    @patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_load_model_success(self, mock_sentence_transformer):
         """Test successful model loading"""
         mock_model = Mock()
@@ -49,7 +49,7 @@ class TestEmbeddingServiceCore:
         # Should be cached
         assert 'test-model' in self.service.model_cache
 
-    @patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_load_model_error(self, mock_sentence_transformer):
         """Test model loading error handling"""
         mock_sentence_transformer.side_effect = Exception("Model not found")
@@ -59,7 +59,7 @@ class TestEmbeddingServiceCore:
 
         assert "Model not found" in str(exc_info.value)
 
-    @patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_model_caching(self, mock_sentence_transformer):
         """Test model caching functionality"""
         mock_model = Mock()
@@ -74,7 +74,7 @@ class TestEmbeddingServiceCore:
         # SentenceTransformer should only be called once
         mock_sentence_transformer.assert_called_once()
 
-    @patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_get_embeddings_single_text(self, mock_sentence_transformer):
         """Test getting embeddings for single text"""
         mock_model = Mock()
@@ -90,7 +90,7 @@ class TestEmbeddingServiceCore:
         assert result["text_count"] == 1
         assert result["embedding_dimension"] == 4
 
-    @patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_get_embeddings_multiple_texts(self, mock_sentence_transformer):
         """Test getting embeddings for multiple texts"""
         mock_model = Mock()
@@ -110,7 +110,7 @@ class TestEmbeddingServiceCore:
         assert result["text_count"] == 3
         assert result["embedding_dimension"] == 3
 
-    @patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_get_embeddings_with_normalization(self, mock_sentence_transformer):
         """Test getting embeddings with L2 normalization"""
         mock_model = Mock()
@@ -125,7 +125,7 @@ class TestEmbeddingServiceCore:
         embedding = np.array(result["embeddings"][0])
         np.testing.assert_almost_equal(np.linalg.norm(embedding), 1.0, decimal=5)
 
-    @patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_get_embeddings_batch_processing(self, mock_sentence_transformer):
         """Test batch processing of embeddings"""
         mock_model = Mock()
@@ -157,7 +157,7 @@ class TestEmbeddingServiceCore:
         assert "error" in result
         assert result["text_count"] == 0
 
-    @patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_calculate_similarity_cosine(self, mock_sentence_transformer):
         """Test cosine similarity calculation"""
         mock_model = Mock()
@@ -173,7 +173,7 @@ class TestEmbeddingServiceCore:
         # Cosine similarity of orthogonal vectors should be 0
         assert abs(result["similarity"]) < 0.001
 
-    @patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_calculate_similarity_dot_product(self, mock_sentence_transformer):
         """Test dot product similarity calculation"""
         mock_model = Mock()
@@ -188,7 +188,7 @@ class TestEmbeddingServiceCore:
         # Dot product of [1,2] and [2,1] should be 4
         assert abs(result["similarity"] - 4.0) < 0.001
 
-    @patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_find_similar_texts_basic(self, mock_sentence_transformer):
         """Test finding similar texts"""
         mock_model = Mock()
@@ -214,7 +214,7 @@ class TestEmbeddingServiceCore:
         # First result should be most similar (identical)
         assert result["results"][0]["similarity"] > result["results"][1]["similarity"]
 
-    @patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_find_similar_texts_with_threshold(self, mock_sentence_transformer):
         """Test finding similar texts with similarity threshold"""
         mock_model = Mock()
@@ -246,7 +246,7 @@ class TestEmbeddingServiceCore:
         assert result["success"] is False
         assert "error" in result
 
-    @patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_calculate_batch_similarity(self, mock_sentence_transformer):
         """Test batch similarity calculation"""
         mock_model = Mock()
@@ -279,7 +279,7 @@ class TestEmbeddingServiceCore:
             "batch_size", "timestamp"
         ]
 
-        with patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer'):
+        with patch('sentence_transformers.SentenceTransformer'):
             result = self.service.get_embeddings("test")
 
             for field in required_fields:
@@ -289,7 +289,7 @@ class TestEmbeddingServiceCore:
         """Test that similarity results have consistent format"""
         required_fields = ["success", "similarity", "metric", "model_name"]
 
-        with patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer'):
+        with patch('sentence_transformers.SentenceTransformer'):
             result = self.service.calculate_similarity("text1", "text2")
 
             for field in required_fields:
@@ -303,7 +303,7 @@ class TestEmbeddingServiceErrorHandling:
         """Setup EmbeddingService for error testing"""
         self.service = EmbeddingService()
 
-    @patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_model_encode_error(self, mock_sentence_transformer):
         """Test handling of model encoding errors"""
         mock_model = Mock()
@@ -316,7 +316,7 @@ class TestEmbeddingServiceErrorHandling:
         assert "error" in result
         assert "Encoding failed" in result["error"]
 
-    @patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_invalid_metric_error(self, mock_sentence_transformer):
         """Test handling of invalid similarity metric"""
         mock_model = Mock()
@@ -342,7 +342,7 @@ class TestEmbeddingServiceErrorHandling:
         if not result["success"]:
             assert "error" in result
 
-    @patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_nan_embedding_handling(self, mock_sentence_transformer):
         """Test handling of NaN embeddings"""
         mock_model = Mock()
@@ -363,7 +363,7 @@ class TestEmbeddingServicePerformance:
         """Setup EmbeddingService for performance testing"""
         self.service = EmbeddingService()
 
-    @patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_batch_size_optimization(self, mock_sentence_transformer):
         """Test that batch size affects processing"""
         mock_model = Mock()
@@ -386,14 +386,14 @@ class TestEmbeddingServicePerformance:
 
     def test_processing_time_tracking(self):
         """Test that processing time is tracked"""
-        with patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer'):
+        with patch('sentence_transformers.SentenceTransformer'):
             result = self.service.get_embeddings("test")
 
             assert "processing_time" in result
             assert isinstance(result["processing_time"], (int, float))
             assert result["processing_time"] >= 0
 
-    @patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_model_cache_efficiency(self, mock_sentence_transformer):
         """Test that model caching improves efficiency"""
         mock_model = Mock()
@@ -426,7 +426,7 @@ class TestEmbeddingServiceIntegration:
             "こんにちは世界",
         ]
 
-        with patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer') as mock_st:
+        with patch('sentence_transformers.SentenceTransformer') as mock_st:
             mock_model = Mock()
             mock_embeddings = np.array([[0.1, 0.2]] * 4)
             mock_model.encode.return_value = mock_embeddings
@@ -445,7 +445,7 @@ class TestEmbeddingServiceIntegration:
             ("cat", "dog", 0.3),  # Should be different
         ]
 
-        with patch('ai_service.layers.embeddings.embedding_service.SentenceTransformer') as mock_st:
+        with patch('sentence_transformers.SentenceTransformer') as mock_st:
             mock_model = Mock()
 
             for text1, text2, expected_min_sim in test_cases:

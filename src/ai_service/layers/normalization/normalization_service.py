@@ -459,6 +459,10 @@ class NormalizationService:
                 normalized_tokens, traces = self._normalize_english_tokens(
                     tagged_tokens, language, enable_advanced_features
                 )
+            elif language == "mixed":
+                normalized_tokens, traces = self._normalize_mixed_tokens(
+                    tagged_tokens, language, enable_advanced_features
+                )
             else:
                 normalized_tokens, traces = self._normalize_slavic_tokens(
                     tagged_tokens, language, enable_advanced_features
@@ -648,7 +652,7 @@ class NormalizationService:
             return True
 
         # Check surname patterns
-        if language in ["ru", "uk"]:
+        if language in ["ru", "uk", "mixed"]:
             surname_patterns = [
                 r".*(?:енко|енка|енку|енком|енці|енкою|енцію|енкою|енцію|енкою|енцію|енкою|енцію)$",
                 r".*(?:ов|ова|ову|овим|овій|ові|ових|ого|овы|овой|овою|овым|овыми)$",
@@ -1133,9 +1137,9 @@ class NormalizationService:
             if base.lower() not in ["и", "and", "i"]:
                 return "initial"
 
-        # Check for ASCII names in Cyrillic context (ru/uk)
+        # Check for ASCII names in Cyrillic context (ru/uk/mixed)
         if (
-            language in ["ru", "uk"]
+            language in ["ru", "uk", "mixed"]
             and base.isascii()
             and base.isalpha()
             and len(base) > 1
@@ -1400,7 +1404,7 @@ class NormalizationService:
                 return "given"
 
         # Check for patronymic patterns (Ukrainian/Russian) - higher priority
-        if language in ["ru", "uk"]:
+        if language in ["ru", "uk", "mixed"]:
             patronymic_patterns = [
                 r".*(?:ович|евич|йович|ійович|інович|инович)(?:а|у|ем|і|и|е|ом|им|ім|ою|ію|ої|ії|ою|ію|ої|ії)?$",  # Male patronymics with cases
                 r".*(?:ич|ыч)$",  # Short patronymics
@@ -1447,7 +1451,7 @@ class NormalizationService:
                     return "given"
 
         # Check for surname patterns (Ukrainian/Russian)
-        if language in ["ru", "uk"]:
+        if language in ["ru", "uk", "mixed"]:
             surname_patterns = [
                 # Ukrainian -enko endings with cases
                 r".*(?:енко|енка|енку|енком|енці|енкою|енцію|енкою|енцію|енкою|енцію|енкою|енцію)$",
@@ -1540,7 +1544,7 @@ class NormalizationService:
             # First token: if it morphologically resolves to a known given name, tag as given
             if i == 0:
                 # Special handling for ASCII names in Cyrillic context
-                if language in ["ru", "uk"] and token.isascii() and token.isalpha():
+                if language in ["ru", "uk", "mixed"] and token.isascii() and token.isalpha():
                     # ASCII names in first position are likely given names
                     new_role = "given"
                 elif role in ["surname", "unknown"]:
@@ -1552,7 +1556,7 @@ class NormalizationService:
 
             # Middle token in 3-token sequence: if it looks like patronymic, tag as such
             elif i == 1 and len(tagged) == 3 and role in ["surname", "unknown"]:
-                if language in ["ru", "uk"] and any(
+                if language in ["ru", "uk", "mixed"] and any(
                     pattern in token.lower() for pattern in ["овн", "евн", "инич"]
                 ):
                     new_role = "patronymic"
@@ -1560,7 +1564,7 @@ class NormalizationService:
             # Last token: if it's ASCII and previous token was given, tag as surname
             elif (
                 i == len(tagged) - 1
-                and language in ["ru", "uk"]
+                and language in ["ru", "uk", "mixed"]
                 and token.isascii()
                 and token.isalpha()
             ):
@@ -2227,7 +2231,7 @@ class NormalizationService:
                 morph_lang = None
                 if (
                     enable_advanced_features
-                    and language in ["ru", "uk"]
+                    and language in ["ru", "uk", "mixed"]
                     and token.isascii()
                     and token.isalpha()
                 ):
@@ -2372,6 +2376,203 @@ class NormalizationService:
                 )
 
         return normalized_tokens, traces
+
+    def _normalize_mixed_tokens(
+        self,
+        tagged_tokens: List[Tuple[str, str]],
+        language: str,
+        enable_advanced_features: bool = True,
+    ) -> Tuple[List[str], List[TokenTrace]]:
+        """
+        Normalize mixed language tokens by determining script per token
+        
+        Args:
+            tagged_tokens: List of (token, role) tuples
+            language: Language code (should be "mixed")
+            enable_advanced_features: If False, skip morphology and advanced features
+        """
+        normalized_tokens = []
+        traces = []
+        
+        # Determine person gender for surname adjustment (use heuristics)
+        person_gender = self._get_person_gender(tagged_tokens, language)
+        
+        for token, role in tagged_tokens:
+            base, is_quoted = self._strip_quoted(token)
+            normalized = None
+            
+            # Handle legal forms - completely ignore
+            if role == "legal_form":
+                continue
+                
+            # Handle organization cores - mark for separate collection
+            if role == "org":
+                normalized_tokens.append("__ORG__" + base)
+                traces.append(
+                    TokenTrace(
+                        token=token,
+                        role=role,
+                        rule="org-pass",
+                        morph_lang=language,
+                        normal_form=None,
+                        output=base,
+                        fallback=False,
+                        notes="quoted" if is_quoted else "",
+                    )
+                )
+                continue
+                
+            # Skip quoted tokens that are marked as 'unknown'
+            if role == "unknown" and is_quoted:
+                continue
+                
+            # Skip all unknown tokens except conjunctions
+            if role == "unknown" and token.lower() not in ["и", "and"]:
+                continue
+                
+            # Determine script and sub-language for this token
+            token_lang = self._determine_token_language(token)
+            
+            # Normalize based on detected script
+            if token_lang == "en":
+                # ASCII tokens - use English normalization (no morphology)
+                normalized = self._normalize_english_token(
+                    token, role, enable_advanced_features
+                )
+                rule = "english-mixed"
+            else:
+                # Cyrillic tokens - use Slavic normalization
+                normalized = self._normalize_slavic_token(
+                    token, role, token_lang, person_gender, enable_advanced_features
+                )
+                rule = f"slavic-mixed-{token_lang}"
+                
+            if normalized:
+                normalized_tokens.append(normalized)
+                traces.append(
+                    TokenTrace(
+                        token=token,
+                        role=role,
+                        rule=rule,
+                        morph_lang=token_lang,
+                        normal_form=normalized if token_lang != "en" else None,
+                        output=normalized,
+                        fallback=False,
+                        notes="quoted" if is_quoted else "",
+                    )
+                )
+                
+        return normalized_tokens, traces
+    
+    def _determine_token_language(self, token: str) -> str:
+        """
+        Determine sub-language for a token in mixed text
+        
+        Args:
+            token: Token to analyze
+            
+        Returns:
+            Language code: "en", "ru", "uk", or "en" as fallback
+        """
+        # Check for Ukrainian-specific characters
+        uk_chars = len(re.findall(r"[іїєґІЇЄҐ]", token))
+        if uk_chars > 0:
+            return "uk"
+            
+        # Check for Russian-specific characters
+        ru_chars = len(re.findall(r"[ёъыэЁЪЫЭ]", token))
+        if ru_chars > 0:
+            return "ru"
+            
+        # Check if token contains Cyrillic characters
+        cyr_chars = len(re.findall(r"[а-яёА-ЯЁ]", token))
+        if cyr_chars > 0:
+            # Has Cyrillic but no specific characters - use heuristics
+            # Check for Ukrainian patterns
+            uk_patterns = len(re.findall(
+                r"\b(і|в|на|з|по|за|від|до|у|о|а|але|або|якщо|коли|де|як|що|хто|кошти|гроші|платіж|переказ)\b",
+                token, re.IGNORECASE
+            ))
+            ru_patterns = len(re.findall(
+                r"\b(и|в|на|с|по|за|от|до|из|у|о|а|но|или|если|когда|где|как|что|кто|деньги|средства|перевод|платеж|оплата)\b",
+                token, re.IGNORECASE
+            ))
+            
+            if uk_patterns > ru_patterns:
+                return "uk"
+            elif ru_patterns > uk_patterns:
+                return "ru"
+            else:
+                # Default to Ukrainian for ambiguous Cyrillic
+                return "uk"
+        else:
+            # ASCII token - treat as English
+            return "en"
+    
+    def _normalize_english_token(
+        self, token: str, role: str, enable_advanced_features: bool
+    ) -> Optional[str]:
+        """
+        Normalize a single English token (no morphology)
+        
+        Args:
+            token: Token to normalize
+            role: Token role
+            enable_advanced_features: If False, skip advanced features
+            
+        Returns:
+            Normalized token or None if should be skipped
+        """
+        base, is_quoted = self._strip_quoted(token)
+        
+        if role == "initial":
+            # Format initials
+            return base.upper() + "."
+        elif role in ["given", "surname"]:
+            # Basic capitalization for English names
+            return base.capitalize()
+        elif role == "conjunction":
+            # Keep conjunctions lowercase
+            return base.lower()
+        else:
+            # Skip other roles
+            return None
+    
+    def _normalize_slavic_token(
+        self, token: str, role: str, token_lang: str, person_gender: str, enable_advanced_features: bool
+    ) -> Optional[str]:
+        """
+        Normalize a single Slavic token using morphology
+        
+        Args:
+            token: Token to normalize
+            role: Token role
+            token_lang: Detected language for this token
+            person_gender: Overall person gender
+            enable_advanced_features: If False, skip morphology
+            
+        Returns:
+            Normalized token or None if should be skipped
+        """
+        base, is_quoted = self._strip_quoted(token)
+        
+        if role == "initial":
+            # Format initials
+            return base.upper() + "."
+        elif role in ["given", "surname", "patronymic"]:
+            if enable_advanced_features:
+                # Use morphology for Slavic tokens
+                morphed = self._morph_nominal(base, token_lang)
+                if morphed:
+                    return morphed
+            # Fallback to basic capitalization
+            return base.capitalize()
+        elif role == "conjunction":
+            # Keep conjunctions lowercase
+            return base.lower()
+        else:
+            # Skip other roles
+            return None
 
     def _reconstruct_text(self, tokens: List[str], traces: List[TokenTrace]) -> str:
         """Reconstruct text, just joining with spaces"""

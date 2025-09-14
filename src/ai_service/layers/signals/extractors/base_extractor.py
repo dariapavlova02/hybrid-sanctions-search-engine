@@ -5,7 +5,7 @@ Base extractor class with common functionality.
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
-from ai_service.utils.logging_config import get_logger
+from ....utils.logging_config import get_logger
 
 
 class BaseExtractor(ABC):

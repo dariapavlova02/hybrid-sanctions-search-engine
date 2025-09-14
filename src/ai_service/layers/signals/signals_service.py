@@ -603,6 +603,9 @@ class SignalsService:
         if not person_ids or not persons or not text:
             return
 
+        # Check if text is mixed language for more lenient proximity matching
+        is_mixed_language = self._is_mixed_language_text(text)
+
         # Найдем позиции всех персон в тексте для proximity matching
         person_positions = []
         for person in persons:
@@ -657,9 +660,12 @@ class SignalsService:
                 # Вычисляем расстояние между центрами
                 distance = abs(id_center - person_center)
 
-                # Ограичиваем максимальным расстоянием в 300 символов
-                # (больше чем для дат, т.к. ID могут быть дальше)
-                if distance < 300 and distance < min_distance:
+                # Для смешанного языка увеличиваем максимальное расстояние
+                max_distance = 500 if is_mixed_language else 300
+                
+                # Ограичиваем максимальным расстоянием
+                # (больше для смешанного языка, т.к. ID могут быть в другой части текста)
+                if distance < max_distance and distance < min_distance:
                     min_distance = distance
                     closest_person = person_pos["person"]
 
@@ -828,7 +834,7 @@ class SignalsService:
 
             # Назначаем дату ближайшей персоне
             if closest_person and date_info["raw"] not in used_birthdates:
-                closest_person.dob = date_info["date"]  # ISO формат YYYY-MM-DD
+                closest_person.dob = date_info["iso_format"]  # ISO формат YYYY-MM-DD
                 closest_person.dob_raw = date_info["raw"]  # Исходный текст
                 closest_person.evidence.append("birthdate_found")
                 used_birthdates.add(date_info["raw"])
@@ -841,7 +847,7 @@ class SignalsService:
         for i, person in enumerate(persons_without_dates):
             if i < len(remaining_dates):
                 date_info = remaining_dates[i]
-                person.dob = date_info["date"]
+                person.dob = date_info["iso_format"]
                 person.dob_raw = date_info["raw"]
                 person.evidence.append("birthdate_found")
 
@@ -1081,3 +1087,25 @@ class SignalsService:
             self.extract,
             text, normalization_result, language
         )
+    
+    def _is_mixed_language_text(self, text: str) -> bool:
+        """
+        Check if text contains mixed language (both Cyrillic and Latin scripts)
+        
+        Args:
+            text: Text to analyze
+            
+        Returns:
+            True if text contains both Cyrillic and Latin characters
+        """
+        if not text:
+            return False
+            
+        # Count Cyrillic characters
+        cyrillic_count = len(re.findall(r"[а-яёіїєґ]", text, re.IGNORECASE))
+        
+        # Count Latin characters
+        latin_count = len(re.findall(r"[a-z]", text, re.IGNORECASE))
+        
+        # Consider mixed if both scripts are present
+        return cyrillic_count > 0 and latin_count > 0

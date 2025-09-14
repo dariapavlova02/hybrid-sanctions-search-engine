@@ -78,7 +78,7 @@ class TestOrchestratorMetrics:
             decision=MatchDecision.MATCH,
             confidence=0.9,
             confidence_level=ConfidenceLevel.HIGH,
-            evidence=[MatchEvidence(source="test", value="Strong signal match", weight=1.0)],
+            evidence=[MatchEvidence(source="test", evidence_type="name_similarity", confidence=0.9, details={"match": "Strong signal match"}, weight=1.0)],
             reasoning="Test decision",
             processing_time=0.001,
             used_layers=["normalization", "signals"]
@@ -99,8 +99,39 @@ class TestOrchestratorMetrics:
 
     @pytest.fixture
     def metrics_service(self):
-        """Create MetricsService instance"""
-        return MetricsService()
+        """Create MetricsService instance with registered metrics"""
+        service = MetricsService()
+        
+        # Register required metrics
+        from ai_service.monitoring.metrics_service import MetricType, MetricDefinition
+        
+        # Register basic metrics
+        service.register_metric(MetricDefinition("processing.requests.total", MetricType.COUNTER, "Total processing requests"))
+        service.register_metric(MetricDefinition("processing.requests.successful", MetricType.COUNTER, "Successful processing requests"))
+        service.register_metric(MetricDefinition("processing.requests.active", MetricType.GAUGE, "Active processing requests"))
+        service.register_metric(MetricDefinition("processing.total_time", MetricType.TIMER, "Total processing time"))
+        
+        # Register layer metrics
+        layers = ["validation", "smart_filter", "language_detection", "unicode_normalization", 
+                 "normalization", "signals", "variants", "embeddings", "decision"]
+        for layer in layers:
+            service.register_metric(MetricDefinition(f"processing.layer.{layer}", MetricType.TIMER, f"{layer} processing time"))
+        
+        # Register confidence metrics
+        confidence_metrics = ["smart_filter", "language_detection", "normalization", "signals", "decision"]
+        for metric in confidence_metrics:
+            service.register_metric(MetricDefinition(f"{metric}.confidence", MetricType.HISTOGRAM, f"{metric} confidence"))
+        
+        # Register other metrics
+        service.register_metric(MetricDefinition("decision.result.match", MetricType.COUNTER, "Match decisions"))
+        service.register_metric(MetricDefinition("language_detection.detected.en", MetricType.COUNTER, "English detections"))
+        service.register_metric(MetricDefinition("normalization.token_count", MetricType.HISTOGRAM, "Token count"))
+        service.register_metric(MetricDefinition("signals.persons_count", MetricType.HISTOGRAM, "Persons count"))
+        service.register_metric(MetricDefinition("signals.organizations_count", MetricType.HISTOGRAM, "Organizations count"))
+        service.register_metric(MetricDefinition("variants.count", MetricType.HISTOGRAM, "Variants count"))
+        service.register_metric(MetricDefinition("embeddings.dimension", MetricType.HISTOGRAM, "Embedding dimension"))
+        
+        return service
 
     @pytest.fixture
     def orchestrator(self, mock_services, metrics_service):
@@ -129,11 +160,13 @@ class TestOrchestratorMetrics:
         result = await orchestrator.process("John Doe")
 
         # Verify basic request metrics
-        assert "processing.requests.total" in metrics_service.metrics
-        assert metrics_service.metrics["processing.requests.total"]["value"] == 1
+        total_requests = metrics_service.get_metric_values("processing.requests.total")
+        assert len(total_requests) > 0
+        assert total_requests[-1].value == 1
 
-        assert "processing.requests.successful" in metrics_service.metrics
-        assert metrics_service.metrics["processing.requests.successful"]["value"] == 1
+        successful_requests = metrics_service.get_metric_values("processing.requests.successful")
+        assert len(successful_requests) > 0
+        assert successful_requests[-1].value == 1
 
         # Verify layer timing metrics
         expected_layers = [
@@ -149,22 +182,32 @@ class TestOrchestratorMetrics:
         ]
 
         for layer in expected_layers:
-            assert layer in metrics_service.metrics
-            assert metrics_service.metrics[layer]["type"].value == "timer"
+            layer_metrics = metrics_service.get_metric_values(layer)
+            assert len(layer_metrics) > 0
 
         # Verify total processing time
-        assert "processing.total_time" in metrics_service.metrics
+        total_time_metrics = metrics_service.get_metric_values("processing.total_time")
+        assert len(total_time_metrics) > 0
 
         # Verify confidence histograms
-        assert "smart_filter.confidence" in metrics_service.metrics
-        assert "language_detection.confidence" in metrics_service.metrics
-        assert "normalization.confidence" in metrics_service.metrics
-        assert "signals.confidence" in metrics_service.metrics
-        assert "decision.confidence" in metrics_service.metrics
+        smart_filter_confidence = metrics_service.get_metric_values("smart_filter.confidence")
+        assert len(smart_filter_confidence) > 0
+        
+        language_confidence = metrics_service.get_metric_values("language_detection.confidence")
+        assert len(language_confidence) > 0
+        
+        normalization_confidence = metrics_service.get_metric_values("normalization.confidence")
+        assert len(normalization_confidence) > 0
+        signals_confidence = metrics_service.get_metric_values("signals.confidence")
+        assert len(signals_confidence) > 0
+        
+        decision_confidence = metrics_service.get_metric_values("decision.confidence")
+        assert len(decision_confidence) > 0
 
         # Verify decision result counter
-        assert "decision.result.match" in metrics_service.metrics
-        assert metrics_service.metrics["decision.result.match"]["value"] == 1
+        decision_match = metrics_service.get_metric_values("decision.result.match")
+        assert len(decision_match) > 0
+        assert decision_match[-1].value == 1
 
     @pytest.mark.asyncio
     async def test_validation_failure_metrics(self, orchestrator, metrics_service, mock_services):
