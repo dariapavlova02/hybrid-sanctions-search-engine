@@ -9,7 +9,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'src'))
 
-from ai_service.services.ukrainian_morphology import UkrainianMorphologyAnalyzer
+from ai_service.layers.normalization.morphology.ukrainian_morphology import UkrainianMorphologyAnalyzer
 
 
 def test_ukrainian_morphology_simple():

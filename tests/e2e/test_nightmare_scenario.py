@@ -1,13 +1,13 @@
 """
 End-to-End "кошмарный" тест-кейс
-Тестирует полный цикл OrchestratorService.process_text для сложного случая
+Тестирует полный цикл UnifiedOrchestrator.process для сложного случая
 """
 
 import pytest
 import asyncio
 from typing import Set
 
-from src.ai_service.services.orchestrator_service import OrchestratorService
+from src.ai_service.core.unified_orchestrator import UnifiedOrchestrator
 
 
 class TestNightmareScenario:

@@ -11,7 +11,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'src'))
 
-from ai_service.services.normalization_service import NormalizationService
+from ai_service.layers.normalization.normalization_service import NormalizationService
 
 
 # --- Фикстура для инициализации сервиса ---
