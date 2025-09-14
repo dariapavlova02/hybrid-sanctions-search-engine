@@ -41,26 +41,59 @@ class EmbeddingService:
             self.logger.info(f"Model loaded successfully on device: {self.config.device}")
         return self._model
 
-    def encode(self, texts: Union[str, List[str]]) -> Union[List[float], List[List[float]]]:
+    def encode_one(self, text: str) -> List[float]:
         """
-        Encode texts to embeddings
+        Encode a single text to embedding vector
 
         Args:
-            texts: Single text string or list of text strings
+            text: Single text string
 
         Returns:
-            Single embedding vector or list of embedding vectors as 32-bit floats
+            Single embedding vector as 32-bit floats
         """
-        # Convert single string to list
-        if isinstance(texts, str):
-            input_texts = [texts]
-            single_input = True
-        else:
-            input_texts = texts
-            single_input = False
+        if not text or not text.strip():
+            return []
 
-        if not input_texts or (len(input_texts) == 1 and not input_texts[0].strip()):
-            return [] if not single_input else []
+        try:
+            # Load model lazily
+            model = self._load_model()
+
+            # Generate embedding
+            embedding = model.encode(
+                [text],
+                batch_size=1,
+                show_progress_bar=False,
+                normalize_embeddings=True,
+                convert_to_numpy=True
+            )
+
+            # Convert to 32-bit float and ensure it's a list
+            if isinstance(embedding, np.ndarray):
+                embedding = embedding.astype(np.float32).tolist()
+
+            return embedding[0] if len(embedding) > 0 else []
+
+        except Exception as e:
+            self.logger.error(f"Failed to encode text: {e}")
+            raise
+
+    def encode_batch(self, texts: List[str]) -> List[List[float]]:
+        """
+        Encode multiple texts to embedding vectors
+
+        Args:
+            texts: List of text strings
+
+        Returns:
+            List of embedding vectors as 32-bit floats
+        """
+        if not texts:
+            return []
+
+        # Filter out empty texts
+        valid_texts = [text for text in texts if text and text.strip()]
+        if not valid_texts:
+            return []
 
         try:
             # Load model lazily
@@ -68,7 +101,7 @@ class EmbeddingService:
 
             # Generate embeddings
             embeddings = model.encode(
-                input_texts,
+                valid_texts,
                 batch_size=self.config.batch_size,
                 show_progress_bar=False,
                 normalize_embeddings=True,
@@ -79,15 +112,26 @@ class EmbeddingService:
             if isinstance(embeddings, np.ndarray):
                 embeddings = embeddings.astype(np.float32).tolist()
 
-            # Return single vector for single input, list for multiple inputs
-            if single_input:
-                return embeddings[0] if embeddings else []
-            else:
-                return embeddings
+            return embeddings
 
         except Exception as e:
             self.logger.error(f"Failed to encode texts: {e}")
             raise
+
+    def encode(self, texts: Union[str, List[str]]) -> Union[List[float], List[List[float]]]:
+        """
+        Encode texts to embeddings (legacy method for backward compatibility)
+
+        Args:
+            texts: Single text string or list of text strings
+
+        Returns:
+            Single embedding vector or list of embedding vectors as 32-bit floats
+        """
+        if isinstance(texts, str):
+            return self.encode_one(texts)
+        else:
+            return self.encode_batch(texts)
 
     def get_embedding_dimension(self) -> int:
         """

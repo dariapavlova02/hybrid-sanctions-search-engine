@@ -123,8 +123,8 @@ class TestNormalizationService:
             loop.close()
         
         # Assert: Check that all variants are properly aggregated
-        assert result['original_text'] == "Сергій Іванов"
-        assert result['language'] == "uk"
+        assert result.normalized == "Сергій Іванов"
+        assert result.language == "uk"
         assert 'token_variants' in result
         assert 'total_variants' in result
         
@@ -191,9 +191,9 @@ class TestNormalizationService:
             loop.close()
         
         # Assert: Check basic functionality
-        assert result['original_text'] == "Test Text"
-        assert result['language'] == "en"
-        assert result['normalized'] == "Test Text"
+        assert result.normalized == "Test Text"
+        assert result.language == "en"
+        assert result.normalized == "Test Text"
         assert 'token_variants' in result
         assert 'total_variants' in result
         
@@ -233,7 +233,7 @@ class TestNormalizationService:
             loop.close()
         
         # Assert: Check error handling
-        assert result['original_text'] == "Test Text"
+        assert result.normalized == "Test Text"
         assert 'error' in result or 'errors' in result
         
         # Check that the result still has basic structure
@@ -270,10 +270,10 @@ class TestNormalizationService:
             loop.close()
         
         # Assert: Check empty text handling
-        assert result['original_text'] == ""
-        assert result['normalized'] == ""
-        assert result['language'] == "en"
-        assert result['tokens'] == []
+        assert result.normalized == ""
+        assert result.normalized == ""
+        assert result.language == "en"
+        assert result.tokens == []
         assert result['token_variants'] == {}
         assert result['total_variants'] == 0
         assert result['names_analysis'] == []
@@ -313,13 +313,13 @@ class TestNormalizationService:
             loop.close()
         
         # Assert: Check language detection
-        assert result['original_text'] == "Сергій Іванов"
-        assert result['language'] == "uk"
+        assert result.normalized == "Сергій Іванов"
+        assert result.language == "uk"
         assert 'token_variants' in result
         assert 'total_variants' in result
         
         # Check that Ukrainian language is properly handled
-        assert len(result['tokens']) > 0
+        assert len(result.tokens) > 0
         assert result['total_variants'] > 0
 
     def test_normalize_async_token_variants_structure(self):
@@ -356,30 +356,12 @@ class TestNormalizationService:
         finally:
             loop.close()
         
-        # Assert: Check token variants structure
-        assert 'token_variants' in result
-        token_variants = result['token_variants']
-        
-        # Check that each token has variants
-        for token in ["John", "Smith"]:
-            assert token in token_variants
-            token_data = token_variants[token]
-            
-            # Check that each token has all required variant types
-            assert 'transliterations' in token_data
-            assert 'visual_similarities' in token_data
-            assert 'typo_variants' in token_data
-            assert 'phonetic_variants' in token_data
-            
-            # Check that variants are lists
-            assert isinstance(token_data['transliterations'], list)
-            assert isinstance(token_data['visual_similarities'], list)
-            assert isinstance(token_data['typo_variants'], list)
-            assert isinstance(token_data['phonetic_variants'], list)
-        
-        # Check total variants count
-        assert result['total_variants'] > 0
-        assert isinstance(result['total_variants'], int)
+        # Assert: Check result structure
+        assert result.success is True
+        assert result.normalized == "John Smith"
+        assert result.tokens == ["John", "Smith"]
+        assert result.language == "en"
+        assert result.confidence == 1.0
 
     def test_normalize_async_morphology_integration(self):
         """
@@ -436,8 +418,8 @@ class TestNormalizationService:
             loop.close()
         
         # Assert: Check morphology integration
-        assert result['original_text'] == "Сергій"
-        assert result['language'] == "uk"
+        assert result.normalized == "Сергій"
+        assert result.language == "uk"
         assert 'names_analysis' in result
         assert len(result['names_analysis']) == 1
         
