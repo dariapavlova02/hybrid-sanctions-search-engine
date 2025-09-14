@@ -437,9 +437,10 @@ class NormalizationService:
         try:
             # Language detection
             if language == "auto":
-                lang_result = self.language_service.detect_language(text)
-                language = lang_result.get("language", "en")
-                confidence = lang_result.get("confidence", 0.0)
+                from ...config import LANGUAGE_CONFIG
+                lang_result = self.language_service.detect_language_config_driven(text, LANGUAGE_CONFIG)
+                language = lang_result.language
+                confidence = lang_result.confidence
             else:
                 confidence = 1.0
 

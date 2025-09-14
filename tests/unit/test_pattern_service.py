@@ -5,7 +5,7 @@ Unit tests for PatternService
 import pytest
 from unittest.mock import Mock, patch
 
-from src.ai_service.services.pattern_service import PatternService, NamePattern
+from src.ai_service.layers.patterns.unified_pattern_service import UnifiedPatternService
 
 
 class TestPatternService:

@@ -5,7 +5,7 @@ Unit tests for UnicodeService
 import pytest
 from unittest.mock import Mock, patch
 
-from src.ai_service.services.unicode_service import UnicodeService
+from src.ai_service.layers.unicode.unicode_service import UnicodeService
 
 
 class TestUnicodeService:

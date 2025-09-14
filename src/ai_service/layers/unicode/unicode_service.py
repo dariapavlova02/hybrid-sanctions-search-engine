@@ -20,6 +20,27 @@ class UnicodeService:
 
         # Mapping for complex characters
         self.character_mapping = {
+            # Apostrophe unification for Ukrainian names (D'Artanyan, O'Connor, etc.)
+            # All apostrophe variants → standard ASCII apostrophe
+            "'": "'",    # U+2019 Right single quotation mark → U+0027 ASCII apostrophe
+            "'": "'",    # U+2018 Left single quotation mark → U+0027 ASCII apostrophe
+            "ʼ": "'",    # U+02BC Modifier letter apostrophe → U+0027 ASCII apostrophe
+            "`": "'",    # U+0060 Grave accent → U+0027 ASCII apostrophe (common typo)
+            "´": "'",    # U+00B4 Acute accent → U+0027 ASCII apostrophe (common typo)
+
+            # Quote unification for company names ("Company Name")
+            # All quote variants → standard ASCII double quote
+            """: '"',    # U+201C Left double quotation mark → U+0022 ASCII quote
+            """: '"',    # U+201D Right double quotation mark → U+0022 ASCII quote
+            "«": '"',    # U+00AB Left-pointing double angle quotation mark → U+0022 ASCII quote
+            "»": '"',    # U+00BB Right-pointing double angle quotation mark → U+0022 ASCII quote
+
+            # Hyphen/dash unification for compound names (Jean-Baptiste)
+            # All dash variants → standard ASCII hyphen-minus
+            "–": "-",    # U+2013 En dash → U+002D ASCII hyphen-minus
+            "—": "-",    # U+2014 Em dash → U+002D ASCII hyphen-minus
+            "−": "-",    # U+2212 Minus sign → U+002D ASCII hyphen-minus
+
             # Cyrillic characters that may have different Unicode representations
             "ё": "е",
             "Ё": "Е",
@@ -255,8 +276,9 @@ class UnicodeService:
             result["original"] = text  # Preserve None or empty string
             return result
 
-        # Idempotency check: if string is already NFC/NFKC normalized, return as-is
-        if self._is_already_normalized(text):
+        # Idempotency check: if string is already NFC/NFKC normalized AND has no special characters to replace
+        has_special_chars = any(char in self.character_mapping for char in text)
+        if self._is_already_normalized(text) and not has_special_chars:
             result = self._create_normalization_result(text, 1.0, 0, 0, 0)
             result["original"] = text
             result["idempotent"] = True
@@ -273,17 +295,15 @@ class UnicodeService:
             text = recovered_text
             changes_count += 1
 
-        # 1. Basic Unicode normalization (NFD -> NFKC)
-        normalized_text = self._apply_unicode_normalization(text)
-
-        # 2. Case normalization
-        normalized_text = self._normalize_case(normalized_text)
-
-        # 3. Replace complex characters
-        normalized_text, replacements = self._replace_complex_characters(
-            normalized_text
-        )
+        # 1. Replace complex characters FIRST to prevent Unicode normalization from converting them to combining chars
+        normalized_text, replacements = self._replace_complex_characters(text)
         char_replacements += replacements
+
+        # 2. Basic Unicode normalization (NFD -> NFKC) after character replacements
+        normalized_text = self._apply_unicode_normalization(normalized_text)
+
+        # 3. Case normalization (after character replacements and Unicode normalization)
+        normalized_text = self._normalize_case(normalized_text)
 
         # 4. ASCII folding (always in aggressive mode, or only if not aggressive)
         if aggressive:

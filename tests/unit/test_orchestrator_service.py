@@ -7,7 +7,7 @@ import asyncio
 from unittest.mock import Mock, patch, AsyncMock
 from datetime import datetime
 
-from src.ai_service.services.orchestrator_service import OrchestratorService, ProcessingResult
+from src.ai_service.core.unified_orchestrator import UnifiedOrchestrator
 
 
 class TestOrchestratorService:

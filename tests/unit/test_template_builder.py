@@ -6,8 +6,8 @@ import pytest
 from unittest.mock import Mock, patch
 from datetime import datetime
 
-from src.ai_service.services.template_builder import TemplateBuilder, EntityTemplate
-from src.ai_service.services.pattern_service import NamePattern
+from src.ai_service.layers.variants.template_builder import TemplateBuilder, EntityTemplate
+from src.ai_service.layers.patterns.unified_pattern_service import UnifiedPatternService
 
 
 class TestTemplateBuilder:

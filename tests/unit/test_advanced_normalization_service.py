@@ -6,14 +6,14 @@ import pytest
 import asyncio
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
 
-from src.ai_service.services.advanced_normalization_service import AdvancedNormalizationService
+from src.ai_service.layers.normalization.normalization_service import NormalizationService
 
 
-class TestAdvancedNormalizationService:
-    """Tests for AdvancedNormalizationService"""
+class TestNormalizationService:
+    """Tests for NormalizationService"""
     
-    @patch('src.ai_service.services.advanced_normalization_service.spacy.load')
-    @patch('src.ai_service.services.advanced_normalization_service.MorphAnalyzer')
+    @patch('src.ai_service.layers.normalization.normalization_service.spacy.load')
+    @patch('src.ai_service.layers.normalization.normalization_service.MorphAnalyzer')
     def test_variant_aggregation_logic(self, mock_morph_analyzer, mock_spacy_load, advanced_normalization_service):
         """Critically important test: checking variant aggregation logic"""
         # Arrange - mock all dependencies
@@ -125,7 +125,7 @@ class TestAdvancedNormalizationService:
         # Assert
         assert result['language'] in ['uk', 'ru', 'en']  # Should detect one of supported
     
-    @patch('src.ai_service.services.advanced_normalization_service.detect')
+    @patch('src.ai_service.layers.normalization.normalization_service.detect')
     @pytest.mark.asyncio
     async def test_language_detection_fallback(self, mock_detect, advanced_normalization_service):
         """Test fallback on language detection error"""
@@ -333,7 +333,7 @@ class TestAdvancedNormalizationService:
             assert 'stop_words' in info[lang]
             assert 'pymorphy3' in info[lang]
     
-    @patch('src.ai_service.services.advanced_normalization_service.word_tokenize')
+    @patch('src.ai_service.layers.normalization.normalization_service.word_tokenize')
     def test_tokenize_with_spacy_fallback(self, mock_word_tokenize, advanced_normalization_service):
         """Test fallback to word_tokenize when SpaCy is unavailable"""
         # Arrange

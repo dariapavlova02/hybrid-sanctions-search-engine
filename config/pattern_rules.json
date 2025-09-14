@@ -1,0 +1,103 @@
+{
+  "pattern_validation_rules": {
+    "version": "1.0.0",
+    "description": "Validation rules for AC patterns to prevent low-quality matches",
+    "last_updated": "2024-09-14",
+    "rules": {
+      "min_pattern_length": {
+        "value": 3,
+        "description": "Minimum length for any pattern",
+        "severity": "error"
+      },
+      "max_pattern_length": {
+        "value": 100,
+        "description": "Maximum length for any pattern",
+        "severity": "warning"
+      },
+      "forbidden_patterns": {
+        "description": "Patterns that should not be included",
+        "patterns": [
+          "^[0-9]+$",
+          "^[a-zA-Z]$",
+          "^\\s+$",
+          "the",
+          "and",
+          "or",
+          "but",
+          "для",
+          "или",
+          "что"
+        ],
+        "severity": "error"
+      },
+      "required_quality_score": {
+        "value": 0.3,
+        "description": "Minimum quality score for patterns",
+        "severity": "warning"
+      },
+      "max_patterns_per_tier": {
+        "tier_0": 1000,
+        "tier_1": 5000,
+        "tier_2": 10000,
+        "tier_3": 20000,
+        "description": "Maximum patterns allowed per tier",
+        "severity": "error"
+      },
+      "duplicate_detection": {
+        "enabled": true,
+        "case_sensitive": false,
+        "description": "Detect and prevent duplicate patterns",
+        "severity": "warning"
+      }
+    },
+    "tier_specific_rules": {
+      "tier_0": {
+        "min_length": 5,
+        "context_required": false,
+        "max_false_positive_rate": 0.01
+      },
+      "tier_1": {
+        "min_length": 4,
+        "context_required": false,
+        "max_false_positive_rate": 0.05
+      },
+      "tier_2": {
+        "min_length": 3,
+        "context_required": true,
+        "max_false_positive_rate": 0.10
+      },
+      "tier_3": {
+        "min_length": 3,
+        "context_required": true,
+        "max_false_positive_rate": 0.20
+      }
+    }
+  },
+  "governance": {
+    "version_control": {
+      "enabled": true,
+      "changelog_required": true,
+      "approval_process": "two_person_rule"
+    },
+    "testing_requirements": {
+      "sanity_tests": true,
+      "false_positive_testing": true,
+      "performance_benchmarks": true
+    },
+    "deployment": {
+      "canary_percentage": 5,
+      "rollback_conditions": [
+        "false_positive_rate > 0.15",
+        "performance_degradation > 20%",
+        "error_rate > 1%"
+      ]
+    }
+  },
+  "quality_metrics": {
+    "precision_target": 0.95,
+    "recall_target": 0.90,
+    "f1_target": 0.92,
+    "processing_time_target_ms": 50,
+    "memory_usage_target_mb": 100
+  }
+}

@@ -7,9 +7,9 @@ import pytest
 import asyncio
 from unittest.mock import patch
 
-from src.ai_service.services.language_detection_service import LanguageDetectionService
-from src.ai_service.services.advanced_normalization_service import AdvancedNormalizationService
-from src.ai_service.services.variant_generation_service import VariantGenerationService
+from src.ai_service.layers.language.language_detection_service import LanguageDetectionService
+from src.ai_service.layers.normalization.normalization_service import NormalizationService
+from src.ai_service.layers.variants.variant_generation_service import VariantGenerationService
 
 
 class TestNormalizationPipeline:

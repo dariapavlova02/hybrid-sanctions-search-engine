@@ -5,8 +5,8 @@ Unit tests for UkrainianMorphologyAnalyzer using pytest fixtures
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 
-from src.ai_service.services.ukrainian_morphology import UkrainianMorphologyAnalyzer
-from src.ai_service.services.base_morphology import MorphologicalAnalysis
+from src.ai_service.layers.normalization.morphology.ukrainian_morphology import UkrainianMorphologyAnalyzer
+from src.ai_service.layers.normalization.morphology.base_morphology import MorphologicalAnalysis
 
 
 class TestUkrainianMorphologyAnalyzer:

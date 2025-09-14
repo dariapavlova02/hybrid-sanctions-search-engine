@@ -5,7 +5,7 @@ Unit tests for VariantGenerationService
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 
-from src.ai_service.services.variant_generation_service import VariantGenerationService
+from src.ai_service.layers.variants.variant_generation_service import VariantGenerationService
 
 
 class TestVariantGenerationService:

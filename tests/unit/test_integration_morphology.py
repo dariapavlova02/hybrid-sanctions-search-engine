@@ -26,8 +26,8 @@ class TestMorphologyIntegration:
         assert advanced_normalization_service.ru_morphology is not None
         
         # Check types
-        from src.ai_service.services.ukrainian_morphology import UkrainianMorphologyAnalyzer
-        from src.ai_service.services.russian_morphology import RussianMorphologyAnalyzer
+        from src.ai_service.layers.normalization.morphology.ukrainian_morphology import UkrainianMorphologyAnalyzer
+        from src.ai_service.layers.normalization.morphology.russian_morphology import RussianMorphologyAnalyzer
         
         assert isinstance(advanced_normalization_service.uk_morphology, UkrainianMorphologyAnalyzer)
         assert isinstance(advanced_normalization_service.ru_morphology, RussianMorphologyAnalyzer)

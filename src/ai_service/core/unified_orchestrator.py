@@ -238,11 +238,13 @@ class UnifiedOrchestrator:
             logger.debug("Stage 4: Language Detection")
             layer_start = time.time()
 
-            lang_result = self.language_service.detect_language(
-                unicode_normalized  # Use unicode-normalized text for language detection
+            from ..config import LANGUAGE_CONFIG
+            lang_result = self.language_service.detect_language_config_driven(
+                unicode_normalized,  # Use unicode-normalized text for language detection
+                LANGUAGE_CONFIG
             )
-            context.language = language_hint or lang_result.get("language", "en")
-            context.language_confidence = lang_result.get("confidence", 0.0)
+            context.language = language_hint or lang_result.language
+            context.language_confidence = lang_result.confidence
 
             if self.metrics_service:
                 self.metrics_service.record_timer('processing.layer.language_detection', time.time() - layer_start)

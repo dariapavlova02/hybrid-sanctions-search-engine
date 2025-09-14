@@ -7,9 +7,9 @@ import asyncio
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
 
 # Mock heavy dependencies before importing
-with patch('ai_service.services.advanced_normalization_service.spacy') as mock_spacy, \
-     patch('ai_service.services.advanced_normalization_service.MorphAnalyzer') as mock_morph, \
-     patch('ai_service.services.advanced_normalization_service.stopwords') as mock_stopwords:
+with patch('ai_service.layers.normalization.normalization_service.spacy') as mock_spacy, \
+     patch('ai_service.layers.normalization.normalization_service.MorphAnalyzer') as mock_morph, \
+     patch('ai_service.layers.normalization.normalization_service.stopwords') as mock_stopwords:
     
     # Configure mocks
     mock_spacy.load.return_value = MagicMock()
@@ -17,7 +17,7 @@ with patch('ai_service.services.advanced_normalization_service.spacy') as mock_s
     mock_stopwords.words.return_value = ['the', 'a', 'an']
     
     # Now import our module (it will use the mocked dependencies)
-    from ai_service.services.advanced_normalization_service import AdvancedNormalizationService
+    from ai_service.layers.normalization.normalization_service import NormalizationService
 
 
 class TestAdvancedNormalizationService:
