@@ -6,15 +6,23 @@ from typing import Any, Dict, List, Optional
 
 from ..contracts.decision_contracts import DecisionInput, DecisionOutput, RiskLevel, SmartFilterInfo, SignalsInfo, SimilarityInfo
 from ..config.settings import DecisionConfig, DECISION_CONFIG
+from ..utils.logging_config import get_logger
+from ..monitoring.metrics_service import MetricsService, MetricDefinition, MetricType
 
 
 class DecisionEngine:
     """Decision engine for risk assessment and processing decisions."""
     
-    def __init__(self, config: Optional[DecisionConfig] = None):
+    def __init__(self, config: Optional[DecisionConfig] = None, metrics_service: Optional[MetricsService] = None):
         """Initialize decision engine with configuration."""
         # Use provided config, or fall back to unified config with ENV overrides
         self.config = config or DECISION_CONFIG
+        self.metrics_service = metrics_service
+        self.logger = get_logger(__name__)
+        
+        # Register decision-specific metrics if metrics service is available
+        if self.metrics_service:
+            self._register_decision_metrics()
     
     def decide(self, inp: DecisionInput) -> DecisionOutput:
         """
@@ -61,6 +69,20 @@ class DecisionEngine:
         
         # Extract details with used features and weights
         details = self._extract_details(safe_input, score)
+        
+        # Log decision details at DEBUG level
+        self.logger.debug(
+            f"Decision made: risk={risk.value}, score={score:.3f}, "
+            f"smartfilter_conf={smartfilter.confidence:.3f}, "
+            f"person_conf={signals.person_confidence:.3f}, "
+            f"org_conf={signals.org_confidence:.3f}, "
+            f"similarity={similarity.cos_top}, "
+            f"date_match={signals.date_match}, id_match={signals.id_match}"
+        )
+        
+        # Record metrics if available
+        if self.metrics_service:
+            self._record_decision_metrics(risk, score, inp)
         
         return DecisionOutput(
             risk=risk,
@@ -254,3 +276,102 @@ class DecisionEngine:
             cos_top=similarity.cos_top,
             cos_p95=similarity.cos_p95
         )
+    
+    def _register_decision_metrics(self):
+        """Register decision-specific metrics"""
+        decision_metrics = [
+            MetricDefinition(
+                "decision_total",
+                MetricType.COUNTER,
+                "Total number of decisions made",
+                labels={"risk"}
+            ),
+            MetricDefinition(
+                "decision_score",
+                MetricType.HISTOGRAM,
+                "Decision scores distribution",
+                labels={"risk"}
+            ),
+            MetricDefinition(
+                "decision_confidence_smartfilter",
+                MetricType.HISTOGRAM,
+                "Smart filter confidence scores"
+            ),
+            MetricDefinition(
+                "decision_confidence_person",
+                MetricType.HISTOGRAM,
+                "Person confidence scores"
+            ),
+            MetricDefinition(
+                "decision_confidence_org",
+                MetricType.HISTOGRAM,
+                "Organization confidence scores"
+            ),
+            MetricDefinition(
+                "decision_similarity",
+                MetricType.HISTOGRAM,
+                "Similarity scores (cos_top)"
+            ),
+            MetricDefinition(
+                "decision_evidence_matches",
+                MetricType.COUNTER,
+                "Evidence match counts",
+                labels={"match_type"}  # date_match, id_match
+            )
+        ]
+        
+        for metric_def in decision_metrics:
+            self.metrics_service.register_metric(metric_def)
+        
+        self.logger.info("Registered decision-specific metrics")
+    
+    def _record_decision_metrics(self, risk: RiskLevel, score: float, inp: DecisionInput):
+        """Record decision metrics"""
+        # Record total decisions with risk label
+        self.metrics_service.increment_counter(
+            "decision_total",
+            labels={"risk": risk.value}
+        )
+        
+        # Record score histogram with risk label
+        self.metrics_service.record_histogram(
+            "decision_score",
+            score,
+            labels={"risk": risk.value}
+        )
+        
+        # Record confidence scores
+        self.metrics_service.record_histogram(
+            "decision_confidence_smartfilter",
+            inp.smartfilter.confidence
+        )
+        
+        self.metrics_service.record_histogram(
+            "decision_confidence_person",
+            inp.signals.person_confidence
+        )
+        
+        self.metrics_service.record_histogram(
+            "decision_confidence_org",
+            inp.signals.org_confidence
+        )
+        
+        # Record similarity if available
+        if inp.similarity.cos_top is not None:
+            self.metrics_service.record_histogram(
+                "decision_similarity",
+                inp.similarity.cos_top
+            )
+        
+        # Record evidence matches
+        if inp.signals.date_match:
+            self.metrics_service.increment_counter(
+                "decision_evidence_matches",
+                labels={"match_type": "date_match"}
+            )
+        
+        if inp.signals.id_match:
+            self.metrics_service.increment_counter(
+                "decision_evidence_matches",
+                labels={"match_type": "id_match"}
+            )
