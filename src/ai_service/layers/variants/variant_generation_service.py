@@ -178,14 +178,14 @@ class VariantGenerationService:
     def _import_dictionaries(self):
         """Import dictionaries from files"""
         # Import name dictionaries
-        from ..data.dicts.ukrainian_names import ALL_UKRAINIAN_NAMES
-        from ..data.dicts.russian_names import ALL_RUSSIAN_NAMES
-        from ..data.dicts.english_names import ALL_ENGLISH_NAMES
-        from ..data.dicts.asian_names import ALL_ASIAN_NAMES
-        from ..data.dicts.arabic_names import ALL_ARABIC_NAMES
-        from ..data.dicts.indian_names import ALL_INDIAN_NAMES
-        from ..data.dicts.european_names import ALL_EUROPEAN_NAMES
-        from ..data.dicts.scandinavian_names import ALL_SCANDINAVIAN_NAMES
+        from ...data.dicts.ukrainian_names import ALL_UKRAINIAN_NAMES
+        from ...data.dicts.russian_names import ALL_RUSSIAN_NAMES
+        from ...data.dicts.english_names import ALL_ENGLISH_NAMES
+        from ...data.dicts.asian_names import ALL_ASIAN_NAMES
+        from ...data.dicts.arabic_names import ALL_ARABIC_NAMES
+        from ...data.dicts.indian_names import ALL_INDIAN_NAMES
+        from ...data.dicts.european_names import ALL_EUROPEAN_NAMES
+        from ...data.dicts.scandinavian_names import ALL_SCANDINAVIAN_NAMES
         
         # Update dictionaries
         self.name_dictionaries = {

@@ -499,7 +499,7 @@ NAMES = {
 }
 
 # All Asian names
-# ALL_NAMES = list(NAMES.keys())
+ALL_ASIAN_NAMES = list(NAMES.keys())
 
 # Example output of name count in dictionary
 # Total Asian names count: {len(ALL_ASIAN_NAMES)}

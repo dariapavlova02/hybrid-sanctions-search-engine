@@ -190,7 +190,7 @@ def pattern_service():
 @pytest.fixture(scope="function")
 def cache_service():
     """Provides a clean instance of CacheService for each test"""
-    from src.ai_service.services.core.cache_service import CacheService
+    from src.ai_service.core.cache_service import CacheService
     service = CacheService(max_size=3, default_ttl=5)  # Small size and TTL for tests
     yield service
     # Clean up after test
@@ -200,5 +200,5 @@ def cache_service():
 @pytest.fixture(scope="function")
 def template_builder():
     """Provides a clean instance of TemplateBuilder for each test"""
-    from src.ai_service.services.templates.template_builder import TemplateBuilder
+    from src.ai_service.layers.variants.template_builder import TemplateBuilder
     return TemplateBuilder()

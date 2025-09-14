@@ -16,7 +16,7 @@ class TestUkrainianMorphologyAnalyzer:
     def setup_analyzer(self):
         """Create analyzer instance for tests"""
         # Mock the dependencies
-        with patch('src.ai_service.services.ukrainian_morphology.get_logger'):
+        with patch('src.ai_service.layers.ukrainian_morphology.get_logger'):
             self.analyzer = UkrainianMorphologyAnalyzer()
         
         # Mock special names

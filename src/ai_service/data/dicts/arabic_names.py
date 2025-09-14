@@ -340,7 +340,7 @@ NAMES = {
 }
 
 # All Arabic names
-# ALL_NAMES = list(NAMES.keys())
+ALL_ARABIC_NAMES = list(NAMES.keys())
 
 # Example output of name count in dictionary
 # Total Arabic names count: {len(ALL_ARABIC_NAMES)}

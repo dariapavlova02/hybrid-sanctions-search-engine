@@ -309,7 +309,7 @@ NAMES = {
 }
 
 # All European names
-# ALL_NAMES = list(NAMES.keys())
+ALL_EUROPEAN_NAMES = list(NAMES.keys())
 
 # Example output of names count in dictionary
 # Total European names count: {len(ALL_EUROPEAN_NAMES)}

@@ -106,7 +106,7 @@ class TestNormalizationService:
         # Set spacy model to None to force fallback
         service.language_configs['en']['spacy_model'] = None
 
-        with patch('src.ai_service.services.morphology.normalization_service._word_tokenize') as mock_tokenize:
+        with patch('src.ai_service.layers.normalization.normalization_service._word_tokenize') as mock_tokenize:
             mock_tokenize.return_value = ["Hello", "world"]
 
             result = service.tokenize_text("Hello world", "en")
@@ -119,7 +119,7 @@ class TestNormalizationService:
         # Set both spacy model and NLTK to None to force basic fallback
         service.language_configs['en']['spacy_model'] = None
 
-        with patch('src.ai_service.services.morphology.normalization_service._word_tokenize', None):
+        with patch('src.ai_service.layers.normalization.normalization_service._word_tokenize', None):
             result = service.tokenize_text("Hello world", "en")
 
             # Basic split fallback
@@ -147,7 +147,7 @@ class TestNormalizationService:
 
     def test_remove_stop_words_fallback(self, service):
         """Test stop words removal fallback when NLTK not available"""
-        with patch('src.ai_service.services.morphology.normalization_service._nltk_stopwords', None):
+        with patch('src.ai_service.layers.normalization.normalization_service._nltk_stopwords', None):
 
             tokens = ["the", "cat", "is", "sleeping"]
             result = service.remove_stop_words(tokens, "en")
@@ -464,9 +464,9 @@ class TestNormalizationServiceEdgeCases:
 
     @pytest.fixture
     def service(self):
-        with patch('src.ai_service.services.morphology.normalization_service.nlp_en'), \
-             patch('src.ai_service.services.morphology.normalization_service.nlp_ru'), \
-             patch('src.ai_service.services.morphology.normalization_service.nlp_uk'):
+        with patch('src.ai_service.layers.normalization.normalization_service.nlp_en'), \
+             patch('src.ai_service.layers.normalization.normalization_service.nlp_ru'), \
+             patch('src.ai_service.layers.normalization.normalization_service.nlp_uk'):
             return NormalizationService()
 
     def test_normalize_very_long_text(self, service):
@@ -581,27 +581,27 @@ class TestNormalizationServiceConfiguration:
 
     def test_initialization_without_spacy(self):
         """Test service initialization when SpaCy is not available"""
-        with patch('src.ai_service.services.morphology.normalization_service.SPACY_AVAILABLE', False), \
-             patch('src.ai_service.services.morphology.normalization_service.nlp_en', None), \
-             patch('src.ai_service.services.morphology.normalization_service.nlp_ru', None), \
-             patch('src.ai_service.services.morphology.normalization_service.nlp_uk', None):
+        with patch('src.ai_service.layers.normalization.normalization_service.SPACY_AVAILABLE', False), \
+             patch('src.ai_service.layers.normalization.normalization_service.nlp_en', None), \
+             patch('src.ai_service.layers.normalization.normalization_service.nlp_ru', None), \
+             patch('src.ai_service.layers.normalization.normalization_service.nlp_uk', None):
 
             service = NormalizationService()
             assert service is not None
 
     def test_initialization_without_nltk(self):
         """Test service initialization when NLTK is not available"""
-        with patch('src.ai_service.services.morphology.normalization_service.NLTK_AVAILABLE', False), \
-             patch('src.ai_service.services.morphology.normalization_service._nltk_stopwords', None), \
-             patch('src.ai_service.services.morphology.normalization_service.porter_stemmer', None):
+        with patch('src.ai_service.layers.normalization.normalization_service.NLTK_AVAILABLE', False), \
+             patch('src.ai_service.layers.normalization.normalization_service._nltk_stopwords', None), \
+             patch('src.ai_service.layers.normalization.normalization_service.porter_stemmer', None):
 
             service = NormalizationService()
             assert service is not None
 
     def test_initialization_minimal_dependencies(self):
         """Test service initialization with minimal dependencies"""
-        with patch('src.ai_service.services.morphology.normalization_service.SPACY_AVAILABLE', False), \
-             patch('src.ai_service.services.morphology.normalization_service.NLTK_AVAILABLE', False):
+        with patch('src.ai_service.layers.normalization.normalization_service.SPACY_AVAILABLE', False), \
+             patch('src.ai_service.layers.normalization.normalization_service.NLTK_AVAILABLE', False):
 
             service = NormalizationService()
 
@@ -626,9 +626,9 @@ class TestNormalizationServiceConfiguration:
 
     def test_cache_functionality(self):
         """Test caching functionality"""
-        with patch('src.ai_service.services.morphology.normalization_service.nlp_en'), \
-             patch('src.ai_service.services.morphology.normalization_service.nlp_ru'), \
-             patch('src.ai_service.services.morphology.normalization_service.nlp_uk'):
+        with patch('src.ai_service.layers.normalization.normalization_service.nlp_en'), \
+             patch('src.ai_service.layers.normalization.normalization_service.nlp_ru'), \
+             patch('src.ai_service.layers.normalization.normalization_service.nlp_uk'):
 
             service = NormalizationService()
 
