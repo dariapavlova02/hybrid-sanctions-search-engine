@@ -60,7 +60,7 @@ class TestSmartFilterAdapter:
             estimated_complexity="medium"
         )
 
-        mock_service.filter = AsyncMock(return_value=mock_filter_result)
+        mock_service.should_process_text = Mock(return_value=mock_filter_result)
 
         # Test processing
         result = await adapter_instance.should_process("ТОВ Іван Петров")
@@ -101,7 +101,7 @@ class TestSmartFilterAdapter:
                 estimated_complexity="test"
             )
 
-            mock_service.filter = AsyncMock(return_value=mock_result)
+            mock_service.should_process_text = Mock(return_value=mock_result)
 
             result = await adapter_instance.should_process("test text")
 
@@ -130,7 +130,7 @@ class TestSmartFilterAdapter:
             estimated_complexity="medium"
         )
 
-        mock_service.filter = AsyncMock(return_value=mock_result)
+        mock_service.should_process_text = Mock(return_value=mock_result)
 
         result = await adapter_instance.should_process("П.І. Коваленко")
 
@@ -163,7 +163,7 @@ class TestSmartFilterAdapter:
             estimated_complexity="high"
         )
 
-        mock_service.filter = AsyncMock(return_value=mock_result)
+        mock_service.should_process_text = Mock(return_value=mock_result)
 
         result = await adapter_instance.should_process('ТОВ "Агросвіт"')
 
@@ -194,7 +194,7 @@ class TestSmartFilterAdapter:
             estimated_complexity="medium"
         )
 
-        mock_service.filter = AsyncMock(return_value=mock_result)
+        mock_service.should_process_text = Mock(return_value=mock_result)
 
         result = await adapter_instance.should_process("Платеж в пользу Іван Петров")
 
@@ -209,7 +209,7 @@ class TestSmartFilterAdapter:
         adapter_instance, mock_service = adapter
 
         # Simulate service error
-        mock_service.filter = AsyncMock(side_effect=Exception("Service error"))
+        mock_service.should_process_text = Mock(side_effect=Exception("Service error"))
 
         result = await adapter_instance.should_process("test input")
 
@@ -246,7 +246,7 @@ class TestSmartFilterAdapter:
             estimated_complexity="medium"
         )
 
-        mock_service.filter = AsyncMock(return_value=mock_result)
+        mock_service.should_process_text = Mock(return_value=mock_result)
 
         result = await adapter_instance.should_process("test")
 
@@ -268,7 +268,7 @@ class TestSmartFilterAdapter:
             estimated_complexity="low"
         )
 
-        mock_service.filter = AsyncMock(return_value=mock_result)
+        mock_service.should_process_text = Mock(return_value=mock_result)
 
         result = await adapter_instance.should_process("test")
 
