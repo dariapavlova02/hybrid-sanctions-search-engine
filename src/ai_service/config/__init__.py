@@ -11,6 +11,7 @@ from .settings import (
     DatabaseConfig,
     DeploymentConfig,
     IntegrationConfig,
+    LanguageConfig,
     LoggingConfig,
     PerformanceConfig,
     SecurityConfig,
@@ -40,6 +41,7 @@ class Config:
         self.security = SecurityConfig()
         self.performance = PerformanceConfig()
         self.integration = IntegrationConfig()
+        self.language = LanguageConfig()
         self.deployment = DeploymentConfig(environment=self.environment)
 
     def get_all_config(self) -> Dict[str, Any]:
@@ -51,6 +53,7 @@ class Config:
             "security": self.security.to_dict(),
             "performance": self.performance.to_dict(),
             "integration": self.integration.to_dict(),
+            "language": self.language.to_dict(),
             "deployment": self.deployment.to_dict(),
         }
 
@@ -73,6 +76,7 @@ config = Config()
 SERVICE_CONFIG = config.service
 SECURITY_CONFIG = config.security
 INTEGRATION_CONFIG = config.integration
+LANGUAGE_CONFIG = config.language
 DEPLOYMENT_CONFIG = config.deployment
 PERFORMANCE_CONFIG = config.performance
 LOGGING_CONFIG = config.logging
@@ -83,6 +87,7 @@ __all__ = [
     "SERVICE_CONFIG",
     "SECURITY_CONFIG",
     "INTEGRATION_CONFIG",
+    "LANGUAGE_CONFIG",
     "DEPLOYMENT_CONFIG",
     "PERFORMANCE_CONFIG",
     "LOGGING_CONFIG",

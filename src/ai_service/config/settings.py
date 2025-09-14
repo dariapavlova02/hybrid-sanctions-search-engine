@@ -232,6 +232,34 @@ class IntegrationConfig:
 
 
 @dataclass
+class LanguageConfig:
+    """Language detection configuration settings"""
+    
+    # Пороги для долей символов
+    min_cyr_ratio: float = field(default_factory=lambda: float(os.getenv("LANG_MIN_CYR_RATIO", "0.25")))
+    min_lat_ratio: float = field(default_factory=lambda: float(os.getenv("LANG_MIN_LAT_RATIO", "0.25")))
+    mixed_gap: float = field(default_factory=lambda: float(os.getenv("LANG_MIXED_GAP", "0.15")))
+    
+    # Бонусы за специфические буквы
+    prefer_uk_chars_bonus: float = field(default_factory=lambda: float(os.getenv("LANG_UK_CHARS_BONUS", "0.05")))
+    prefer_ru_chars_bonus: float = field(default_factory=lambda: float(os.getenv("LANG_RU_CHARS_BONUS", "0.05")))
+    
+    # Минимальная уверенность
+    min_confidence: float = field(default_factory=lambda: float(os.getenv("LANG_MIN_CONFIDENCE", "0.55")))
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary"""
+        return {
+            "min_cyr_ratio": self.min_cyr_ratio,
+            "min_lat_ratio": self.min_lat_ratio,
+            "mixed_gap": self.mixed_gap,
+            "prefer_uk_chars_bonus": self.prefer_uk_chars_bonus,
+            "prefer_ru_chars_bonus": self.prefer_ru_chars_bonus,
+            "min_confidence": self.min_confidence,
+        }
+
+
+@dataclass
 class DeploymentConfig:
     """Deployment configuration settings"""
 

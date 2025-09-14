@@ -15,9 +15,10 @@ except ImportError:
     detect = None
     LangDetectException = Exception
 
-from ...config import SERVICE_CONFIG
+from ...config import SERVICE_CONFIG, LANGUAGE_CONFIG
 from ...exceptions import LanguageDetectionError
 from ...utils.logging_config import get_logger
+from ...utils.types import LanguageDetectionResult
 
 
 # Import name dictionaries for verification
@@ -179,6 +180,201 @@ class LanguageDetectionService:
         default_result = self._create_detection_result("en", 0.5, "default")
         self._update_stats(0.5, "default")
         return default_result
+
+    def detect_language_config_driven(self, text: str, config: Optional[Any] = None) -> LanguageDetectionResult:
+        """
+        Config-driven language detection with detailed analysis
+        
+        Args:
+            text: Input text to analyze
+            config: LanguageConfig instance (uses LANGUAGE_CONFIG if None)
+            
+        Returns:
+            LanguageDetectionResult with detailed analysis
+        """
+        if config is None:
+            config = LANGUAGE_CONFIG
+            
+        if not text or not text.strip():
+            return LanguageDetectionResult(
+                language="unknown",
+                confidence=0.0,
+                details={
+                    "method": "empty_text",
+                    "cyr_ratio": 0.0,
+                    "lat_ratio": 0.0,
+                    "uk_chars": 0,
+                    "ru_chars": 0,
+                    "total_letters": 0,
+                    "bonuses": {},
+                    "reason": "empty_text"
+                }
+            )
+        
+        # Calculate character ratios
+        details = self._calculate_character_ratios(text)
+        
+        # Determine primary language based on config thresholds
+        language, confidence, reason = self._determine_language_from_ratios(
+            details, config, text
+        )
+        
+        # Apply bonuses for specific characters
+        confidence = self._apply_character_bonuses(
+            details, confidence, config
+        )
+        
+        # Check for mixed language
+        if self._is_mixed_language(details, config):
+            language = "mixed"
+            confidence = min(max(details["cyr_ratio"], details["lat_ratio"]) + 0.05, 0.95)
+            reason = "mixed_language"
+        
+        # Apply minimum confidence threshold
+        if confidence < config.min_confidence:
+            language = "unknown"
+            reason = "low_confidence"
+        
+        # Clamp confidence to [0, 1]
+        confidence = max(0.0, min(1.0, confidence))
+        
+        # Update details with final results
+        details.update({
+            "method": "config_driven",
+            "reason": reason,
+            "final_confidence": confidence,
+            "final_language": language,
+            "config_used": config.to_dict()
+        })
+        
+        return LanguageDetectionResult(
+            language=language,
+            confidence=confidence,
+            details=details
+        )
+    
+    def _calculate_character_ratios(self, text: str) -> Dict[str, Any]:
+        """Calculate character ratios and counts"""
+        # Count different character types
+        cyr_chars = len(re.findall(r"[а-яёіїєґА-ЯЁІЇЄҐ]", text))
+        lat_chars = len(re.findall(r"[a-zA-Z]", text))
+        digits = len(re.findall(r"[0-9]", text))
+        punct = len(re.findall(r"[^\w\s]", text))
+        
+        # Count specific characters for bonuses
+        uk_chars = len(re.findall(r"[іїєґІЇЄҐ]", text))
+        ru_chars = len(re.findall(r"[ёъыэЁЪЫЭ]", text))
+        
+        # Calculate total letters (excluding digits and punctuation)
+        total_letters = cyr_chars + lat_chars
+        
+        # Calculate ratios
+        cyr_ratio = cyr_chars / total_letters if total_letters > 0 else 0.0
+        lat_ratio = lat_chars / total_letters if total_letters > 0 else 0.0
+        
+        return {
+            "cyr_chars": cyr_chars,
+            "lat_chars": lat_chars,
+            "cyr_ratio": cyr_ratio,
+            "lat_ratio": lat_ratio,
+            "uk_chars": uk_chars,
+            "ru_chars": ru_chars,
+            "total_letters": total_letters,
+            "digits": digits,
+            "punct": punct,
+            "bonuses": {}
+        }
+    
+    def _determine_language_from_ratios(self, details: Dict[str, Any], config: Any, text: str) -> tuple[str, float, str]:
+        """Determine primary language from character ratios"""
+        cyr_ratio = details["cyr_ratio"]
+        lat_ratio = details["lat_ratio"]
+        
+        # Check if both ratios are below minimum thresholds
+        if cyr_ratio < config.min_cyr_ratio and lat_ratio < config.min_lat_ratio:
+            return "unknown", 0.0, "below_thresholds"
+        
+        # Check for mixed language (both ratios above thresholds and close)
+        if (cyr_ratio >= config.min_cyr_ratio and 
+            lat_ratio >= config.min_lat_ratio and 
+            abs(cyr_ratio - lat_ratio) < config.mixed_gap):
+            return "mixed", min(cyr_ratio, lat_ratio), "mixed_candidate"
+        
+        # Determine primary language based on higher ratio
+        if cyr_ratio > lat_ratio:
+            # Determine if Ukrainian or Russian based on specific characters
+            if details["uk_chars"] > details["ru_chars"]:
+                return "uk", cyr_ratio, "cyrillic_ukrainian"
+            elif details["ru_chars"] > details["uk_chars"]:
+                return "ru", cyr_ratio, "cyrillic_russian"
+            else:
+                # Use pattern-based detection for ambiguous Cyrillic text
+                lang, confidence, reason = self._detect_cyrillic_language_patterns(text)
+                return lang, confidence, reason
+        else:
+            return "en", lat_ratio, "latin"
+    
+    def _apply_character_bonuses(self, details: Dict[str, Any], confidence: float, config: Any) -> float:
+        """Apply bonuses for specific characters"""
+        bonuses = {}
+        
+        # Ukrainian character bonus
+        if details["uk_chars"] > 0:
+            uk_bonus = min(details["uk_chars"] * config.prefer_uk_chars_bonus, 0.2)
+            confidence += uk_bonus
+            bonuses["uk_chars"] = uk_bonus
+        
+        # Russian character bonus
+        if details["ru_chars"] > 0:
+            ru_bonus = min(details["ru_chars"] * config.prefer_ru_chars_bonus, 0.2)
+            confidence += ru_bonus
+            bonuses["ru_chars"] = ru_bonus
+        
+        details["bonuses"] = bonuses
+        return confidence
+    
+    def _is_mixed_language(self, details: Dict[str, Any], config: Any) -> bool:
+        """Check if the language should be classified as mixed"""
+        cyr_ratio = details["cyr_ratio"]
+        lat_ratio = details["lat_ratio"]
+        
+        return (cyr_ratio >= config.min_cyr_ratio and 
+                lat_ratio >= config.min_lat_ratio and 
+                abs(cyr_ratio - lat_ratio) < config.mixed_gap)
+    
+    def _detect_cyrillic_language_patterns(self, text: str) -> tuple[str, float, str]:
+        """Detect Ukrainian vs Russian using pattern matching for ambiguous Cyrillic text"""
+        # Ukrainian patterns
+        uk_patterns = [
+            r"\b(і|в|на|з|по|за|від|до|у|о|а|але|або|якщо|коли|де|як|що|хто|кошти|гроші|платіж|переказ|одержувач|отримувач)\b",
+            r"\b(був|була|були|бути|є|немає|це|той|ця|ці|усього|загалом)\b",
+        ]
+        
+        # Russian patterns
+        ru_patterns = [
+            r"\b(и|в|на|с|по|за|от|до|из|у|о|а|но|или|если|когда|где|как|что|кто|деньги|средства|перевод|платеж|оплата)\b",
+            r"\b(был|была|были|быть|есть|нет|это|тот|эта|эти)\b",
+        ]
+        
+        # Count pattern matches
+        uk_matches = sum(len(re.findall(pattern, text, re.IGNORECASE)) for pattern in uk_patterns)
+        ru_matches = sum(len(re.findall(pattern, text, re.IGNORECASE)) for pattern in ru_patterns)
+        
+        # Check for Ukrainian surname suffixes
+        words = re.findall(r"\b[А-ЯІЇЄҐ][а-яіїєґА-ЯІЇЄҐ\'-]+\b", text)
+        uk_surname_count = sum(1 for w in words if any(w.lower().endswith(suf) for suf in self.uk_surname_suffixes))
+        
+        # Determine language based on patterns
+        if uk_matches > ru_matches or uk_surname_count > 0:
+            confidence = min(0.9, 0.7 + uk_matches * 0.05 + uk_surname_count * 0.1)
+            return "uk", confidence, "cyrillic_patterns_ukrainian"
+        elif ru_matches > uk_matches:
+            confidence = min(0.9, 0.7 + ru_matches * 0.05)
+            return "ru", confidence, "cyrillic_patterns_russian"
+        else:
+            # Default to Russian for ambiguous cases (more conservative)
+            confidence = 0.6
+            return "ru", confidence, "cyrillic_default_russian"
 
     def _fast_pattern_detection(self, text: str) -> Dict[str, Any]:
         """Fast detection by patterns"""
