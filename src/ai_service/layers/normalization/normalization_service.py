@@ -209,10 +209,10 @@ class NormalizationService:
     # Also create the method with the signature used in tests
     @monitor_performance("normalize")
     @monitor_memory_usage
-    async def normalize(self, text: str, language: str = 'auto', 
-                       remove_stop_words: bool = True, 
-                       preserve_names: bool = True, 
-                       enable_advanced_features: bool = True) -> NormalizationResult:
+    def normalize(self, text: str, language: str = 'auto', 
+                 remove_stop_words: bool = True, 
+                 preserve_names: bool = True, 
+                 enable_advanced_features: bool = True) -> NormalizationResult:
         """
         Normalize name text using morphological pipeline
         
