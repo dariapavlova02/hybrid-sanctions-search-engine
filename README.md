@@ -1,17 +1,38 @@
-# AI Service for Sanctions Data Verification
+# 🚀 AI Service - Unified Architecture
 
-AI service for normalization and variant generation of sanctions data with support for multiple languages (English, Russian, Ukrainian).
+**Clean, consolidated AI service** for normalization and structured extraction from sanctions data with support for multiple languages (English, Russian, Ukrainian).
 
-## Features
+## ✨ **Unified Architecture Benefits**
 
-- **Text Normalization**: Advanced text processing with Unicode cleaning and morphological analysis
-- **Variant Generation**: Multiple algorithms for generating spelling variants (transliteration, phonetic, morphological)
-- **Multi-language Support**: English, Russian, and Ukrainian with automatic language detection
-- **Caching**: LRU cache with TTL support for improved performance
-- **Signal Detection**: Pattern matching for sanctions data
-- **Embedding Generation**: Vector representations for similarity search
-- **Batch Processing**: Efficient processing of multiple texts
-- **Health Monitoring**: Comprehensive health checks and statistics
+🎯 **Single Orchestrator** - Replaced 3+ duplicate implementations with one clean `UnifiedOrchestrator`
+📋 **CLAUDE.md Compliant** - Exact 9-layer specification implementation
+🔍 **Structured Signals** - Persons, organizations, IDs, dates with full traceability
+⚡ **Performance Optimized** - ≤10ms for short strings, comprehensive caching
+🧪 **Comprehensive Testing** - 12 real payment scenarios, contract validation
+
+## 🏗️ **9-Layer Architecture**
+
+```
+1. Validation & Sanitization  →  Basic input validation
+2. Smart Filter              →  Pre-processing decision
+3. Language Detection        →  ru/uk/en identification
+4. Unicode Normalization     →  Text standardization
+5. Name Normalization (CORE) →  Person names + org cores
+6. Signals                   →  Structured extraction
+7. Variants (optional)       →  Spelling alternatives
+8. Embeddings (optional)     →  Vector representation
+9. Decision & Response       →  Final result assembly
+```
+
+## 🎯 **Core Features**
+
+- **📝 Text Normalization**: Morphological analysis with token-level tracing
+- **🏢 Structured Extraction**: Persons with DOB/IDs, organizations with legal forms
+- **🌍 Multi-language Support**: Russian, Ukrainian, English with mixed-script handling
+- **🔍 Smart Filtering**: Pre-processing optimization with signal detection
+- **📊 Signal Analysis**: Legal forms, payment contexts, document numbers
+- **🎯 Variant Generation**: Transliteration, phonetic, morphological variants
+- **⚡ High Performance**: Caching, async processing, performance monitoring
 
 ## Quick Start
 

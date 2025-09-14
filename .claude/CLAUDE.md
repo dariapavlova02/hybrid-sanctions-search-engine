@@ -50,28 +50,266 @@
 
 ## 4) Слои
 
-### NormalizationService
 
-* **Tokenizer**: чистим мусор (цифры, стоп-слова при remove\_stop\_words=True).
-* **Role tagger**: initial | patronymic | given | surname | unknown.
+# Логика работы по слоям
 
-  * ORG\_ACRONYMS всегда unknown.
-  * Дефолты только если ≥2 CapStart токенов.
-* **Normalize by role**:
+## 0. Вход / Контракты
 
-  * initial → форматирование (A.).
-  * given/surname/patronymic → morph (если enable\_advanced\_features=True) → diminutives → gender adjust.
-  * ASCII в ru/uk режиме не морфить.
-* **Reconstruct**: собрать токены, фильтровать `unknown`, вернуть NormalizationResult (+ TokenTrace).
-* **Output**: `persons_core`, `organizations_core` (без legal\_form/ids/dob).
+**Вход:** `text: str`, опц. `hints: {language?, flags?}`
+**Выход (верхний уровень Orchestrator):**
 
-### SignalsService
+```json
+{
+  "original_text": "...",
+  "language": "ru|uk|en",
+  "language_confidence": 0.0-1.0,
+  "normalized_text": "чистое ФИО + ядра компаний",
+  "tokens": ["..."],
+  "trace": [...],                  // TokenTrace по выведенным токенам
+  "signals": {                     // Сервис сигналов
+    "persons": [...],
+    "organizations": [...],
+    "numbers": {...},             // inn / edrpou / ogrn / etc.
+    "dates": {...},               // birth_dates, other_dates
+    "confidence": 0.0-1.0
+  },
+  "variants": [...],              // опционально
+  "embeddings": [...],            // опционально
+  "processing_time": ...,
+  "success": true,
+  "errors": []
+}
+```
 
-* **Legal forms**: словари/регексы, восстанавливает `full_name` (ТОВ + core).
-* **IDs**: ИНН, ЕДРПОУ, ОГРН, VAT и т.п. → нормализовать, привязать к org/person.
-* **DOB**: искать форматы дат + маркеры (р.н., DOB, born). → нормализовать ISO.
-* **Scoring**: confidence 0–1, evidence = список правил/паттернов.
-* **Output**: JSON {persons\[], organizations\[], extras{dates, amounts}}.
+---
+
+## 1) Validation & Sanitization (Input)
+
+**Задача:** базовая проверка и безопасная очистка.
+**Делает:**
+
+* trim, collapse spaces, ограничение длины, удаление явного бинарного мусора.
+* early-block (например, только цифры/символы) → короткий ответ `should_process=false` (опционально).
+  **Не делает:** языковых/морфологических преобразований.
+  **Выход:** `sanitized_text`, предупреждения.
+
+---
+
+## 2) Smart Filter (предварительная оценка)
+
+**Задача:** быстро решить, «имеет смысл» дорогая обработка.
+**Вход:** `sanitized_text` (в оригинальном виде).
+**Детекторы:**
+
+* `NameDetector`: заглавные, инициалы, патронимные хвосты, никнеймы/уменьшительные.
+* `CompanyDetector`: юр. формы (ООО/ТОВ/LLC/Inc…), банковские/организационные триггеры, кавычные ядра.
+* контекст платежа (триггеры: платеж/оплата/в пользу/за услуги и т.п.).
+  **Скоринг:** веса сигналов → `confidence` + классификация: `must_process | recommend | maybe | skip`.
+  **Не делает:** нормализации/лемматизации.
+  **Выход:** `FilterResult {should_process, confidence, detected_signals, details}`.
+
+> Если `skip` — можно остановиться (конфигурируемо). Иначе — дальше.
+
+---
+
+## 3) Language Detection
+
+**Задача:** определить основной язык текста (ru/uk/en) + доверие.
+**Принципы:**
+
+* быстрые эвристики (алфавит, частотные токены) → словари → ML (fallback).
+* mixed-script допускается (основной язык один, ASCII-токены учитываются отдельно на нормализации).
+  **Выход:** `language`, `language_confidence`.
+
+---
+
+## 4) Unicode Normalization
+
+**Задача:** привести символы к каноническим формам.
+**Делает:**
+
+* NFKC/NFKD нормализацию (по конфигу), маппинг диакритики, homoglyph-safe замены (ё→е при необходимости), кавычки к стандарту, дефисы/апострофы к норме.
+  **Не делает:** токенизацию по смыслу.
+  **Выход:** `text_unicode_normalized`.
+
+---
+
+## 5) Name Normalization (Morph NormalizationService)
+
+**Задача:** вывести **канон ФИО** и **ядра названий компаний**, детально трассируя правила.
+**Флаги (обязателен реальный эффект):**
+
+* `remove_stop_words`: true/false — чистка STOP\_ALL в токенизаторе.
+* `preserve_names`: true/false — сохранять `. - '` (инициалы/двойные фамилии/O’Brien). Если false — агрессивнее сплитим.
+* `enable_advanced_features`: true/false — морфология + diminutives + гендер фамилий; если false — минимум (кейсинг, инициалы, фильтр unknown).
+  **Пайплайн:**
+
+1. **Tokenize & Noise-strip**
+
+   * унификация кейса; выделение кавычных токенов; мягкая фильтрация мусора; сохранение знаков имён, если `preserve_names`.
+2. **Role Tagging**
+
+   * `initial` (в т.ч. автосплит `"П.І."` → `["П.", "І."]`), `patronymic` (регексы c падежами), `given` (словари имен/уменьшительных), `surname` (паттерны -енко, -ов/-ова, -ський/-ська, -ук/-юк/-чук, -ян, -дзе …), `unknown`.
+   * **ORG\_ACRONYMS** (ООО/ТОВ/LLC …) → всегда `unknown` (или `legal_form`) и **не участвуют** в позиционных дефолтах.
+   * позиционные дефолты (first→given, last→surname) **только** для нейтральных токенов и **никогда** для стоп-словаря/акронимов/явного контекста.
+3. **Normalize by Role**
+
+   * `initial` → формат `X.`
+   * `given/surname/patronymic`:
+
+     * если `enable_advanced_features`: морфология (pymorphy3 ru/uk), выбор лучшего парса (Name/Surn + `nomn`, иначе lemma), **после** — diminutives DIM2FULL (ru/uk, + en nicknames).
+     * гендер фамилии: сохраняем женскую форму; в сомнениях — остаёмся на исходной женской, не «омужичиваем».
+     * **ASCII-токены при ru/uk**: морфологию **не** применяем, только капитализация и позиционные роли.
+4. **Reconstruct**
+
+   * собираем **только** персональные токены (unknown/context — отбрасываются), нормализуем пробелы, фиксируем `TokenTrace` (token, role, rule, morph\_lang?, normal\_form?, output, fallback, notes?).
+   * параллельно собираем `organizations.core` из кавычных/орг-токенов (не попадает в `normalized`).
+     **Выход:**
+     `NormalizationResult { normalized, tokens, trace, organizations.core?, language, confidence?, token_count, lengths, processing_time, success }`.
+
+> Важно: **юридические формы** (ООО/ТОВ/LLC) из нормализации не уходят в `normalized` — это задача Signals собрать их в полное имя организации.
+
+---
+
+## 6) Signals (обогащение поверх нормализации)
+
+**Задача:** извлечь структуру сигналов из **оригинального текста** + **trace/organizations.core** из нормализации.
+**Делает:**
+
+* **Организации**:
+
+  * `legal_form`: из словаря (ООО/ТОВ/LLC/Inc/Bank/…);
+  * `core`: из `NormalizationResult.organizations.core` (кавычные и явные ядра);
+  * `full`: `legal_form + "core"` (учёт кавычек), варианты написания (регистры/кавычки).
+  * confidence по сигналам (legal\_form + quoted core + банковские триггеры).
+* **Персоны**:
+
+  * ФИО-строки и токены из `normalized` + позиции в исходном тексте (по сопоставлению);
+  * quality метки (есть ли patronymic, инициалы и т.п.).
+* **Документы/номера**:
+
+  * `numbers`: `inn/itn`, `edrpou`, `ogrn`, `kpp` и т.п. — по шаблонам/контексту.
+* **Даты рождения**:
+
+  * date patterns (дд.мм.гггг, ISO, текстом), контекстные ключи (`дата рождения`, `DOB`, `р.`, `born`, `д/р`).
+  * нормализация в `YYYY-MM-DD`, доп. `precision` (day|month|year).
+* **Скоринг**: веса сигналов + бонусы за согласованность (например, legal\_form + quoted core).
+  **Не делает:** морфологию.
+  **Выход:** `signals { organizations[], persons[], numbers{}, dates{}, confidence }`.
+
+---
+
+## 7) Variants (опционально)
+
+**Задача:** на базе нормализованного ФИО/ядра генерировать варианты:
+
+* морфологические (падежи), типографские (инициалы, дефис), транслитерация, фонетические.
+  **Вход:** нормализованный результат.
+  **Выход:** `variants: [..]`, `token_variants: {token: [...]}`.
+
+---
+
+## 8) Embeddings (опционально)
+
+**Задача:** векторизация для семантического поиска/сопоставления (sentence-transformers).
+**Вход:** normalized/variants.
+**Выход:** `embeddings`.
+
+---
+
+## 9) Decision & Response
+
+**Задача:** собрать итог, проставить статусы, метрики, ошибки.
+**Делает:** измерение времени этапов, агрегация ошибок, финальные флаги `success`.
+
+---
+
+# Границы ответственности (что где НЕ делаем)
+
+* **NormalizationService**:
+
+  * не восстанавливает полное название компании с юр. формой;
+  * не извлекает даты/идентификаторы;
+  * не делает тяжёлых поисков/сопоставлений;
+  * не решает «обрабатывать или нет» — это Smart Filter.
+
+* **Smart Filter**:
+
+  * не нормализует и не меняет текст;
+  * не склеивает `legal_form + core`;
+  * не генерирует варианты.
+
+* **Signals**:
+
+  * не морфологизирует;
+  * не детектит язык;
+  * не решает пропуск этапов (только отдаёт confidence по сигналам).
+
+---
+
+# Правила-ключи (суммарно)
+
+* ORG\_ACRONYMS всегда `unknown` для нормализованного ФИО и **не участвуют** в позиционных дефолтах.
+* ASCII-токены в ru/uk режиме — не морфить.
+* Женские фамилии не «омужичивать».
+* `enable_advanced_features=False` — без морфологии/словарей, только кейс/инициалы/фильтр.
+* Все `unknown` и контекстные слова (союзы/глаголы) — **вне** `normalized`.
+* Полные названия компаний собирает **Signals** (legal\_form + quoted core).
+
+---
+
+# Мини-псевдокод (сквозной)
+
+```python
+def process(text):
+    inp = validate(text)
+    filt = smart_filter.should_process(inp.text)
+    if not filt.should_process and config.allow_skip:
+        return minimal_response(inp.text, filt)
+
+    lang = language.detect(inp.text)
+    uni  = unicode.normalize(inp.text)
+
+    norm = morph_normalize.normalize_async(
+        uni,
+        language=lang.code,
+        remove_stop_words=True,
+        preserve_names=True,
+        enable_advanced_features=True
+    )
+    sigs = signals.extract(
+        original_text=inp.text,
+        norm_trace=norm.trace,
+        org_core=norm.organizations.get("core")
+    )
+
+    vars = variants.generate(norm.normalized) if config.gen_variants else None
+    embs = embedder.encode(norm.normalized)   if config.gen_embeddings else None
+
+    return assemble_response(inp, lang, norm, sigs, vars, embs)
+```
+
+---
+
+# Мини-набор приёмочных критериев
+
+* **NormalizationResult**
+
+  * `normalized` содержит только персональные токены (инициалы/имя/отчество/фамилия).
+  * `organizations.core` заполнен для кавычных ядёр.
+  * `TokenTrace` есть на каждый выведенный токен.
+  * флаги реально ветвят поведение.
+
+* **Signals**
+
+  * `organizations[*].legal_form` из текста;
+  * `organizations[*].core` из нормализации;
+  * `organizations[*].full` = склейка;
+  * `numbers.inn|edrpou|...` и `dates.birth` извлекаются при наличии.
+
+* **Perf**
+
+  * p95 нормализации ≤ 10 мс (короткие строки), благодаря lru\_cache морфологии и ASCII bypass.
 
 ---
 

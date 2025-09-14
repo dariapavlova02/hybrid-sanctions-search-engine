@@ -13,8 +13,8 @@ from typing import Dict, List, Any
 # Add path to src for imports
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from ai_service.services.template_builder import TemplateBuilder
-from ai_service.services.pattern_service import PatternService
+from ai_service.layers.variants.template_builder import TemplateBuilder
+from ai_service.layers.signals.pattern_service import PatternService
 from ai_service.utils.logging_config import get_logger
 
 

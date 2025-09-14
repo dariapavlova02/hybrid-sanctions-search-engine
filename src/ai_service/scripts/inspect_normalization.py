@@ -14,7 +14,7 @@ from typing import Optional
 project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
 
-from ai_service.services.normalization_service import NormalizationService
+from ai_service.layers.normalization.normalization_service import NormalizationService
 
 
 def _strip_domain_context(text: str, language: str) -> str:

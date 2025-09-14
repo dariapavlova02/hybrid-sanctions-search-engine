@@ -26,7 +26,7 @@ from ai_service.exceptions import (
     ServiceUnavailableError,
     InternalServerError
 )
-from ai_service.services.orchestrator_service import OrchestratorService
+from ai_service.core.orchestrator_factory import OrchestratorFactory
 from ai_service.utils import setup_logging, get_logger
 
 # Setup centralized logging
@@ -194,8 +194,9 @@ async def startup_event():
         logger.error("Failed to load required models. Service may not work correctly.")
     
     try:
-        orchestrator = OrchestratorService(cache_size=10000, default_ttl=3600)
-        logger.info("Orchestrator successfully initialized")
+        # Initialize unified orchestrator with production configuration
+        orchestrator = await OrchestratorFactory.create_production_orchestrator()
+        logger.info("Unified orchestrator successfully initialized")
     except Exception as e:
         logger.error(f"Error initializing orchestrator: {e}")
         raise
@@ -247,11 +248,14 @@ async def process_text(request: ProcessTextRequest):
         raise ServiceUnavailableError("Orchestrator not initialized")
     
     try:
-        result = await orchestrator.process_text(
+        result = await orchestrator.process(
             text=request.text,
             generate_variants=request.generate_variants,
             generate_embeddings=request.generate_embeddings,
-            cache_result=request.cache_result
+            # Normalization flags from updated spec
+            remove_stop_words=True,
+            preserve_names=True,
+            enable_advanced_features=True
         )
         
         return {
@@ -260,6 +264,13 @@ async def process_text(request: ProcessTextRequest):
             "normalized_text": result.normalized_text,
             "language": result.language,
             "language_confidence": result.language_confidence,
+            "tokens": result.tokens,
+            "trace": [trace.__dict__ if hasattr(trace, '__dict__') else trace for trace in result.trace],
+            "signals": {
+                "persons": result.signals.persons,
+                "organizations": result.signals.organizations,
+                "confidence": result.signals.confidence
+            },
             "variants": result.variants,
             "processing_time": result.processing_time,
             "has_embeddings": result.embeddings is not None,
@@ -289,12 +300,15 @@ async def normalize_text(request: TextNormalizationRequest):
         raise ServiceUnavailableError("Orchestrator not initialized")
     
     try:
-        # Use orchestrator for normalization
-        result = await orchestrator.process_text(
+        # Use unified orchestrator for normalization only
+        result = await orchestrator.process(
             text=request.text,
             generate_variants=False,
             generate_embeddings=False,
-            cache_result=True
+            # Use request parameters for normalization flags
+            remove_stop_words=request.remove_stop_words,
+            preserve_names=request.preserve_names,
+            enable_advanced_features=request.apply_lemmatization
         )
         
         return {
