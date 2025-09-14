@@ -309,7 +309,6 @@ class TestPipelineEnd2End:
         cls.orchestrator = await OrchestratorFactory.create_testing_orchestrator(minimal=False)
         logger.info("Orchestrator initialized successfully")
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize("test_case", INTEGRATION_TEST_CASES, ids=lambda tc: tc.name)
     async def test_pipeline_integration(self, test_case: IntegrationTestCase):
         """Test complete pipeline integration with real payment scenarios"""
@@ -389,7 +388,6 @@ class TestPipelineEnd2End:
 
         logger.info(f"✅ {test_case.name} passed - processing time: {result.processing_time:.3f}s")
 
-    @pytest.mark.asyncio
     async def test_normalization_flags_behavior(self):
         """Test that normalization flags actually change behavior (CLAUDE.md requirement)"""
 
@@ -417,7 +415,6 @@ class TestPipelineEnd2End:
 
         logger.info(f"✅ Flags behavior test passed - {len(unique_results)} unique results from {len(flag_combinations)} flag combinations")
 
-    @pytest.mark.asyncio
     async def test_performance_requirements(self):
         """Test performance requirements from CLAUDE.md"""
 

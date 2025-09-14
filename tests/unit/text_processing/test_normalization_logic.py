@@ -41,11 +41,10 @@ ukrainian_test_cases = [
     ("Для Іванова-Петренка С.В.", "Іванов-Петренко С.В."),
 ]
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("input_text, expected_name", ukrainian_test_cases)
-async def test_ukrainian_full_normalization(normalization_service, input_text, expected_name):
+def test_ukrainian_full_normalization(normalization_service, input_text, expected_name):
     """Проверяет полную нормализацию украинских имен."""
-    result = await normalization_service.normalize(input_text, language="uk")
+    result = normalization_service.normalize(input_text, language="uk")
     assert_normalized_name(result, expected_name)
 
 # Категория 2: РУССКИЕ ИМЕНА (полная нормализация)
@@ -61,11 +60,10 @@ russian_test_cases = [
     ("Зачисление от Лермонтова М.Ю.", "Лермонтов М.Ю."),
 ]
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("input_text, expected_name", russian_test_cases)
-async def test_russian_full_normalization(normalization_service, input_text, expected_name):
+def test_russian_full_normalization(normalization_service, input_text, expected_name):
     """Проверяет полную нормализацию русских имен."""
-    result = await normalization_service.normalize(input_text, language="ru")
+    result = normalization_service.normalize(input_text, language="ru")
     assert_normalized_name(result, expected_name)
 
 # Категория 3: АНГЛИЙСКИЕ ИМЕНА (полная нормализация)
@@ -81,9 +79,8 @@ english_test_cases = [
     ("For BARACK H. OBAMA, invoice 123", "Barack H. Obama"),
 ]
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("input_text, expected_name", english_test_cases)
-async def test_english_full_normalization(normalization_service, input_text, expected_name):
+def test_english_full_normalization(normalization_service, input_text, expected_name):
     """Проверяет полную нормализацию английских имен."""
-    result = await normalization_service.normalize(input_text, language="en")
+    result = normalization_service.normalize(input_text, language="en")
     assert_normalized_name(result, expected_name)

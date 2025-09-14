@@ -259,13 +259,14 @@ class TestNormalizationService:
         # Should return original tokens
         assert result == tokens
 
-    def test_normalize_success(self, service):
+    async def test_normalize_success(self, service):
         """Test successful normalization with all features"""
         test_text = "The cats are running quickly"
 
         # Mock the entire normalize_sync method to avoid async issues
         mock_result = NormalizationResult(
             success=True,
+            trace=[],
             normalized="The cats are running quickly",
             tokens=["cat", "run", "quickly"],
             language="en",
@@ -274,11 +275,11 @@ class TestNormalizationService:
             normalized_length=len("The cats are running quickly"),
             token_count=3,
             processing_time=0.1,
-            errors=None
+            errors=[]
         )
 
-        with patch.object(service, 'normalize_sync', return_value=mock_result):
-            result = service.normalize(test_text, apply_lemmatization=True, remove_stop_words=True)
+        with patch.object(service, '_normalize_sync', return_value=mock_result):
+            result = await service.normalize_async(test_text, apply_lemmatization=True, remove_stop_words=True)
 
             assert isinstance(result, NormalizationResult)
             assert result.success == True
@@ -289,13 +290,14 @@ class TestNormalizationService:
             assert result.token_count == 3
             assert result.processing_time > 0
 
-    def test_normalize_without_optional_processing(self, service):
+    async def test_normalize_without_optional_processing(self, service):
         """Test normalization without lemmatization and stop words removal"""
         test_text = "Simple test"
 
         # Mock the entire normalize_sync method to avoid async issues
         mock_result = NormalizationResult(
             success=True,
+            trace=[],
             normalized="Simple test",
             tokens=["Simple", "test"],
             language="en",
@@ -304,17 +306,17 @@ class TestNormalizationService:
             normalized_length=len("Simple test"),
             token_count=2,
             processing_time=0.1,
-            errors=None
+            errors=[]
         )
 
-        with patch.object(service, 'normalize_sync', return_value=mock_result):
-            result = service.normalize(test_text, apply_lemmatization=False, remove_stop_words=False)
+        with patch.object(service, '_normalize_sync', return_value=mock_result):
+            result = await service.normalize_async(test_text, apply_lemmatization=False, remove_stop_words=False)
 
             assert result.success == True
             assert result.tokens == ["Simple", "test"]
             assert result.token_count == 2
 
-    def test_normalize_ukrainian_with_forms(self):
+    async def test_normalize_ukrainian_with_forms(self):
         """Test normalization with Ukrainian morphological forms"""
         test_text = "Українські імена"
 
@@ -326,6 +328,7 @@ class TestNormalizationService:
         expected_result = NormalizationResult(
             normalized="Українські імена",
             tokens=["українські", "імена", "українське", "ім'я"],
+            trace=[],
             language="uk",
             confidence=0.95,
             original_length=len(test_text),
@@ -336,19 +339,20 @@ class TestNormalizationService:
             errors=[]
         )
         
-        mock_service.normalize.return_value = expected_result
+        mock_service.normalize_async.return_value = expected_result
 
-        result = mock_service.normalize(test_text, apply_lemmatization=True)
+        result = await mock_service.normalize_async(test_text, apply_lemmatization=True)
 
         assert result.success == True
         assert result.language == "uk"
         assert len(result.tokens) >= 2  # Should include Ukrainian forms
 
-    def test_normalize_empty_text(self, service):
+    async def test_normalize_empty_text(self, service):
         """Test normalization with empty text"""
         # Mock the result to avoid async issues
         mock_result = NormalizationResult(
             success=True,
+            trace=[],
             normalized="",
             tokens=[""],
             language="unknown",
@@ -357,24 +361,25 @@ class TestNormalizationService:
             normalized_length=0,
             token_count=1,
             processing_time=0.001,
-            errors=None
+            errors=[]
         )
 
-        with patch.object(service, 'normalize_sync', return_value=mock_result):
-            result = service.normalize("")
+        with patch.object(service, '_normalize_sync', return_value=mock_result):
+            result = await service.normalize_async("")
 
             assert result.success == True
             assert result.normalized == ""
             assert result.tokens == [""]
             assert result.token_count == 1
 
-    def test_normalize_whitespace_only(self, service):
+    async def test_normalize_whitespace_only(self, service):
         """Test normalization with whitespace-only text"""
         test_text = "   \n\t   "
 
         # Mock result to avoid async issues
         mock_result = NormalizationResult(
             success=True,
+            trace=[],
             normalized="",
             tokens=[""],
             language="unknown",
@@ -383,22 +388,23 @@ class TestNormalizationService:
             normalized_length=0,
             token_count=1,
             processing_time=0.001,
-            errors=None
+            errors=[]
         )
 
-        with patch.object(service, 'normalize_sync', return_value=mock_result):
-            result = service.normalize(test_text)
+        with patch.object(service, '_normalize_sync', return_value=mock_result):
+            result = await service.normalize_async(test_text)
 
             assert result.success == True
             assert result.normalized == ""
 
-    def test_normalize_unicode_error(self, service):
+    async def test_normalize_unicode_error(self, service):
         """Test normalization handling Unicode service errors"""
         # Mock error result
         mock_result = NormalizationResult(
             success=False,
             normalized="Test text",
             tokens=[],
+            trace=[],
             language="unknown",
             confidence=0.0,
             original_length=9,
@@ -408,19 +414,20 @@ class TestNormalizationService:
             errors=["Unicode error"]
         )
 
-        with patch.object(service, 'normalize_sync', return_value=mock_result):
-            result = service.normalize("Test text")
+        with patch.object(service, '_normalize_sync', return_value=mock_result):
+            result = await service.normalize_async("Test text")
 
             assert result.success == False
-            assert "Unicode error" in result.error
+            assert "Unicode error" in result.errors[0]
 
-    def test_normalize_language_detection_error(self, service):
+    async def test_normalize_language_detection_error(self, service):
         """Test normalization handling language detection errors"""
         # Mock error result
         mock_result = NormalizationResult(
             success=False,
             normalized="Test text",
             tokens=[],
+            trace=[],
             language="unknown",
             confidence=0.0,
             original_length=9,
@@ -430,19 +437,20 @@ class TestNormalizationService:
             errors=["Detection failed"]
         )
 
-        with patch.object(service, 'normalize_sync', return_value=mock_result):
-            result = service.normalize("Test text")
+        with patch.object(service, '_normalize_sync', return_value=mock_result):
+            result = await service.normalize_async("Test text")
 
             assert result.success == False
-            assert "Detection failed" in result.error
+            assert "Detection failed" in result.errors[0]
 
-    def test_normalize_processing_error(self, service):
+    async def test_normalize_processing_error(self, service):
         """Test normalization handling general processing errors"""
         # Mock error result
         mock_result = NormalizationResult(
             success=False,
             normalized="Test text",
             tokens=[],
+            trace=[],
             language="unknown",
             confidence=0.0,
             original_length=9,
@@ -452,11 +460,11 @@ class TestNormalizationService:
             errors=["Tokenization failed"]
         )
 
-        with patch.object(service, 'normalize_sync', return_value=mock_result):
-            result = service.normalize("Test text")
+        with patch.object(service, '_normalize_sync', return_value=mock_result):
+            result = await service.normalize_async("Test text")
 
             assert result.success == False
-            assert "Tokenization failed" in result.error
+            assert "Tokenization failed" in result.errors[0]
 
 
 class TestNormalizationServiceEdgeCases:
@@ -464,18 +472,17 @@ class TestNormalizationServiceEdgeCases:
 
     @pytest.fixture
     def service(self):
-        with patch('src.ai_service.layers.normalization.normalization_service.nlp_en'), \
-             patch('src.ai_service.layers.normalization.normalization_service.nlp_ru'), \
-             patch('src.ai_service.layers.normalization.normalization_service.nlp_uk'):
-            return NormalizationService()
+        # No need to patch nlp_* as they don't exist in normalization_service.py
+        return NormalizationService()
 
-    def test_normalize_very_long_text(self, service):
+    async def test_normalize_very_long_text(self, service):
         """Test normalization with very long text"""
         long_text = "word " * 1000  # 1000 words
 
         # Mock result to avoid async issues with large text
         mock_result = NormalizationResult(
             success=True,
+            trace=[],
             normalized=long_text.strip(),
             tokens=["word"] * 1000,
             language="en",
@@ -484,16 +491,16 @@ class TestNormalizationServiceEdgeCases:
             normalized_length=len(long_text.strip()),
             token_count=1000,
             processing_time=0.1,
-            errors=None
+            errors=[]
         )
 
-        with patch.object(service, 'normalize_sync', return_value=mock_result):
-            result = service.normalize(long_text)
+        with patch.object(service, '_normalize_sync', return_value=mock_result):
+            result = await service.normalize_async(long_text)
 
             assert result.success == True
             assert len(result.normalized) > 0
 
-    def test_normalize_special_characters(self, service):
+    async def test_normalize_special_characters(self, service):
         """Test normalization with special characters and symbols"""
         special_text = "Text with @#$%^&*()_+ symbols 123"
 
@@ -502,28 +509,30 @@ class TestNormalizationServiceEdgeCases:
             success=True,
             normalized=special_text,
             tokens=["Text", "with", "symbols", "123"],
+            trace=[],  # Add required trace field
             language="en",
             confidence=0.95,
             original_length=len(special_text),
             normalized_length=len(special_text),
             token_count=4,
             processing_time=0.01,
-            errors=None
+            errors=[]  # Change from None to empty list
         )
 
-        with patch.object(service, 'normalize_sync', return_value=mock_result):
-            result = service.normalize(special_text)
+        with patch.object(service, '_normalize_sync', return_value=mock_result):
+            result = await service.normalize_async(special_text)
 
             assert result.success == True
             assert result.normalized == special_text
 
-    def test_normalize_mixed_languages(self, service):
+    async def test_normalize_mixed_languages(self, service):
         """Test normalization with mixed language text"""
         mixed_text = "Hello привет світ world"
 
         # Mock result to avoid async issues
         mock_result = NormalizationResult(
             success=True,
+            trace=[],
             normalized=mixed_text,
             tokens=["Hello", "привет", "світ", "world"],
             language="mixed",
@@ -532,20 +541,21 @@ class TestNormalizationServiceEdgeCases:
             normalized_length=len(mixed_text),
             token_count=4,
             processing_time=0.01,
-            errors=None
+            errors=[]
         )
 
-        with patch.object(service, 'normalize_sync', return_value=mock_result):
-            result = service.normalize(mixed_text)
+        with patch.object(service, '_normalize_sync', return_value=mock_result):
+            result = await service.normalize_async(mixed_text)
 
             assert result.success == True
             assert result.language == "mixed"
 
-    def test_normalize_unsupported_language(self, service):
+    async def test_normalize_unsupported_language(self, service):
         """Test normalization with unsupported language"""
         # Mock result to avoid async issues
         mock_result = NormalizationResult(
             success=True,
+            trace=[],
             normalized="Texto em português",
             tokens=["Texto", "em", "português"],
             language="pt",
@@ -554,26 +564,28 @@ class TestNormalizationServiceEdgeCases:
             normalized_length=17,
             token_count=3,
             processing_time=0.01,
-            errors=None
+            errors=[]
         )
 
-        with patch.object(service, 'normalize_sync', return_value=mock_result):
-            result = service.normalize("Texto em português")
+        with patch.object(service, '_normalize_sync', return_value=mock_result):
+            result = await service.normalize_async("Texto em português")
 
             assert result.success == True
             assert result.language == "pt"
             # Should still process even with unsupported language
 
-    def test_get_ukrainian_forms_basic(self, service):
-        """Test Ukrainian forms generation"""
-        tokens = ["Петро", "Іванович"]
-
-        # This tests the _get_ukrainian_forms method that was showing as uncovered
-        result = service._get_ukrainian_forms(tokens)
-
-        # Should return at least the original tokens
-        assert len(result) >= len(tokens)
-        assert all(token in result for token in tokens)
+    async def test_ukrainian_normalization_basic(self, service):
+        """Test Ukrainian normalization basic functionality"""
+        text = "Петро Іванович"
+        
+        # Test basic normalization
+        result = await service.normalize_async(text, language="uk")
+        
+        # Should return a valid result
+        assert result.success
+        assert result.normalized is not None
+        assert len(result.tokens) > 0
+        assert result.language == "uk"
 
 
 class TestNormalizationServiceConfiguration:
@@ -598,7 +610,7 @@ class TestNormalizationServiceConfiguration:
             service = NormalizationService()
             assert service is not None
 
-    def test_initialization_minimal_dependencies(self):
+    async def test_initialization_minimal_dependencies(self):
         """Test service initialization with minimal dependencies"""
         with patch('src.ai_service.layers.normalization.normalization_service.SPACY_AVAILABLE', False), \
              patch('src.ai_service.layers.normalization.normalization_service.NLTK_AVAILABLE', False):
@@ -608,6 +620,7 @@ class TestNormalizationServiceConfiguration:
             # Mock the result to avoid async issues
             mock_result = NormalizationResult(
                 success=True,
+            trace=[],
                 normalized="Simple text",
                 tokens=["Simple", "text"],
                 language="unknown",
@@ -616,15 +629,15 @@ class TestNormalizationServiceConfiguration:
                 normalized_length=11,
                 token_count=2,
                 processing_time=0.01,
-                errors=None
+                errors=[]
             )
 
-            with patch.object(service, 'normalize_sync', return_value=mock_result):
+            with patch.object(service, '_normalize_sync', return_value=mock_result):
                 # Should still work with basic text processing
-                result = service.normalize("Simple text")
+                result = await service.normalize_async("Simple text")
                 assert result.success == True
 
-    def test_cache_functionality(self):
+    async def test_cache_functionality(self):
         """Test caching functionality"""
         with patch('src.ai_service.layers.normalization.normalization_service.nlp_en'), \
              patch('src.ai_service.layers.normalization.normalization_service.nlp_ru'), \
@@ -639,9 +652,9 @@ class TestNormalizationServiceConfiguration:
                 mock_normalize.return_value = mock_result
 
                 # First call
-                result1 = service.normalize("Test")
+                result1 = await service.normalize_async("Test")
                 # Second call (should use cache if implemented)
-                result2 = service.normalize("Test")
+                result2 = await service.normalize_async("Test")
 
                 # Both should return results
                 assert result1.success == True
@@ -655,6 +668,7 @@ class TestNormalizationResult:
         """Test NormalizationResult creation with all fields"""
         result = NormalizationResult(
             success=True,
+            trace=[],
             normalized="test text",
             tokens=["test", "text"],
             language="en",
@@ -663,7 +677,7 @@ class TestNormalizationResult:
             normalized_length=9,
             token_count=2,
             processing_time=0.1,
-            errors=None
+            errors=[]
         )
 
         assert result.success == True

@@ -13,6 +13,7 @@ Signals Service - структурирование и обогащение су�
 - Решение "пропускать/не пропускать" (это делает SmartFilter)
 """
 
+import asyncio
 import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -106,6 +107,9 @@ class SignalsService:
         self.identifier_extractor = IdentifierExtractor()
         self.birthdate_extractor = BirthdateExtractor()
 
+        # Text storage for proximity matching
+        self._current_text = ""
+
         self.logger.info("SignalsService initialized with extractors")
 
     def extract(
@@ -130,6 +134,9 @@ class SignalsService:
         """
         if not text or not text.strip():
             return self._empty_result()
+
+        # Сохраняем текст для proximity matching
+        self._current_text = text
 
         try:
             # 1. Извлекаем базовые токены сущностей
@@ -582,30 +589,182 @@ class SignalsService:
     def _enrich_persons_with_ids(
         self, persons: List[PersonSignal], person_ids: List[Dict]
     ):
-        """Обогащение персон найденными ID"""
-        if not person_ids:
+        """Обогащение персон найденными ID с proximity matching"""
+        if not person_ids or not persons:
             return
 
+        # Используем proximity matching аналогично логике для дат рождения
+        self._link_ids_to_persons_by_proximity(persons, person_ids, self._current_text)
+
+    def _link_ids_to_persons_by_proximity(
+        self, persons: List[PersonSignal], person_ids: List[Dict], text: str
+    ):
+        """Связывание ID с персонами на основе близости в тексте"""
+        if not person_ids or not persons or not text:
+            return
+
+        # Найдем позиции всех персон в тексте для proximity matching
+        person_positions = []
         for person in persons:
-            # Ищем релевантные ID для этой персоны
-            for id_info in person_ids:
-                # Простая эвристика: добавляем все найденные персональные ID
-                # В будущем можно добавить более сложную логику связывания
-                person.ids.append(
+            # Составляем полное имя для поиска
+            full_name = " ".join(person.core)
+
+            # Ищем все вхождения имени в тексте
+            import re
+
+            name_pattern = re.escape(full_name)
+            matches = list(re.finditer(name_pattern, text, re.IGNORECASE))
+
+            if matches:
+                # Берем первое вхождение как основную позицию
+                start_pos = matches[0].start()
+                end_pos = matches[0].end()
+                person_positions.append(
                     {
-                        "type": id_info["type"],
-                        "value": id_info["value"],
-                        "raw": id_info["raw"],
-                        "confidence": id_info["confidence"],
-                        "valid": id_info["valid"],
+                        "person": person,
+                        "start": start_pos,
+                        "end": end_pos,
+                        "center": (start_pos + end_pos) // 2,
                     }
                 )
 
-                # Добавляем evidence (скоринг будет в _score_entities)
-                if id_info["valid"]:
-                    person.evidence.append(f"valid_{id_info['type']}")
-                else:
-                    person.evidence.append(f"invalid_{id_info['type']}")
+        # Ассоциируем каждый ID с ближайшей персоной
+        used_ids = set()
+
+        for id_info in person_ids:
+            if "position" not in id_info:
+                # Если позиция ID не указана, добавляем ко всем персонам
+                # (fallback для совместимости)
+                self._assign_id_to_all_persons(persons, id_info)
+                continue
+
+            id_start = id_info["position"][0]
+            id_end = id_info["position"][1]
+            id_center = (id_start + id_end) // 2
+
+            # Находим ближайшую персону
+            closest_person = None
+            min_distance = float("inf")
+
+            for person_pos in person_positions:
+                # Проверяем, что ID не был использован
+                id_key = f"{id_info['type']}_{id_info['value']}"
+                if id_key in used_ids:
+                    continue
+
+                person_center = person_pos["center"]
+
+                # Вычисляем расстояние между центрами
+                distance = abs(id_center - person_center)
+
+                # Ограичиваем максимальным расстоянием в 300 символов
+                # (больше чем для дат, т.к. ID могут быть дальше)
+                if distance < 300 and distance < min_distance:
+                    min_distance = distance
+                    closest_person = person_pos["person"]
+
+                    self.logger.debug(
+                        f"ID {id_info['type']}:{id_info['value']} distance {distance} to person "
+                        f"{''.join(person_pos['person'].core)} (new closest)"
+                    )
+
+            # Назначаем ID ближайшей персоне
+            if closest_person:
+                id_key = f"{id_info['type']}_{id_info['value']}"
+                if id_key not in used_ids:
+                    # Дополнительная проверка: если персона уже имеет ID того же типа,
+                    # это может быть признаком ошибки или наличия нескольких сущностей
+                    existing_id_types = {existing_id["type"] for existing_id in closest_person.ids}
+
+                    if id_info["type"] in existing_id_types:
+                        self.logger.debug(
+                            f"Person {''.join(closest_person.core)} already has ID of type "
+                            f"{id_info['type']}, possible multiple entities"
+                        )
+                        # Не назначаем дублирующий тип ID той же персоне
+                        # Это ID останется для fallback логики
+                    else:
+                        self._assign_id_to_person(closest_person, id_info)
+                        used_ids.add(id_key)
+
+                        self.logger.debug(
+                            f"Linked ID {id_info['type']}:{id_info['value']} to person "
+                            f"{''.join(closest_person.core)} (distance: {min_distance})"
+                        )
+
+        # Если остались персоны без ID, но есть неиспользованные ID,
+        # применяем fallback логику для оставшихся ID
+        remaining_ids = [
+            id_info for id_info in person_ids
+            if f"{id_info['type']}_{id_info['value']}" not in used_ids
+        ]
+
+        if remaining_ids:
+            self.logger.debug(f"Applying fallback logic for {len(remaining_ids)} unlinked IDs")
+
+            # Применяем консервативную fallback логику в ограниченных случаях:
+            # 1. Если персон без ID больше чем ID (более вероятно правильное распределение) И
+            #    количество ID не превышает количество персон
+            # 2. Или если у нас простая ситуация: 1 персона, 1 ID, и расстояние не экстремальное
+            persons_without_ids = [p for p in persons if not p.ids]
+
+            # Для случая 1 персона + 1 ID проверяем расстояние
+            can_apply_single_fallback = True
+            if len(persons_without_ids) == 1 and len(remaining_ids) == 1:
+                id_info = remaining_ids[0]
+                if "position" in id_info and person_positions:
+                    person_pos = person_positions[0]  # Единственная персона
+                    id_center = (id_info["position"][0] + id_info["position"][1]) // 2
+                    person_center = person_pos["center"]
+                    distance = abs(id_center - person_center)
+
+                    # Если расстояние экстремально большое (>500), не применяем fallback
+                    if distance > 500:
+                        can_apply_single_fallback = False
+                        self.logger.debug(
+                            f"Skipping single fallback: distance {distance} > 500 chars"
+                        )
+
+            # Условие 1: Персон строго больше чем ID (можно назначить все ID персонам)
+            # Условие 2: Простой случай 1:1 с подходящим расстоянием
+            if ((len(persons_without_ids) > len(remaining_ids) and len(remaining_ids) > 0) or
+                (len(persons_without_ids) == 1 and len(remaining_ids) == 1 and can_apply_single_fallback)):
+
+                # Добавляем оставшиеся ID к персонам без ID (по одному на персону)
+                for i, id_info in enumerate(remaining_ids):
+                    if i < len(persons_without_ids):
+                        self._assign_id_to_person(persons_without_ids[i], id_info)
+                        self.logger.debug(f"Fallback: assigned ID {id_info['type']}:{id_info['value']} to person")
+            else:
+                # Слишком рискованно назначать ID - возможно, они действительно не связаны
+                # Например: 1 персона и 2+ ID - неясно, какие ID принадлежат персоне
+                self.logger.debug(
+                    f"Skipping fallback assignment: {len(remaining_ids)} remaining IDs, "
+                    f"{len(persons_without_ids)} persons without IDs"
+                )
+
+    def _assign_id_to_person(self, person: PersonSignal, id_info: Dict):
+        """Присваивает ID конкретной персоне"""
+        person.ids.append(
+            {
+                "type": id_info["type"],
+                "value": id_info["value"],
+                "raw": id_info["raw"],
+                "confidence": id_info["confidence"],
+                "valid": id_info["valid"],
+            }
+        )
+
+        # Добавляем evidence (скоринг будет в _score_entities)
+        if id_info["valid"]:
+            person.evidence.append(f"valid_{id_info['type']}")
+        else:
+            person.evidence.append(f"invalid_{id_info['type']}")
+
+    def _assign_id_to_all_persons(self, persons: List[PersonSignal], id_info: Dict):
+        """Fallback: присваивает ID всем персонам (старая логика)"""
+        for person in persons:
+            self._assign_id_to_person(person, id_info)
 
     def _enrich_persons_with_birthdates(
         self, persons: List[PersonSignal], birthdates: List[Dict], text: str
@@ -893,3 +1052,32 @@ class SignalsService:
 
         # Если кавычек нет, возвращаем заглушку
         return "UNNAMED_ORG"
+
+    # ==================== ASYNC METHODS ====================
+
+    async def extract_async(
+        self,
+        text: str,
+        normalization_result: Optional[Dict[str, Any]] = None,
+        language: str = "uk",
+    ) -> Dict[str, Any]:
+        """
+        Async version of extract using thread pool executor
+        
+        Args:
+            text: Исходный текст
+            normalization_result: Результат работы NormalizationService (опциональный)
+            language: Язык текста
+
+        Returns:
+            Dict с ключами:
+            - persons: List[PersonSignal]
+            - organizations: List[OrganizationSignal]
+            - extras: Dict с дополнительными сигналы
+        """
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,  # Use default thread pool executor
+            self.extract,
+            text, normalization_result, language
+        )

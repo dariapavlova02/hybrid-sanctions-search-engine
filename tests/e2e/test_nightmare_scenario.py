@@ -13,7 +13,6 @@ from src.ai_service.core.unified_orchestrator import UnifiedOrchestrator
 class TestNightmareScenario:
     """E2E tests for complex processing scenarios"""
     
-    @pytest.mark.asyncio
     async def test_nightmare_scenario_gnatyuk_abdullaev(self, orchestrator_service):
         """
         Nightmare test case:
@@ -86,7 +85,6 @@ class TestNightmareScenario:
         logger.info(f"Coverage: {coverage:.2%}")
         logger.info(f"First 20 variants: {result.variants[:20]}")
     
-    @pytest.mark.asyncio
     async def test_multilingual_nightmare(self, orchestrator_service):
         """
         Multilingual nightmare test:
@@ -121,7 +119,6 @@ class TestNightmareScenario:
         # Compound Ukrainian surname
         assert any(name in all_variants_lower for name in ['petrenko', 'smith', 'петренко', 'сміт'])
     
-    @pytest.mark.asyncio
     async def test_corrupted_encoding_nightmare(self, orchestrator_service):
         """
         Corrupted encoding nightmare test:
@@ -152,7 +149,6 @@ class TestNightmareScenario:
             assert any(name in all_variants_lower for name in ['sergii', 'sergey', 'сергий', 'сергій']), \
                 f"Should recover Sergii variants from corrupted text {i}"
     
-    @pytest.mark.asyncio
     async def test_performance_nightmare(self, orchestrator_service):
         """
         Performance test for nightmare scenario:
@@ -216,7 +212,6 @@ class TestNightmareScenario:
         logger.info(f"Text length: {len(complex_text)} characters")
         logger.info(f"Throughput: {len(complex_text)/processing_time:.1f} chars/second")
     
-    @pytest.mark.asyncio
     async def test_edge_cases_nightmare(self, orchestrator_service):
         """
         Edge cases test:
@@ -257,7 +252,6 @@ class TestNightmareScenario:
                 assert isinstance(result.variants, list)
                 assert result.processing_time >= 0
     
-    @pytest.mark.asyncio
     async def test_cache_effectiveness_nightmare(self, orchestrator_service):
         """
         Cache effectiveness test in nightmare scenarios
@@ -314,7 +308,6 @@ class TestNightmareScenario:
         logger.info(f"Cache hits: {stats['cache_hits']}")
         logger.info(f"Cache misses: {stats['cache_misses']}")
     
-    @pytest.mark.asyncio
     async def test_batch_nightmare(self, orchestrator_service):
         """
         Batch processing test for nightmare cases

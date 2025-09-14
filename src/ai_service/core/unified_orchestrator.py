@@ -36,8 +36,14 @@ from ..contracts.base_contracts import (
     ValidationServiceInterface,
     VariantsServiceInterface,
 )
+from ..contracts.decision_contracts import (
+    DecisionEngineInterface,
+    DecisionResult,
+    MatchDecision,
+)
 from ..exceptions import InternalServerError, ServiceInitializationError
 from ..utils import get_logger
+from ..monitoring.metrics_service import MetricsService, MetricType, AlertSeverity
 
 logger = get_logger(__name__)
 
@@ -62,11 +68,14 @@ class UnifiedOrchestrator:
         smart_filter_service: Optional[SmartFilterInterface] = None,
         variants_service: Optional[VariantsServiceInterface] = None,
         embeddings_service: Optional[EmbeddingsServiceInterface] = None,
-        # Configuration
-        enable_smart_filter: bool = True,
-        enable_variants: bool = False,
-        enable_embeddings: bool = False,
-        allow_smart_filter_skip: bool = False,
+        decision_engine: Optional[DecisionEngineInterface] = None,
+        metrics_service: Optional[MetricsService] = None,
+        # Configuration - defaults from SERVICE_CONFIG
+        enable_smart_filter: Optional[bool] = None,
+        enable_variants: Optional[bool] = None,
+        enable_embeddings: Optional[bool] = None,
+        enable_decision_engine: Optional[bool] = None,
+        allow_smart_filter_skip: Optional[bool] = None,
     ):
         # Validate required services are not None
         if validation_service is None:
@@ -88,14 +97,29 @@ class UnifiedOrchestrator:
         self.signals_service = signals_service
         self.variants_service = variants_service
         self.embeddings_service = embeddings_service
+        self.decision_engine = decision_engine
+        self.metrics_service = metrics_service
 
-        # Configuration flags
+        # Configuration flags - use SERVICE_CONFIG defaults if not provided
         self.enable_smart_filter = (
-            enable_smart_filter and smart_filter_service is not None
+            (enable_smart_filter if enable_smart_filter is not None else SERVICE_CONFIG.enable_smart_filter)
+            and smart_filter_service is not None
         )
-        self.enable_variants = enable_variants and variants_service is not None
-        self.enable_embeddings = enable_embeddings and embeddings_service is not None
-        self.allow_smart_filter_skip = allow_smart_filter_skip
+        self.enable_variants = (
+            (enable_variants if enable_variants is not None else SERVICE_CONFIG.enable_variants)
+            and variants_service is not None
+        )
+        self.enable_embeddings = (
+            (enable_embeddings if enable_embeddings is not None else SERVICE_CONFIG.enable_embeddings)
+            and embeddings_service is not None
+        )
+        self.enable_decision_engine = (
+            (enable_decision_engine if enable_decision_engine is not None else SERVICE_CONFIG.enable_decision_engine)
+            and decision_engine is not None
+        )
+        self.allow_smart_filter_skip = (
+            allow_smart_filter_skip if allow_smart_filter_skip is not None else SERVICE_CONFIG.allow_smart_filter_skip
+        )
 
         logger.info(
             f"UnifiedOrchestrator initialized with stages: "
@@ -136,16 +160,29 @@ class UnifiedOrchestrator:
         context = ProcessingContext(original_text=text)
         errors = []
 
+        # Initialize metrics collection
+        if self.metrics_service:
+            self.metrics_service.increment_counter('processing.requests.total')
+            self.metrics_service.set_gauge('processing.requests.active', 1)
+
         try:
             # ================================================================
             # Layer 1: Validation & Sanitization
             # ================================================================
             logger.debug("Stage 1: Validation & Sanitization")
+            layer_start = time.time()
+
             validation_result = await self.validation_service.validate_and_sanitize(
                 text
             )
             context.sanitized_text = validation_result.get("sanitized_text", text)
+
+            if self.metrics_service:
+                self.metrics_service.record_timer('processing.layer.validation', time.time() - layer_start)
+
             if not validation_result.get("should_process", True):
+                if self.metrics_service:
+                    self.metrics_service.increment_counter('processing.validation.failed')
                 return self._create_early_response(
                     context, "Input validation failed", start_time
                 )
@@ -155,7 +192,9 @@ class UnifiedOrchestrator:
             # ================================================================
             if self.enable_smart_filter:
                 logger.debug("Stage 2: Smart Filter")
-                filter_result = await self.smart_filter_service.should_process(
+                layer_start = time.time()
+
+                filter_result = await self.smart_filter_service.should_process_text_async(
                     context.sanitized_text
                 )
                 context.should_process = filter_result.should_process
@@ -167,7 +206,13 @@ class UnifiedOrchestrator:
                     "details": filter_result.details,
                 }
 
+                if self.metrics_service:
+                    self.metrics_service.record_timer('processing.layer.smart_filter', time.time() - layer_start)
+                    self.metrics_service.record_histogram('smart_filter.confidence', filter_result.confidence)
+
                 if not context.should_process and self.allow_smart_filter_skip:
+                    if self.metrics_service:
+                        self.metrics_service.increment_counter('processing.smart_filter.skipped')
                     return self._create_filtered_response(
                         context, filter_result, start_time
                     )
@@ -176,24 +221,38 @@ class UnifiedOrchestrator:
             # Layer 3: Language Detection
             # ================================================================
             logger.debug("Stage 3: Language Detection")
+            layer_start = time.time()
+
             lang_result = await self.language_service.detect_language(
                 context.sanitized_text
             )
             context.language = language_hint or lang_result.get("language", "en")
             context.language_confidence = lang_result.get("confidence", 0.0)
 
+            if self.metrics_service:
+                self.metrics_service.record_timer('processing.layer.language_detection', time.time() - layer_start)
+                self.metrics_service.record_histogram('language_detection.confidence', context.language_confidence)
+                self.metrics_service.increment_counter(f'language_detection.detected.{context.language}')
+
             # ================================================================
             # Layer 4: Unicode Normalization
             # ================================================================
             logger.debug("Stage 4: Unicode Normalization")
+            layer_start = time.time()
+
             unicode_normalized = await self.unicode_service.normalize_unicode(
                 context.sanitized_text
             )
+
+            if self.metrics_service:
+                self.metrics_service.record_timer('processing.layer.unicode_normalization', time.time() - layer_start)
 
             # ================================================================
             # Layer 5: Name Normalization (morph) - THE CORE
             # ================================================================
             logger.debug("Stage 5: Name Normalization")
+            layer_start = time.time()
+
             norm_result = await self.normalization_service.normalize_async(
                 unicode_normalized,
                 language=context.language,
@@ -202,16 +261,32 @@ class UnifiedOrchestrator:
                 enable_advanced_features=enable_advanced_features,
             )
 
+            if self.metrics_service:
+                self.metrics_service.record_timer('processing.layer.normalization', time.time() - layer_start)
+                if hasattr(norm_result, 'confidence') and norm_result.confidence is not None:
+                    self.metrics_service.record_histogram('normalization.confidence', norm_result.confidence)
+                self.metrics_service.record_histogram('normalization.token_count', len(norm_result.tokens))
+
             if not norm_result.success:
+                if self.metrics_service:
+                    self.metrics_service.increment_counter('processing.normalization.failed')
                 errors.extend(norm_result.errors)
 
             # ================================================================
             # Layer 6: Signals (enrichment)
             # ================================================================
             logger.debug("Stage 6: Signals Extraction")
-            signals_result = await self.signals_service.extract_signals(
-                original_text=context.original_text, normalization_result=norm_result
+            layer_start = time.time()
+
+            signals_result = await self.signals_service.extract_async(
+                text=context.original_text, normalization_result=norm_result
             )
+
+            if self.metrics_service:
+                self.metrics_service.record_timer('processing.layer.signals', time.time() - layer_start)
+                self.metrics_service.record_histogram('signals.confidence', signals_result.confidence)
+                self.metrics_service.record_histogram('signals.persons_count', len(signals_result.persons))
+                self.metrics_service.record_histogram('signals.organizations_count', len(signals_result.organizations))
 
             # ================================================================
             # Layer 7: Variants (optional)
@@ -221,12 +296,19 @@ class UnifiedOrchestrator:
                 generate_variants is None and self.enable_variants
             ):
                 logger.debug("Stage 7: Variant Generation")
+                layer_start = time.time()
                 try:
                     variants = await self.variants_service.generate_variants(
                         norm_result.normalized, context.language
                     )
+                    if self.metrics_service:
+                        self.metrics_service.record_timer('processing.layer.variants', time.time() - layer_start)
+                        if variants:
+                            self.metrics_service.record_histogram('variants.count', len(variants))
                 except Exception as e:
                     logger.warning(f"Variant generation failed: {e}")
+                    if self.metrics_service:
+                        self.metrics_service.increment_counter('processing.variants.failed')
                     errors.append(f"Variants: {str(e)}")
 
             # ================================================================
@@ -237,24 +319,85 @@ class UnifiedOrchestrator:
                 generate_embeddings is None and self.enable_embeddings
             ):
                 logger.debug("Stage 8: Embedding Generation")
+                layer_start = time.time()
                 try:
                     embeddings = await self.embeddings_service.generate_embeddings(
                         norm_result.normalized
                     )
+                    if self.metrics_service:
+                        self.metrics_service.record_timer('processing.layer.embeddings', time.time() - layer_start)
+                        if embeddings is not None:
+                            self.metrics_service.record_histogram('embeddings.dimension', len(embeddings) if hasattr(embeddings, '__len__') else 0)
                 except Exception as e:
                     logger.warning(f"Embedding generation failed: {e}")
+                    if self.metrics_service:
+                        self.metrics_service.increment_counter('processing.embeddings.failed')
                     errors.append(f"Embeddings: {str(e)}")
 
             # ================================================================
             # Layer 9: Decision & Response
             # ================================================================
+            decision_result = None
+
+            # Create processing result for decision engine
+            temp_processing_result = UnifiedProcessingResult(
+                original_text=context.original_text,
+                language=context.language,
+                language_confidence=context.language_confidence,
+                normalized_text=norm_result.normalized,
+                tokens=norm_result.tokens,
+                trace=norm_result.trace,
+                signals=signals_result,
+                variants=variants,
+                embeddings=embeddings,
+                processing_time=0.0,  # Will be set below
+                success=len(errors) == 0,
+                errors=errors,
+            )
+
+            # Run decision engine if enabled
+            if self.enable_decision_engine:
+                logger.debug("Stage 9: Decision Engine")
+                layer_start = time.time()
+                try:
+                    decision_result = await self.decision_engine.make_decision(
+                        processing_result=temp_processing_result,
+                        candidates=None,  # Could be passed as parameter in future
+                        context=context.metadata.get("decision_context", {})
+                    )
+                    logger.debug(
+                        f"Decision made: {decision_result.decision.value} "
+                        f"(confidence: {decision_result.confidence:.2f})"
+                    )
+                    if self.metrics_service:
+                        self.metrics_service.record_timer('processing.layer.decision', time.time() - layer_start)
+                        self.metrics_service.record_histogram('decision.confidence', decision_result.confidence)
+                        self.metrics_service.increment_counter(f'decision.result.{decision_result.decision.value.lower()}')
+                except Exception as e:
+                    logger.warning(f"Decision engine failed: {e}")
+                    if self.metrics_service:
+                        self.metrics_service.increment_counter('processing.decision.failed')
+                    errors.append(f"Decision engine: {str(e)}")
+
             processing_time = time.time() - start_time
+
+            # Update final metrics
+            if self.metrics_service:
+                self.metrics_service.record_timer('processing.total_time', processing_time)
+                self.metrics_service.set_gauge('processing.requests.active', -1)  # Decrement active requests
+                if len(errors) == 0:
+                    self.metrics_service.increment_counter('processing.requests.successful')
+                else:
+                    self.metrics_service.increment_counter('processing.requests.failed')
+                    self.metrics_service.record_histogram('processing.error_count', len(errors))
 
             # Warn if processing is slow
             if processing_time > 0.1:  # 100ms threshold per CLAUDE.md
                 logger.warning(
                     f"Slow processing: {processing_time:.3f}s for text: {text[:50]}..."
                 )
+                if self.metrics_service:
+                    self.metrics_service.increment_counter('processing.slow_requests')
 
             return UnifiedProcessingResult(
                 original_text=context.original_text,
@@ -266,6 +409,7 @@ class UnifiedOrchestrator:
                 signals=signals_result,
                 variants=variants,
                 embeddings=embeddings,
+                decision=decision_result,
                 processing_time=processing_time,
                 success=len(errors) == 0,
                 errors=errors,
@@ -274,6 +418,13 @@ class UnifiedOrchestrator:
         except Exception as e:
             processing_time = time.time() - start_time
             logger.error(f"Processing failed: {e}", exc_info=True)
+
+            # Update error metrics
+            if self.metrics_service:
+                self.metrics_service.increment_counter('processing.requests.failed')
+                self.metrics_service.increment_counter('processing.exceptions')
+                self.metrics_service.set_gauge('processing.requests.active', -1)  # Decrement active requests
+                self.metrics_service.record_timer('processing.total_time', processing_time)
 
             return UnifiedProcessingResult(
                 original_text=context.original_text,
@@ -362,6 +513,6 @@ class UnifiedOrchestrator:
     ) -> SignalsResult:
         """Backward compatibility: direct signals extraction"""
         logger.warning("extract_signals is deprecated. Use process() instead.")
-        return await self.signals_service.extract_signals(
-            original_text, normalization_result
+        return await self.signals_service.extract_async(
+            text=original_text, normalization_result=normalization_result
         )

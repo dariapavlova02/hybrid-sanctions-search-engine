@@ -17,12 +17,11 @@ class TestNormalizationResultFields:
         """Create normalization service instance."""
         return NormalizationService()
     
-    @pytest.mark.asyncio
-    async def test_normalization_result_metadata_fields(self, service):
+    def test_normalization_result_metadata_fields(self, service):
         """Test that NormalizationResult has all required metadata fields."""
         # Test with Ukrainian text
         text = "Переказ коштів на ім'я Петро Іванович Коваленко"
-        result = await service.normalize(text, language="uk")
+        result = service.normalize(text, language="uk")
         
         # Assert result is a NormalizationResult
         assert isinstance(result, NormalizationResult)
@@ -76,11 +75,10 @@ class TestNormalizationResultFields:
         # Assert no errors
         assert result.errors is None or len(result.errors) == 0
     
-    @pytest.mark.asyncio
-    async def test_normalization_result_tokens(self, service):
+    def test_normalization_result_tokens(self, service):
         """Test that normalization produces valid tokens."""
         text = "Переказ коштів на ім'я Петро Іванович Коваленко"
-        result = await service.normalize(text, language="uk")
+        result = service.normalize(text, language="uk")
         
         # Assert we have tokens
         assert len(result.tokens) > 0
@@ -92,22 +90,20 @@ class TestNormalizationResultFields:
             # Tokens should not be empty strings
             assert token.strip() != ""
     
-    @pytest.mark.asyncio
-    async def test_normalization_result_extra_fields_allowed(self, service):
+    def test_normalization_result_extra_fields_allowed(self, service):
         """Test that NormalizationResult allows extra fields."""
         text = "Переказ коштів на ім'я Петро Іванович Коваленко"
-        result = await service.normalize(text, language="uk")
+        result = service.normalize(text, language="uk")
         
         # Test that we can add extra fields to the dataclass
         result.custom_field = 'test_value'
         assert hasattr(result, 'custom_field')
         assert result.custom_field == 'test_value'
     
-    @pytest.mark.asyncio
-    async def test_normalization_result_basic_serialization(self, service):
+    def test_normalization_result_basic_serialization(self, service):
         """Test that NormalizationResult can be converted to dict."""
         text = "Переказ коштів на ім'я Петро Іванович Коваленко"
-        result = await service.normalize(text, language="uk")
+        result = service.normalize(text, language="uk")
         
         # Test conversion to dict using dataclasses.asdict
         import dataclasses

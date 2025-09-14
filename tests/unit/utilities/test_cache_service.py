@@ -57,7 +57,6 @@ class TestCacheService:
         assert cache_service.get("key3") == "value3"
         assert cache_service.get("key4") == "value4"
     
-    @pytest.mark.asyncio
     async def test_ttl_expiration(self, cache_service):
         """Test TTL: save element with TTL=1 second"""
         # Arrange
@@ -171,7 +170,6 @@ class TestCacheService:
         cache_service.clear()
         assert cache_service.exists(key) is False
     
-    @pytest.mark.asyncio
     async def test_exists_with_expired_key(self, cache_service):
         """Test exists with expired key"""
         # Arrange

@@ -39,6 +39,17 @@ class ServiceConfig:
     preserve_names: bool = True
     clean_unicode: bool = True
 
+    # Feature Flags - управляемые из env
+    enable_aho_corasick: bool = field(default_factory=lambda: os.getenv("ENABLE_AHO_CORASICK", "true").lower() == "true")
+    prioritize_quality: bool = field(default_factory=lambda: os.getenv("PRIORITIZE_QUALITY", "true").lower() == "true")
+    enable_faiss_index: bool = field(default_factory=lambda: os.getenv("ENABLE_FAISS_INDEX", "true").lower() == "true")
+    enable_smart_filter: bool = field(default_factory=lambda: os.getenv("ENABLE_SMART_FILTER", "true").lower() == "true")
+    enable_variants: bool = field(default_factory=lambda: os.getenv("ENABLE_VARIANTS", "false").lower() == "true")
+    enable_embeddings: bool = field(default_factory=lambda: os.getenv("ENABLE_EMBEDDINGS", "false").lower() == "true")
+    enable_decision_engine: bool = field(default_factory=lambda: os.getenv("ENABLE_DECISION_ENGINE", "false").lower() == "true")
+    enable_metrics: bool = field(default_factory=lambda: os.getenv("ENABLE_METRICS", "true").lower() == "true")
+    allow_smart_filter_skip: bool = field(default_factory=lambda: os.getenv("ALLOW_SMART_FILTER_SKIP", "false").lower() == "true")
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -51,6 +62,15 @@ class ServiceConfig:
             "enable_transliterations": self.enable_transliterations,
             "preserve_names": self.preserve_names,
             "clean_unicode": self.clean_unicode,
+            "enable_aho_corasick": self.enable_aho_corasick,
+            "prioritize_quality": self.prioritize_quality,
+            "enable_faiss_index": self.enable_faiss_index,
+            "enable_smart_filter": self.enable_smart_filter,
+            "enable_variants": self.enable_variants,
+            "enable_embeddings": self.enable_embeddings,
+            "enable_decision_engine": self.enable_decision_engine,
+            "enable_metrics": self.enable_metrics,
+            "allow_smart_filter_skip": self.allow_smart_filter_skip,
         }
 
 

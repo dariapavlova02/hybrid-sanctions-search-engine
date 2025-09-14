@@ -144,6 +144,9 @@ class UnifiedProcessingResult:
     variants: Optional[List[str]] = None
     embeddings: Optional[List[float]] = None
 
+    # Decision engine result (Layer 9)
+    decision: Optional["DecisionResult"] = None
+
     # Metadata
     processing_time: float = 0.0
     success: bool = True
@@ -190,6 +193,7 @@ class UnifiedProcessingResult:
             },
             "variants": self.variants,
             "embeddings": self.embeddings,
+            "decision": self.decision.model_dump() if self.decision else None,
             "processing_time": self.processing_time,
             "success": self.success,
             "errors": self.errors,

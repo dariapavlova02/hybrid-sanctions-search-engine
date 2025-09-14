@@ -27,7 +27,6 @@ class TestNormalizationContracts:
         service = NormalizationService()
         return service
 
-    @pytest.mark.asyncio
     async def test_normalization_result_structure(self, service):
         """Test that NormalizationResult has all required fields per new contracts"""
         text = "Переказ коштів на ім'я Петро Іванович Коваленко"
@@ -74,7 +73,6 @@ class TestNormalizationContracts:
         if result.organizations_core:
             assert isinstance(result.organizations_core, list)
 
-    @pytest.mark.asyncio
     async def test_token_trace_completeness(self, service):
         """Test that every token has proper TokenTrace per CLAUDE.md requirement"""
         text = "П.І. Коваленко"
@@ -110,7 +108,6 @@ class TestNormalizationContracts:
             # Output should match token in normalized result
             assert trace.output == token
 
-    @pytest.mark.asyncio
     async def test_organizations_core_separation(self, service):
         """Test that organizations are properly separated per CLAUDE.md"""
         text = 'ТОВ "ГАЗПРОМ" переказ коштів Іван Петров'
@@ -127,7 +124,6 @@ class TestNormalizationContracts:
             assert "ГАЗПROM" in result.organizations_core or "ГАЗПРОМ" in result.organizations_core
             assert "ТОВ" not in result.organizations_core  # Legal form handled by Signals
 
-    @pytest.mark.asyncio
     async def test_persons_core_structure(self, service):
         """Test persons_core structure per new contracts"""
         text = "Петро Іванович Коваленко"
@@ -147,7 +143,6 @@ class TestNormalizationContracts:
             for component in expected_components:
                 assert component in person_core
 
-    @pytest.mark.asyncio
     async def test_flag_behavior_real_impact(self, service):
         """Test that flags have real behavioral impact per CLAUDE.md requirement"""
         text = "Іван і компанія"
@@ -172,7 +167,6 @@ class TestNormalizationContracts:
         assert len(unique_results) > 1, \
             f"Flags should produce different results but all were identical: {normalized_results}"
 
-    @pytest.mark.asyncio
     async def test_org_acronyms_always_unknown(self, service):
         """Test that ORG_ACRONYMS are always tagged as unknown per CLAUDE.md"""
         # Test various legal forms
@@ -190,7 +184,6 @@ class TestNormalizationContracts:
             if legal_form_traces:
                 assert legal_form_traces[0].role == "unknown"
 
-    @pytest.mark.asyncio
     async def test_ascii_no_morph_in_cyrillic(self, service):
         """Test ASCII names in Cyrillic context don't get morphed per CLAUDE.md"""
         text = "John Smith працює в компанії"
@@ -213,7 +206,6 @@ class TestNormalizationContracts:
         if smith_trace:
             assert smith_trace[0].morph_lang is None  # No morphology
 
-    @pytest.mark.asyncio
     async def test_womens_surnames_preserved(self, service):
         """Test that women's surnames are preserved per CLAUDE.md"""
         text = "Марія Коваленко-Петренко"
@@ -230,7 +222,6 @@ class TestNormalizationContracts:
         # Should not "masculinize" to "Коваленко-Петренків" or similar
         assert "Коваленків" not in result.normalized
 
-    @pytest.mark.asyncio
     async def test_serialization_compatibility(self, service):
         """Test that result can be serialized per contract requirements"""
         text = "Тест нормализации"
@@ -249,7 +240,6 @@ class TestNormalizationContracts:
         assert isinstance(json_str, str)
         assert "normalized" in json_str
 
-    @pytest.mark.asyncio
     async def test_performance_requirements(self, service):
         """Test performance requirements per CLAUDE.md"""
         short_texts = [
@@ -266,7 +256,6 @@ class TestNormalizationContracts:
             assert result.processing_time <= 0.01, \
                 f"Processing too slow for '{text}': {result.processing_time:.3f}s"
 
-    @pytest.mark.asyncio
     async def test_error_handling(self, service):
         """Test error handling and success flags"""
         # Test with problematic input

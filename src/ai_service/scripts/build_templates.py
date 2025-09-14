@@ -13,7 +13,7 @@ from typing import Any, Dict, List
 # Add path to src for imports
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from ai_service.layers.signals.pattern_service import PatternService
+from ai_service.layers.patterns.unified_pattern_service import UnifiedPatternService
 from ai_service.layers.variants.template_builder import TemplateBuilder
 from ai_service.utils.logging_config import get_logger
 
@@ -62,7 +62,7 @@ def build_templates(data: Dict[str, Any], output_dir: str):
     logger = get_logger(__name__)
 
     # Initialize services
-    pattern_service = PatternService()
+    pattern_service = UnifiedPatternService()
     template_builder = TemplateBuilder()
 
     all_templates = []

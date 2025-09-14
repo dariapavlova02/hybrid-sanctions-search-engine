@@ -5,6 +5,7 @@ Intelligent pre-filtering service for Aho-Corasick search decisions.
 """
 
 # Standard library imports
+import asyncio
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -21,8 +22,7 @@ from ...data.dicts.smart_filter_patterns import (
 from ...exceptions import LanguageDetectionError, SmartFilterError
 from ...utils.logging_config import get_logger
 from ..signals.signals_service import SignalsService
-
-# from ..aho_corasick_service import AhoCorasickService  # Removed - templates only
+from ..patterns.unified_pattern_service import UnifiedPatternService
 from .company_detector import CompanyDetector
 from .confidence_scorer import ConfidenceScorer
 from .decision_logic import DecisionLogic, DecisionType, RiskLevel
@@ -51,7 +51,8 @@ class SmartFilterService:
         language_service: Optional[Any] = None,
         signal_service: Optional[Any] = None,
         enable_terrorism_detection: bool = True,
-        enable_aho_corasick: bool = False,  # Disabled - templates only
+        enable_aho_corasick: bool = True,  # Now enabled with UnifiedPatternService
+        pattern_service: Optional[UnifiedPatternService] = None,
     ):
         """
         Initialize smart filter service
@@ -61,6 +62,7 @@ class SmartFilterService:
             signal_service: Signal detection service instance
             enable_terrorism_detection: Enable terrorism detection
             enable_aho_corasick: Enable Aho-Corasick pattern matching
+            pattern_service: Unified pattern service for AC integration
 
         Raises:
             SmartFilterError: If service initialization fails
@@ -75,9 +77,9 @@ class SmartFilterService:
             # Initialize base signal service
             self.signal_service = signal_service or SignalsService()
 
-            # Aho-Corasick functionality disabled - only templates are generated
-            self.aho_corasick_enabled = False
-            self.aho_corasick_service = None
+            # Initialize pattern service for AC integration
+            self.aho_corasick_enabled = enable_aho_corasick
+            self.pattern_service = pattern_service or UnifiedPatternService()
 
             # Initialize main decision module
             self.decision_logic = DecisionLogic(
@@ -246,28 +248,82 @@ class SmartFilterService:
         self, text: str, max_matches: Optional[int] = None
     ) -> Dict[str, Any]:
         """
-        Perform Aho-Corasick pattern matching on text
+        Perform enhanced pattern matching using UnifiedPatternService
 
         Args:
             text: Text to search in
             max_matches: Maximum number of matches to return
 
         Returns:
-            Aho-Corasick search results
+            Enhanced pattern search results
 
         Raises:
             SmartFilterError: If search fails
         """
-        # Aho-Corasick functionality disabled - only templates are generated
-        return {
-            "matches": [],
-            "total_matches": 0,
-            "processing_time_ms": 0.0,
-            "patterns_loaded": 0,
-            "text_length": len(text),
-            "enabled": False,
-            "message": "Aho-Corasick search disabled - only pattern templates are generated",
-        }
+        if not self.aho_corasick_enabled:
+            return {
+                "matches": [],
+                "total_matches": 0,
+                "processing_time_ms": 0.0,
+                "patterns_loaded": 0,
+                "text_length": len(text),
+                "enabled": False,
+                "message": "AC integration disabled",
+            }
+
+        try:
+            import time
+            start_time = time.time()
+
+            # Detect language for better pattern generation
+            language = self._detect_language(text)
+
+            # Generate patterns using UnifiedPatternService
+            patterns = self.pattern_service.generate_patterns(text, language=language)
+
+            # Convert to AC-compatible format
+            ac_patterns = self.pattern_service.export_for_aho_corasick(patterns)
+
+            # Simulate AC search with our patterns
+            matches = []
+            for tier, tier_patterns in ac_patterns.items():
+                for pattern in tier_patterns[:max_matches] if max_matches else tier_patterns:
+                    # Simple substring search (in real AC implementation, this would be more sophisticated)
+                    if pattern.lower() in text.lower():
+                        match_start = text.lower().find(pattern.lower())
+                        matches.append({
+                            "pattern": pattern,
+                            "tier": tier,
+                            "start": match_start,
+                            "end": match_start + len(pattern),
+                            "matched_text": text[match_start:match_start + len(pattern)],
+                            "confidence": self._get_pattern_confidence(pattern, tier),
+                            "pattern_type": self._infer_pattern_type(pattern, patterns)
+                        })
+
+            # Limit matches if requested
+            if max_matches and len(matches) > max_matches:
+                # Sort by confidence and tier priority
+                matches.sort(key=lambda x: (self._get_tier_priority(x["tier"]), x["confidence"]), reverse=True)
+                matches = matches[:max_matches]
+
+            processing_time_ms = (time.time() - start_time) * 1000
+
+            return {
+                "matches": matches,
+                "total_matches": len(matches),
+                "processing_time_ms": processing_time_ms,
+                "patterns_loaded": len(patterns),
+                "text_length": len(text),
+                "enabled": True,
+                "language": language,
+                "tier_distribution": {tier: len(tier_patterns) for tier, tier_patterns in ac_patterns.items()},
+                "message": f"Enhanced AC search completed with {len(patterns)} patterns",
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error in enhanced AC search: {e}")
+            raise SmartFilterError(f"Enhanced pattern search failed: {str(e)}")
 
     def _analyze_payment_context(self, text: str) -> Dict[str, Any]:
         """
@@ -585,4 +641,150 @@ class SmartFilterService:
             signal_details={},
             processing_recommendation="Empty text",
             estimated_complexity="none",
+        )
+
+    def _get_pattern_confidence(self, pattern: str, tier: str) -> float:
+        """Get confidence score for a pattern based on tier"""
+        tier_confidence_map = {
+            "tier_0_exact": 0.98,
+            "tier_1_high_confidence": 0.90,
+            "tier_2_medium_confidence": 0.75,
+            "tier_3_low_confidence": 0.60,
+        }
+        return tier_confidence_map.get(tier, 0.50)
+
+    def _get_tier_priority(self, tier: str) -> int:
+        """Get priority weight for tier sorting"""
+        tier_priority_map = {
+            "tier_0_exact": 4,
+            "tier_1_high_confidence": 3,
+            "tier_2_medium_confidence": 2,
+            "tier_3_low_confidence": 1,
+        }
+        return tier_priority_map.get(tier, 0)
+
+    def _infer_pattern_type(self, pattern: str, all_patterns) -> str:
+        """Infer pattern type from the pattern string and full pattern list"""
+        # Find matching pattern in the full list to get its type
+        for p in all_patterns:
+            if p.pattern == pattern:
+                return p.pattern_type
+
+        # Fallback inference based on pattern characteristics
+        if any(char.isdigit() for char in pattern) and len(pattern) >= 6:
+            return "document_id"
+        elif "." in pattern and len(pattern.split()) <= 3:
+            return "structured_name"
+        elif len(pattern.split()) >= 2:
+            return "full_name"
+        else:
+            return "basic_pattern"
+
+    def enhanced_pattern_analysis(self, text: str) -> Dict[str, Any]:
+        """
+        Perform enhanced pattern analysis combining smart filtering with AC patterns
+
+        Args:
+            text: Text to analyze
+
+        Returns:
+            Enhanced analysis results
+        """
+        try:
+            # Get basic smart filter result
+            filter_result = self.should_process_text(text)
+
+            # Get AC pattern matches if enabled
+            ac_result = self.search_aho_corasick(text, max_matches=50)
+
+            # Generate comprehensive patterns
+            language = self._detect_language(text)
+            patterns = self.pattern_service.generate_patterns(text, language=language)
+            pattern_stats = self.pattern_service.get_pattern_statistics(patterns)
+
+            # Combine results for enhanced analysis
+            enhanced_confidence = filter_result.confidence
+            if ac_result["total_matches"] > 0:
+                # Boost confidence based on AC matches
+                match_boost = min(ac_result["total_matches"] * 0.1, 0.3)
+                enhanced_confidence = min(enhanced_confidence + match_boost, 1.0)
+
+            return {
+                "text": text,
+                "language": language,
+                "smart_filter_result": {
+                    "should_process": filter_result.should_process,
+                    "confidence": filter_result.confidence,
+                    "detected_signals": filter_result.detected_signals,
+                    "processing_recommendation": filter_result.processing_recommendation,
+                },
+                "ac_pattern_result": ac_result,
+                "pattern_analysis": {
+                    "total_patterns_generated": len(patterns),
+                    "pattern_statistics": pattern_stats,
+                    "high_confidence_patterns": len([p for p in patterns if p.confidence >= 0.9]),
+                },
+                "enhanced_analysis": {
+                    "final_confidence": enhanced_confidence,
+                    "should_process": enhanced_confidence >= 0.3,
+                    "processing_priority": "high" if enhanced_confidence >= 0.8 else
+                                          "medium" if enhanced_confidence >= 0.5 else "low",
+                    "match_quality": "excellent" if ac_result["total_matches"] >= 3 else
+                                   "good" if ac_result["total_matches"] >= 1 else "basic",
+                },
+                "recommendations": self._generate_processing_recommendations(
+                    enhanced_confidence, ac_result["total_matches"], filter_result.detected_signals
+                ),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error in enhanced pattern analysis: {e}")
+            raise SmartFilterError(f"Enhanced analysis failed: {str(e)}")
+
+    def _generate_processing_recommendations(
+        self, confidence: float, ac_matches: int, detected_signals: List[str]
+    ) -> List[str]:
+        """Generate processing recommendations based on analysis results"""
+        recommendations = []
+
+        if confidence >= 0.9:
+            recommendations.append("High priority - immediate processing recommended")
+        elif confidence >= 0.7:
+            recommendations.append("Medium priority - process within standard timeframe")
+        elif confidence >= 0.3:
+            recommendations.append("Low priority - consider batch processing")
+        else:
+            recommendations.append("Very low priority - may skip processing")
+
+        if ac_matches >= 5:
+            recommendations.append("Multiple pattern matches - potential high-value content")
+        elif ac_matches >= 2:
+            recommendations.append("Some pattern matches - moderate relevance detected")
+        elif ac_matches == 1:
+            recommendations.append("Single pattern match - basic relevance detected")
+
+        if "company" in detected_signals and "name" in detected_signals:
+            recommendations.append("Both company and name signals detected - likely business transaction")
+        elif "payment_context" in detected_signals:
+            recommendations.append("Payment context detected - financial transaction likely")
+
+        return recommendations
+
+    # ==================== ASYNC METHODS ====================
+
+    async def should_process_text_async(self, text: str) -> FilterResult:
+        """
+        Async version of should_process_text using thread pool executor
+        
+        Args:
+            text: Text to analyze
+
+        Returns:
+            FilterResult with recommendation
+        """
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,  # Use default thread pool executor
+            self.should_process_text,
+            text
         )

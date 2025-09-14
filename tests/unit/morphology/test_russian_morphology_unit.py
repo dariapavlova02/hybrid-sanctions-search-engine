@@ -16,7 +16,7 @@ class TestRussianMorphologyAnalyzer:
     def setup_analyzer(self):
         """Create analyzer instance for tests"""
         # Mock the dependencies
-        with patch('src.ai_service.layers.russian_morphology.get_logger'):
+        with patch('src.ai_service.layers.normalization.morphology.russian_morphology.get_logger'):
             self.analyzer = RussianMorphologyAnalyzer()
         
         # Mock special names

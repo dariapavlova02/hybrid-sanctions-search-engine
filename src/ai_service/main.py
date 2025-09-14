@@ -253,6 +253,74 @@ async def health_check():
         }
 
 
+@app.get("/metrics")
+async def get_metrics():
+    """
+    Prometheus metrics endpoint
+    Returns metrics in Prometheus text format
+    """
+    try:
+        if not orchestrator:
+            return "# HELP ai_service_up Service is up and running\n# TYPE ai_service_up gauge\nai_service_up 0\n"
+
+        # Get orchestrator metrics
+        stats = orchestrator.get_processing_stats()
+
+        # Get MetricsService metrics if available
+        metrics_lines = []
+
+        # Basic service metrics
+        metrics_lines.append("# HELP ai_service_up Service is up and running")
+        metrics_lines.append("# TYPE ai_service_up gauge")
+        metrics_lines.append("ai_service_up 1")
+
+        # Processing metrics
+        metrics_lines.append("# HELP ai_service_requests_total Total processed requests")
+        metrics_lines.append("# TYPE ai_service_requests_total counter")
+        metrics_lines.append(f"ai_service_requests_total {stats.get('total_processed', 0)}")
+
+        metrics_lines.append("# HELP ai_service_requests_successful_total Total successful requests")
+        metrics_lines.append("# TYPE ai_service_requests_successful_total counter")
+        metrics_lines.append(f"ai_service_requests_successful_total {stats.get('successful', 0)}")
+
+        metrics_lines.append("# HELP ai_service_requests_failed_total Total failed requests")
+        metrics_lines.append("# TYPE ai_service_requests_failed_total counter")
+        metrics_lines.append(f"ai_service_requests_failed_total {stats.get('failed', 0)}")
+
+        # Performance metrics
+        if 'performance' in stats:
+            perf = stats['performance']
+            metrics_lines.append("# HELP ai_service_processing_time_avg_seconds Average processing time")
+            metrics_lines.append("# TYPE ai_service_processing_time_avg_seconds gauge")
+            metrics_lines.append(f"ai_service_processing_time_avg_seconds {perf.get('avg_processing_time', 0)}")
+
+            metrics_lines.append("# HELP ai_service_processing_time_p95_seconds 95th percentile processing time")
+            metrics_lines.append("# TYPE ai_service_processing_time_p95_seconds gauge")
+            metrics_lines.append(f"ai_service_processing_time_p95_seconds {perf.get('p95_processing_time', 0)}")
+
+        # Cache metrics
+        if 'cache' in stats:
+            cache = stats['cache']
+            metrics_lines.append("# HELP ai_service_cache_hit_rate Cache hit rate")
+            metrics_lines.append("# TYPE ai_service_cache_hit_rate gauge")
+            metrics_lines.append(f"ai_service_cache_hit_rate {cache.get('hit_rate', 0)}")
+
+        # Service availability metrics
+        if 'services' in stats:
+            services = stats['services']
+            for service_name, service_status in services.items():
+                metrics_lines.append(f"# HELP ai_service_component_available Component {service_name} availability")
+                metrics_lines.append(f"# TYPE ai_service_component_available gauge")
+                available = 1 if service_status.get('available', True) else 0
+                metrics_lines.append(f"ai_service_component_available{{component=\"{service_name}\"}} {available}")
+
+        return "\n".join(metrics_lines) + "\n"
+
+    except Exception as e:
+        logger.error(f"Error generating metrics: {e}")
+        return f"# Error generating metrics: {e}\nai_service_up 0\n"
+
+
 @app.post("/process")
 async def process_text(request: ProcessTextRequest):
     """

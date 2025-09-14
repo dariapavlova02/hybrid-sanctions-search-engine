@@ -47,7 +47,7 @@ class TestUnifiedOrchestrator:
 
         # Mock smart filter service
         smart_filter_service = Mock()
-        smart_filter_service.should_process = AsyncMock(return_value=SmartFilterResult(
+        smart_filter_service.should_process_text_async = AsyncMock(return_value=SmartFilterResult(
             should_process=True,
             confidence=0.8,
             classification="recommend",
@@ -81,7 +81,7 @@ class TestUnifiedOrchestrator:
 
         # Mock signals service
         signals_service = Mock()
-        signals_service.extract_signals = AsyncMock(return_value=SignalsResult(
+        signals_service.extract_async = AsyncMock(return_value=SignalsResult(
             persons=[SignalsPerson(core=["Іван", "Петров"], full_name="Іван Петров")],
             confidence=0.85
         ))
@@ -121,7 +121,6 @@ class TestUnifiedOrchestrator:
             enable_embeddings=True
         )
 
-    @pytest.mark.asyncio
     async def test_complete_pipeline(self, orchestrator, mock_services):
         """Test complete 9-layer pipeline execution"""
 
@@ -149,15 +148,14 @@ class TestUnifiedOrchestrator:
 
         # Verify all services were called in order
         mock_services["validation_service"].validate_and_sanitize.assert_called_once()
-        mock_services["smart_filter_service"].should_process.assert_called_once()
+        mock_services["smart_filter_service"].should_process_text_async.assert_called_once()
         mock_services["language_service"].detect_language.assert_called_once()
         mock_services["unicode_service"].normalize_unicode.assert_called_once()
         mock_services["normalization_service"].normalize_async.assert_called_once()
-        mock_services["signals_service"].extract_signals.assert_called_once()
+        mock_services["signals_service"].extract_async.assert_called_once()
         mock_services["variants_service"].generate_variants.assert_called_once()
         mock_services["embeddings_service"].generate_embeddings.assert_called_once()
 
-    @pytest.mark.asyncio
     async def test_normalization_flags_passed_correctly(self, orchestrator, mock_services):
         """Test that normalization flags are passed correctly to the service"""
 
@@ -174,7 +172,6 @@ class TestUnifiedOrchestrator:
         assert call_args[1]["preserve_names"] is False
         assert call_args[1]["enable_advanced_features"] is False
 
-    @pytest.mark.asyncio
     async def test_smart_filter_skip_behavior(self, orchestrator, mock_services):
         """Test smart filter skip behavior when allow_smart_filter_skip=True"""
 
@@ -200,9 +197,8 @@ class TestUnifiedOrchestrator:
 
         # Normalization and signals should not be called
         mock_services["normalization_service"].normalize_async.assert_not_called()
-        mock_services["signals_service"].extract_signals.assert_not_called()
+        mock_services["signals_service"].extract_async.assert_not_called()
 
-    @pytest.mark.asyncio
     async def test_optional_services_disabled(self, mock_services):
         """Test orchestrator with optional services disabled"""
 
@@ -232,7 +228,6 @@ class TestUnifiedOrchestrator:
         mock_services["variants_service"].generate_variants.assert_not_called()
         mock_services["embeddings_service"].generate_embeddings.assert_not_called()
 
-    @pytest.mark.asyncio
     async def test_error_handling(self, orchestrator, mock_services):
         """Test error handling in the pipeline"""
 
@@ -248,7 +243,6 @@ class TestUnifiedOrchestrator:
         assert len(result.errors) > 0
         assert "Normalization failed" in str(result.errors)
 
-    @pytest.mark.asyncio
     async def test_performance_warning(self, orchestrator, mock_services):
         """Test performance warning for slow processing"""
 
@@ -271,7 +265,6 @@ class TestUnifiedOrchestrator:
         assert result.success is True
         assert result.processing_time > 0.1
 
-    @pytest.mark.asyncio
     async def test_backward_compatibility_methods(self, orchestrator, mock_services):
         """Test backward compatibility methods"""
 
@@ -297,7 +290,6 @@ class TestUnifiedOrchestrator:
         assert isinstance(signals, SignalsResult)
         assert len(signals.persons) == 1
 
-    @pytest.mark.asyncio
     async def test_signals_integration(self, orchestrator, mock_services):
         """Test signals service integration with normalization results"""
 
@@ -310,7 +302,6 @@ class TestUnifiedOrchestrator:
         if len(call_args[0]) > 0:
             assert isinstance(call_args[0][1], NormalizationResult)  # normalization result
 
-    @pytest.mark.asyncio
     async def test_trace_preservation(self, orchestrator, mock_services):
         """Test that token traces are preserved through the pipeline"""
 
@@ -323,7 +314,6 @@ class TestUnifiedOrchestrator:
         assert result.trace[1].token == "Петров"
         assert result.trace[1].role == "surname"
 
-    @pytest.mark.asyncio
     async def test_language_hint(self, orchestrator, mock_services):
         """Test language hint override"""
 
@@ -336,7 +326,6 @@ class TestUnifiedOrchestrator:
         call_args = mock_services["normalization_service"].normalize_async.call_args
         assert call_args[1]["language"] == "en"
 
-    @pytest.mark.asyncio
     async def test_result_serialization(self, orchestrator, mock_services):
         """Test that result can be serialized to dict"""
 
@@ -372,7 +361,7 @@ class TestUnifiedOrchestratorConstructor:
 
         # Mock smart filter service
         smart_filter_service = Mock()
-        smart_filter_service.should_process = AsyncMock(return_value=SmartFilterResult(
+        smart_filter_service.should_process_text_async = AsyncMock(return_value=SmartFilterResult(
             should_process=True,
             confidence=0.8,
             classification="recommend",
@@ -406,7 +395,7 @@ class TestUnifiedOrchestratorConstructor:
 
         # Mock signals service
         signals_service = Mock()
-        signals_service.extract_signals = AsyncMock(return_value=SignalsResult(
+        signals_service.extract_async = AsyncMock(return_value=SignalsResult(
             persons=[SignalsPerson(core=["Іван", "Петров"], full_name="Іван Петров")],
             confidence=0.85
         ))
@@ -524,7 +513,6 @@ class TestUnifiedOrchestratorConstructor:
 class TestUnifiedOrchestratorEdgeCases:
     """Test edge cases and error conditions"""
 
-    @pytest.mark.asyncio
     async def test_empty_input(self):
         """Test handling of empty input"""
 
@@ -549,7 +537,6 @@ class TestUnifiedOrchestratorEdgeCases:
         assert result.success is False
         assert result.normalized_text == ""
 
-    @pytest.mark.asyncio
     async def test_service_initialization_failure(self):
         """Test behavior when services have initialization issues"""
 

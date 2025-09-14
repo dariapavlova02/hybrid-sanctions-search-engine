@@ -34,8 +34,7 @@ class TestSmartFilterAdapter:
 
         return adapter, mock_service
 
-    @pytest.mark.asyncio
-    async def test_should_process_basic(self, adapter):
+    def test_should_process_basic(self, adapter):
         """Test basic should_process functionality"""
         adapter_instance, mock_service = adapter
 
@@ -63,7 +62,7 @@ class TestSmartFilterAdapter:
         mock_service.should_process_text = Mock(return_value=mock_filter_result)
 
         # Test processing
-        result = await adapter_instance.should_process("ТОВ Іван Петров")
+        result = adapter_instance.should_process("ТОВ Іван Петров")
 
         # Verify result structure
         assert isinstance(result, SmartFilterResult)
@@ -79,8 +78,7 @@ class TestSmartFilterAdapter:
         assert result.details["name_signals"]["has_capitals"] is True
         assert result.details["company_signals"]["has_legal_forms"] is True
 
-    @pytest.mark.asyncio
-    async def test_classification_mapping(self, adapter):
+    def test_classification_mapping(self, adapter):
         """Test confidence to classification mapping per CLAUDE.md"""
         adapter_instance, mock_service = adapter
 
@@ -103,13 +101,12 @@ class TestSmartFilterAdapter:
 
             mock_service.should_process_text = Mock(return_value=mock_result)
 
-            result = await adapter_instance.should_process("test text")
+            result = adapter_instance.should_process("test text")
 
             assert result.classification == expected_classification, \
                 f"Confidence {confidence} should map to {expected_classification}, got {result.classification}"
 
-    @pytest.mark.asyncio
-    async def test_name_signals_extraction(self, adapter):
+    def test_name_signals_extraction(self, adapter):
         """Test name signals extraction per CLAUDE.md specification"""
         adapter_instance, mock_service = adapter
 
@@ -132,7 +129,7 @@ class TestSmartFilterAdapter:
 
         mock_service.should_process_text = Mock(return_value=mock_result)
 
-        result = await adapter_instance.should_process("П.І. Коваленко")
+        result = adapter_instance.should_process("П.І. Коваленко")
 
         name_signals = result.details["name_signals"]
         assert name_signals["has_capitals"] is True
@@ -141,8 +138,7 @@ class TestSmartFilterAdapter:
         assert name_signals["has_nicknames"] is False
         assert name_signals["confidence"] == 0.85
 
-    @pytest.mark.asyncio
-    async def test_company_signals_extraction(self, adapter):
+    def test_company_signals_extraction(self, adapter):
         """Test company signals extraction per CLAUDE.md specification"""
         adapter_instance, mock_service = adapter
 
@@ -165,7 +161,7 @@ class TestSmartFilterAdapter:
 
         mock_service.should_process_text = Mock(return_value=mock_result)
 
-        result = await adapter_instance.should_process('ТОВ "Агросвіт"')
+        result = adapter_instance.should_process('ТОВ "Агросвіт"')
 
         company_signals = result.details["company_signals"]
         assert company_signals["has_legal_forms"] is True
@@ -174,8 +170,7 @@ class TestSmartFilterAdapter:
         assert company_signals["has_org_patterns"] is True
         assert company_signals["confidence"] == 0.9
 
-    @pytest.mark.asyncio
-    async def test_payment_signals_extraction(self, adapter):
+    def test_payment_signals_extraction(self, adapter):
         """Test payment context signals extraction per CLAUDE.md specification"""
         adapter_instance, mock_service = adapter
 
@@ -196,22 +191,21 @@ class TestSmartFilterAdapter:
 
         mock_service.should_process_text = Mock(return_value=mock_result)
 
-        result = await adapter_instance.should_process("Платеж в пользу Іван Петров")
+        result = adapter_instance.should_process("Платеж в пользу Іван Петров")
 
         payment_signals = result.details["payment_signals"]
         assert payment_signals["has_payment_keywords"] is True
         assert payment_signals["payment_triggers"] == ["платеж", "оплата"]
         assert payment_signals["confidence"] == 0.8
 
-    @pytest.mark.asyncio
-    async def test_error_handling_fallback(self, adapter):
+    def test_error_handling_fallback(self, adapter):
         """Test error handling with safe fallback"""
         adapter_instance, mock_service = adapter
 
         # Simulate service error
         mock_service.should_process_text = Mock(side_effect=Exception("Service error"))
 
-        result = await adapter_instance.should_process("test input")
+        result = adapter_instance.should_process("test input")
 
         # Should fallback to safe processing
         assert result.should_process is True  # Safe fallback
@@ -220,16 +214,14 @@ class TestSmartFilterAdapter:
         assert "fallback" in result.detected_signals
         assert "error" in result.details
 
-    @pytest.mark.asyncio
-    async def test_initialization_required(self):
+    def test_initialization_required(self):
         """Test that adapter requires initialization"""
         adapter = SmartFilterAdapter()
 
         with pytest.raises(RuntimeError, match="not initialized"):
-            await adapter.should_process("test")
+            adapter.should_process("test")
 
-    @pytest.mark.asyncio
-    async def test_signal_names_extraction(self, adapter):
+    def test_signal_names_extraction(self, adapter):
         """Test extraction of human-readable signal names"""
         adapter_instance, mock_service = adapter
 
@@ -248,14 +240,13 @@ class TestSmartFilterAdapter:
 
         mock_service.should_process_text = Mock(return_value=mock_result)
 
-        result = await adapter_instance.should_process("test")
+        result = adapter_instance.should_process("test")
 
         assert "name_pattern" in result.detected_signals
         assert "company_legal_form" in result.detected_signals
         assert "payment_context" in result.detected_signals
 
-    @pytest.mark.asyncio
-    async def test_processing_time_tracking(self, adapter):
+    def test_processing_time_tracking(self, adapter):
         """Test that processing time is tracked"""
         adapter_instance, mock_service = adapter
 
@@ -270,7 +261,7 @@ class TestSmartFilterAdapter:
 
         mock_service.should_process_text = Mock(return_value=mock_result)
 
-        result = await adapter_instance.should_process("test")
+        result = adapter_instance.should_process("test")
 
         assert result.processing_time >= 0
         assert isinstance(result.processing_time, float)
@@ -279,16 +270,15 @@ class TestSmartFilterAdapter:
 class TestSmartFilterAdapterIntegration:
     """Integration tests for SmartFilterAdapter with actual service"""
 
-    @pytest.mark.asyncio
-    async def test_full_initialization(self):
+    def test_full_initialization(self):
         """Test full adapter initialization"""
         adapter = SmartFilterAdapter()
 
         # Should initialize without errors
-        await adapter.initialize()
+        adapter.initialize()
 
         # Should be able to process
-        result = await adapter.should_process("ТОВ Тестова Компанія")
+        result = adapter.should_process("ТОВ Тестова Компанія")
 
         assert isinstance(result, SmartFilterResult)
         assert hasattr(result, 'should_process')
@@ -296,11 +286,10 @@ class TestSmartFilterAdapterIntegration:
         assert hasattr(result, 'classification')
         assert hasattr(result, 'detected_signals')
 
-    @pytest.mark.asyncio
-    async def test_claude_md_compliance(self):
+    def test_claude_md_compliance(self):
         """Test compliance with CLAUDE.md Layer 2 specification"""
         adapter = SmartFilterAdapter()
-        await adapter.initialize()
+        adapter.initialize()
 
         # Test various input types per CLAUDE.md
         test_cases = [
@@ -311,7 +300,7 @@ class TestSmartFilterAdapterIntegration:
         ]
 
         for text, expected_signal_types in test_cases:
-            result = await adapter.should_process(text)
+            result = adapter.should_process(text)
 
             # Verify basic structure
             assert isinstance(result, SmartFilterResult)

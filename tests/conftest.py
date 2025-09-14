@@ -182,9 +182,9 @@ def unicode_service():
 
 @pytest.fixture(scope="function")
 def pattern_service():
-    """Provides a clean instance of PatternService for each test"""
-    from src.ai_service.layers.signals.pattern_service import PatternService
-    return PatternService()
+    """Provides a clean instance of UnifiedPatternService for each test"""
+    from src.ai_service.layers.patterns.unified_pattern_service import UnifiedPatternService
+    return UnifiedPatternService()
 
 
 @pytest.fixture(scope="function")

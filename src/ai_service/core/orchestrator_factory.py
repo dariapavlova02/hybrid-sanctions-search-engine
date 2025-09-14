@@ -20,6 +20,7 @@ from ..layers.unicode.unicode_service import UnicodeService
 from ..layers.validation.validation_service import ValidationService
 from ..layers.variants.variant_generation_service import VariantGenerationService
 from ..utils import get_logger
+from .decision_engine import DecisionEngine
 from .unified_orchestrator import UnifiedOrchestrator
 
 logger = get_logger(__name__)
@@ -40,6 +41,7 @@ class OrchestratorFactory:
         enable_smart_filter: bool = True,
         enable_variants: bool = False,
         enable_embeddings: bool = False,
+        enable_decision_engine: bool = False,
         # Processing behavior
         allow_smart_filter_skip: bool = False,
         # Custom service implementations (for testing/customization)
@@ -51,6 +53,7 @@ class OrchestratorFactory:
         signals_service: Optional = None,
         variants_service: Optional = None,
         embeddings_service: Optional = None,
+        decision_engine: Optional = None,
     ) -> UnifiedOrchestrator:
         """
         Create a fully configured UnifiedOrchestrator.
@@ -59,6 +62,7 @@ class OrchestratorFactory:
             enable_smart_filter: Enable pre-processing filter
             enable_variants: Enable variant generation
             enable_embeddings: Enable embedding generation
+            enable_decision_engine: Enable automated match/no-match decisions
             allow_smart_filter_skip: Allow smart filter to skip expensive processing
             *_service: Custom service implementations (optional)
 
@@ -71,7 +75,7 @@ class OrchestratorFactory:
         logger.info(
             "Creating unified orchestrator with configuration: "
             f"smart_filter={enable_smart_filter}, variants={enable_variants}, "
-            f"embeddings={enable_embeddings}"
+            f"embeddings={enable_embeddings}, decision_engine={enable_decision_engine}"
         )
 
         try:
@@ -161,6 +165,16 @@ class OrchestratorFactory:
                     embeddings_service = None
                     enable_embeddings = False
 
+            # Decision engine - optional
+            if enable_decision_engine and decision_engine is None:
+                try:
+                    decision_engine = DecisionEngine()
+                    logger.info("Decision engine initialized")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize decision engine: {e}")
+                    decision_engine = None
+                    enable_decision_engine = False
+
             # ============================================================
             # Create orchestrator
             # ============================================================
@@ -176,10 +190,12 @@ class OrchestratorFactory:
                 smart_filter_service=smart_filter_service,
                 variants_service=variants_service,
                 embeddings_service=embeddings_service,
+                decision_engine=decision_engine,
                 # Configuration
                 enable_smart_filter=enable_smart_filter,
                 enable_variants=enable_variants,
                 enable_embeddings=enable_embeddings,
+                enable_decision_engine=enable_decision_engine,
                 allow_smart_filter_skip=allow_smart_filter_skip,
             )
 
@@ -224,5 +240,6 @@ class OrchestratorFactory:
             enable_smart_filter=True,
             enable_variants=True,
             enable_embeddings=True,
+            enable_decision_engine=True,    # Enable automated decision making
             allow_smart_filter_skip=True,  # Allow skipping obviously irrelevant texts
         )

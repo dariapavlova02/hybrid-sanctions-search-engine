@@ -7,6 +7,7 @@ from Ukrainian, Russian, and English texts. It is designed to be robust,
 traced, and avoid hardcoded rules for specific names.
 """
 
+import asyncio
 import logging
 import re
 import time
@@ -14,6 +15,47 @@ import unicodedata
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
+
+# Async-compatible cache for morphological analysis
+class AsyncMorphCache:
+    """Async-compatible cache for morphological analysis results"""
+    
+    def __init__(self, maxsize: int = 10000):
+        self._cache: Dict[Tuple[str, str], str] = {}
+        self._maxsize = maxsize
+        self._access_order: List[Tuple[str, str]] = []
+    
+    def get(self, token: str, language: str) -> Optional[str]:
+        """Get cached result"""
+        key = (token, language)
+        if key in self._cache:
+            # Move to end (most recently used)
+            self._access_order.remove(key)
+            self._access_order.append(key)
+            return self._cache[key]
+        return None
+    
+    def put(self, token: str, language: str, result: str) -> None:
+        """Put result in cache"""
+        key = (token, language)
+        
+        # Remove oldest if at capacity
+        if len(self._cache) >= self._maxsize and key not in self._cache:
+            oldest_key = self._access_order.pop(0)
+            del self._cache[oldest_key]
+        
+        self._cache[key] = result
+        if key in self._access_order:
+            self._access_order.remove(key)
+        self._access_order.append(key)
+    
+    def clear(self) -> None:
+        """Clear cache"""
+        self._cache.clear()
+        self._access_order.clear()
+
+# Global async cache instance
+_async_morph_cache = AsyncMorphCache(maxsize=10000)
 
 # Legal company forms that should be dropped (not treated as person names or org cores)
 ORG_LEGAL_FORMS = {
@@ -328,7 +370,7 @@ class NormalizationService:
         **kwargs,
     ) -> NormalizationResult:
         """
-        Async wrapper for normalize method with universal kwargs support
+        Async normalization using thread pool executor to avoid blocking event loop
 
         Args:
             text: Input text containing person names
@@ -341,7 +383,13 @@ class NormalizationService:
         Returns:
             NormalizationResult with normalized text and trace
         """
-        return await self.normalize(
+        import asyncio
+        
+        # Execute synchronous normalization in thread pool to avoid blocking event loop
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,  # Use default thread pool executor
+            self._normalize_sync,
             text, language, remove_stop_words, preserve_names, enable_advanced_features
         )
 
@@ -1528,37 +1576,51 @@ class NormalizationService:
         """Get morphological analyzer for language"""
         return self.morph_analyzers.get(language)
 
-    @lru_cache(maxsize=10000)
     @monitor_performance("morph_nominal")
     def _morph_nominal(self, token: str, primary_lang: str) -> str:
         """
         Get nominative form of a token using morphological analysis.
         Prioritizes Name/Surn parts of speech and nominative case.
+        Uses async-compatible cache for better performance.
         """
+        # Check cache first
+        cached_result = _async_morph_cache.get(token, primary_lang)
+        if cached_result is not None:
+            return cached_result
+        
         morph_analyzer = self._get_morph(primary_lang)
         if not morph_analyzer:
-            return token  # Preserve original case
+            result = token  # Preserve original case
+            _async_morph_cache.put(token, primary_lang, result)
+            return result
 
         # Special handling for Ukrainian surnames that get misanalyzed
         if primary_lang == "uk":
             result = self._ukrainian_surname_normalization(token)
             if result:
+                _async_morph_cache.put(token, primary_lang, result)
                 return result
 
         # Special handling for patronymics - don't normalize to masculine form
         if self._is_patronymic(token, primary_lang):
-            return token  # Keep original patronymic form
+            result = token  # Keep original patronymic form
+            _async_morph_cache.put(token, primary_lang, result)
+            return result
 
         # Special handling for surnames - preserve gender form
         if self._is_surname(token, primary_lang):
-            return token  # Keep original surname form
+            result = token  # Keep original surname form
+            _async_morph_cache.put(token, primary_lang, result)
+            return result
 
         try:
             if hasattr(morph_analyzer, "morph_analyzer"):
                 # Use pymorphy3 directly
                 parses = morph_analyzer.morph_analyzer.parse(token)
                 if not parses:
-                    return token  # Preserve original case
+                    result = token  # Preserve original case
+                    _async_morph_cache.put(token, primary_lang, result)
+                    return result
 
                 # Prefer Name/Surn parts of speech for proper nouns
                 name_parses = []
@@ -1613,6 +1675,7 @@ class NormalizationService:
                     else:
                         result = result[0].upper() + result[1:]
 
+                _async_morph_cache.put(token, primary_lang, result)
                 return result
 
             else:
@@ -1634,11 +1697,14 @@ class NormalizationService:
                         result = "-".join(capitalized_parts)
                     else:
                         result = result[0].upper() + result[1:]
+                _async_morph_cache.put(token, primary_lang, result)
                 return result
 
         except Exception as e:
             self.logger.warning(f"Morphological analysis failed for '{token}': {e}")
-            return self._normalize_characters(token)
+            result = self._normalize_characters(token)
+            _async_morph_cache.put(token, primary_lang, result)
+            return result
 
     def _is_surname(self, token: str, language: str) -> bool:
         """

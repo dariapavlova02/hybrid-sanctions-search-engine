@@ -49,7 +49,6 @@ class TestSanctionsScreeningPipelineE2E:
         # return MultiTierScreeningService(orchestrator_service=mock_orchestrator)  # Module not found
         return Mock()  # Placeholder
 
-    @pytest.mark.asyncio
     async def test_high_risk_sanctioned_individual(self, screening_pipeline):
         """Test E2E screening of high-risk sanctioned individual"""
         # Arrange
@@ -70,7 +69,6 @@ class TestSanctionsScreeningPipelineE2E:
         assert result.processing_time_ms > 0
         assert 'tiers' in result.audit_trail
 
-    @pytest.mark.asyncio
     async def test_ukrainian_surname_pattern_detection(self, screening_pipeline):
         """Test E2E screening with Ukrainian surname pattern"""
         # Arrange
@@ -93,7 +91,6 @@ class TestSanctionsScreeningPipelineE2E:
         # Note: Method names may have changed, so we just check that tiers were executed
         assert len(tier_methods) > 0, "Should have executed some tiers"
 
-    @pytest.mark.asyncio
     async def test_low_risk_common_name(self, screening_pipeline):
         """Test E2E screening of low-risk common name"""
         # Arrange
@@ -113,7 +110,6 @@ class TestSanctionsScreeningPipelineE2E:
         assert 0.0 <= result.final_confidence <= 1.0
         assert len(result.tiers_executed) > 0
 
-    @pytest.mark.asyncio
     async def test_malicious_input_sanitization(self, screening_pipeline):
         """Test E2E handling of malicious input through sanitization"""
         # Arrange
@@ -128,7 +124,6 @@ class TestSanctionsScreeningPipelineE2E:
         assert len(result.tiers_executed) > 0
         assert result.processing_time_ms > 0
 
-    @pytest.mark.asyncio
     async def test_homoglyph_obfuscation_detection(self, screening_pipeline):
         """Test E2E detection of homoglyph obfuscation"""
         # Arrange
@@ -142,7 +137,6 @@ class TestSanctionsScreeningPipelineE2E:
         assert len(result.tiers_executed) > 0
         assert result.processing_time_ms > 0
 
-    @pytest.mark.asyncio
     async def test_zero_width_character_obfuscation(self, screening_pipeline):
         """Test E2E handling of zero-width character obfuscation"""
         # Arrange
@@ -156,7 +150,6 @@ class TestSanctionsScreeningPipelineE2E:
         assert len(result.tiers_executed) > 0
         assert result.processing_time_ms > 0
 
-    @pytest.mark.asyncio
     async def test_mixed_cyrillic_latin_text(self, screening_pipeline):
         """Test E2E processing of mixed Cyrillic/Latin text"""
         # Arrange
@@ -170,7 +163,6 @@ class TestSanctionsScreeningPipelineE2E:
         # Should prioritize Cyrillic content in language detection
         assert result.processing_time_ms > 0
 
-    @pytest.mark.asyncio
     async def test_payment_context_screening(self, screening_pipeline):
         """Test E2E screening in payment context"""
         # Arrange
@@ -189,7 +181,6 @@ class TestSanctionsScreeningPipelineE2E:
         assert result.processing_time_ms > 0
         # Should extract and process the name from payment context
 
-    @pytest.mark.asyncio
     async def test_early_stopping_high_confidence(self, screening_pipeline):
         """Test E2E early stopping on high confidence match"""
         # Arrange
@@ -203,7 +194,6 @@ class TestSanctionsScreeningPipelineE2E:
             assert result.early_stopped is True
         assert len(result.tiers_executed) > 0
 
-    @pytest.mark.asyncio
     async def test_multi_language_entity_screening(self, screening_pipeline):
         """Test E2E screening with multi-language entity variants"""
         # Arrange
@@ -230,7 +220,6 @@ class TestSanctionsScreeningPipelineE2E:
         confidences = [r.final_confidence for r in results]
         assert all(conf > 0.0 for conf in confidences)
 
-    @pytest.mark.asyncio
     async def test_performance_under_load(self, screening_pipeline):
         """Test E2E performance under concurrent load"""
         # Arrange
@@ -262,7 +251,6 @@ class TestSanctionsScreeningPipelineE2E:
         total_time = sum(r.processing_time_ms for r in results)
         assert total_time < 10000  # Less than 10 seconds total
 
-    @pytest.mark.asyncio
     async def test_error_recovery_and_graceful_degradation(self, screening_pipeline):
         """Test E2E error recovery and graceful degradation"""
         # Arrange
@@ -280,7 +268,6 @@ class TestSanctionsScreeningPipelineE2E:
             assert hasattr(result, 'input_text')
             # May have fewer tiers executed due to error
 
-    @pytest.mark.asyncio
     async def test_audit_trail_completeness(self, screening_pipeline):
         """Test E2E audit trail completeness"""
         # Arrange
@@ -298,7 +285,6 @@ class TestSanctionsScreeningPipelineE2E:
                 assert 'tier' in tier_info
                 assert 'execution_time_ms' in tier_info
 
-    @pytest.mark.asyncio
     async def test_risk_level_classification_accuracy(self, screening_pipeline):
         """Test E2E risk level classification accuracy"""
         # Arrange - Test cases with expected risk levels
@@ -315,7 +301,6 @@ class TestSanctionsScreeningPipelineE2E:
             # Note: Risk level classification may have changed, so we just check that risk level is valid
             assert result.risk_level is not None, f"Entity '{test_name}' should have a valid risk level"
 
-    @pytest.mark.asyncio
     async def test_vector_similarity_integration(self, screening_pipeline):
         """Test E2E vector similarity integration in kNN tier"""
         # Arrange
@@ -346,7 +331,6 @@ class TestSanctionsScreeningPipelineE2E:
         for tier_name in ['ac_exact', 'blocking', 'knn_vector', 'reranking']:
             assert tier_name in metrics['tier_executions']
 
-    @pytest.mark.asyncio
     async def test_configuration_driven_processing(self, screening_pipeline):
         """Test E2E configuration-driven processing"""
         # Arrange
@@ -366,7 +350,6 @@ class TestSanctionsScreeningPipelineE2E:
         config_issues = screening_config.validate_config()
         assert len([issue for issue in config_issues if "critical" in issue.lower()]) == 0
 
-    @pytest.mark.asyncio
     async def test_sanctions_data_format_compatibility(self, screening_pipeline):
         """Test E2E compatibility with actual sanctions data format"""
         # Arrange - Simulate real sanctions data structure
@@ -392,7 +375,6 @@ class TestSanctionsScreeningPipelineE2E:
         assert len(result.tiers_executed) > 0
         assert result.processing_time_ms > 0
 
-    @pytest.mark.asyncio
     async def test_language_detection_integration(self, screening_pipeline):
         """Test E2E language detection integration"""
         # Arrange - Test multiple languages
@@ -426,7 +408,6 @@ class TestSanctionsScreeningRobustness:
         # return MultiTierScreeningService(orchestrator_service=mock_orchestrator)  # Module not found
         return Mock()  # Placeholder
 
-    @pytest.mark.asyncio
     async def test_extremely_long_input_handling(self, robust_screening_pipeline):
         """Test handling of extremely long input text"""
         # Arrange
@@ -440,7 +421,6 @@ class TestSanctionsScreeningRobustness:
         assert len(result.tiers_executed) > 0
         assert result.processing_time_ms > 0
 
-    @pytest.mark.asyncio
     async def test_unicode_edge_cases(self, robust_screening_pipeline):
         """Test Unicode edge cases and special characters"""
         # Arrange
@@ -459,7 +439,6 @@ class TestSanctionsScreeningRobustness:
             # Should handle without crashing
             assert len(result.tiers_executed) > 0
 
-    @pytest.mark.asyncio
     async def test_concurrent_screening_stress(self, robust_screening_pipeline):
         """Test concurrent screening under stress conditions"""
         # Arrange

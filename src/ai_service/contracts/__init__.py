@@ -23,6 +23,16 @@ from .base_contracts import (  # Core data structures; Service interfaces
     VariantsServiceInterface,
 )
 
+from .decision_contracts import (  # Decision engine contracts
+    ConfidenceLevel,
+    DecisionContext,
+    DecisionEngineInterface,
+    DecisionMetrics,
+    DecisionResult,
+    MatchDecision,
+    MatchEvidence,
+)
+
 __all__ = [
     # Data structures
     "TokenTrace",
@@ -34,6 +44,13 @@ __all__ = [
     "ProcessingContext",
     "UnifiedProcessingResult",
     "SmartFilterResult",
+    # Decision engine structures
+    "DecisionResult",
+    "MatchEvidence",
+    "DecisionContext",
+    "DecisionMetrics",
+    "MatchDecision",
+    "ConfidenceLevel",
     # Interfaces
     "ProcessingStage",
     "ValidationServiceInterface",
@@ -44,4 +61,5 @@ __all__ = [
     "SignalsServiceInterface",
     "VariantsServiceInterface",
     "EmbeddingsServiceInterface",
+    "DecisionEngineInterface",
 ]

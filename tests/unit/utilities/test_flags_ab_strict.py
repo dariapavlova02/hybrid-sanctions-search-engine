@@ -74,11 +74,10 @@ from ai_service.layers.normalization.normalization_service import NormalizationS
 from ai_service.data.dicts.stopwords import STOP_ALL
 
 
-@pytest.mark.asyncio
-async def test_enable_advanced_features_false_no_morph():
+def test_enable_advanced_features_false_no_morph():
     service = NormalizationService()
     text = "Сергея Петрова"
-    result = await service.normalize(
+    result = service.normalize(
         text,
         language="ru",
         enable_advanced_features=False,
@@ -91,11 +90,10 @@ async def test_enable_advanced_features_false_no_morph():
     assert "Сергей Петров" not in norm, f"Unexpected morphing to nominative: {norm}"
 
 
-@pytest.mark.asyncio
-async def test_preserve_names_false_splits_apostrophe():
+def test_preserve_names_false_splits_apostrophe():
     service = NormalizationService()
     text = "Переказ коштів на ім'я O'Brien Петро-Іванович Коваленко"
-    result = await service.normalize(
+    result = service.normalize(
         text,
         language="uk",
         preserve_names=False,
@@ -112,11 +110,10 @@ async def test_preserve_names_false_splits_apostrophe():
     assert any("brien" == t or "бриен" == t for t in tokens), f"Expected token 'Brien' present: {result.tokens}"
 
 
-@pytest.mark.asyncio
-async def test_remove_stop_words_false_keeps_stopwords():
+def test_remove_stop_words_false_keeps_stopwords():
     service = NormalizationService()
     text = "Переказ коштів від імені Петро Іванович Коваленко"
-    result = await service.normalize(
+    result = service.normalize(
         text,
         language="uk",
         remove_stop_words=False,

@@ -2,6 +2,7 @@
 Service for obtaining sentence embeddings
 """
 
+import asyncio
 import logging
 import time
 from datetime import datetime
@@ -473,3 +474,113 @@ class EmbeddingService:
         """Clear model cache"""
         self.model_cache.clear()
         self.logger.info("Model cache cleared")
+
+    # ==================== ASYNC METHODS ====================
+
+    async def get_embeddings_async(
+        self,
+        texts: Union[str, List[str]],
+        model_name: Optional[str] = None,
+        normalize: bool = True,
+        batch_size: int = 32,
+    ) -> Dict[str, Any]:
+        """
+        Async version of get_embeddings using thread pool executor
+        
+        Args:
+            texts: Text or list of texts
+            model_name: Model name
+            normalize: Normalize embeddings (L2)
+            batch_size: Batch size
+
+        Returns:
+            Dict with embeddings and metadata
+        """
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,  # Use default thread pool executor
+            self.get_embeddings,
+            texts, model_name, normalize, batch_size
+        )
+
+    async def calculate_similarity_async(
+        self,
+        text1: str,
+        text2: str,
+        model_name: Optional[str] = None,
+        metric: str = "cosine",
+    ) -> Dict[str, Any]:
+        """
+        Async version of calculate_similarity using thread pool executor
+        
+        Args:
+            text1: First text
+            text2: Second text
+            model_name: Model name
+            metric: Similarity metric
+
+        Returns:
+            Dict with similarity score and metadata
+        """
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,  # Use default thread pool executor
+            self.calculate_similarity,
+            text1, text2, model_name, metric
+        )
+
+    async def find_most_similar_async(
+        self,
+        query_text: str,
+        candidate_texts: List[str],
+        model_name: Optional[str] = None,
+        top_k: int = 5,
+        metric: str = "cosine",
+    ) -> Dict[str, Any]:
+        """
+        Async version of find_similar_texts using thread pool executor
+        
+        Args:
+            query_text: Query text
+            candidate_texts: List of candidate texts
+            model_name: Model name
+            top_k: Number of top results
+            metric: Similarity metric
+
+        Returns:
+            Dict with most similar texts and scores
+        """
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,  # Use default thread pool executor
+            self.find_similar_texts,
+            query_text, candidate_texts, model_name, top_k, metric
+        )
+
+    async def batch_similarity_async(
+        self,
+        query_texts: List[str],
+        candidate_texts: List[str],
+        model_name: Optional[str] = None,
+        metric: str = "cosine",
+        batch_size: int = 32,
+    ) -> Dict[str, Any]:
+        """
+        Async version of calculate_batch_similarity using thread pool executor
+        
+        Args:
+            query_texts: List of query texts
+            candidate_texts: List of candidate texts
+            model_name: Model name
+            metric: Similarity metric
+            batch_size: Batch size
+
+        Returns:
+            Dict with similarity matrix and metadata
+        """
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,  # Use default thread pool executor
+            self.calculate_batch_similarity,
+            query_texts, candidate_texts, model_name, metric, batch_size
+        )
