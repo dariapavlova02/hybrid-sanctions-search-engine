@@ -24,13 +24,12 @@ from .base_contracts import (  # Core data structures; Service interfaces
 )
 
 from .decision_contracts import (  # Decision engine contracts
-    ConfidenceLevel,
-    DecisionContext,
-    DecisionEngineInterface,
-    DecisionMetrics,
-    DecisionResult,
-    MatchDecision,
-    MatchEvidence,
+    DecisionInput,
+    DecisionOutput,
+    RiskLevel,
+    SmartFilterInfo,
+    SignalsInfo,
+    SimilarityInfo,
 )
 
 __all__ = [
@@ -45,12 +44,12 @@ __all__ = [
     "UnifiedProcessingResult",
     "SmartFilterResult",
     # Decision engine structures
-    "DecisionResult",
-    "MatchEvidence",
-    "DecisionContext",
-    "DecisionMetrics",
-    "MatchDecision",
-    "ConfidenceLevel",
+    "DecisionInput",
+    "DecisionOutput",
+    "RiskLevel",
+    "SmartFilterInfo",
+    "SignalsInfo",
+    "SimilarityInfo",
     # Interfaces
     "ProcessingStage",
     "ValidationServiceInterface",
@@ -61,5 +60,4 @@ __all__ = [
     "SignalsServiceInterface",
     "VariantsServiceInterface",
     "EmbeddingsServiceInterface",
-    "DecisionEngineInterface",
 ]
