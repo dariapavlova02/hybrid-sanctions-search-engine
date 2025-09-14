@@ -6,11 +6,11 @@ implements the exact specification from CLAUDE.md.
 """
 
 import time
-from typing import Dict, Any
+from typing import Any, Dict
 
 from ...contracts.base_contracts import SmartFilterInterface, SmartFilterResult
 from ...utils import get_logger
-from .smart_filter_service import SmartFilterService, FilterResult
+from .smart_filter_service import FilterResult, SmartFilterService
 
 logger = get_logger(__name__)
 
@@ -40,7 +40,7 @@ class SmartFilterAdapter(SmartFilterInterface):
                 language_service=None,  # Will use fallback detection
                 signal_service=None,
                 enable_terrorism_detection=True,
-                enable_aho_corasick=False
+                enable_aho_corasick=False,
             )
             logger.info("SmartFilterAdapter initialized successfully")
         except Exception as e:
@@ -74,12 +74,13 @@ class SmartFilterAdapter(SmartFilterInterface):
 
             # Map existing result to new contract
             classification = self._map_to_classification(
-                filter_result.confidence,
-                filter_result.should_process
+                filter_result.confidence, filter_result.should_process
             )
 
             # Extract detected signals for transparency
-            detected_signals = self._extract_signal_names(filter_result.detected_signals)
+            detected_signals = self._extract_signal_names(
+                filter_result.detected_signals
+            )
 
             processing_time = time.time() - start_time
 
@@ -92,15 +93,23 @@ class SmartFilterAdapter(SmartFilterInterface):
                     "signal_details": filter_result.signal_details,
                     "processing_recommendation": filter_result.processing_recommendation,
                     "estimated_complexity": filter_result.estimated_complexity,
-                    "name_signals": self._extract_name_signals(filter_result.signal_details),
-                    "company_signals": self._extract_company_signals(filter_result.signal_details),
-                    "payment_signals": self._extract_payment_signals(filter_result.signal_details)
+                    "name_signals": self._extract_name_signals(
+                        filter_result.signal_details
+                    ),
+                    "company_signals": self._extract_company_signals(
+                        filter_result.signal_details
+                    ),
+                    "payment_signals": self._extract_payment_signals(
+                        filter_result.signal_details
+                    ),
                 },
-                processing_time=processing_time
+                processing_time=processing_time,
             )
 
         except Exception as e:
-            logger.error(f"SmartFilter processing failed for text: {text[:50]}... Error: {e}")
+            logger.error(
+                f"SmartFilter processing failed for text: {text[:50]}... Error: {e}"
+            )
             # Safe fallback: recommend processing
             return SmartFilterResult(
                 should_process=True,
@@ -108,7 +117,7 @@ class SmartFilterAdapter(SmartFilterInterface):
                 classification="recommend",
                 detected_signals=["fallback"],
                 details={"error": str(e)},
-                processing_time=time.time() - start_time
+                processing_time=time.time() - start_time,
             )
 
     def _map_to_classification(self, confidence: float, should_process: bool) -> str:
@@ -146,13 +155,17 @@ class SmartFilterAdapter(SmartFilterInterface):
 
         if "name_detector" in signal_details:
             details = signal_details["name_detector"]
-            name_signals.update({
-                "has_capitals": details.get("has_proper_names", False),
-                "has_initials": details.get("has_initials", False),
-                "has_patronymic_endings": details.get("has_patronymic_patterns", False),
-                "has_nicknames": details.get("has_diminutives", False),
-                "confidence": details.get("confidence", 0.0)
-            })
+            name_signals.update(
+                {
+                    "has_capitals": details.get("has_proper_names", False),
+                    "has_initials": details.get("has_initials", False),
+                    "has_patronymic_endings": details.get(
+                        "has_patronymic_patterns", False
+                    ),
+                    "has_nicknames": details.get("has_diminutives", False),
+                    "confidence": details.get("confidence", 0.0),
+                }
+            )
 
         return name_signals
 
@@ -162,13 +175,15 @@ class SmartFilterAdapter(SmartFilterInterface):
 
         if "company_detector" in signal_details:
             details = signal_details["company_detector"]
-            company_signals.update({
-                "has_legal_forms": details.get("has_legal_forms", False),
-                "has_banking_triggers": details.get("has_banking_keywords", False),
-                "has_quoted_cores": details.get("has_quoted_names", False),
-                "has_org_patterns": details.get("has_organization_patterns", False),
-                "confidence": details.get("confidence", 0.0)
-            })
+            company_signals.update(
+                {
+                    "has_legal_forms": details.get("has_legal_forms", False),
+                    "has_banking_triggers": details.get("has_banking_keywords", False),
+                    "has_quoted_cores": details.get("has_quoted_names", False),
+                    "has_org_patterns": details.get("has_organization_patterns", False),
+                    "confidence": details.get("confidence", 0.0),
+                }
+            )
 
         return company_signals
 
@@ -180,11 +195,13 @@ class SmartFilterAdapter(SmartFilterInterface):
         for detector_key, details in signal_details.items():
             if isinstance(details, dict):
                 if details.get("has_payment_context", False):
-                    payment_signals.update({
-                        "has_payment_keywords": True,
-                        "payment_triggers": details.get("payment_keywords", []),
-                        "confidence": details.get("payment_confidence", 0.0)
-                    })
+                    payment_signals.update(
+                        {
+                            "has_payment_keywords": True,
+                            "payment_triggers": details.get("payment_keywords", []),
+                            "confidence": details.get("payment_confidence", 0.0),
+                        }
+                    )
                     break
 
         return payment_signals if payment_signals else {"has_payment_keywords": False}

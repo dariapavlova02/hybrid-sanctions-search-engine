@@ -1,14 +1,17 @@
 """
 Tracing utilities for normalization pipeline
 """
-from pydantic import BaseModel
-from typing import List, Optional, Any, Dict
-from datetime import datetime
+
 import json
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel
 
 
 class TokenTrace(BaseModel):
     """Trace for a single token's normalization"""
+
     token: str
     role: str
     rule: str
@@ -21,8 +24,9 @@ class TokenTrace(BaseModel):
 
 class NormalizationResult(BaseModel):
     """Result of text normalization with full traceability"""
+
     model_config = {"extra": "allow"}
-    
+
     normalized: str
     tokens: List[str]
     trace: List[TokenTrace]
@@ -46,19 +50,19 @@ class NormalizationResult(BaseModel):
         return self.model_dump_json()
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'NormalizationResult':
+    def from_dict(cls, data: Dict[str, Any]) -> "NormalizationResult":
         """Create from dictionary"""
         return cls(**data)
 
     @classmethod
-    def from_json(cls, json_str: str) -> 'NormalizationResult':
+    def from_json(cls, json_str: str) -> "NormalizationResult":
         """Create from JSON string"""
         return cls.model_validate_json(json_str)
 
 
 class TraceCollector:
     """Collects and manages normalization traces"""
-    
+
     def __init__(self):
         self.traces: List[TokenTrace] = []
         self.errors: List[str] = []
@@ -82,7 +86,7 @@ class TraceCollector:
         morph_lang: Optional[str] = None,
         normal_form: Optional[str] = None,
         fallback: bool = False,
-        notes: Optional[str] = None
+        notes: Optional[str] = None,
     ) -> None:
         """Add a token trace to the collection"""
         trace = TokenTrace(
@@ -93,7 +97,7 @@ class TraceCollector:
             normal_form=normal_form,
             output=output,
             fallback=fallback,
-            notes=notes
+            notes=notes,
         )
         self.traces.append(trace)
 
@@ -113,7 +117,7 @@ class TraceCollector:
         tokens: List[str],
         language: Optional[str] = None,
         confidence: Optional[float] = None,
-        original_length: Optional[int] = None
+        original_length: Optional[int] = None,
     ) -> NormalizationResult:
         """Create a NormalizationResult from collected traces"""
         return NormalizationResult(
@@ -127,7 +131,7 @@ class TraceCollector:
             normalized_length=len(normalized),
             token_count=len(tokens),
             processing_time=self.get_processing_time(),
-            success=len(self.errors) == 0
+            success=len(self.errors) == 0,
         )
 
     def reset(self) -> None:

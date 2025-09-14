@@ -64,7 +64,7 @@ class ValidationService(ValidationServiceInterface):
                 "warnings": result.warnings,
                 "blocked_patterns": result.blocked_patterns,
                 "risk_level": result.risk_level,
-                "is_valid": result.is_valid
+                "is_valid": result.is_valid,
             }
 
         except Exception as e:
@@ -78,5 +78,5 @@ class ValidationService(ValidationServiceInterface):
                 "warnings": [f"Validation error: {str(e)}"],
                 "blocked_patterns": [],
                 "risk_level": "unknown",
-                "is_valid": len(sanitized) > 0
+                "is_valid": len(sanitized) > 0,
             }

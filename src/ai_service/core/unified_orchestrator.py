@@ -22,21 +22,21 @@ from typing import Any, Dict, List, Optional
 
 from ..config import SERVICE_CONFIG
 from ..contracts.base_contracts import (
+    EmbeddingsServiceInterface,
+    LanguageDetectionInterface,
+    NormalizationResult,
+    NormalizationServiceInterface,
     ProcessingContext,
     ProcessingStage,
     SignalsResult,
-    UnifiedProcessingResult,
-    NormalizationResult,
-    ValidationServiceInterface,
-    SmartFilterInterface,
-    LanguageDetectionInterface,
-    UnicodeServiceInterface,
-    NormalizationServiceInterface,
     SignalsServiceInterface,
+    SmartFilterInterface,
+    UnicodeServiceInterface,
+    UnifiedProcessingResult,
+    ValidationServiceInterface,
     VariantsServiceInterface,
-    EmbeddingsServiceInterface,
 )
-from ..exceptions import ServiceInitializationError, InternalServerError
+from ..exceptions import InternalServerError, ServiceInitializationError
 from ..utils import get_logger
 
 logger = get_logger(__name__)
@@ -58,12 +58,10 @@ class UnifiedOrchestrator:
         unicode_service: UnicodeServiceInterface,
         normalization_service: NormalizationServiceInterface,
         signals_service: SignalsServiceInterface,
-
         # Optional services
         smart_filter_service: Optional[SmartFilterInterface] = None,
         variants_service: Optional[VariantsServiceInterface] = None,
         embeddings_service: Optional[EmbeddingsServiceInterface] = None,
-
         # Configuration
         enable_smart_filter: bool = True,
         enable_variants: bool = False,
@@ -92,15 +90,19 @@ class UnifiedOrchestrator:
         self.embeddings_service = embeddings_service
 
         # Configuration flags
-        self.enable_smart_filter = enable_smart_filter and smart_filter_service is not None
+        self.enable_smart_filter = (
+            enable_smart_filter and smart_filter_service is not None
+        )
         self.enable_variants = enable_variants and variants_service is not None
         self.enable_embeddings = enable_embeddings and embeddings_service is not None
         self.allow_smart_filter_skip = allow_smart_filter_skip
 
-        logger.info(f"UnifiedOrchestrator initialized with stages: "
-                   f"validation=True, smart_filter={self.enable_smart_filter}, "
-                   f"language=True, unicode=True, normalization=True, signals=True, "
-                   f"variants={self.enable_variants}, embeddings={self.enable_embeddings}")
+        logger.info(
+            f"UnifiedOrchestrator initialized with stages: "
+            f"validation=True, smart_filter={self.enable_smart_filter}, "
+            f"language=True, unicode=True, normalization=True, signals=True, "
+            f"variants={self.enable_variants}, embeddings={self.enable_embeddings}"
+        )
 
     async def process(
         self,
@@ -139,34 +141,44 @@ class UnifiedOrchestrator:
             # Layer 1: Validation & Sanitization
             # ================================================================
             logger.debug("Stage 1: Validation & Sanitization")
-            validation_result = await self.validation_service.validate_and_sanitize(text)
+            validation_result = await self.validation_service.validate_and_sanitize(
+                text
+            )
             context.sanitized_text = validation_result.get("sanitized_text", text)
             if not validation_result.get("should_process", True):
-                return self._create_early_response(context, "Input validation failed", start_time)
+                return self._create_early_response(
+                    context, "Input validation failed", start_time
+                )
 
             # ================================================================
             # Layer 2: Smart Filter (optional skip)
             # ================================================================
             if self.enable_smart_filter:
                 logger.debug("Stage 2: Smart Filter")
-                filter_result = await self.smart_filter_service.should_process(context.sanitized_text)
+                filter_result = await self.smart_filter_service.should_process(
+                    context.sanitized_text
+                )
                 context.should_process = filter_result.should_process
                 context.metadata["smart_filter"] = {
                     "should_process": filter_result.should_process,
                     "confidence": filter_result.confidence,
                     "classification": filter_result.classification,
                     "detected_signals": filter_result.detected_signals,
-                    "details": filter_result.details
+                    "details": filter_result.details,
                 }
 
                 if not context.should_process and self.allow_smart_filter_skip:
-                    return self._create_filtered_response(context, filter_result, start_time)
+                    return self._create_filtered_response(
+                        context, filter_result, start_time
+                    )
 
             # ================================================================
             # Layer 3: Language Detection
             # ================================================================
             logger.debug("Stage 3: Language Detection")
-            lang_result = await self.language_service.detect_language(context.sanitized_text)
+            lang_result = await self.language_service.detect_language(
+                context.sanitized_text
+            )
             context.language = language_hint or lang_result.get("language", "en")
             context.language_confidence = lang_result.get("confidence", 0.0)
 
@@ -174,7 +186,9 @@ class UnifiedOrchestrator:
             # Layer 4: Unicode Normalization
             # ================================================================
             logger.debug("Stage 4: Unicode Normalization")
-            unicode_normalized = await self.unicode_service.normalize_unicode(context.sanitized_text)
+            unicode_normalized = await self.unicode_service.normalize_unicode(
+                context.sanitized_text
+            )
 
             # ================================================================
             # Layer 5: Name Normalization (morph) - THE CORE
@@ -185,7 +199,7 @@ class UnifiedOrchestrator:
                 language=context.language,
                 remove_stop_words=remove_stop_words,
                 preserve_names=preserve_names,
-                enable_advanced_features=enable_advanced_features
+                enable_advanced_features=enable_advanced_features,
             )
 
             if not norm_result.success:
@@ -196,15 +210,16 @@ class UnifiedOrchestrator:
             # ================================================================
             logger.debug("Stage 6: Signals Extraction")
             signals_result = await self.signals_service.extract_signals(
-                original_text=context.original_text,
-                normalization_result=norm_result
+                original_text=context.original_text, normalization_result=norm_result
             )
 
             # ================================================================
             # Layer 7: Variants (optional)
             # ================================================================
             variants = None
-            if (generate_variants is True) or (generate_variants is None and self.enable_variants):
+            if (generate_variants is True) or (
+                generate_variants is None and self.enable_variants
+            ):
                 logger.debug("Stage 7: Variant Generation")
                 try:
                     variants = await self.variants_service.generate_variants(
@@ -218,10 +233,14 @@ class UnifiedOrchestrator:
             # Layer 8: Embeddings (optional)
             # ================================================================
             embeddings = None
-            if (generate_embeddings is True) or (generate_embeddings is None and self.enable_embeddings):
+            if (generate_embeddings is True) or (
+                generate_embeddings is None and self.enable_embeddings
+            ):
                 logger.debug("Stage 8: Embedding Generation")
                 try:
-                    embeddings = await self.embeddings_service.generate_embeddings(norm_result.normalized)
+                    embeddings = await self.embeddings_service.generate_embeddings(
+                        norm_result.normalized
+                    )
                 except Exception as e:
                     logger.warning(f"Embedding generation failed: {e}")
                     errors.append(f"Embeddings: {str(e)}")
@@ -233,7 +252,9 @@ class UnifiedOrchestrator:
 
             # Warn if processing is slow
             if processing_time > 0.1:  # 100ms threshold per CLAUDE.md
-                logger.warning(f"Slow processing: {processing_time:.3f}s for text: {text[:50]}...")
+                logger.warning(
+                    f"Slow processing: {processing_time:.3f}s for text: {text[:50]}..."
+                )
 
             return UnifiedProcessingResult(
                 original_text=context.original_text,
@@ -247,7 +268,7 @@ class UnifiedOrchestrator:
                 embeddings=embeddings,
                 processing_time=processing_time,
                 success=len(errors) == 0,
-                errors=errors
+                errors=errors,
             )
 
         except Exception as e:
@@ -264,14 +285,11 @@ class UnifiedOrchestrator:
                 signals=SignalsResult(),
                 processing_time=processing_time,
                 success=False,
-                errors=[str(e)]
+                errors=[str(e)],
             )
 
     def _create_early_response(
-        self,
-        context: ProcessingContext,
-        reason: str,
-        start_time: float
+        self, context: ProcessingContext, reason: str, start_time: float
     ) -> UnifiedProcessingResult:
         """Create response for early termination"""
         return UnifiedProcessingResult(
@@ -284,14 +302,14 @@ class UnifiedOrchestrator:
             signals=SignalsResult(),
             processing_time=time.time() - start_time,
             success=False,
-            errors=[reason]
+            errors=[reason],
         )
 
     def _create_filtered_response(
         self,
         context: ProcessingContext,
         filter_result,  # SmartFilterResult object
-        start_time: float
+        start_time: float,
     ) -> UnifiedProcessingResult:
         """Create response when smart filter suggests skipping"""
         return UnifiedProcessingResult(
@@ -304,16 +322,12 @@ class UnifiedOrchestrator:
             signals=SignalsResult(confidence=filter_result.confidence),
             processing_time=time.time() - start_time,
             success=True,
-            errors=[]
+            errors=[],
         )
 
     # Convenience methods for backward compatibility
 
-    async def normalize_async(
-        self,
-        text: str,
-        **kwargs
-    ) -> NormalizationResult:
+    async def normalize_async(self, text: str, **kwargs) -> NormalizationResult:
         """
         Backward compatibility: direct normalization.
         For new code, use process() instead.
@@ -321,8 +335,17 @@ class UnifiedOrchestrator:
         logger.warning("normalize_async is deprecated. Use process() instead.")
 
         # Extract normalization-specific flags
-        norm_flags = {k: v for k, v in kwargs.items()
-                     if k in ['language', 'remove_stop_words', 'preserve_names', 'enable_advanced_features']}
+        norm_flags = {
+            k: v
+            for k, v in kwargs.items()
+            if k
+            in [
+                "language",
+                "remove_stop_words",
+                "preserve_names",
+                "enable_advanced_features",
+            ]
+        }
 
         # Run minimal pipeline: validation -> unicode -> normalization
         validation_result = await self.validation_service.validate_and_sanitize(text)
@@ -330,13 +353,15 @@ class UnifiedOrchestrator:
 
         unicode_normalized = await self.unicode_service.normalize_unicode(sanitized)
 
-        return await self.normalization_service.normalize_async(unicode_normalized, **norm_flags)
+        return await self.normalization_service.normalize_async(
+            unicode_normalized, **norm_flags
+        )
 
     async def extract_signals(
-        self,
-        original_text: str,
-        normalization_result: NormalizationResult
+        self, original_text: str, normalization_result: NormalizationResult
     ) -> SignalsResult:
         """Backward compatibility: direct signals extraction"""
         logger.warning("extract_signals is deprecated. Use process() instead.")
-        return await self.signals_service.extract_signals(original_text, normalization_result)
+        return await self.signals_service.extract_signals(
+            original_text, normalization_result
+        )

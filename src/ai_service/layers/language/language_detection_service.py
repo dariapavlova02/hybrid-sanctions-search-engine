@@ -3,11 +3,11 @@ Language detection service with fallback mechanisms
 """
 
 import logging
+import os
 import re
 import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
-import os
 
 try:
     from langdetect import LangDetectException, detect
@@ -19,6 +19,7 @@ from ...config import SERVICE_CONFIG
 from ...exceptions import LanguageDetectionError
 from ...utils.logging_config import get_logger
 
+
 # Import name dictionaries for verification
 class LanguageDetectionService:
     """Service for language detection with focus on speed and accuracy"""
@@ -27,10 +28,9 @@ class LanguageDetectionService:
         """Initialize language detection service"""
         self.logger = get_logger(__name__)
         # Controls: make Cyrillic heuristics override more aggressively if enabled
-        self.aggressive_cyr_override = (
-            os.getenv("AI_SERVICE_AGGRESSIVE_CYR_FALLBACK", "true").lower()
-            in ("1", "true", "yes", "on")
-        )
+        self.aggressive_cyr_override = os.getenv(
+            "AI_SERVICE_AGGRESSIVE_CYR_FALLBACK", "true"
+        ).lower() in ("1", "true", "yes", "on")
 
         # Supported languages
         self.supported_languages = {"en": "English", "ru": "Russian", "uk": "Ukrainian"}

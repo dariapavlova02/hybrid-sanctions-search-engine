@@ -26,6 +26,8 @@ dependencies = [
     "requests>=2.31.0",
     "pymorphy3-dicts-uk>=2.4.1.1.1663094765",
     "pyyaml>=6.0.2",
+    "isort (>=6.0.1,<7.0.0)",
+    "black (>=25.1.0,<26.0.0)",
 ]
 
 [project.optional-dependencies]

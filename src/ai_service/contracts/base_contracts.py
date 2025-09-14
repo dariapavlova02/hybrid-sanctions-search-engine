@@ -3,20 +3,22 @@ Base contracts and interfaces for the unified AI service architecture.
 Implements the layered processing model as specified in CLAUDE.md.
 """
 
+import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from pydantic import BaseModel
 from typing import Any, Dict, List, Optional, Union
-import json
 
+from pydantic import BaseModel
 
 # ============================================================================
 # Core Processing Contracts
 # ============================================================================
 
+
 class TokenTrace(BaseModel):
     """Trace for a single token's normalization process"""
+
     token: str
     role: str  # initial | patronymic | given | surname | unknown
     rule: str
@@ -29,6 +31,7 @@ class TokenTrace(BaseModel):
 
 class NormalizationResult(BaseModel):
     """Contract for normalization service output"""
+
     model_config = {"extra": "allow"}
 
     # Core output
@@ -62,10 +65,13 @@ class NormalizationResult(BaseModel):
 @dataclass
 class SignalsPerson:
     """Person entity from signals extraction"""
+
     core: List[str]  # from normalization [given, surname, patronymic]
-    full_name: str   # reconstructed full name
+    full_name: str  # reconstructed full name
     dob: Optional[str] = None  # ISO date YYYY-MM-DD
-    ids: List[Dict[str, str]] = field(default_factory=list)  # [{type: "inn", value: "123", valid: true}]
+    ids: List[Dict[str, str]] = field(
+        default_factory=list
+    )  # [{type: "inn", value: "123", valid: true}]
     confidence: float = 0.0
     evidence: List[str] = field(default_factory=list)  # reasoning steps
 
@@ -73,9 +79,10 @@ class SignalsPerson:
 @dataclass
 class SignalsOrganization:
     """Organization entity from signals extraction"""
-    core: str           # core name from normalization
+
+    core: str  # core name from normalization
     legal_form: Optional[str] = None  # ООО, ТОВ, LLC, etc.
-    full_name: str = ""   # legal_form + core (properly formatted)
+    full_name: str = ""  # legal_form + core (properly formatted)
     ids: List[Dict[str, str]] = field(default_factory=list)
     confidence: float = 0.0
     evidence: List[str] = field(default_factory=list)
@@ -84,13 +91,17 @@ class SignalsOrganization:
 @dataclass
 class SignalsExtras:
     """Additional signals not tied to persons/orgs"""
-    dates: List[Dict[str, Any]] = field(default_factory=list)  # [{value, precision, context}]
+
+    dates: List[Dict[str, Any]] = field(
+        default_factory=list
+    )  # [{value, precision, context}]
     amounts: List[Dict[str, Any]] = field(default_factory=list)  # [{value, currency}]
 
 
 @dataclass
 class SignalsResult:
     """Contract for signals service output"""
+
     persons: List[SignalsPerson] = field(default_factory=list)
     organizations: List[SignalsOrganization] = field(default_factory=list)
     extras: SignalsExtras = field(default_factory=SignalsExtras)
@@ -100,6 +111,7 @@ class SignalsResult:
 @dataclass
 class ProcessingContext:
     """Context passed through processing pipeline"""
+
     original_text: str
     sanitized_text: Optional[str] = None
     language: Optional[str] = None
@@ -112,6 +124,7 @@ class ProcessingContext:
 @dataclass
 class UnifiedProcessingResult:
     """Final unified result matching the layer specification"""
+
     # Input
     original_text: str
 
@@ -144,7 +157,10 @@ class UnifiedProcessingResult:
             "language_confidence": self.language_confidence,
             "normalized_text": self.normalized_text,
             "tokens": self.tokens,
-            "trace": [trace.model_dump() if hasattr(trace, 'model_dump') else trace.__dict__ for trace in self.trace],
+            "trace": [
+                trace.model_dump() if hasattr(trace, "model_dump") else trace.__dict__
+                for trace in self.trace
+            ],
             "signals": {
                 "persons": [
                     {
@@ -153,8 +169,9 @@ class UnifiedProcessingResult:
                         "dob": p.dob,
                         "ids": p.ids,
                         "confidence": p.confidence,
-                        "evidence": p.evidence
-                    } for p in self.signals.persons
+                        "evidence": p.evidence,
+                    }
+                    for p in self.signals.persons
                 ],
                 "organizations": [
                     {
@@ -163,18 +180,19 @@ class UnifiedProcessingResult:
                         "full_name": o.full_name,
                         "ids": o.ids,
                         "confidence": o.confidence,
-                        "evidence": o.evidence
-                    } for o in self.signals.organizations
+                        "evidence": o.evidence,
+                    }
+                    for o in self.signals.organizations
                 ],
                 "numbers": {},  # Legacy compatibility
                 "dates": self.signals.extras.dates,
-                "confidence": self.signals.confidence
+                "confidence": self.signals.confidence,
             },
             "variants": self.variants,
             "embeddings": self.embeddings,
             "processing_time": self.processing_time,
             "success": self.success,
-            "errors": self.errors
+            "errors": self.errors,
         }
         return result
 
@@ -182,6 +200,7 @@ class UnifiedProcessingResult:
 # ============================================================================
 # Service Interfaces
 # ============================================================================
+
 
 class ProcessingStage(ABC):
     """Base interface for all processing stages"""
@@ -209,6 +228,7 @@ class ValidationServiceInterface(ABC):
 @dataclass
 class SmartFilterResult:
     """Smart filter result with detailed classification"""
+
     should_process: bool
     confidence: float
     classification: str  # must_process | recommend | maybe | skip
@@ -273,7 +293,7 @@ class NormalizationServiceInterface(ABC):
         language: Optional[str] = None,
         remove_stop_words: bool = True,
         preserve_names: bool = True,
-        enable_advanced_features: bool = True
+        enable_advanced_features: bool = True,
     ) -> NormalizationResult:
         """Normalize names with full traceability"""
         pass
@@ -284,9 +304,7 @@ class SignalsServiceInterface(ABC):
 
     @abstractmethod
     async def extract_signals(
-        self,
-        original_text: str,
-        normalization_result: NormalizationResult
+        self, original_text: str, normalization_result: NormalizationResult
     ) -> SignalsResult:
         """Extract structured signals from text + normalization trace"""
         pass

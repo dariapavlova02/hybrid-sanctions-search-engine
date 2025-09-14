@@ -18,32 +18,38 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from ...utils.logging_config import get_logger
-from .extractors import PersonExtractor, OrganizationExtractor, IdentifierExtractor, BirthdateExtractor
+from .extractors import (
+    BirthdateExtractor,
+    IdentifierExtractor,
+    OrganizationExtractor,
+    PersonExtractor,
+)
+
 
 # Confidence scoring constants
 class ConfidenceScoring:
     """Constants for confidence scoring algorithm."""
-    
+
     BASE_CONFIDENCE = 0.5
-    
+
     # Person scoring bonuses
     BIRTHDATE_BONUS = 0.15
     VALID_ID_BONUS = 0.2
     INVALID_ID_BONUS = 0.1
     NAME_PATTERN_BONUS = 0.1
-    
+
     # Organization scoring bonuses
     LEGAL_FORM_BONUS = 0.3
     QUOTED_CORE_BONUS = 0.2
     NORM_MATCH_BONUS = 0.2
     ADJACENT_NAME_BONUS = 0.1
     ORG_CORE_BONUS = 0.1
-    
+
     # Multi-evidence bonuses
     PERSON_MAX_MULTI_BONUS = 0.2
     ORG_MAX_MULTI_BONUS = 0.25
     MULTI_EVIDENCE_INCREMENT = 0.05
-    
+
     MAX_CONFIDENCE = 1.0
 
 
@@ -93,13 +99,13 @@ class SignalsService:
 
     def __init__(self):
         self.logger = get_logger(__name__)
-        
+
         # Initialize specialized extractors
         self.person_extractor = PersonExtractor()
         self.organization_extractor = OrganizationExtractor()
         self.identifier_extractor = IdentifierExtractor()
         self.birthdate_extractor = BirthdateExtractor()
-        
+
         self.logger.info("SignalsService initialized with extractors")
 
     def extract(
@@ -180,7 +186,9 @@ class SignalsService:
 
         return persons_core, organizations_core
 
-    def _create_person_signals(self, persons_core: List[List[str]]) -> List[PersonSignal]:
+    def _create_person_signals(
+        self, persons_core: List[List[str]]
+    ) -> List[PersonSignal]:
         """Создает PersonSignal объекты из токенов."""
         persons = []
         for person_tokens in persons_core:
@@ -206,9 +214,9 @@ class SignalsService:
         # Сначала добавляем базовые организации из нормализации
         for org_core in organizations_core:
             org_dict[org_core.upper()] = OrganizationSignal(
-                core=org_core.upper(), 
-                confidence=ConfidenceScoring.BASE_CONFIDENCE, 
-                evidence=["org_core"]
+                core=org_core.upper(),
+                confidence=ConfidenceScoring.BASE_CONFIDENCE,
+                evidence=["org_core"],
             )
 
         # Обновляем информацией о юридических формах
@@ -232,7 +240,10 @@ class SignalsService:
         return list(org_dict.values())
 
     def _enrich_with_identifiers(
-        self, text: str, persons: List[PersonSignal], organizations: List[OrganizationSignal]
+        self,
+        text: str,
+        persons: List[PersonSignal],
+        organizations: List[OrganizationSignal],
     ):
         """Обогащает сущности найденными идентификаторами."""
         org_ids = self.identifier_extractor.extract_organization_ids(text)
@@ -711,12 +722,14 @@ class SignalsService:
             if evidence_count > 1:
                 multi_bonus = min(
                     ConfidenceScoring.PERSON_MAX_MULTI_BONUS,
-                    (evidence_count - 1) * ConfidenceScoring.MULTI_EVIDENCE_INCREMENT
+                    (evidence_count - 1) * ConfidenceScoring.MULTI_EVIDENCE_INCREMENT,
                 )
                 bonus += multi_bonus
 
             # Обновляем уверенность с учетом максимума
-            person.confidence = min(ConfidenceScoring.MAX_CONFIDENCE, base_confidence + bonus)
+            person.confidence = min(
+                ConfidenceScoring.MAX_CONFIDENCE, base_confidence + bonus
+            )
 
         # Скоринг организаций
         for org in organizations:
@@ -745,12 +758,14 @@ class SignalsService:
             if evidence_count > 1:
                 multi_bonus = min(
                     ConfidenceScoring.ORG_MAX_MULTI_BONUS,
-                    (evidence_count - 1) * ConfidenceScoring.MULTI_EVIDENCE_INCREMENT
+                    (evidence_count - 1) * ConfidenceScoring.MULTI_EVIDENCE_INCREMENT,
                 )
                 bonus += multi_bonus
 
             # Обновляем уверенность с учетом максимума
-            org.confidence = min(ConfidenceScoring.MAX_CONFIDENCE, base_confidence + bonus)
+            org.confidence = min(
+                ConfidenceScoring.MAX_CONFIDENCE, base_confidence + bonus
+            )
 
     def _person_to_dict(self, person: PersonSignal) -> Dict[str, Any]:
         """Конвертация PersonSignal в словарь"""

@@ -9,18 +9,17 @@ from typing import Optional
 
 from ..config import SERVICE_CONFIG
 from ..exceptions import ServiceInitializationError
-from ..utils import get_logger
+from ..layers.embeddings.embedding_service import EmbeddingService
+from ..layers.language.language_detection_service import LanguageDetectionService
+from ..layers.normalization.normalization_service import NormalizationService
+from ..layers.signals.signals_service import SignalsService
+from ..layers.smart_filter.smart_filter_adapter import SmartFilterAdapter
+from ..layers.unicode.unicode_service import UnicodeService
 
 # Import existing service implementations
 from ..layers.validation.validation_service import ValidationService
-from ..layers.smart_filter.smart_filter_adapter import SmartFilterAdapter
-from ..layers.language.language_detection_service import LanguageDetectionService
-from ..layers.unicode.unicode_service import UnicodeService
-from ..layers.normalization.normalization_service import NormalizationService
-from ..layers.signals.signals_service import SignalsService
 from ..layers.variants.variant_generation_service import VariantGenerationService
-from ..layers.embeddings.embedding_service import EmbeddingService
-
+from ..utils import get_logger
 from .unified_orchestrator import UnifiedOrchestrator
 
 logger = get_logger(__name__)
@@ -41,10 +40,8 @@ class OrchestratorFactory:
         enable_smart_filter: bool = True,
         enable_variants: bool = False,
         enable_embeddings: bool = False,
-
         # Processing behavior
         allow_smart_filter_skip: bool = False,
-
         # Custom service implementations (for testing/customization)
         validation_service: Optional = None,
         smart_filter_service: Optional = None,
@@ -71,9 +68,11 @@ class OrchestratorFactory:
         Raises:
             ServiceInitializationError: If required services fail to initialize
         """
-        logger.info("Creating unified orchestrator with configuration: "
-                   f"smart_filter={enable_smart_filter}, variants={enable_variants}, "
-                   f"embeddings={enable_embeddings}")
+        logger.info(
+            "Creating unified orchestrator with configuration: "
+            f"smart_filter={enable_smart_filter}, variants={enable_variants}, "
+            f"embeddings={enable_embeddings}"
+        )
 
         try:
             # ============================================================
@@ -173,12 +172,10 @@ class OrchestratorFactory:
                 unicode_service=unicode_service,
                 normalization_service=normalization_service,
                 signals_service=signals_service,
-
                 # Optional services
                 smart_filter_service=smart_filter_service,
                 variants_service=variants_service,
                 embeddings_service=embeddings_service,
-
                 # Configuration
                 enable_smart_filter=enable_smart_filter,
                 enable_variants=enable_variants,
@@ -194,9 +191,7 @@ class OrchestratorFactory:
             raise ServiceInitializationError(f"Orchestrator creation failed: {e}")
 
     @staticmethod
-    async def create_testing_orchestrator(
-        minimal: bool = False
-    ) -> UnifiedOrchestrator:
+    async def create_testing_orchestrator(minimal: bool = False) -> UnifiedOrchestrator:
         """
         Create orchestrator optimized for testing.
 
@@ -212,7 +207,7 @@ class OrchestratorFactory:
             enable_smart_filter=not minimal,
             enable_variants=False,  # Usually not needed in tests
             enable_embeddings=False,  # Usually not needed in tests
-            allow_smart_filter_skip=False  # Don't skip processing in tests
+            allow_smart_filter_skip=False,  # Don't skip processing in tests
         )
 
     @staticmethod
@@ -229,5 +224,5 @@ class OrchestratorFactory:
             enable_smart_filter=True,
             enable_variants=True,
             enable_embeddings=True,
-            allow_smart_filter_skip=True  # Allow skipping obviously irrelevant texts
+            allow_smart_filter_skip=True,  # Allow skipping obviously irrelevant texts
         )

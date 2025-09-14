@@ -173,51 +173,58 @@ class ConfidenceScorer:
         return 0.0
 
     def _combine_confidences(
-        self, company_confidence: float, name_confidence: float, context_confidence: float = 0.0
+        self,
+        company_confidence: float,
+        name_confidence: float,
+        context_confidence: float = 0.0,
     ) -> float:
         """Combine confidence for companies, names, and context"""
         # Collect all non-zero confidences
-        confidences = [c for c in [company_confidence, name_confidence, context_confidence] if c > 0]
-        
+        confidences = [
+            c
+            for c in [company_confidence, name_confidence, context_confidence]
+            if c > 0
+        ]
+
         if not confidences:
             return 0.0
-        
+
         if len(confidences) == 1:
             return confidences[0]
-        
+
         # If multiple signal types exist, give bonus
         max_confidence = max(confidences)
         min_confidence = min(confidences)
-        
+
         # Combination bonus based on number of signal types
         combination_bonus = min_confidence * 0.3 * len(confidences)
-        
+
         # Context bonus - if we have payment context, boost name detection
         if context_confidence > 0 and name_confidence > 0:
             context_bonus = context_confidence * name_confidence * 0.2
             combination_bonus += context_bonus
-        
+
         return min(max_confidence + combination_bonus, 1.0)
 
     def _calculate_context_confidence(self, context_signals: Dict[str, Any]) -> float:
         """Calculate confidence for payment context signals"""
         if not context_signals:
             return 0.0
-        
+
         confidence = context_signals.get("confidence", 0.0)
-        
+
         # Bonus for having name indicators
         if context_signals.get("has_name_indicators", False):
             confidence += 0.2
-        
+
         # Bonus for having payment context
         if context_signals.get("has_payment_context", False):
             confidence += 0.1
-        
+
         # Bonus for having currency indicators
         if context_signals.get("has_currency_indicators", False):
             confidence += 0.1
-        
+
         return min(confidence, 1.0)
 
     def _normalize_confidence(

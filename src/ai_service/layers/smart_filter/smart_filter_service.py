@@ -132,7 +132,7 @@ class SmartFilterService:
         try:
             # Keep original text for context analysis
             original_text = text.strip()
-            
+
             # Light normalization for exclusion checks only
             normalized_text = self._normalize_text(original_text)
 
@@ -169,9 +169,9 @@ class SmartFilterService:
 
             # Combine results
             all_signals = {
-                "companies": company_signals, 
+                "companies": company_signals,
                 "names": name_signals,
-                "context": context_signals
+                "context": context_signals,
             }
 
             # Calculate total confidence
@@ -272,52 +272,54 @@ class SmartFilterService:
     def _analyze_payment_context(self, text: str) -> Dict[str, Any]:
         """
         Analyze payment context using payment triggers as signals
-        
+
         Args:
             text: Original text to analyze
-            
+
         Returns:
             Context analysis results
         """
         try:
             # Import payment triggers
             from ...data.dicts.payment_triggers import PAYMENT_TRIGGERS
-            
+
             # Detect language
             detected_language = self._detect_language(text)
-            
+
             # Get payment triggers for the language
             triggers = PAYMENT_TRIGGERS.get(detected_language, {})
             context_words = triggers.get("context", [])
             prep_words = triggers.get("preps", [])
             currency_words = triggers.get("currencies", [])
-            
+
             # Find context signals
             context_matches = []
             prep_matches = []
             currency_matches = []
-            
+
             text_lower = text.lower()
-            
+
             # Check for context words
             for word in context_words:
                 if word.lower() in text_lower:
                     context_matches.append(word)
-            
+
             # Check for prepositional phrases that indicate names
             for prep in prep_words:
                 if prep.lower() in text_lower:
                     prep_matches.append(prep)
-            
+
             # Check for currency indicators
             for currency in currency_words:
                 if currency.lower() in text_lower:
                     currency_matches.append(currency)
-            
+
             # Calculate confidence based on matches
-            total_matches = len(context_matches) + len(prep_matches) + len(currency_matches)
+            total_matches = (
+                len(context_matches) + len(prep_matches) + len(currency_matches)
+            )
             confidence = min(total_matches * 0.2, 1.0)  # Max confidence of 1.0
-            
+
             return {
                 "confidence": confidence,
                 "context_words": context_matches,
@@ -329,7 +331,7 @@ class SmartFilterService:
                 "has_name_indicators": len(prep_matches) > 0,
                 "has_currency_indicators": len(currency_matches) > 0,
             }
-            
+
         except Exception as e:
             self.logger.warning(f"Error analyzing payment context: {e}")
             return {
@@ -351,7 +353,9 @@ class SmartFilterService:
         """
         # This method is kept for backward compatibility but should not be used
         # in the new context-aware approach
-        self.logger.warning("_clean_service_words is deprecated - use context-aware analysis instead")
+        self.logger.warning(
+            "_clean_service_words is deprecated - use context-aware analysis instead"
+        )
         return text
 
     def _detect_language(self, text: str) -> str:

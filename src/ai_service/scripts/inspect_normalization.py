@@ -104,7 +104,9 @@ def _extract_company_core(text: str, language: str) -> str:
     return toks[0] if toks else ""
 
 
-def inspect(text: str, language: str = "auto", apply_lemmatization: bool = True) -> None:
+def inspect(
+    text: str, language: str = "auto", apply_lemmatization: bool = True
+) -> None:
     svc = NormalizationService()
 
     # Detect language (if auto)
