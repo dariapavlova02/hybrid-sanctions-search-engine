@@ -1,5 +1,36 @@
 """
-Simplified Embedding Service with lazy initialization
+Embedding Service - Pure Vector Generation for AI Service
+
+This service provides multilingual text embeddings using sentence transformers.
+It follows the architectural principle of separation of concerns:
+
+- VECTOR GENERATION → This service (pure embeddings)
+- INDEXING/SIMILARITY → Downstream services (VectorIndex, Decision)
+
+Key Features:
+1. Multilingual support (ru/uk/en) with consistent embeddings
+2. Automatic preprocessing (removes dates/IDs, keeps names/organizations)
+3. Lazy model loading for memory efficiency
+4. Batch processing optimization
+5. Configurable model switching
+
+Default Model: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+- 384-dimensional vectors
+- Balanced performance and quality
+- Proven multilingual capabilities
+
+Usage:
+    from ai_service.config import EmbeddingConfig
+    from ai_service.layers.embeddings.embedding_service import EmbeddingService
+
+    config = EmbeddingConfig()
+    service = EmbeddingService(config)
+
+    # Single text
+    vector = service.encode_one("Ivan Petrov")  # 384 floats
+
+    # Batch processing (recommended)
+    vectors = service.encode_batch(["Ivan Petrov", "Anna Smith"])  # 2x384 floats
 """
 
 import logging
@@ -38,10 +69,11 @@ class EmbeddingService:
         if self._model is None:
             self.logger.info(f"Loading embedding model: {self.config.model_name}")
             self._model = SentenceTransformer(
-                self.config.model_name,
-                device=self.config.device
+                self.config.model_name, device=self.config.device
             )
-            self.logger.info(f"Model loaded successfully on device: {self.config.device}")
+            self.logger.info(
+                f"Model loaded successfully on device: {self.config.device}"
+            )
         return self._model
 
     def encode_one(self, text: str) -> List[float]:
@@ -72,7 +104,7 @@ class EmbeddingService:
                 batch_size=1,
                 show_progress_bar=False,
                 normalize_embeddings=True,
-                convert_to_numpy=True
+                convert_to_numpy=True,
             )
 
             # Convert to 32-bit float and ensure it's a list
@@ -96,7 +128,7 @@ class EmbeddingService:
             List of embedding vectors as 32-bit floats
         """
         start_time = time.perf_counter()
-        
+
         if not texts:
             return []
 
@@ -107,7 +139,7 @@ class EmbeddingService:
                 normalized = self.preprocessor.normalize_for_embedding(text)
                 if normalized:  # Only include non-empty normalized texts
                     normalized_texts.append(normalized)
-        
+
         if not normalized_texts:
             return []
 
@@ -121,7 +153,7 @@ class EmbeddingService:
                 batch_size=self.config.batch_size,
                 show_progress_bar=False,
                 normalize_embeddings=True,
-                convert_to_numpy=True
+                convert_to_numpy=True,
             )
 
             # Convert to 32-bit float and ensure it's a list
@@ -131,9 +163,11 @@ class EmbeddingService:
             # Log timing
             duration_ms = (time.perf_counter() - start_time) * 1000
             self.logger.debug(f"encode_batch({len(texts)} texts): {duration_ms:.2f}ms")
-            
+
             if duration_ms > 100:
-                self.logger.warning(f"Slow encode_batch({len(texts)} texts): {duration_ms:.2f}ms > 100ms")
+                self.logger.warning(
+                    f"Slow encode_batch({len(texts)} texts): {duration_ms:.2f}ms > 100ms"
+                )
 
             return embeddings
 
@@ -141,7 +175,9 @@ class EmbeddingService:
             self.logger.error(f"Failed to encode texts: {e}")
             raise
 
-    def encode(self, texts: Union[str, List[str]]) -> Union[List[float], List[List[float]]]:
+    def encode(
+        self, texts: Union[str, List[str]]
+    ) -> Union[List[float], List[List[float]]]:
         """
         Encode texts to embeddings (legacy method for backward compatibility)
 
