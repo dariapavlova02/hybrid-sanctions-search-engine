@@ -3,6 +3,7 @@ Simplified Embedding Service with lazy initialization
 """
 
 import logging
+import time
 from typing import List, Union
 
 import numpy as np
@@ -94,6 +95,8 @@ class EmbeddingService:
         Returns:
             List of embedding vectors as 32-bit floats
         """
+        start_time = time.perf_counter()
+        
         if not texts:
             return []
 
@@ -124,6 +127,13 @@ class EmbeddingService:
             # Convert to 32-bit float and ensure it's a list
             if isinstance(embeddings, np.ndarray):
                 embeddings = embeddings.astype(np.float32).tolist()
+
+            # Log timing
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            self.logger.debug(f"encode_batch({len(texts)} texts): {duration_ms:.2f}ms")
+            
+            if duration_ms > 100:
+                self.logger.warning(f"Slow encode_batch({len(texts)} texts): {duration_ms:.2f}ms > 100ms")
 
             return embeddings
 
