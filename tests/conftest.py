@@ -138,6 +138,15 @@ def orchestrator_service():
             "Jean-Baptiste Muller Олександр Петренко-Смит Zürcher Strasse"
         ]
         
+        # Create mock cache service
+        from src.ai_service.core.cache_service import CacheService
+        mock_cache_service = CacheService(max_size=100, default_ttl=60)
+        
+        # Create mock embeddings service
+        mock_embeddings_service = AsyncMock()
+        mock_embeddings_service.generate_embeddings.return_value = [0.1, 0.2, 0.3]
+        mock_embeddings_service.find_similar_texts.return_value = []
+        
         # Use small values for tests to speed them up
         service = OrchestratorService(
             validation_service=mock_validation_service,
@@ -145,8 +154,16 @@ def orchestrator_service():
             unicode_service=mock_unicode_service,
             normalization_service=mock_normalization_service,
             signals_service=mock_signals_service,
-            variants_service=mock_variants_service
+            variants_service=mock_variants_service,
+            embeddings_service=mock_embeddings_service
         )
+        
+        # Set the cache service for legacy compatibility
+        service.cache_service = mock_cache_service
+        
+        # Set other legacy services for compatibility
+        service.pattern_service = Mock()
+        service.template_builder = Mock()
         
         # Ensure clean state before test
         # UnifiedOrchestrator doesn't have reset_stats/clear_cache methods
