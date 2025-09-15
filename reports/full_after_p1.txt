@@ -1,0 +1,251 @@
+
+==================================== ERRORS ====================================
+____________ ERROR collecting tests/e2e/test_nightmare_scenario.py _____________
+/opt/homebrew/lib/python3.13/site-packages/_pytest/python.py:498: in importtestmodule
+    mod = import_path(
+/opt/homebrew/lib/python3.13/site-packages/_pytest/pathlib.py:587: in import_path
+    importlib.import_module(module_name)
+/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+/opt/homebrew/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:177: in exec_module
+    source_stat, co = _rewrite_test(fn, self.config)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:357: in _rewrite_test
+    tree = ast.parse(source, filename=strfn)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/ast.py:50: in parse
+    return compile(source, filename, mode, flags,
+E     File "/Users/dariapavlova/Desktop/ai-service/tests/e2e/test_nightmare_scenario.py", line 16
+E       @pytest.mark.asyncio
+E                           ^
+E   IndentationError: unindent does not match any outer indentation level
+_______ ERROR collecting tests/e2e/test_sanctions_screening_pipeline.py ________
+/opt/homebrew/lib/python3.13/site-packages/_pytest/python.py:498: in importtestmodule
+    mod = import_path(
+/opt/homebrew/lib/python3.13/site-packages/_pytest/pathlib.py:587: in import_path
+    importlib.import_module(module_name)
+/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+/opt/homebrew/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:177: in exec_module
+    source_stat, co = _rewrite_test(fn, self.config)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:357: in _rewrite_test
+    tree = ast.parse(source, filename=strfn)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/ast.py:50: in parse
+    return compile(source, filename, mode, flags,
+E     File "/Users/dariapavlova/Desktop/ai-service/tests/e2e/test_sanctions_screening_pipeline.py", line 19
+E       @pytest.fixture
+E                      ^
+E   IndentationError: unindent does not match any outer indentation level
+_ ERROR collecting tests/integration/test_orchestrator_decision_integration.py _
+/opt/homebrew/lib/python3.13/site-packages/_pytest/python.py:498: in importtestmodule
+    mod = import_path(
+/opt/homebrew/lib/python3.13/site-packages/_pytest/pathlib.py:587: in import_path
+    importlib.import_module(module_name)
+/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+/opt/homebrew/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:177: in exec_module
+    source_stat, co = _rewrite_test(fn, self.config)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:357: in _rewrite_test
+    tree = ast.parse(source, filename=strfn)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/ast.py:50: in parse
+    return compile(source, filename, mode, flags,
+E     File "/Users/dariapavlova/Desktop/ai-service/tests/integration/test_orchestrator_decision_integration.py", line 27
+E       @pytest.fixture
+E                      ^
+E   IndentationError: unindent does not match any outer indentation level
+____________ ERROR collecting tests/unit/api/test_main_endpoints.py ____________
+/opt/homebrew/lib/python3.13/site-packages/starlette/testclient.py:44: in <module>
+    import httpx
+E   ModuleNotFoundError: No module named 'httpx'
+
+During handling of the above exception, another exception occurred:
+tests/unit/api/test_main_endpoints.py:10: in <module>
+    from fastapi.testclient import TestClient
+/opt/homebrew/lib/python3.13/site-packages/fastapi/testclient.py:1: in <module>
+    from starlette.testclient import TestClient as TestClient  # noqa
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/lib/python3.13/site-packages/starlette/testclient.py:46: in <module>
+    raise RuntimeError(
+E   RuntimeError: The starlette.testclient module requires the httpx package to be installed.
+E   You can install this with:
+E       $ pip install httpx
+_______ ERROR collecting tests/unit/layers/test_smart_filter_adapter.py ________
+/opt/homebrew/lib/python3.13/site-packages/_pytest/python.py:498: in importtestmodule
+    mod = import_path(
+/opt/homebrew/lib/python3.13/site-packages/_pytest/pathlib.py:587: in import_path
+    importlib.import_module(module_name)
+/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+/opt/homebrew/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:177: in exec_module
+    source_stat, co = _rewrite_test(fn, self.config)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:357: in _rewrite_test
+    tree = ast.parse(source, filename=strfn)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/ast.py:50: in parse
+    return compile(source, filename, mode, flags,
+E     File "/Users/dariapavlova/Desktop/ai-service/tests/unit/layers/test_smart_filter_adapter.py", line 26
+E       @pytest.fixture
+E                      ^
+E   IndentationError: unindent does not match any outer indentation level
+_______ ERROR collecting tests/unit/test_advanced_normalization_unit.py ________
+ImportError while importing test module '/Users/dariapavlova/Desktop/ai-service/tests/unit/test_advanced_normalization_unit.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_advanced_normalization_unit.py:10: in <module>
+    with patch('spacy.load') as mock_spacy, \
+         ^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:1481: in __enter__
+    self.target = self.getter()
+                  ^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/pkgutil.py:513: in resolve_name
+    mod = importlib.import_module(modname)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   ModuleNotFoundError: No module named 'spacy'
+___________ ERROR collecting tests/unit/test_unified_orchestrator.py ___________
+/opt/homebrew/lib/python3.13/site-packages/_pytest/python.py:498: in importtestmodule
+    mod = import_path(
+/opt/homebrew/lib/python3.13/site-packages/_pytest/pathlib.py:587: in import_path
+    importlib.import_module(module_name)
+/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+/opt/homebrew/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:177: in exec_module
+    source_stat, co = _rewrite_test(fn, self.config)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:357: in _rewrite_test
+    tree = ast.parse(source, filename=strfn)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/ast.py:50: in parse
+    return compile(source, filename, mode, flags,
+E     File "/Users/dariapavlova/Desktop/ai-service/tests/unit/test_unified_orchestrator.py", line 35
+E       @pytest.fixture
+E                      ^
+E   IndentationError: unindent does not match any outer indentation level
+_ ERROR collecting tests/unit/text_processing/test_normalization_service_old.py _
+/opt/homebrew/lib/python3.13/site-packages/_pytest/python.py:498: in importtestmodule
+    mod = import_path(
+/opt/homebrew/lib/python3.13/site-packages/_pytest/pathlib.py:587: in import_path
+    importlib.import_module(module_name)
+/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+/opt/homebrew/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:177: in exec_module
+    source_stat, co = _rewrite_test(fn, self.config)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:357: in _rewrite_test
+    tree = ast.parse(source, filename=strfn)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/ast.py:50: in parse
+    return compile(source, filename, mode, flags,
+E     File "/Users/dariapavlova/Desktop/ai-service/tests/unit/text_processing/test_normalization_service_old.py", line 24
+E       @pytest.fixture
+E                      ^
+E   IndentationError: unindent does not match any outer indentation level
+=============================== warnings summary ===============================
+tests/performance/test_lang_perf.py:89
+  /Users/dariapavlova/Desktop/ai-service/tests/performance/test_lang_perf.py:89: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.performance
+
+tests/performance/test_lang_perf.py:133
+  /Users/dariapavlova/Desktop/ai-service/tests/performance/test_lang_perf.py:133: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.performance
+
+tests/performance/test_lang_perf.py:170
+  /Users/dariapavlova/Desktop/ai-service/tests/performance/test_lang_perf.py:170: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.performance
+
+tests/performance/test_lang_perf.py:189
+  /Users/dariapavlova/Desktop/ai-service/tests/performance/test_lang_perf.py:189: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.performance
+
+tests/performance/test_lang_perf.py:220
+  /Users/dariapavlova/Desktop/ai-service/tests/performance/test_lang_perf.py:220: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.performance
+
+tests/unit/core/test_decision_engine.py:273
+  /Users/dariapavlova/Desktop/ai-service/tests/unit/core/test_decision_engine.py:273: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/unit/core/test_decision_engine.py:282
+  /Users/dariapavlova/Desktop/ai-service/tests/unit/core/test_decision_engine.py:282: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.performance
+
+tests/unit/core/test_orchestrator_factory.py:276
+  /Users/dariapavlova/Desktop/ai-service/tests/unit/core/test_orchestrator_factory.py:276: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR tmp/tests/e2e/test_nightmare_scenario.py
+ERROR tmp/tests/e2e/test_sanctions_screening_pipeline.py
+ERROR tmp/tests/integration/test_orchestrator_decision_integration.py
+ERROR tmp/tests/unit/api/test_main_endpoints.py - RuntimeError: The starlette...
+ERROR tmp/tests/unit/layers/test_smart_filter_adapter.py
+ERROR tmp/tests/unit/test_advanced_normalization_unit.py
+ERROR tmp/tests/unit/test_unified_orchestrator.py
+ERROR tmp/tests/unit/text_processing/test_normalization_service_old.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 8 errors during collection !!!!!!!!!!!!!!!!!!!!
+8 warnings, 8 errors in 5.97s
