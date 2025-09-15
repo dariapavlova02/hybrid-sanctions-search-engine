@@ -1,0 +1,1026 @@
+.....FFFFFFFFF.............F.F.F......FFF..........F..FF................ [ 27%]
+..F...F.............F.F...FFFFFFF.FF.FFFFFFFF............FFFFFFFFFFFFFF. [ 55%]
+........................................................................ [ 82%]
+...FF................F.....F.FF..............                            [100%]
+=================================== FAILURES ===================================
+_________ TestE2ESanctionsScreening.test_russian_person_with_documents _________
+tests/integration/test_e2e_sanctions_screening.py:36: in test_russian_person_with_documents
+    result = await orchestrator.process(
+                   ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'coroutine' object has no attribute 'process'
+____ TestE2ESanctionsScreening.test_ukrainian_organization_with_legal_form _____
+tests/integration/test_e2e_sanctions_screening.py:95: in test_ukrainian_organization_with_legal_form
+    result = await orchestrator.process(
+                   ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'coroutine' object has no attribute 'process'
+___________ TestE2ESanctionsScreening.test_english_mixed_script_name ___________
+tests/integration/test_e2e_sanctions_screening.py:146: in test_english_mixed_script_name
+    result = await orchestrator.process(
+                   ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'coroutine' object has no attribute 'process'
+__________ TestE2ESanctionsScreening.test_complex_payment_description __________
+tests/integration/test_e2e_sanctions_screening.py:181: in test_complex_payment_description
+    result = await orchestrator.process(
+                   ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'coroutine' object has no attribute 'process'
+___________ TestE2ESanctionsScreening.test_edge_case_compound_names ____________
+tests/integration/test_e2e_sanctions_screening.py:228: in test_edge_case_compound_names
+    result = await orchestrator.process(
+                   ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'coroutine' object has no attribute 'process'
+__________ TestE2ESanctionsScreening.test_decision_engine_thresholds ___________
+tests/integration/test_e2e_sanctions_screening.py:262: in test_decision_engine_thresholds
+    result = await orchestrator.process(
+                   ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'coroutine' object has no attribute 'process'
+______________ TestE2ESanctionsScreening.test_metrics_collection _______________
+tests/integration/test_e2e_sanctions_screening.py:294: in test_metrics_collection
+    result = await orchestrator.process(
+                   ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'coroutine' object has no attribute 'process'
+____________ TestE2ESanctionsScreening.test_performance_benchmarks _____________
+tests/integration/test_e2e_sanctions_screening.py:330: in test_performance_benchmarks
+    result = await orchestrator.process(
+                   ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'coroutine' object has no attribute 'process'
+___________ TestE2ESanctionsScreening.test_golden_dataset_stability ____________
+tests/integration/test_e2e_sanctions_screening.py:377: in test_golden_dataset_stability
+    result = await orchestrator.process(
+                   ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'coroutine' object has no attribute 'process'
+_ test_ukrainian_full_normalization[\u0414\u043b\u044f \u0416\u0435\u043d\u0456 \u0413\u0430\u043b\u0438\u0447\u0430 \u0437 \u0433\u0440\u0443\u043f\u0438 O.Torvald-\u0404\u0432\u0433\u0435\u043d \u0413\u0430\u043b\u0438\u0447] _
+tests/integration/test_full_normalization_suite.py:70: in test_ukrainian_full_normalization
+    assert_normalized_name(result, expected_name)
+tests/integration/test_full_normalization_suite.py:38: in assert_normalized_name
+    assert expected_parts == actual_tokens, \
+E   AssertionError: Ожидалось: {'євген', 'галич'}, получено: {'євген', 'галич', 'з.'}
+E   assert {'галич', 'євген'} == {'галич', 'з.', 'євген'}
+E     
+E     Extra items in the right set:
+E     'з.'
+E     Use -v to get more diff
+_ test_ukrainian_full_normalization[\u0417\u0443\u0441\u0442\u0440\u0456\u0447 \u0437 \u041b\u0456\u043d\u043e\u044e \u041a\u043e\u0441\u0442\u0435\u043d\u043a\u043e-\u041b\u0456\u043d\u0430 \u041a\u043e\u0441\u0442\u0435\u043d\u043a\u043e] _
+tests/integration/test_full_normalization_suite.py:70: in test_ukrainian_full_normalization
+    assert_normalized_name(result, expected_name)
+tests/integration/test_full_normalization_suite.py:38: in assert_normalized_name
+    assert expected_parts == actual_tokens, \
+E   AssertionError: Ожидалось: {'костенко', 'ліна'}, получено: {'ліна', 'костенко', 'з.'}
+E   assert {'костенко', 'ліна'} == {'з.', 'костенко', 'ліна'}
+E     
+E     Extra items in the right set:
+E     'з.'
+E     Use -v to get more diff
+_ test_ukrainian_full_normalization[\u0420\u043e\u0437\u043c\u043e\u0432\u043b\u044f\u0432 \u0437 \u0412\u0430\u043b\u0435\u0440\u0456\u0454\u043c \u0417\u0430\u043b\u0443\u0436\u043d\u0438\u043c-\u0412\u0430\u043b\u0435\u0440\u0456\u0439 \u0417\u0430\u043b\u0443\u0436\u043d\u0438\u0439] _
+tests/integration/test_full_normalization_suite.py:70: in test_ukrainian_full_normalization
+    assert_normalized_name(result, expected_name)
+tests/integration/test_full_normalization_suite.py:38: in assert_normalized_name
+    assert expected_parts == actual_tokens, \
+E   AssertionError: Ожидалось: {'валерій', 'залужний'}, получено: {'валерій', 'залужний', 'з.'}
+E   assert {'валерій', 'залужний'} == {'валерій', 'з.', 'залужний'}
+E     
+E     Extra items in the right set:
+E     'з.'
+E     Use -v to get more diff
+_ test_russian_full_normalization[\u0414\u043b\u044f \u0410\u043b\u043b\u044b \u0411\u043e\u0440\u0438\u0441\u043e\u0432\u043d\u044b \u041f\u0443\u0433\u0430\u0447\u0435\u0432\u043e\u0439-\u0410\u043b\u043b\u0430 \u0411\u043e\u0440\u0438\u0441\u043e\u0432\u043d\u0430 \u041f\u0443\u0433\u0430\u0447\u0435\u0432\u0430] _
+tests/integration/test_full_normalization_suite.py:97: in test_russian_full_normalization
+    assert_normalized_name(result, expected_name)
+tests/integration/test_full_normalization_suite.py:38: in assert_normalized_name
+    assert expected_parts == actual_tokens, \
+E   AssertionError: Ожидалось: {'борисовна', 'алла', 'пугачева'}, получено: {'пугачев', 'борисовн', 'аллы'}
+E   assert {'алла', 'бор...', 'пугачева'} == {'аллы', 'бор...н', 'пугачев'}
+E     
+E     Extra items in the left set:
+E     'борисовна'
+E     'алла'
+E     'пугачева'
+E     Extra items in the right set:
+E     'пугачев'...
+E     
+E     ...Full output truncated (3 lines hidden), use '-vv' to show
+_ test_russian_full_normalization[\u0411\u043b\u0430\u0433\u043e\u0434\u0430\u0440\u043d\u043e\u0441\u0442\u044c \u041f\u0435\u0442\u0440\u0443 \u0427\u0430\u0439\u043a\u043e\u0432\u0441\u043a\u043e\u043c\u0443-\u041f\u0435\u0442\u0440 \u0427\u0430\u0439\u043a\u043e\u0432\u0441\u043a\u0438\u0439] _
+tests/integration/test_full_normalization_suite.py:97: in test_russian_full_normalization
+    assert_normalized_name(result, expected_name)
+tests/integration/test_full_normalization_suite.py:38: in assert_normalized_name
+    assert expected_parts == actual_tokens, \
+E   AssertionError: Ожидалось: {'петр', 'чайковский'}, получено: {'петр', 'чайковском'}
+E   assert {'петр', 'чайковский'} == {'петр', 'чайковском'}
+E     
+E     Extra items in the left set:
+E     'чайковский'
+E     Extra items in the right set:
+E     'чайковском'
+E     Use -v to get more diff
+_ test_russian_full_normalization[\u0412\u0441\u0442\u0440\u0435\u0447\u0430 \u0441 \u0410\u043d\u043d\u043e\u0439 \u0410\u0445\u043c\u0430\u0442\u043e\u0432\u043e\u0439-\u0410\u043d\u043d\u0430 \u0410\u0445\u043c\u0430\u0442\u043e\u0432\u0430] _
+tests/integration/test_full_normalization_suite.py:97: in test_russian_full_normalization
+    assert_normalized_name(result, expected_name)
+tests/integration/test_full_normalization_suite.py:38: in assert_normalized_name
+    assert expected_parts == actual_tokens, \
+E   AssertionError: Ожидалось: {'анна', 'ахматова'}, получено: {'анна', 'с.', 'ахматова'}
+E   assert {'анна', 'ахматова'} == {'анна', 'ахматова', 'с.'}
+E     
+E     Extra items in the right set:
+E     'с.'
+E     Use -v to get more diff
+___ test_english_full_normalization[Sent to ELON MUSK for X corp-Elon Musk] ____
+tests/integration/test_full_normalization_suite.py:124: in test_english_full_normalization
+    assert_normalized_name(result, expected_name)
+tests/integration/test_full_normalization_suite.py:38: in assert_normalized_name
+    assert expected_parts == actual_tokens, \
+E   AssertionError: Ожидалось: {'musk', 'elon'}, получено: {'musk', 'x', 'elon'}
+E   assert {'elon', 'musk'} == {'elon', 'musk', 'x'}
+E     
+E     Extra items in the right set:
+E     'x'
+E     Use -v to get more diff
+_____________________ test_critical_russian_normalization ______________________
+tests/integration/test_full_normalization_suite.py:160: in test_critical_russian_normalization
+    assert tokens_lower == expected_tokens, f"Expected {expected_tokens}, but got {tokens_lower}"
+E   AssertionError: Expected {'петров', 'владимирович', 'сергей'}, but got {'владимирович', 'петров', 'сергей', 'в.'}
+E   assert {'в.', 'влади...ов', 'сергей'} == {'владимирови...ов', 'сергей'}
+E     
+E     Extra items in the left set:
+E     'в.'
+E     Use -v to get more diff
+__ TestGenderAdjustmentIntegration.test_ukrainian_female_name_with_patronymic __
+tests/integration/test_gender_adjustment.py:32: in test_ukrainian_female_name_with_patronymic
+    assert person["tokens"] == ["Павлов", "Дарʼя", "Юріївна"]
+E   AssertionError: assert ['Павлов', 'Дарʼї', 'Юріївна'] == ['Павлов', 'Дарʼя', 'Юріївна']
+E     
+E     At index 1 diff: 'Дарʼї' != 'Дарʼя'
+E     Use -v to get more diff
+_ TestUnicodeFirstLanguageDetectionOrder.test_unicode_normalization_before_language_detection _
+tests/integration/test_lang_order_unicode_first.py:109: in test_unicode_normalization_before_language_detection
+    orchestrator.unicode_service.normalize_unicode.assert_called_once_with(test_text)
+/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:990: in assert_called_once_with
+    raise AssertionError(msg)
+E   AssertionError: Expected 'normalize_unicode' to be called once. Called 0 times.
+------------------------------ Captured log call -------------------------------
+ERROR    ai_service.core.unified_orchestrator:unified_orchestrator.py:439 Processing failed: object Mock can't be used in 'await' expression
+Traceback (most recent call last):
+  File "/Users/dariapavlova/Desktop/ai-service/src/ai_service/core/unified_orchestrator.py", line 290, in process
+    signals_result = await self.signals_service.extract_signals(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        text=context.original_text, normalization_result=norm_result, language=context.language
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+TypeError: object Mock can't be used in 'await' expression
+_ TestUnicodeFirstLanguageDetectionOrder.test_orchestrator_call_order_verification _
+tests/integration/test_lang_order_unicode_first.py:297: in test_orchestrator_call_order_verification
+    assert "unicode" in call_order
+E   AssertionError: assert 'unicode' in []
+------------------------------ Captured log call -------------------------------
+ERROR    ai_service.core.unified_orchestrator:unified_orchestrator.py:439 Processing failed: object Mock can't be used in 'await' expression
+Traceback (most recent call last):
+  File "/Users/dariapavlova/Desktop/ai-service/src/ai_service/core/unified_orchestrator.py", line 290, in process
+    signals_result = await self.signals_service.extract_signals(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        text=context.original_text, normalization_result=norm_result, language=context.language
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+TypeError: object Mock can't be used in 'await' expression
+_________ TestMixedScriptNames.test_ascii_names_with_cyrillic_surnames _________
+tests/integration/test_mixed_script_names.py:66: in test_ascii_names_with_cyrillic_surnames
+    assert "Петрова" in result.normalized
+E   AssertionError: assert 'Петрова' in 'John Коваленко Mary Петров'
+E    +  where 'John Коваленко Mary Петров' = NormalizationResult(normalized='John Коваленко Mary Петров', tokens=['John', 'Коваленко', 'Mary', 'Петров'], trace=[To...re_female': 0, 'score_male': 2, 'gap': 2}}], person_gender=None, gender_confidence=None, organizations=[], org_core='').normalized
+_____________ TestMixedScriptNames.test_ascii_names_no_morphology ______________
+tests/integration/test_mixed_script_names.py:106: in test_ascii_names_no_morphology
+    assert "morph" not in smith_trace.rule.lower()
+E   AssertionError: assert 'morph' not in 'morph'
+E     
+E     'morph' is contained here:
+E       morph
+____________ TestNormalizationPipeline.test_ukrainian_name_pipeline ____________
+tests/integration/test_normalization_pipeline.py:51: in test_ukrainian_name_pipeline
+    assert normalization_result['language'] == 'uk'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: 'NormalizationResult' object is not subscriptable
+------------------------------ Captured log setup ------------------------------
+WARNING  src.ai_service.layers.variants.variant_generation_service:variant_generation_service.py:392 Ukrainian morphology analyzer not available: No module named 'src.ai_service.layers.variants.ukrainian_morphology'
+_____________ TestNormalizationPipeline.test_russian_name_pipeline _____________
+tests/integration/test_normalization_pipeline.py:96: in test_russian_name_pipeline
+    text=normalization_result['normalized'],
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: 'NormalizationResult' object is not subscriptable
+------------------------------ Captured log setup ------------------------------
+WARNING  src.ai_service.layers.variants.variant_generation_service:variant_generation_service.py:392 Ukrainian morphology analyzer not available: No module named 'src.ai_service.layers.variants.ukrainian_morphology'
+_________ TestNormalizationPipeline.test_mixed_language_text_pipeline __________
+tests/integration/test_normalization_pipeline.py:125: in test_mixed_language_text_pipeline
+    assert normalization_result['language'] in ['en', 'ru', 'uk']
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: 'NormalizationResult' object is not subscriptable
+------------------------------ Captured log setup ------------------------------
+WARNING  src.ai_service.layers.variants.variant_generation_service:variant_generation_service.py:392 Ukrainian morphology analyzer not available: No module named 'src.ai_service.layers.variants.ukrainian_morphology'
+____________ TestNormalizationPipeline.test_compound_name_pipeline _____________
+tests/integration/test_normalization_pipeline.py:154: in test_compound_name_pipeline
+    text=normalization_result['normalized'],
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: 'NormalizationResult' object is not subscriptable
+------------------------------ Captured log setup ------------------------------
+WARNING  src.ai_service.layers.variants.variant_generation_service:variant_generation_service.py:392 Ukrainian morphology analyzer not available: No module named 'src.ai_service.layers.variants.ukrainian_morphology'
+___________ TestNormalizationPipeline.test_error_resilience_pipeline ___________
+tests/integration/test_normalization_pipeline.py:199: in test_error_resilience_pipeline
+    text=normalization_result['normalized'],
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: 'NormalizationResult' object is not subscriptable
+------------------------------ Captured log setup ------------------------------
+WARNING  src.ai_service.layers.variants.variant_generation_service:variant_generation_service.py:392 Ukrainian morphology analyzer not available: No module named 'src.ai_service.layers.variants.ukrainian_morphology'
+______________ TestNormalizationPipeline.test_empty_text_pipeline ______________
+tests/integration/test_normalization_pipeline.py:217: in test_empty_text_pipeline
+    text=normalization_result['normalized'],
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: 'NormalizationResult' object is not subscriptable
+------------------------------ Captured log setup ------------------------------
+WARNING  src.ai_service.layers.variants.variant_generation_service:variant_generation_service.py:392 Ukrainian morphology analyzer not available: No module named 'src.ai_service.layers.variants.ukrainian_morphology'
+_____________ TestNormalizationPipeline.test_performance_pipeline ______________
+tests/integration/test_normalization_pipeline.py:262: in test_performance_pipeline
+    assert 'token_variants' in result
+E   AssertionError: assert 'token_variants' in NormalizationResult(normalized='Олександр Петренко', tokens=['Олександр', 'Петренко'], trace=[TokenTrace(token='Олекса...re_female': 0, 'score_male': 3, 'gap': 3}}], person_gender=None, gender_confidence=None, organizations=[], org_core='')
+------------------------------ Captured log setup ------------------------------
+WARNING  src.ai_service.layers.variants.variant_generation_service:variant_generation_service.py:392 Ukrainian morphology analyzer not available: No module named 'src.ai_service.layers.variants.ukrainian_morphology'
+____________ TestNormalizationPipeline.test_morphology_integration _____________
+venv/lib/python3.13/site-packages/pydantic/main.py:983: in __getattr__
+    return pydantic_extra[item]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'get'
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_normalization_pipeline.py:300: in test_morphology_integration
+    names_analysis = normalization_result.get('names_analysis', [])
+                     ^^^^^^^^^^^^^^^^^^^^^^^^
+venv/lib/python3.13/site-packages/pydantic/main.py:985: in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+E   AttributeError: 'NormalizationResult' object has no attribute 'get'
+------------------------------ Captured log setup ------------------------------
+WARNING  src.ai_service.layers.variants.variant_generation_service:variant_generation_service.py:392 Ukrainian morphology analyzer not available: No module named 'src.ai_service.layers.variants.ukrainian_morphology'
+__________ TestNormalizationPipeline.test_transliteration_integration __________
+tests/integration/test_normalization_pipeline.py:328: in test_transliteration_integration
+    token_variants = normalization_result['token_variants']
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: 'NormalizationResult' object is not subscriptable
+------------------------------ Captured log setup ------------------------------
+WARNING  src.ai_service.layers.variants.variant_generation_service:variant_generation_service.py:392 Ukrainian morphology analyzer not available: No module named 'src.ai_service.layers.variants.ukrainian_morphology'
+_________ TestOrchestratorDecisionIntegration.test_high_risk_scenario __________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+___ TestOrchestratorDecisionIntegration.test_skip_scenario_smartfilter_false ___
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+________ TestOrchestratorDecisionIntegration.test_medium_risk_scenario _________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+__________ TestOrchestratorDecisionIntegration.test_low_risk_scenario __________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+______ TestOrchestratorDecisionIntegration.test_decision_engine_disabled _______
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_______ TestOrchestratorDecisionIntegration.test_decision_input_creation _______
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+______ TestOrchestratorDecisionIntegration.test_risk_level_determination _______
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_____ TestOrchestratorDecisionIntegration.test_decision_reasons_generation _____
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_____ TestPipelineEnd2End.test_pipeline_integration[ukrainian_simple_name] _____
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+------------------------------ Captured log setup ------------------------------
+WARNING  ai_service.layers.variants.variant_generation_service:variant_generation_service.py:392 Ukrainian morphology analyzer not available: No module named 'ai_service.layers.variants.ukrainian_morphology'
+WARNING  ai_service.core.orchestrator_factory:orchestrator_factory.py:150 Failed to initialize variants service: 'VariantGenerationService' object has no attribute 'initialize'
+WARNING  ai_service.core.orchestrator_factory:orchestrator_factory.py:161 Failed to initialize embeddings service: EmbeddingService.__init__() missing 1 required positional argument: 'config'
+_ TestPipelineEnd2End.test_pipeline_integration[ukrainian_full_name_with_patronymic] _
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_ TestPipelineEnd2End.test_pipeline_integration[ukrainian_company_with_legal_form] _
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+___ TestPipelineEnd2End.test_pipeline_integration[mixed_person_and_company] ____
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+____ TestPipelineEnd2End.test_pipeline_integration[person_with_birth_date] _____
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+________ TestPipelineEnd2End.test_pipeline_integration[person_with_inn] ________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+______ TestPipelineEnd2End.test_pipeline_integration[mixed_script_names] _______
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+__ TestPipelineEnd2End.test_pipeline_integration[noise_context_should_filter] __
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+__ TestPipelineEnd2End.test_pipeline_integration[quoted_company_with_person] ___
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+______ TestPipelineEnd2End.test_pipeline_integration[hyphenated_surname] _______
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+________ TestPipelineEnd2End.test_pipeline_integration[overfit_canary] _________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+___ TestPipelineEnd2End.test_pipeline_integration[full_pipeline_stress_test] ___
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+____________ TestPipelineEnd2End.test_normalization_flags_behavior _____________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+______________ TestPipelineEnd2End.test_performance_requirements _______________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_ test_role_based_slavic_normalization[\u0410\u043b\u043b\u044b \u0411\u043e\u0440\u0438\u0441\u043e\u0432\u043d\u044b \u041f\u0443\u0433\u0430\u0447\u0435\u0432\u043e\u0439-\u0410\u043b\u043b\u0430 \u0411\u043e\u0440\u0438\u0441\u043e\u0432\u043d\u0430 \u041f\u0443\u0433\u0430\u0447\u0435\u0432\u0430-ru] _
+tests/integration/test_role_based_normalization.py:43: in test_role_based_slavic_normalization
+    assert_normalized_name(result, expected_name)
+tests/integration/test_full_normalization_suite.py:38: in assert_normalized_name
+    assert expected_parts == actual_tokens, \
+E   AssertionError: Ожидалось: {'борисовна', 'алла', 'пугачева'}, получено: {'пугачев', 'борисовн', 'аллы'}
+E   assert {'алла', 'бор...', 'пугачева'} == {'аллы', 'бор...н', 'пугачев'}
+E     
+E     Extra items in the left set:
+E     'борисовна'
+E     'алла'
+E     'пугачева'
+E     Extra items in the right set:
+E     'пугачев'...
+E     
+E     ...Full output truncated (3 lines hidden), use '-vv' to show
+_ test_role_based_slavic_normalization[\u041f\u0435\u0442\u0440\u0443 \u0427\u0430\u0439\u043a\u043e\u0432\u0441\u043a\u043e\u043c\u0443-\u041f\u0435\u0442\u0440 \u0427\u0430\u0439\u043a\u043e\u0432\u0441\u043a\u0438\u0439-ru] _
+tests/integration/test_role_based_normalization.py:43: in test_role_based_slavic_normalization
+    assert_normalized_name(result, expected_name)
+tests/integration/test_full_normalization_suite.py:38: in assert_normalized_name
+    assert expected_parts == actual_tokens, \
+E   AssertionError: Ожидалось: {'петр', 'чайковский'}, получено: {'петр', 'чайковском'}
+E   assert {'петр', 'чайковский'} == {'петр', 'чайковском'}
+E     
+E     Extra items in the left set:
+E     'чайковский'
+E     Extra items in the right set:
+E     'чайковском'
+E     Use -v to get more diff
+_______ TestRussianUkrainianSentences.test_multiple_persons_same_surname _______
+tests/integration/test_ru_uk_sentences.py:97: in test_multiple_persons_same_surname
+    assert "Владимир Петров" in result.normalized
+E   AssertionError: assert 'Владимир Петров' in 'Владимир Анна Петров'
+E    +  where 'Владимир Анна Петров' = NormalizationResult(normalized='Владимир Анна Петров', tokens=['Владимир', 'Анна', 'Петров'], trace=[TokenTrace(token=...re_female': 3, 'score_male': 2, 'gap': 1}}], person_gender=None, gender_confidence=None, organizations=[], org_core='').normalized
+____________ TestRussianUkrainianSentences.test_surname_variations _____________
+tests/integration/test_ru_uk_sentences.py:161: in test_surname_variations
+    assert "Петрова" in result.normalized
+E   AssertionError: assert 'Петрова' in 'Петров Петров Петров Петров'
+E    +  where 'Петров Петров Петров Петров' = NormalizationResult(normalized='Петров Петров Петров Петров', tokens=['Петров', 'Петров', 'Петров', 'Петров'], trace=[...re_female': 0, 'score_male': 2, 'gap': 2}}], person_gender=None, gender_confidence=None, organizations=[], org_core='').normalized
+____ TestRussianUkrainianSentences.test_organization_legal_forms_filtering _____
+tests/integration/test_ru_uk_sentences.py:184: in test_organization_legal_forms_filtering
+    assert "EXAMPLE" in result.organizations
+E   AssertionError: assert 'EXAMPLE' in ['ПРИВАТБАНК', 'ТЕСТ']
+E    +  where ['ПРИВАТБАНК', 'ТЕСТ'] = NormalizationResult(normalized='Example', tokens=['Example'], trace=[TokenTrace(token='ПРИВАТБАНК', role='org', rule='...p': 0}}], person_gender=None, gender_confidence=None, organizations=['ПРИВАТБАНК', 'ТЕСТ'], org_core='ПРИВАТБАНК ТЕСТ').organizations
+________ TestRussianUkrainianSentences.test_performance_with_long_text _________
+tests/integration/test_ru_uk_sentences.py:198: in test_performance_with_long_text
+    assert "Анна Петровна Сидорова" in result.normalized
+E   AssertionError: assert 'Анна Петровна Сидорова' in 'Петр Иванович Коваленко Анна Петровна Сидоров Владимир Сергеевич Петров Елена Александровна Козлов Михаил Николаевич Смирнов Ольга Владимировна Морозов'
+E    +  where 'Петр Иванович Коваленко Анна Петровна Сидоров Владимир Сергеевич Петров Елена Александровна Козлов Михаил Николаевич Смирнов Ольга Владимировна Морозов' = NormalizationResult(normalized='Петр Иванович Коваленко Анна Петровна Сидоров Владимир Сергеевич Петров Елена Александ...female': 18, 'score_male': 28, 'gap': 10}}], person_gender=None, gender_confidence=None, organizations=[], org_core='').normalized
+=============================== warnings summary ===============================
+test_e2e_sanctions_screening.py::TestE2ESanctionsScreening::test_russian_person_with_documents
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/_pytest/fixtures.py:1182: PytestRemovedIn9Warning: 'TestE2ESanctionsScreening' requested an async fixture 'orchestrator', with no plugin or hook that handled it. This is usually an error, as pytest does not natively support it. This will turn into an error in pytest 9.
+  See: https://docs.pytest.org/en/stable/deprecations.html#sync-test-depending-on-async-fixture
+    warnings.warn(
+
+test_e2e_sanctions_screening.py::TestE2ESanctionsScreening::test_russian_person_with_documents
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:678: PytestDeprecationWarning: asyncio test 'test_russian_person_with_documents' requested async @pytest.fixture 'orchestrator' in strict mode. You might want to use @pytest_asyncio.fixture or switch to auto mode. This will become an error in future versions of pytest-asyncio.
+    warnings.warn(
+
+test_e2e_sanctions_screening.py::TestE2ESanctionsScreening::test_ukrainian_organization_with_legal_form
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:678: PytestDeprecationWarning: asyncio test 'test_ukrainian_organization_with_legal_form' requested async @pytest.fixture 'orchestrator' in strict mode. You might want to use @pytest_asyncio.fixture or switch to auto mode. This will become an error in future versions of pytest-asyncio.
+    warnings.warn(
+
+test_e2e_sanctions_screening.py::TestE2ESanctionsScreening::test_english_mixed_script_name
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:678: PytestDeprecationWarning: asyncio test 'test_english_mixed_script_name' requested async @pytest.fixture 'orchestrator' in strict mode. You might want to use @pytest_asyncio.fixture or switch to auto mode. This will become an error in future versions of pytest-asyncio.
+    warnings.warn(
+
+test_e2e_sanctions_screening.py::TestE2ESanctionsScreening::test_complex_payment_description
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:678: PytestDeprecationWarning: asyncio test 'test_complex_payment_description' requested async @pytest.fixture 'orchestrator' in strict mode. You might want to use @pytest_asyncio.fixture or switch to auto mode. This will become an error in future versions of pytest-asyncio.
+    warnings.warn(
+
+test_e2e_sanctions_screening.py::TestE2ESanctionsScreening::test_edge_case_compound_names
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:678: PytestDeprecationWarning: asyncio test 'test_edge_case_compound_names' requested async @pytest.fixture 'orchestrator' in strict mode. You might want to use @pytest_asyncio.fixture or switch to auto mode. This will become an error in future versions of pytest-asyncio.
+    warnings.warn(
+
+test_e2e_sanctions_screening.py::TestE2ESanctionsScreening::test_decision_engine_thresholds
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:678: PytestDeprecationWarning: asyncio test 'test_decision_engine_thresholds' requested async @pytest.fixture 'orchestrator' in strict mode. You might want to use @pytest_asyncio.fixture or switch to auto mode. This will become an error in future versions of pytest-asyncio.
+    warnings.warn(
+
+test_e2e_sanctions_screening.py::TestE2ESanctionsScreening::test_metrics_collection
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:678: PytestDeprecationWarning: asyncio test 'test_metrics_collection' requested async @pytest.fixture 'orchestrator' in strict mode. You might want to use @pytest_asyncio.fixture or switch to auto mode. This will become an error in future versions of pytest-asyncio.
+    warnings.warn(
+
+test_e2e_sanctions_screening.py::TestE2ESanctionsScreening::test_performance_benchmarks
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:678: PytestDeprecationWarning: asyncio test 'test_performance_benchmarks' requested async @pytest.fixture 'orchestrator' in strict mode. You might want to use @pytest_asyncio.fixture or switch to auto mode. This will become an error in future versions of pytest-asyncio.
+    warnings.warn(
+
+test_e2e_sanctions_screening.py::TestE2ESanctionsScreening::test_golden_dataset_stability
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:678: PytestDeprecationWarning: asyncio test 'test_golden_dataset_stability' requested async @pytest.fixture 'orchestrator' in strict mode. You might want to use @pytest_asyncio.fixture or switch to auto mode. This will become an error in future versions of pytest-asyncio.
+    warnings.warn(
+
+test_full_normalization_suite.py::test_ukrainian_full_normalization[\u041f\u043e\u0434\u0430\u0440\u0443\u043d\u043e\u043a \u0434\u043b\u044f \u0414\u0430\u0448\u0435\u043d\u044c\u043a\u0438 \u041a\u0432\u0456\u0442\u043a\u043e\u0432\u043e\u0457-\u0414\u0430\u0440\u0456\u044f \u041a\u0432\u0456\u0442\u043a\u043e\u0432\u0430]
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/pymorphy3/tagset.py:271: RuntimeWarning: coroutine 'TestE2ESanctionsScreening.orchestrator' was never awaited
+    grammemes_tuple = tuple((intern(str(g)) for g in grammemes))
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_high_risk_scenario
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/_pytest/fixtures.py:1182: PytestRemovedIn9Warning: 'test_high_risk_scenario' requested an async fixture 'orchestrator_with_decision_engine', with no plugin or hook that handled it. This is usually an error, as pytest does not natively support it. This will turn into an error in pytest 9.
+  See: https://docs.pytest.org/en/stable/deprecations.html#sync-test-depending-on-async-fixture
+    warnings.warn(
+
+test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_high_risk_scenario
+test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_skip_scenario_smartfilter_false
+test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_medium_risk_scenario
+test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_low_risk_scenario
+test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_decision_input_creation
+test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_risk_level_determination
+test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_decision_reasons_generation
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/_pytest/runner.py:146: RuntimeWarning: coroutine 'TestOrchestratorDecisionIntegration.orchestrator_with_decision_engine' was never awaited
+    item.funcargs = None  # type: ignore[attr-defined]
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_skip_scenario_smartfilter_false
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/_pytest/fixtures.py:1182: PytestRemovedIn9Warning: 'test_skip_scenario_smartfilter_false' requested an async fixture 'orchestrator_with_decision_engine', with no plugin or hook that handled it. This is usually an error, as pytest does not natively support it. This will turn into an error in pytest 9.
+  See: https://docs.pytest.org/en/stable/deprecations.html#sync-test-depending-on-async-fixture
+    warnings.warn(
+
+test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_medium_risk_scenario
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/_pytest/fixtures.py:1182: PytestRemovedIn9Warning: 'test_medium_risk_scenario' requested an async fixture 'orchestrator_with_decision_engine', with no plugin or hook that handled it. This is usually an error, as pytest does not natively support it. This will turn into an error in pytest 9.
+  See: https://docs.pytest.org/en/stable/deprecations.html#sync-test-depending-on-async-fixture
+    warnings.warn(
+
+test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_low_risk_scenario
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/_pytest/fixtures.py:1182: PytestRemovedIn9Warning: 'test_low_risk_scenario' requested an async fixture 'orchestrator_with_decision_engine', with no plugin or hook that handled it. This is usually an error, as pytest does not natively support it. This will turn into an error in pytest 9.
+  See: https://docs.pytest.org/en/stable/deprecations.html#sync-test-depending-on-async-fixture
+    warnings.warn(
+
+test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_decision_engine_disabled
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/_pytest/fixtures.py:1182: PytestRemovedIn9Warning: 'test_decision_engine_disabled' requested an async fixture 'orchestrator_without_decision_engine', with no plugin or hook that handled it. This is usually an error, as pytest does not natively support it. This will turn into an error in pytest 9.
+  See: https://docs.pytest.org/en/stable/deprecations.html#sync-test-depending-on-async-fixture
+    warnings.warn(
+
+test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_decision_engine_disabled
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/_pytest/runner.py:146: RuntimeWarning: coroutine 'TestOrchestratorDecisionIntegration.orchestrator_without_decision_engine' was never awaited
+    item.funcargs = None  # type: ignore[attr-defined]
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_decision_input_creation
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/_pytest/fixtures.py:1182: PytestRemovedIn9Warning: 'test_decision_input_creation' requested an async fixture 'orchestrator_with_decision_engine', with no plugin or hook that handled it. This is usually an error, as pytest does not natively support it. This will turn into an error in pytest 9.
+  See: https://docs.pytest.org/en/stable/deprecations.html#sync-test-depending-on-async-fixture
+    warnings.warn(
+
+test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_risk_level_determination
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/_pytest/fixtures.py:1182: PytestRemovedIn9Warning: 'test_risk_level_determination' requested an async fixture 'orchestrator_with_decision_engine', with no plugin or hook that handled it. This is usually an error, as pytest does not natively support it. This will turn into an error in pytest 9.
+  See: https://docs.pytest.org/en/stable/deprecations.html#sync-test-depending-on-async-fixture
+    warnings.warn(
+
+test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_decision_reasons_generation
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/_pytest/fixtures.py:1182: PytestRemovedIn9Warning: 'test_decision_reasons_generation' requested an async fixture 'orchestrator_with_decision_engine', with no plugin or hook that handled it. This is usually an error, as pytest does not natively support it. This will turn into an error in pytest 9.
+  See: https://docs.pytest.org/en/stable/deprecations.html#sync-test-depending-on-async-fixture
+    warnings.warn(
+
+test_simple_normalization.py::test_normalization_directly
+  /Users/dariapavlova/Desktop/ai-service/venv/lib/python3.13/site-packages/_pytest/python.py:161: PytestReturnNotNoneWarning: Test functions should return None, but test_simple_normalization.py::test_normalization_directly returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==================================== PASSES ====================================
+____________________________ test_diminutive_forms _____________________________
+----------------------------- Captured stdout call -----------------------------
+🔍 Testing Diminutive Forms
+==================================================
+
+Input: 'Петрик'
+Expected base: 'Петро'
+Forms: ["Parse(word='петриком', tag=OpencorporaTag('NOUN,masc,inan ablt'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петриком', 316, 6),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,Surn,anim masc,nomn'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 488, 0),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,Surn,Fixd,femn,anim loct'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 9, 5),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,Surn,Fixd,femn,anim gent'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 9, 1),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,Surn,Fixd,femn,anim ablt'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 9, 4),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,Surn,Fixd,femn,anim accs'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 9, 3),))", "Parse(word='петрикові', tag=OpencorporaTag('NOUN,masc,inan datv'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрикові', 316, 3),))", "Parse(word='петрика', tag=OpencorporaTag('NOUN,Surn,masc,anim accs'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрика', 488, 4),))", "Parse(word='петрика', tag=OpencorporaTag('NOUN,Surn,masc,anim gent'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрика', 488, 1),))", "Parse(word='петрикові', tag=OpencorporaTag('NOUN,Surn,masc,anim loct'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрикові', 488, 6),))", 'Петрик', "Parse(word='петрикові', tag=OpencorporaTag('NOUN,Name,masc,anim loct'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрикові', 1897, 6),))", "Parse(word='петрика', tag=OpencorporaTag('NOUN,Name,masc,anim gent'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрика', 1897, 1),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,Name,anim masc,nomn'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 1897, 0),))", "Parse(word='петрика', tag=OpencorporaTag('NOUN,Name,masc,anim accs'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрика', 1897, 4),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,masc,inan nomn'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 316, 0),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,masc,inan accs'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 316, 5),))", "Parse(word='петрикові', tag=OpencorporaTag('NOUN,Surn,masc,anim datv'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрикові', 488, 2),))", "Parse(word='петрикові', tag=OpencorporaTag('NOUN,masc,inan loct'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрикові', 316, 7),))", "Parse(word='петрикові', tag=OpencorporaTag('NOUN,Name,masc,anim datv'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрикові', 1897, 2),))", "Parse(word='петриком', tag=OpencorporaTag('NOUN,Name,masc,anim ablt'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петриком', 1897, 5),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,Surn,Fixd,femn,anim datv'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 9, 2),))", "Parse(word='петриком', tag=OpencorporaTag('NOUN,Surn,masc,anim ablt'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петриком', 488, 5),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,Surn,Fixd,femn,anim nomn'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 9, 0),))", "Parse(word='петрика', tag=OpencorporaTag('NOUN,masc,inan gent'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрика', 316, 1),))"]
+❌ Expected base form 'Петро' NOT found
+   Available forms: ["Parse(word='петриком', tag=OpencorporaTag('NOUN,masc,inan ablt'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петриком', 316, 6),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,Surn,anim masc,nomn'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 488, 0),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,Surn,Fixd,femn,anim loct'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 9, 5),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,Surn,Fixd,femn,anim gent'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 9, 1),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,Surn,Fixd,femn,anim ablt'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 9, 4),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,Surn,Fixd,femn,anim accs'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 9, 3),))", "Parse(word='петрикові', tag=OpencorporaTag('NOUN,masc,inan datv'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрикові', 316, 3),))", "Parse(word='петрика', tag=OpencorporaTag('NOUN,Surn,masc,anim accs'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрика', 488, 4),))", "Parse(word='петрика', tag=OpencorporaTag('NOUN,Surn,masc,anim gent'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрика', 488, 1),))", "Parse(word='петрикові', tag=OpencorporaTag('NOUN,Surn,masc,anim loct'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрикові', 488, 6),))", 'Петрик', "Parse(word='петрикові', tag=OpencorporaTag('NOUN,Name,masc,anim loct'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрикові', 1897, 6),))", "Parse(word='петрика', tag=OpencorporaTag('NOUN,Name,masc,anim gent'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрика', 1897, 1),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,Name,anim masc,nomn'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 1897, 0),))", "Parse(word='петрика', tag=OpencorporaTag('NOUN,Name,masc,anim accs'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрика', 1897, 4),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,masc,inan nomn'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 316, 0),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,masc,inan accs'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 316, 5),))", "Parse(word='петрикові', tag=OpencorporaTag('NOUN,Surn,masc,anim datv'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрикові', 488, 2),))", "Parse(word='петрикові', tag=OpencorporaTag('NOUN,masc,inan loct'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрикові', 316, 7),))", "Parse(word='петрикові', tag=OpencorporaTag('NOUN,Name,masc,anim datv'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрикові', 1897, 2),))", "Parse(word='петриком', tag=OpencorporaTag('NOUN,Name,masc,anim ablt'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петриком', 1897, 5),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,Surn,Fixd,femn,anim datv'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 9, 2),))", "Parse(word='петриком', tag=OpencorporaTag('NOUN,Surn,masc,anim ablt'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петриком', 488, 5),))", "Parse(word='петрик', tag=OpencorporaTag('NOUN,Surn,Fixd,femn,anim nomn'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрик', 9, 0),))", "Parse(word='петрика', tag=OpencorporaTag('NOUN,masc,inan gent'), normal_form='петрик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрика', 316, 1),))"]
+
+Input: 'Сашко'
+Expected base: 'Олександр'
+Forms: ["Parse(word='сашка', tag=OpencorporaTag('NOUN,Name,masc,anim nomn'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашка', 365, 0),))", "Parse(word='сашку', tag=OpencorporaTag('NOUN,Name,masc,anim accs'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашку', 365, 3),))", "Parse(word='сашкові', tag=OpencorporaTag('NOUN,Name,masc,anim loct'), normal_form='сашко', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашкові', 407, 6),))", 'Сашко', "Parse(word='сашка', tag=OpencorporaTag('NOUN,Name,femn,anim nomn'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашка', 265, 0),))", "Parse(word='сашкою', tag=OpencorporaTag('NOUN,Name,femn,anim ablt'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашкою', 265, 4),))", "Parse(word='сашці', tag=OpencorporaTag('NOUN,Name,femn,anim loct'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашці', 265, 5),))", "Parse(word='сашка', tag=OpencorporaTag('NOUN,Name,masc,anim accs'), normal_form='сашко', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашка', 407, 4),))", "Parse(word='сашком', tag=OpencorporaTag('NOUN,Name,masc,anim ablt'), normal_form='сашко', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашком', 407, 5),))", "Parse(word='сашка', tag=OpencorporaTag('NOUN,Name,masc,anim gent'), normal_form='сашко', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашка', 407, 1),))", "Parse(word='сашки', tag=OpencorporaTag('NOUN,Name,femn,anim gent'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашки', 265, 1),))", "Parse(word='сашку', tag=OpencorporaTag('NOUN,Name,femn,anim accs'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашку', 265, 3),))", "Parse(word='сашкою', tag=OpencorporaTag('NOUN,Name,masc,anim ablt'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашкою', 365, 4),))", "Parse(word='сашці', tag=OpencorporaTag('NOUN,Name,masc,anim datv'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашці', 365, 2),))", "Parse(word='сашці', tag=OpencorporaTag('NOUN,Name,masc,anim loct'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашці', 365, 5),))", "Parse(word='сашки', tag=OpencorporaTag('NOUN,Name,masc,anim gent'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашки', 365, 1),))", "Parse(word='сашкові', tag=OpencorporaTag('NOUN,Name,masc,anim datv'), normal_form='сашко', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашкові', 407, 2),))", "Parse(word='сашко', tag=OpencorporaTag('NOUN,Name,anim masc,nomn'), normal_form='сашко', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашко', 407, 0),))", "Parse(word='сашці', tag=OpencorporaTag('NOUN,Name,femn,anim datv'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашці', 265, 2),))"]
+❌ Expected base form 'Олександр' NOT found
+   Available forms: ["Parse(word='сашка', tag=OpencorporaTag('NOUN,Name,masc,anim nomn'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашка', 365, 0),))", "Parse(word='сашку', tag=OpencorporaTag('NOUN,Name,masc,anim accs'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашку', 365, 3),))", "Parse(word='сашкові', tag=OpencorporaTag('NOUN,Name,masc,anim loct'), normal_form='сашко', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашкові', 407, 6),))", 'Сашко', "Parse(word='сашка', tag=OpencorporaTag('NOUN,Name,femn,anim nomn'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашка', 265, 0),))", "Parse(word='сашкою', tag=OpencorporaTag('NOUN,Name,femn,anim ablt'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашкою', 265, 4),))", "Parse(word='сашці', tag=OpencorporaTag('NOUN,Name,femn,anim loct'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашці', 265, 5),))", "Parse(word='сашка', tag=OpencorporaTag('NOUN,Name,masc,anim accs'), normal_form='сашко', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашка', 407, 4),))", "Parse(word='сашком', tag=OpencorporaTag('NOUN,Name,masc,anim ablt'), normal_form='сашко', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашком', 407, 5),))", "Parse(word='сашка', tag=OpencorporaTag('NOUN,Name,masc,anim gent'), normal_form='сашко', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашка', 407, 1),))", "Parse(word='сашки', tag=OpencorporaTag('NOUN,Name,femn,anim gent'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашки', 265, 1),))", "Parse(word='сашку', tag=OpencorporaTag('NOUN,Name,femn,anim accs'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашку', 265, 3),))", "Parse(word='сашкою', tag=OpencorporaTag('NOUN,Name,masc,anim ablt'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашкою', 365, 4),))", "Parse(word='сашці', tag=OpencorporaTag('NOUN,Name,masc,anim datv'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашці', 365, 2),))", "Parse(word='сашці', tag=OpencorporaTag('NOUN,Name,masc,anim loct'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашці', 365, 5),))", "Parse(word='сашки', tag=OpencorporaTag('NOUN,Name,masc,anim gent'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашки', 365, 1),))", "Parse(word='сашкові', tag=OpencorporaTag('NOUN,Name,masc,anim datv'), normal_form='сашко', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашкові', 407, 2),))", "Parse(word='сашко', tag=OpencorporaTag('NOUN,Name,anim masc,nomn'), normal_form='сашко', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашко', 407, 0),))", "Parse(word='сашці', tag=OpencorporaTag('NOUN,Name,femn,anim datv'), normal_form='сашка', score=1.0, methods_stack=((DictionaryAnalyzer(), 'сашці', 265, 2),))"]
+
+Input: 'Вовчик'
+Expected base: 'Володимир'
+Forms: ["Parse(word='вовчика', tag=OpencorporaTag('NOUN,anim masc,gent'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчика', 197, 1),))", "Parse(word='вовчика', tag=OpencorporaTag('NOUN,anim masc,accs'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчика', 197, 4),))", 'Вовчик', "Parse(word='вовчикові', tag=OpencorporaTag('NOUN,anim masc,datv'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчикові', 197, 2),))", "Parse(word='вовчикові', tag=OpencorporaTag('NOUN,anim masc,loct'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчикові', 197, 6),))", "Parse(word='вовчик', tag=OpencorporaTag('NOUN,anim masc,nomn'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчик', 197, 0),))", "Parse(word='вовчик', tag=OpencorporaTag('NOUN,masc,inan nomn'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчик', 316, 0),))", "Parse(word='вовчик', tag=OpencorporaTag('NOUN,masc,inan accs'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчик', 316, 5),))", "Parse(word='вовчикові', tag=OpencorporaTag('NOUN,masc,inan loct'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчикові', 316, 7),))", "Parse(word='вовчикові', tag=OpencorporaTag('NOUN,masc,inan datv'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчикові', 316, 3),))", "Parse(word='вовчиком', tag=OpencorporaTag('NOUN,anim masc,ablt'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчиком', 197, 5),))", "Parse(word='вовчика', tag=OpencorporaTag('NOUN,masc,inan gent'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчика', 316, 1),))", "Parse(word='вовчиком', tag=OpencorporaTag('NOUN,masc,inan ablt'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчиком', 316, 6),))"]
+❌ Expected base form 'Володимир' NOT found
+   Available forms: ["Parse(word='вовчика', tag=OpencorporaTag('NOUN,anim masc,gent'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчика', 197, 1),))", "Parse(word='вовчика', tag=OpencorporaTag('NOUN,anim masc,accs'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчика', 197, 4),))", 'Вовчик', "Parse(word='вовчикові', tag=OpencorporaTag('NOUN,anim masc,datv'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчикові', 197, 2),))", "Parse(word='вовчикові', tag=OpencorporaTag('NOUN,anim masc,loct'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчикові', 197, 6),))", "Parse(word='вовчик', tag=OpencorporaTag('NOUN,anim masc,nomn'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчик', 197, 0),))", "Parse(word='вовчик', tag=OpencorporaTag('NOUN,masc,inan nomn'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчик', 316, 0),))", "Parse(word='вовчик', tag=OpencorporaTag('NOUN,masc,inan accs'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчик', 316, 5),))", "Parse(word='вовчикові', tag=OpencorporaTag('NOUN,masc,inan loct'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчикові', 316, 7),))", "Parse(word='вовчикові', tag=OpencorporaTag('NOUN,masc,inan datv'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчикові', 316, 3),))", "Parse(word='вовчиком', tag=OpencorporaTag('NOUN,anim masc,ablt'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчиком', 197, 5),))", "Parse(word='вовчика', tag=OpencorporaTag('NOUN,masc,inan gent'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчика', 316, 1),))", "Parse(word='вовчиком', tag=OpencorporaTag('NOUN,masc,inan ablt'), normal_form='вовчик', score=1.0, methods_stack=((DictionaryAnalyzer(), 'вовчиком', 316, 6),))"]
+
+Input: 'Женя'
+Expected base: 'Євген'
+Forms: ["Parse(word='жені', tag=OpencorporaTag('NOUN,Name,masc,anim loct'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'жені', 786, 5),))", "Parse(word='жені', tag=OpencorporaTag('NOUN,Name,femn,anim gent'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'жені', 413, 1),))", "Parse(word='жені', tag=OpencorporaTag('NOUN,Name,masc,anim gent'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'жені', 786, 1),))", "Parse(word='женею', tag=OpencorporaTag('NOUN,Name,masc,anim ablt'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'женею', 786, 4),))", "Parse(word='жені', tag=OpencorporaTag('NOUN,Name,femn,anim loct'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'жені', 413, 5),))", "Parse(word='женю', tag=OpencorporaTag('NOUN,Name,masc,anim accs'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'женю', 786, 3),))", "Parse(word='женя', tag=OpencorporaTag('NOUN,Name,femn,anim nomn'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'женя', 413, 0),))", "Parse(word='женю', tag=OpencorporaTag('NOUN,Name,femn,anim accs'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'женю', 413, 3),))", "Parse(word='жені', tag=OpencorporaTag('NOUN,Name,masc,anim datv'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'жені', 786, 2),))", "Parse(word='женею', tag=OpencorporaTag('NOUN,Name,femn,anim ablt'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'женею', 413, 4),))", 'Женя', "Parse(word='женя', tag=OpencorporaTag('NOUN,Name,masc,anim nomn'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'женя', 786, 0),))", "Parse(word='жені', tag=OpencorporaTag('NOUN,Name,femn,anim datv'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'жені', 413, 2),))"]
+❌ Expected base form 'Євген' NOT found
+   Available forms: ["Parse(word='жені', tag=OpencorporaTag('NOUN,Name,masc,anim loct'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'жені', 786, 5),))", "Parse(word='жені', tag=OpencorporaTag('NOUN,Name,femn,anim gent'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'жені', 413, 1),))", "Parse(word='жені', tag=OpencorporaTag('NOUN,Name,masc,anim gent'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'жені', 786, 1),))", "Parse(word='женею', tag=OpencorporaTag('NOUN,Name,masc,anim ablt'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'женею', 786, 4),))", "Parse(word='жені', tag=OpencorporaTag('NOUN,Name,femn,anim loct'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'жені', 413, 5),))", "Parse(word='женю', tag=OpencorporaTag('NOUN,Name,masc,anim accs'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'женю', 786, 3),))", "Parse(word='женя', tag=OpencorporaTag('NOUN,Name,femn,anim nomn'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'женя', 413, 0),))", "Parse(word='женю', tag=OpencorporaTag('NOUN,Name,femn,anim accs'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'женю', 413, 3),))", "Parse(word='жені', tag=OpencorporaTag('NOUN,Name,masc,anim datv'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'жені', 786, 2),))", "Parse(word='женею', tag=OpencorporaTag('NOUN,Name,femn,anim ablt'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'женею', 413, 4),))", 'Женя', "Parse(word='женя', tag=OpencorporaTag('NOUN,Name,masc,anim nomn'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'женя', 786, 0),))", "Parse(word='жені', tag=OpencorporaTag('NOUN,Name,femn,anim datv'), normal_form='женя', score=1.0, methods_stack=((DictionaryAnalyzer(), 'жені', 413, 2),))"]
+
+Input: 'Дашенька'
+Expected base: 'Дарія'
+Forms: ["Parse(word='дашенької', tag=OpencorporaTag('ADJF femn,gent'), normal_form='дашенький', score=1.0, methods_stack=((FakeDictionary(), 'дашенької', 5, 10), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашенька', tag=OpencorporaTag('NOUN,inan femn,nomn'), normal_form='дашенька', score=1.0, methods_stack=((FakeDictionary(), 'дашенька', 55, 0), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашенька', tag=OpencorporaTag('ADJF femn,nomn'), normal_form='дашенький', score=1.0, methods_stack=((FakeDictionary(), 'дашенька', 5, 9), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашеньці', tag=OpencorporaTag('NOUN,inan femn,datv'), normal_form='дашенька', score=1.0, methods_stack=((FakeDictionary(), 'дашеньці', 55, 2), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашенькою', tag=OpencorporaTag('ADJF femn,ablt'), normal_form='дашенький', score=1.0, methods_stack=((FakeDictionary(), 'дашенькою', 5, 13), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашеньці', tag=OpencorporaTag('NOUN,inan femn,loct'), normal_form='дашенька', score=1.0, methods_stack=((FakeDictionary(), 'дашеньці', 55, 5), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашеньку', tag=OpencorporaTag('ADJF femn,accs'), normal_form='дашенький', score=1.0, methods_stack=((FakeDictionary(), 'дашеньку', 5, 12), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашеньки', tag=OpencorporaTag('NOUN,inan femn,gent'), normal_form='дашенька', score=1.0, methods_stack=((FakeDictionary(), 'дашеньки', 55, 1), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашеньку', tag=OpencorporaTag('NOUN,inan femn,accs'), normal_form='дашенька', score=1.0, methods_stack=((FakeDictionary(), 'дашеньку', 55, 3), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашенькій', tag=OpencorporaTag('ADJF femn,datv'), normal_form='дашенький', score=1.0, methods_stack=((FakeDictionary(), 'дашенькій', 5, 11), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", 'Дашенька', "Parse(word='дашенькій', tag=OpencorporaTag('ADJF femn,loct'), normal_form='дашенький', score=1.0, methods_stack=((FakeDictionary(), 'дашенькій', 5, 14), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашенькою', tag=OpencorporaTag('NOUN,inan femn,ablt'), normal_form='дашенька', score=1.0, methods_stack=((FakeDictionary(), 'дашенькою', 55, 4), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))"]
+❌ Expected base form 'Дарія' NOT found
+   Available forms: ["Parse(word='дашенької', tag=OpencorporaTag('ADJF femn,gent'), normal_form='дашенький', score=1.0, methods_stack=((FakeDictionary(), 'дашенької', 5, 10), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашенька', tag=OpencorporaTag('NOUN,inan femn,nomn'), normal_form='дашенька', score=1.0, methods_stack=((FakeDictionary(), 'дашенька', 55, 0), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашенька', tag=OpencorporaTag('ADJF femn,nomn'), normal_form='дашенький', score=1.0, methods_stack=((FakeDictionary(), 'дашенька', 5, 9), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашеньці', tag=OpencorporaTag('NOUN,inan femn,datv'), normal_form='дашенька', score=1.0, methods_stack=((FakeDictionary(), 'дашеньці', 55, 2), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашенькою', tag=OpencorporaTag('ADJF femn,ablt'), normal_form='дашенький', score=1.0, methods_stack=((FakeDictionary(), 'дашенькою', 5, 13), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашеньці', tag=OpencorporaTag('NOUN,inan femn,loct'), normal_form='дашенька', score=1.0, methods_stack=((FakeDictionary(), 'дашеньці', 55, 5), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашеньку', tag=OpencorporaTag('ADJF femn,accs'), normal_form='дашенький', score=1.0, methods_stack=((FakeDictionary(), 'дашеньку', 5, 12), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашеньки', tag=OpencorporaTag('NOUN,inan femn,gent'), normal_form='дашенька', score=1.0, methods_stack=((FakeDictionary(), 'дашеньки', 55, 1), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашеньку', tag=OpencorporaTag('NOUN,inan femn,accs'), normal_form='дашенька', score=1.0, methods_stack=((FakeDictionary(), 'дашеньку', 55, 3), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашенькій', tag=OpencorporaTag('ADJF femn,datv'), normal_form='дашенький', score=1.0, methods_stack=((FakeDictionary(), 'дашенькій', 5, 11), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", 'Дашенька', "Parse(word='дашенькій', tag=OpencorporaTag('ADJF femn,loct'), normal_form='дашенький', score=1.0, methods_stack=((FakeDictionary(), 'дашенькій', 5, 14), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))", "Parse(word='дашенькою', tag=OpencorporaTag('NOUN,inan femn,ablt'), normal_form='дашенька', score=1.0, methods_stack=((FakeDictionary(), 'дашенькою', 55, 4), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'енька')))"]
+
+==================================================
+Test completed!
+___________ TestMultilingualEmbeddings.test_name_variants_similarity ___________
+----------------------------- Captured stdout call -----------------------------
+Similarity between 'Ivan Petrov' and 'Іван Петров': 0.912
+Similarity between 'Ivan Petrov' and 'Иван Петров': 0.973
+Similarity between 'Іван Петров' and 'Иван Петров': 0.929
+------------------------------ Captured log call -------------------------------
+WARNING  ai_service.layers.embeddings.embedding_service:embedding_service.py:184 Slow encode_batch(3 texts): 4015.54ms > 100ms
+________ TestMultilingualEmbeddings.test_organization_names_similarity _________
+----------------------------- Captured stdout call -----------------------------
+Similarity between 'PrivatBank' and 'Приватбанк': 0.898
+------------------------------ Captured log call -------------------------------
+WARNING  ai_service.layers.embeddings.embedding_service:embedding_service.py:184 Slow encode_batch(2 texts): 3676.82ms > 100ms
+_______ TestMultilingualEmbeddings.test_unrelated_strings_low_similarity _______
+----------------------------- Captured stdout call -----------------------------
+Similarity between 'Ivan Petrov' and 'PrivatBank': 0.255
+Similarity between 'Ivan Petrov' and 'random text here': 0.038
+Similarity between 'Ivan Petrov' and 'completely different': 0.050
+Similarity between 'Ivan Petrov' and 'unrelated content': 0.093
+Similarity between 'PrivatBank' and 'random text here': 0.037
+Similarity between 'PrivatBank' and 'completely different': 0.006
+Similarity between 'PrivatBank' and 'unrelated content': 0.037
+Similarity between 'random text here' and 'completely different': 0.103
+Similarity between 'random text here' and 'unrelated content': 0.400
+Similarity between 'completely different' and 'unrelated content': 0.245
+------------------------------ Captured log call -------------------------------
+WARNING  ai_service.layers.embeddings.embedding_service:embedding_service.py:184 Slow encode_batch(5 texts): 3595.42ms > 100ms
+______________ TestMultilingualEmbeddings.test_mixed_script_names ______________
+----------------------------- Captured stdout call -----------------------------
+Similarity between 'Ivan Петров' and 'Іван Petrov': 0.920
+Similarity between 'Ivan Петров' and 'Иван Петров': 0.997
+Similarity between 'Іван Petrov' and 'Иван Петров': 0.928
+------------------------------ Captured log call -------------------------------
+WARNING  ai_service.layers.embeddings.embedding_service:embedding_service.py:184 Slow encode_batch(3 texts): 3211.89ms > 100ms
+_______ TestMultilingualEmbeddings.test_common_names_different_languages _______
+----------------------------- Captured stdout call -----------------------------
+Similarity between 'Alexander' and 'Александр': 0.953
+Similarity between 'Alexander' and 'Олександр': 0.907
+Similarity between 'Александр' and 'Олександр': 0.980
+------------------------------ Captured log call -------------------------------
+WARNING  ai_service.layers.embeddings.embedding_service:embedding_service.py:184 Slow encode_batch(3 texts): 3286.79ms > 100ms
+____________ TestMultilingualEmbeddings.test_organization_variants _____________
+----------------------------- Captured stdout call -----------------------------
+Similarity between 'PrivatBank' and 'Приватбанк': 0.898
+Similarity between 'PrivatBank' and 'ПРИВАТБАНК': 0.379
+Similarity between 'PrivatBank' and 'privatbank': 0.953
+Similarity between 'Приватбанк' and 'ПРИВАТБАНК': 0.423
+Similarity between 'Приватбанк' and 'privatbank': 0.955
+Similarity between 'ПРИВАТБАНК' and 'privatbank': 0.357
+------------------------------ Captured log call -------------------------------
+WARNING  ai_service.layers.embeddings.embedding_service:embedding_service.py:184 Slow encode_batch(4 texts): 3493.89ms > 100ms
+_______ TestMultilingualEmbeddings.test_embedding_dimensions_consistency _______
+------------------------------ Captured log call -------------------------------
+WARNING  ai_service.layers.embeddings.embedding_service:embedding_service.py:184 Slow encode_batch(7 texts): 3702.88ms > 100ms
+_________ TestMultilingualEmbeddings.test_preprocessing_effectiveness __________
+----------------------------- Captured stdout call -----------------------------
+Similarity between preprocessed texts 0 and 1: 0.912
+Similarity between preprocessed texts 0 and 2: 0.973
+Similarity between preprocessed texts 1 and 2: 0.929
+------------------------------ Captured log call -------------------------------
+WARNING  ai_service.layers.embeddings.embedding_service:embedding_service.py:184 Slow encode_batch(3 texts): 3336.40ms > 100ms
+____________________ test_critical_ukrainian_normalization _____________________
+----------------------------- Captured stdout call -----------------------------
+✅ Critical test passed: Оплата от Петра Порошенка по Договору 123 -> ['Петро', 'Порошенко']
+________ TestNormalizationPipeline.test_language_detection_consistency _________
+------------------------------ Captured log setup ------------------------------
+WARNING  src.ai_service.layers.variants.variant_generation_service:variant_generation_service.py:392 Ukrainian morphology analyzer not available: No module named 'src.ai_service.layers.variants.ukrainian_morphology'
+________ TestNormalizationPipeline.test_variant_generation_integration _________
+------------------------------ Captured log setup ------------------------------
+WARNING  src.ai_service.layers.variants.variant_generation_service:variant_generation_service.py:392 Ukrainian morphology analyzer not available: No module named 'src.ai_service.layers.variants.ukrainian_morphology'
+_________________________ test_normalization_directly __________________________
+----------------------------- Captured stdout call -----------------------------
+🧪 Testing Normalization Service Directly
+==================================================
+❌ Error testing normalization: module 'ai_service.services' has no attribute 'normalization_service'
+----------------------------- Captured stderr call -----------------------------
+Traceback (most recent call last):
+  File "/Users/dariapavlova/Desktop/ai-service/tests/integration/test_simple_normalization.py", line 29, in test_normalization_directly
+    with patch('ai_service.services.normalization_service._nltk_stopwords') as mock_stopwords, \
+         ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py", line 1481, in __enter__
+    self.target = self.getter()
+                  ~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/pkgutil.py", line 528, in resolve_name
+    result = getattr(result, p)
+AttributeError: module 'ai_service.services' has no attribute 'normalization_service'
+_________________________ test_strict_name_extraction __________________________
+----------------------------- Captured stdout call -----------------------------
+🔍 Strict Name Extraction Test (No Mocks)
+============================================================
+⚠️  Skipping test - CleanOrchestratorService not available
+_______________________ test_ukrainian_morphology_simple _______________________
+----------------------------- Captured stdout call -----------------------------
+🔍 Ukrainian Morphology Simple Test
+==================================================
+Input: 'Сергея'
+Forms: ["Parse(word='сергеєві', tag=OpencorporaTag('NOUN,anim masc,loct'), normal_form='сергей', score=1.0, methods_stack=((DictionaryAnalyzer(), 'геєві', 208, 6), (UnknownPrefixAnalyzer(score_multiplier=0.5), 'сер')))", "Parse(word='сергея', tag=OpencorporaTag('NOUN,Surn,masc,anim accs'), normal_form='сергей', score=1.0, methods_stack=((FakeDictionary(), 'сергея', 303, 4), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'ергея')))", "Parse(word='сергеєві', tag=OpencorporaTag('NOUN,Surn,masc,anim loct'), normal_form='сергей', score=1.0, methods_stack=((FakeDictionary(), 'сергеєві', 303, 6), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'ергея')))", "Parse(word='сергеєві', tag=OpencorporaTag('NOUN,anim masc,datv'), normal_form='сергей', score=1.0, methods_stack=((DictionaryAnalyzer(), 'геєві', 208, 2), (UnknownPrefixAnalyzer(score_multiplier=0.5), 'сер')))", "Parse(word='сергей', tag=OpencorporaTag('NOUN,anim masc,nomn'), normal_form='сергей', score=1.0, methods_stack=((DictionaryAnalyzer(), 'гей', 208, 0), (UnknownPrefixAnalyzer(score_multiplier=0.5), 'сер')))", "Parse(word='сергеєві', tag=OpencorporaTag('NOUN,Surn,masc,anim datv'), normal_form='сергей', score=1.0, methods_stack=((FakeDictionary(), 'сергеєві', 303, 2), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'ергея')))", 'Сергея', "Parse(word='сергеєм', tag=OpencorporaTag('NOUN,anim masc,ablt'), normal_form='сергей', score=1.0, methods_stack=((DictionaryAnalyzer(), 'геєм', 208, 5), (UnknownPrefixAnalyzer(score_multiplier=0.5), 'сер')))", "Parse(word='сергеєм', tag=OpencorporaTag('NOUN,Surn,masc,anim ablt'), normal_form='сергей', score=1.0, methods_stack=((FakeDictionary(), 'сергеєм', 303, 5), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'ергея')))", "Parse(word='сергея', tag=OpencorporaTag('NOUN,Surn,masc,anim gent'), normal_form='сергей', score=1.0, methods_stack=((FakeDictionary(), 'сергея', 303, 1), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'ергея')))", "Parse(word='сергея', tag=OpencorporaTag('NOUN,anim masc,accs'), normal_form='сергей', score=1.0, methods_stack=((DictionaryAnalyzer(), 'гея', 208, 4), (UnknownPrefixAnalyzer(score_multiplier=0.5), 'сер')))", "Parse(word='сергей', tag=OpencorporaTag('NOUN,Surn,masc,anim nomn'), normal_form='сергей', score=1.0, methods_stack=((FakeDictionary(), 'сергей', 303, 0), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'ергея')))", "Parse(word='сергея', tag=OpencorporaTag('NOUN,anim masc,gent'), normal_form='сергей', score=1.0, methods_stack=((DictionaryAnalyzer(), 'гея', 208, 1), (UnknownPrefixAnalyzer(score_multiplier=0.5), 'сер')))"]
+Types: ['str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str']
+All strings: ✅
+Has nominative form: ❌
+------------------------------
+Input: 'Владимировича'
+Forms: ["Parse(word='владимировичій', tag=OpencorporaTag('ADJF femn,loct'), normal_form='владимировичий', score=1.0, methods_stack=((FakeDictionary(), 'владимировичій', 5, 14), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'овича')))", "Parse(word='владимировичу', tag=OpencorporaTag('ADJF femn,accs'), normal_form='владимировичий', score=1.0, methods_stack=((FakeDictionary(), 'владимировичу', 5, 12), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'овича')))", "Parse(word='владимировичої', tag=OpencorporaTag('ADJF femn,gent'), normal_form='владимировичий', score=1.0, methods_stack=((FakeDictionary(), 'владимировичої', 5, 10), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'овича')))", "Parse(word='владимировичеві', tag=OpencorporaTag('NOUN,Surn,masc,anim loct'), normal_form='владимирович', score=1.0, methods_stack=((DictionaryAnalyzer(), 'мировичеві', 90, 6), (UnknownPrefixAnalyzer(score_multiplier=0.5), 'влади')))", "Parse(word='владимирович', tag=OpencorporaTag('NOUN,Surn,masc,anim nomn'), normal_form='владимирович', score=1.0, methods_stack=((DictionaryAnalyzer(), 'мирович', 90, 0), (UnknownPrefixAnalyzer(score_multiplier=0.5), 'влади')))", "Parse(word='владимировичеві', tag=OpencorporaTag('NOUN,Patr,masc,anim datv'), normal_form='владимирович', score=1.0, methods_stack=((FakeDictionary(), 'владимировичеві', 28, 2), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'овича')))", "Parse(word='владимировичеві', tag=OpencorporaTag('NOUN,Patr,masc,anim loct'), normal_form='владимирович', score=1.0, methods_stack=((FakeDictionary(), 'владимировичеві', 28, 6), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'овича')))", "Parse(word='владимировичеві', tag=OpencorporaTag('NOUN,Surn,masc,anim datv'), normal_form='владимирович', score=1.0, methods_stack=((DictionaryAnalyzer(), 'мировичеві', 90, 2), (UnknownPrefixAnalyzer(score_multiplier=0.5), 'влади')))", 'Владимировича', "Parse(word='владимировичою', tag=OpencorporaTag('ADJF femn,ablt'), normal_form='владимировичий', score=1.0, methods_stack=((FakeDictionary(), 'владимировичою', 5, 13), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'овича')))", "Parse(word='владимировича', tag=OpencorporaTag('NOUN,Patr,masc,anim accs'), normal_form='владимирович', score=1.0, methods_stack=((FakeDictionary(), 'владимировича', 28, 4), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'овича')))", "Parse(word='владимировича', tag=OpencorporaTag('NOUN,Surn,masc,anim accs'), normal_form='владимирович', score=1.0, methods_stack=((DictionaryAnalyzer(), 'мировича', 90, 4), (UnknownPrefixAnalyzer(score_multiplier=0.5), 'влади')))", "Parse(word='владимировича', tag=OpencorporaTag('ADJF femn,nomn'), normal_form='владимировичий', score=1.0, methods_stack=((FakeDictionary(), 'владимировича', 5, 9), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'овича')))", "Parse(word='владимировичій', tag=OpencorporaTag('ADJF femn,datv'), normal_form='владимировичий', score=1.0, methods_stack=((FakeDictionary(), 'владимировичій', 5, 11), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'овича')))", "Parse(word='владимировича', tag=OpencorporaTag('NOUN,Patr,masc,anim gent'), normal_form='владимирович', score=1.0, methods_stack=((FakeDictionary(), 'владимировича', 28, 1), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'овича')))", "Parse(word='владимирович', tag=OpencorporaTag('NOUN,Patr,masc,anim nomn'), normal_form='владимирович', score=1.0, methods_stack=((FakeDictionary(), 'владимирович', 28, 0), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'овича')))", "Parse(word='владимировичем', tag=OpencorporaTag('NOUN,Surn,masc,anim ablt'), normal_form='владимирович', score=1.0, methods_stack=((DictionaryAnalyzer(), 'мировичем', 90, 5), (UnknownPrefixAnalyzer(score_multiplier=0.5), 'влади')))", "Parse(word='владимировича', tag=OpencorporaTag('NOUN,Surn,masc,anim gent'), normal_form='владимирович', score=1.0, methods_stack=((DictionaryAnalyzer(), 'мировича', 90, 1), (UnknownPrefixAnalyzer(score_multiplier=0.5), 'влади')))", "Parse(word='владимировичем', tag=OpencorporaTag('NOUN,Patr,masc,anim ablt'), normal_form='владимирович', score=1.0, methods_stack=((FakeDictionary(), 'владимировичем', 28, 5), (KnownSuffixAnalyzer(min_word_length=4, score_multiplier=0.5), 'овича')))"]
+Types: ['str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str']
+All strings: ✅
+Has nominative form: ❌
+------------------------------
+Input: 'Петрова'
+Forms: ["Parse(word='петрова', tag=OpencorporaTag('ADJF femn,nomn'), normal_form='петрів', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрова', 24, 9),))", "Parse(word='петровій', tag=OpencorporaTag('NOUN,Surn,femn,anim loct'), normal_form='петрова', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петровій', 27, 5),))", "Parse(word='петрової', tag=OpencorporaTag('NOUN,Surn,femn,anim gent'), normal_form='петрова', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрової', 27, 1),))", "Parse(word='петровій', tag=OpencorporaTag('ADJF femn,datv'), normal_form='петрів', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петровій', 24, 11),))", 'Петрова', "Parse(word='петрів', tag=OpencorporaTag('NOUN,masc,inan accs'), normal_form='петрів', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрів', 286, 3),))", "Parse(word='петрова', tag=OpencorporaTag('NOUN,Surn,masc,anim accs'), normal_form='петров', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрова', 26, 3),))", "Parse(word='петровом', tag=OpencorporaTag('NOUN,masc,inan ablt'), normal_form='петрів', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петровом', 286, 4),))", "Parse(word='петріва', tag=OpencorporaTag('NOUN,Surn,masc,anim accs'), normal_form='петрів', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петріва', 285, 5),))", "Parse(word='петріва', tag=OpencorporaTag('NOUN,Surn,masc,anim gent'), normal_form='петрів', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петріва', 285, 1),))", "Parse(word='петрову', tag=OpencorporaTag('NOUN,Surn,femn,anim accs'), normal_form='петрова', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрову', 27, 3),))", "Parse(word='петрова', tag=OpencorporaTag('NOUN,Surn,femn,anim nomn'), normal_form='петрова', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрова', 27, 0),))", "Parse(word='петрову', tag=OpencorporaTag('NOUN,masc,inan datv'), normal_form='петрів', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрову', 286, 2),))", "Parse(word='петрові', tag=OpencorporaTag('NOUN,Surn,masc,anim loct'), normal_form='петров', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрові', 26, 5),))", "Parse(word='петровій', tag=OpencorporaTag('NOUN,Surn,femn,anim datv'), normal_form='петрова', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петровій', 27, 2),))", "Parse(word='петріві', tag=OpencorporaTag('NOUN,Surn,masc,anim loct'), normal_form='петрів', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петріві', 285, 9),))", "Parse(word='петровим', tag=OpencorporaTag('NOUN,Surn,masc,anim ablt'), normal_form='петров', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петровим', 26, 4),))", "Parse(word='петрова', tag=OpencorporaTag('NOUN,Surn,masc,anim gent'), normal_form='петров', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрова', 26, 1),))", "Parse(word='петров', tag=OpencorporaTag('NOUN,Surn,anim masc,nomn'), normal_form='петров', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петров', 26, 0),))", "Parse(word='петрову', tag=OpencorporaTag('ADJF femn,accs'), normal_form='петрів', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрову', 24, 12),))", "Parse(word='петрів', tag=OpencorporaTag('NOUN,Surn,masc,anim nomn'), normal_form='петрів', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрів', 285, 0),))", "Parse(word='петрову', tag=OpencorporaTag('NOUN,Surn,masc,anim datv'), normal_form='петров', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрову', 26, 2),))", "Parse(word='петрів', tag=OpencorporaTag('NOUN,masc,inan nomn'), normal_form='петрів', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрів', 286, 0),))", "Parse(word='петрова', tag=OpencorporaTag('NOUN,masc,inan gent'), normal_form='петрів', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрова', 286, 1),))", "Parse(word='петровою', tag=OpencorporaTag('NOUN,Surn,femn,anim ablt'), normal_form='петрова', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петровою', 27, 4),))", "Parse(word='петрівим', tag=OpencorporaTag('NOUN,Surn,masc,anim ablt'), normal_form='петрів', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрівим', 285, 7),))", "Parse(word='петрові', tag=OpencorporaTag('NOUN,masc,inan loct'), normal_form='петрів', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрові', 286, 5),))", "Parse(word='петровою', tag=OpencorporaTag('ADJF femn,ablt'), normal_form='петрів', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петровою', 24, 13),))", "Parse(word='петрової', tag=OpencorporaTag('ADJF femn,gent'), normal_form='петрів', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрової', 24, 10),))", "Parse(word='петровій', tag=OpencorporaTag('ADJF femn,loct'), normal_form='петрів', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петровій', 24, 14),))", "Parse(word='петріву', tag=OpencorporaTag('NOUN,Surn,masc,anim datv'), normal_form='петрів', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петріву', 285, 3),))"]
+Types: ['str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str']
+All strings: ✅
+Has nominative form: ❌
+------------------------------
+Input: 'Петра'
+Forms: ["Parse(word='петру', tag=OpencorporaTag('NOUN,Name,femn,anim accs'), normal_form='петра', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петру', 264, 3),))", "Parse(word='петра', tag=OpencorporaTag('NOUN,Name,masc,anim gent'), normal_form='петро', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петра', 2461, 1),))", "Parse(word='петра', tag=OpencorporaTag('NOUN,Name,anim femn,nomn'), normal_form='петра', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петра', 264, 0),))", "Parse(word='петрі', tag=OpencorporaTag('NOUN,Name,femn,anim loct'), normal_form='петра', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрі', 264, 5),))", "Parse(word='петри', tag=OpencorporaTag('NOUN,Name,femn,anim gent'), normal_form='петра', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петри', 264, 1),))", "Parse(word='петро', tag=OpencorporaTag('NOUN,Name,anim masc,nomn'), normal_form='петро', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петро', 2461, 0),))", "Parse(word='петрі', tag=OpencorporaTag('NOUN,Name,masc,anim loct'), normal_form='петро', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрі', 2461, 6),))", "Parse(word='петрі', tag=OpencorporaTag('NOUN,Name,femn,anim datv'), normal_form='петра', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрі', 264, 2),))", "Parse(word='петрові', tag=OpencorporaTag('NOUN,Name,masc,anim datv'), normal_form='петро', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрові', 2461, 2),))", 'Петра', "Parse(word='петрою', tag=OpencorporaTag('NOUN,Name,femn,anim ablt'), normal_form='петра', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петрою', 264, 4),))", "Parse(word='петра', tag=OpencorporaTag('NOUN,Name,masc,anim accs'), normal_form='петро', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петра', 2461, 4),))", "Parse(word='петром', tag=OpencorporaTag('NOUN,Name,masc,anim ablt'), normal_form='петро', score=1.0, methods_stack=((DictionaryAnalyzer(), 'петром', 2461, 5),))"]
+Types: ['str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str', 'str']
+All strings: ✅
+Has nominative form: ❌
+------------------------------
+Test completed!
+=========================== short test summary info ============================
+PASSED tmp/test_api_risk_response.py::TestAPIRiskResponse::test_process_endpoint_response_format
+PASSED tmp/test_api_risk_response.py::TestAPIRiskResponse::test_process_endpoint_response_without_decision_engine
+PASSED tmp/test_api_risk_response.py::TestAPIRiskResponse::test_decision_output_serialization
+PASSED tmp/test_api_risk_response.py::TestAPIRiskResponse::test_risk_level_values
+PASSED tmp/test_diminutive_forms.py::test_diminutive_forms
+PASSED tmp/test_embeddings_multilingual.py::TestMultilingualEmbeddings::test_name_variants_similarity
+PASSED tmp/test_embeddings_multilingual.py::TestMultilingualEmbeddings::test_organization_names_similarity
+PASSED tmp/test_embeddings_multilingual.py::TestMultilingualEmbeddings::test_unrelated_strings_low_similarity
+PASSED tmp/test_embeddings_multilingual.py::TestMultilingualEmbeddings::test_mixed_script_names
+PASSED tmp/test_embeddings_multilingual.py::TestMultilingualEmbeddings::test_common_names_different_languages
+PASSED tmp/test_embeddings_multilingual.py::TestMultilingualEmbeddings::test_organization_variants
+PASSED tmp/test_embeddings_multilingual.py::TestMultilingualEmbeddings::test_embedding_dimensions_consistency
+PASSED tmp/test_embeddings_multilingual.py::TestMultilingualEmbeddings::test_preprocessing_effectiveness
+PASSED tmp/test_full_normalization_suite.py::test_ukrainian_full_normalization[\u041e\u043f\u043b\u0430\u0442\u0430 \u0437\u0430 \u043f\u043e\u0441\u043b\u0443\u0433\u0438, \u043f\u043b\u0430\u0442\u043d\u0438\u043a \u041f\u0435\u0442\u0440\u0438\u043a \u041f.-\u041f\u0435\u0442\u0440\u043e \u041f.]
+PASSED tmp/test_full_normalization_suite.py::test_ukrainian_full_normalization[\u0414\u043b\u044f \u041f\u0435\u0442\u0440\u0443\u0441\u044f \u0406\u0432\u0430\u043d\u043e\u0432\u0430, \u0437\u0430 \u0440\u0435\u043c\u043e\u043d\u0442-\u041f\u0435\u0442\u0440\u043e \u0406\u0432\u0430\u043d\u043e\u0432]
+PASSED tmp/test_full_normalization_suite.py::test_ukrainian_full_normalization[\u041f\u0435\u0440\u0435\u043a\u0430\u0437 \u0432\u0456\u0434 \u0412\u043e\u0432\u0447\u0438\u043a\u0430 \u0417\u0435\u043b\u0435\u043d\u0441\u044c\u043a\u043e\u0433\u043e \u0412. \u041e.-\u0412\u043e\u043b\u043e\u0434\u0438\u043c\u0438\u0440 \u0417\u0435\u043b\u0435\u043d\u0441\u044c\u043a\u0438\u0439 \u0412. \u041e.]
+PASSED tmp/test_full_normalization_suite.py::test_ukrainian_full_normalization[\u041f\u043e\u0434\u0430\u0440\u0443\u043d\u043e\u043a \u0434\u043b\u044f \u0414\u0430\u0448\u0435\u043d\u044c\u043a\u0438 \u041a\u0432\u0456\u0442\u043a\u043e\u0432\u043e\u0457-\u0414\u0430\u0440\u0456\u044f \u041a\u0432\u0456\u0442\u043a\u043e\u0432\u0430]
+PASSED tmp/test_full_normalization_suite.py::test_ukrainian_full_normalization[\u0412\u0456\u0434 \u0421\u0430\u0448\u043a\u0430 \u041f\u043e\u043b\u043e\u0436\u0438\u043d\u0441\u044c\u043a\u043e\u0433\u043e \u0437\u0430 \u043a\u0432\u0438\u0442\u043a\u0438-\u041e\u043b\u0435\u043a\u0441\u0430\u043d\u0434\u0440 \u041f\u043e\u043b\u043e\u0436\u0438\u043d\u0441\u044c\u043a\u0438\u0439]
+PASSED tmp/test_full_normalization_suite.py::test_ukrainian_full_normalization[\u0414\u044f\u043a\u0443\u0454\u043c\u043e \u0421\u0435\u0440\u0433\u0456\u0454\u0432\u0456 \u0416\u0430\u0434\u0430\u043d\u0443 \u0437\u0430 \u0442\u0432\u043e\u0440\u0447\u0456\u0441\u0442\u044c-\u0421\u0435\u0440\u0433\u0456\u0439 \u0416\u0430\u0434\u0430\u043d]
+PASSED tmp/test_full_normalization_suite.py::test_ukrainian_full_normalization[\u041f\u043e\u0434\u0430\u0440\u0443\u043d\u043e\u043a \u0434\u043b\u044f \u041e\u043a\u0441\u0430\u043d\u0438 \u0417\u0430\u0431\u0443\u0436\u043a\u043e-\u041e\u043a\u0441\u0430\u043d\u0430 \u0417\u0430\u0431\u0443\u0436\u043a\u043e]
+PASSED tmp/test_full_normalization_suite.py::test_ukrainian_full_normalization[\u041f\u043b\u0442\u0456\u0436 \u0432\u0456\u0434 \u0412'\u044f\u0447\u0435\u0441\u043b\u0430\u0432\u0430 \u0432\u0430\u043a\u0430\u0440\u0447\u0443\u043a\u0430 (\u043e\u043a\u0435\u0430\u043d \u0435\u043b\u044c\u0437\u0438)-\u0412'\u044f\u0447\u0435\u0441\u043b\u0430\u0432 \u0412\u0430\u043a\u0430\u0440\u0447\u0443\u043a]
+PASSED tmp/test_full_normalization_suite.py::test_ukrainian_full_normalization[\u041f\u0435\u0440\u0435\u043a\u0430\u0437 \u041e\u041b\u0415\u0413\u0423 \u0421\u041a\u0420\u0418\u041f\u0426\u0406-\u041e\u043b\u0435\u0433 \u0421\u043a\u0440\u0438\u043f\u043a\u0430]
+PASSED tmp/test_full_normalization_suite.py::test_ukrainian_full_normalization[\u0414\u043b\u044f \u0406\u0432\u0430\u043d\u043e\u0432\u0430-\u041f\u0435\u0442\u0440\u0435\u043d\u043a\u0430 \u0421.\u0412.-\u0406\u0432\u0430\u043d\u043e\u0432-\u041f\u0435\u0442\u0440\u0435\u043d\u043a\u043e \u0421. \u0412.]
+PASSED tmp/test_full_normalization_suite.py::test_russian_full_normalization[\u041f\u0435\u0440\u0435\u0432\u043e\u0434 \u043e\u0442 \u0421\u0430\u0448\u0438 \u041f\u0443\u0448\u043a\u0438\u043d\u0430 \u0410\u043b\u0435\u043a\u0441\u0430\u043d\u0434\u0440\u043e\u0432\u0438\u0447\u0430-\u0410\u043b\u0435\u043a\u0441\u0430\u043d\u0434\u0440 \u041f\u0443\u0448\u043a\u0438\u043d \u0410\u043b\u0435\u043a\u0441\u0430\u043d\u0434\u0440\u043e\u0432\u0438\u0447]
+PASSED tmp/test_full_normalization_suite.py::test_russian_full_normalization[\u041e\u043f\u043b\u0430\u0442\u0430 \u0434\u043b\u044f \u0412\u043e\u043b\u043e\u0434\u0438 \u0412\u044b\u0441\u043e\u0446\u043a\u043e\u0433\u043e-\u0412\u043b\u0430\u0434\u0438\u043c\u0438\u0440 \u0412\u044b\u0441\u043e\u0446\u043a\u0438\u0439]
+PASSED tmp/test_full_normalization_suite.py::test_russian_full_normalization[\u041f\u043b\u0430\u0442\u0451\u0436 \u043e\u0442 \u0414\u0438\u043c\u044b \u041c\u0435\u0434\u0432\u0435\u0434\u0435\u0432\u0430-\u0414\u043c\u0438\u0442\u0440\u0438\u0439 \u041c\u0435\u0434\u0432\u0435\u0434\u0435\u0432]
+PASSED tmp/test_full_normalization_suite.py::test_russian_full_normalization[\u041f\u0435\u0440\u0435\u0432\u043e\u0434 \u0441\u0440\u0435\u0434\u0441\u0442\u0432 \u0418\u0432\u0430\u043d\u0443 \u0411\u0443\u043d\u0438\u043d\u0443-\u0418\u0432\u0430\u043d \u0411\u0443\u043d\u0438\u043d]
+PASSED tmp/test_full_normalization_suite.py::test_russian_full_normalization[\u041e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u043e \u0434\u043b\u044f \u0415\u0441\u0435\u043d\u0438\u043d\u0430 \u0421. \u0410.-\u0415\u0441\u0435\u043d\u0438\u043d \u0421. \u0410.]
+PASSED tmp/test_full_normalization_suite.py::test_russian_full_normalization[\u0417\u0430\u0447\u0438\u0441\u043b\u0435\u043d\u0438\u0435 \u043e\u0442 \u041b\u0435\u0440\u043c\u043e\u043d\u0442\u043e\u0432\u0430 \u041c.\u042e.-\u041b\u0435\u0440\u043c\u043e\u043d\u0442\u043e\u0432 \u041c. \u042e.]
+PASSED tmp/test_full_normalization_suite.py::test_english_full_normalization[Payment from John Fitzgerald Kennedy-John Fitzgerald Kennedy]
+PASSED tmp/test_full_normalization_suite.py::test_english_full_normalization[Transfer to Stephen E. King for services-Stephen E. King]
+PASSED tmp/test_full_normalization_suite.py::test_english_full_normalization[For Mr. Sherlock Holmes, Baker st. 221b-Sherlock Holmes]
+PASSED tmp/test_full_normalization_suite.py::test_english_full_normalization[Refund to Ms. Joanna Rowling-Joanna Rowling]
+PASSED tmp/test_full_normalization_suite.py::test_english_full_normalization[From Bill Gates for charity-William Gates]
+PASSED tmp/test_full_normalization_suite.py::test_english_full_normalization[For Liz Truss, former PM-Elizabeth Truss]
+PASSED tmp/test_full_normalization_suite.py::test_english_full_normalization[Payment from Mike Johnson-Michael Johnson]
+PASSED tmp/test_full_normalization_suite.py::test_english_full_normalization[For BARACK H. OBAMA, invoice 123-Barack H. Obama]
+PASSED tmp/test_full_normalization_suite.py::test_critical_ukrainian_normalization
+PASSED tmp/test_gender_adjustment.py::TestGenderAdjustmentIntegration::test_russian_male_name_with_patronymic
+PASSED tmp/test_gender_adjustment.py::TestGenderAdjustmentIntegration::test_russian_female_name_only
+PASSED tmp/test_gender_adjustment.py::TestGenderAdjustmentIntegration::test_russian_male_dative_case
+PASSED tmp/test_gender_adjustment.py::TestGenderAdjustmentIntegration::test_ukrainian_invariant_surname_kovalenko
+PASSED tmp/test_gender_adjustment.py::TestGenderAdjustmentIntegration::test_ukrainian_invariant_surname_sushko
+PASSED tmp/test_gender_adjustment.py::TestGenderAdjustmentIntegration::test_ukrainian_invariant_surname_lemish
+PASSED tmp/test_gender_adjustment.py::TestGenderAdjustmentIntegration::test_surname_only_without_name
+PASSED tmp/test_gender_adjustment.py::TestGenderAdjustmentIntegration::test_multiple_persons_with_different_genders
+PASSED tmp/test_gender_adjustment.py::TestGenderAdjustmentIntegration::test_confidence_gap_boundary_cases
+PASSED tmp/test_gender_adjustment.py::TestGenderAdjustmentIntegration::test_trace_information_completeness
+PASSED tmp/test_lang_in_results.py::TestLanguageInResults::test_russian_language_in_results
+PASSED tmp/test_lang_in_results.py::TestLanguageInResults::test_ukrainian_language_in_results
+PASSED tmp/test_lang_in_results.py::TestLanguageInResults::test_english_language_in_results
+PASSED tmp/test_lang_in_results.py::TestLanguageInResults::test_mixed_language_in_results
+PASSED tmp/test_lang_in_results.py::TestLanguageInResults::test_unknown_language_in_results
+PASSED tmp/test_lang_in_results.py::TestLanguageInResults::test_confidence_range_validation
+PASSED tmp/test_lang_in_results.py::TestLanguageInResults::test_normalization_result_language_fields
+PASSED tmp/test_lang_in_results.py::TestLanguageInResults::test_processing_result_language_fields
+PASSED tmp/test_lang_order_unicode_first.py::TestUnicodeFirstLanguageDetectionOrder::test_mixed_unicode_forms_detection
+PASSED tmp/test_lang_order_unicode_first.py::TestUnicodeFirstLanguageDetectionOrder::test_unicode_idempotency_protection
+PASSED tmp/test_lang_order_unicode_first.py::TestUnicodeFirstLanguageDetectionOrder::test_diacritics_normalization_stability
+PASSED tmp/test_lang_order_unicode_first.py::TestUnicodeFirstLanguageDetectionOrder::test_edge_cases_unicode_normalization
+PASSED tmp/test_lang_order_unicode_first.py::TestUnicodeFirstLanguageDetectionOrder::test_unicode_normalization_preserves_meaning
+PASSED tmp/test_mixed_language_flow.py::TestMixedLanguageFlow::test_mixed_language_detection
+PASSED tmp/test_mixed_language_flow.py::TestMixedLanguageFlow::test_mixed_language_normalization
+PASSED tmp/test_mixed_language_flow.py::TestMixedLanguageFlow::test_mixed_language_smart_filter
+PASSED tmp/test_mixed_language_flow.py::TestMixedLanguageFlow::test_mixed_language_signals
+PASSED tmp/test_mixed_language_flow.py::TestMixedLanguageFlow::test_mixed_language_birthdate_proximity
+PASSED tmp/test_mixed_language_flow.py::TestMixedLanguageFlow::test_mixed_language_full_flow
+PASSED tmp/test_mixed_language_flow.py::TestMixedLanguageFlow::test_mixed_language_edge_cases
+PASSED tmp/test_mixed_language_flow.py::TestMixedLanguageFlow::test_mixed_language_confidence_scoring
+PASSED tmp/test_mixed_language_flow.py::TestMixedLanguageFlow::test_mixed_language_token_traces
+PASSED tmp/test_mixed_script_names.py::TestMixedScriptNames::test_ascii_names_in_ukrainian_context
+PASSED tmp/test_mixed_script_names.py::TestMixedScriptNames::test_ascii_names_in_russian_context
+PASSED tmp/test_mixed_script_names.py::TestMixedScriptNames::test_ascii_names_positional_inference
+PASSED tmp/test_mixed_script_names.py::TestMixedScriptNames::test_mixed_script_multiple_persons
+PASSED tmp/test_mixed_script_names.py::TestMixedScriptNames::test_ascii_names_with_apostrophes
+PASSED tmp/test_mixed_script_names.py::TestMixedScriptNames::test_ascii_names_not_demoted_to_unknown
+PASSED tmp/test_normalization_pipeline.py::TestNormalizationPipeline::test_language_detection_consistency
+PASSED tmp/test_normalization_pipeline.py::TestNormalizationPipeline::test_variant_generation_integration
+PASSED tmp/test_persons_grouping.py::TestPersonsGroupingIntegration::test_single_person_normalization
+PASSED tmp/test_persons_grouping.py::TestPersonsGroupingIntegration::test_multiple_persons_with_conjunction
+PASSED tmp/test_persons_grouping.py::TestPersonsGroupingIntegration::test_persons_with_patronymics
+PASSED tmp/test_persons_grouping.py::TestPersonsGroupingIntegration::test_persons_with_initials
+PASSED tmp/test_persons_grouping.py::TestPersonsGroupingIntegration::test_persons_with_comma_separator
+PASSED tmp/test_persons_grouping.py::TestPersonsGroupingIntegration::test_persons_with_mixed_separators
+PASSED tmp/test_persons_grouping.py::TestPersonsGroupingIntegration::test_persons_with_non_person_tokens
+PASSED tmp/test_persons_grouping.py::TestPersonsGroupingIntegration::test_persons_data_structure
+PASSED tmp/test_persons_grouping.py::TestPersonsGroupingIntegration::test_empty_text
+PASSED tmp/test_persons_grouping.py::TestPersonsGroupingIntegration::test_text_without_persons
+PASSED tmp/test_persons_grouping.py::TestPersonsGroupingIntegration::test_ukrainian_persons
+PASSED tmp/test_persons_grouping.py::TestPersonsGroupingIntegration::test_english_persons
+PASSED tmp/test_pipeline_initials_orgs.py::TestPipelineInitialsOrgsCase::test_initials_only
+PASSED tmp/test_pipeline_initials_orgs.py::TestPipelineInitialsOrgsCase::test_english_initials_with_surname
+PASSED tmp/test_pipeline_initials_orgs.py::TestPipelineInitialsOrgsCase::test_mixed_initials_and_full_name
+PASSED tmp/test_pipeline_initials_orgs.py::TestPipelineInitialsOrgsCase::test_russian_organization_ooo
+PASSED tmp/test_pipeline_initials_orgs.py::TestPipelineInitialsOrgsCase::test_ukrainian_organization_tov
+PASSED tmp/test_pipeline_initials_orgs.py::TestPipelineInitialsOrgsCase::test_english_organization_llc
+PASSED tmp/test_pipeline_initials_orgs.py::TestPipelineInitialsOrgsCase::test_organization_with_person_name
+PASSED tmp/test_pipeline_initials_orgs.py::TestPipelineInitialsOrgsCase::test_multiple_organizations
+PASSED tmp/test_pipeline_initials_orgs.py::TestPipelineInitialsOrgsCase::test_person_and_organization_mixed
+PASSED tmp/test_pipeline_initials_orgs.py::TestPipelineInitialsOrgsCase::test_organization_with_quotes
+PASSED tmp/test_pipeline_initials_orgs.py::TestPipelineInitialsOrgsCase::test_initials_with_organization
+PASSED tmp/test_pipeline_initials_orgs.py::TestPipelineInitialsOrgsCase::test_multiple_legal_forms
+PASSED tmp/test_pipeline_initials_orgs.py::TestPipelineInitialsOrgsCase::test_organization_with_numbers
+PASSED tmp/test_pipeline_initials_orgs.py::TestPipelineInitialsOrgsCase::test_foreign_organization
+PASSED tmp/test_pipeline_initials_orgs.py::TestPipelineInitialsOrgsCase::test_initials_without_periods
+PASSED tmp/test_pipeline_initials_orgs.py::TestPipelineInitialsOrgsCase::test_organization_in_sentence
+PASSED tmp/test_pipeline_initials_orgs.py::TestPipelineInitialsOrgsCase::test_mixed_case_organization
+PASSED tmp/test_pipeline_initials_orgs.py::TestPipelineInitialsOrgsCase::test_organization_with_address
+PASSED tmp/test_pipeline_initials_orgs.py::TestPipelineInitialsOrgsCase::test_no_unknown_in_normalized_output
+PASSED tmp/test_pipeline_mixed_en.py::TestPipelineMixedEnglishCases::test_english_full_name
+PASSED tmp/test_pipeline_mixed_en.py::TestPipelineMixedEnglishCases::test_english_name_with_apostrophe
+PASSED tmp/test_pipeline_mixed_en.py::TestPipelineMixedEnglishCases::test_english_hyphenated_name
+PASSED tmp/test_pipeline_mixed_en.py::TestPipelineMixedEnglishCases::test_mixed_english_ukrainian
+PASSED tmp/test_pipeline_mixed_en.py::TestPipelineMixedEnglishCases::test_mixed_english_russian
+PASSED tmp/test_pipeline_mixed_en.py::TestPipelineMixedEnglishCases::test_english_initials
+PASSED tmp/test_pipeline_mixed_en.py::TestPipelineMixedEnglishCases::test_english_name_with_title
+PASSED tmp/test_pipeline_mixed_en.py::TestPipelineMixedEnglishCases::test_transliterated_name
+PASSED tmp/test_pipeline_mixed_en.py::TestPipelineMixedEnglishCases::test_multiple_english_names
+PASSED tmp/test_pipeline_mixed_en.py::TestPipelineMixedEnglishCases::test_english_name_with_middle_initial
+PASSED tmp/test_pipeline_mixed_en.py::TestPipelineMixedEnglishCases::test_english_compound_surname
+PASSED tmp/test_pipeline_mixed_en.py::TestPipelineMixedEnglishCases::test_english_name_case_insensitive
+PASSED tmp/test_pipeline_mixed_en.py::TestPipelineMixedEnglishCases::test_three_language_mix
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_empty_text
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_whitespace_only
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_numbers_only
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_punctuation_only
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_stop_words_only
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_random_gibberish
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_special_characters
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_emoji_only
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_very_long_text
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_mixed_scripts_nonsense
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_common_words_not_names
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_dates_and_addresses
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_currencies_and_amounts
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_technical_terms
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_medical_terms
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_country_and_city_names
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_brand_names
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_malformed_input
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_sql_injection_attempt
+PASSED tmp/test_pipeline_negative_canaries.py::TestPipelineNegativeCanaries::test_no_unknown_tokens_in_output
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_ukrainian_full_name_with_patronymic
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_russian_full_name_with_patronymic
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_ukrainian_female_name_with_patronymic
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_russian_female_name_with_patronymic
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_ukrainian_double_surname
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_russian_double_surname
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_ukrainian_name_with_initials
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_russian_name_with_initials
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_ukrainian_compound_name
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_russian_compound_name
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_ukrainian_name_with_apostrophe
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_russian_name_with_apostrophe
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_multiple_ukrainian_names
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_multiple_russian_names
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_ukrainian_name_with_typos
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_russian_name_with_typos
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_ukrainian_name_with_numbers
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_russian_name_with_numbers
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_ukrainian_name_with_punctuation
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_russian_name_with_punctuation
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_ukrainian_name_with_extra_spaces
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_russian_name_with_extra_spaces
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_ukrainian_name_case_insensitive
+PASSED tmp/test_pipeline_ru_uk_cases.py::TestPipelineRuUkCases::test_russian_name_case_insensitive
+PASSED tmp/test_role_based_normalization.py::test_role_based_slavic_normalization[\u0421\u0435\u0440\u0433\u0456\u0454\u0432\u0456 \u0416\u0430\u0434\u0430\u043d\u0443-\u0421\u0435\u0440\u0433\u0456\u0439 \u0416\u0430\u0434\u0430\u043d-uk]
+PASSED tmp/test_role_based_normalization.py::test_role_based_slavic_normalization[\u041e\u043a\u0441\u0430\u043d\u0456 \u0417\u0430\u0431\u0443\u0436\u043a\u043e-\u041e\u043a\u0441\u0430\u043d\u0430 \u0417\u0430\u0431\u0443\u0436\u043a\u043e-uk]
+PASSED tmp/test_role_based_normalization.py::test_role_based_slavic_normalization[\u041f\u0435\u0442\u0440\u0430 \u0418\u0432\u0430\u043d\u043e\u0432\u0430-\u041f\u0435\u0442\u0440\u043e \u0418\u0432\u0430\u043d\u043e\u0432-uk]
+PASSED tmp/test_role_based_normalization.py::test_role_based_slavic_normalization[\u043e\u0442 \u0410\u043b\u0435\u043a\u0441\u0430\u043d\u0434\u0440\u0430 \u0410\u043b\u0435\u043a\u0441\u0430\u043d\u0434\u0440\u043e\u0432\u0438\u0447\u0430-\u0410\u043b\u0435\u043a\u0441\u0430\u043d\u0434\u0440 \u0410\u043b\u0435\u043a\u0441\u0430\u043d\u0434\u0440\u043e\u0432\u0438\u0447-ru]
+PASSED tmp/test_role_based_normalization.py::test_role_based_slavic_normalization[\u0434\u043b\u044f \u0406\u0432\u0430\u043d\u0456\u0432\u043d\u0438-\u0406\u0432\u0430\u043d\u0456\u0432\u043d\u0430-uk]
+PASSED tmp/test_role_based_normalization.py::test_role_based_slavic_normalization[\u0414\u043b\u044f \u0406\u0432\u0430\u043d\u043e\u0432\u0430-\u041f\u0435\u0442\u0440\u0435\u043d\u043a\u0430 \u0421.\u0412.-\u0406\u0432\u0430\u043d\u043e\u0432-\u041f\u0435\u0442\u0440\u0435\u043d\u043a\u043e \u0421. \u0412.-uk]
+PASSED tmp/test_role_based_normalization.py::test_role_based_slavic_normalization[Payment from JOHN DOE-John Doe-en]
+PASSED tmp/test_role_based_normalization.py::test_role_based_slavic_normalization[\u041e\u043f\u043b\u0430\u0442\u0430 \u0432\u0456\u0434 \u041f\u0435\u0442\u0440\u0430 \u041f\u043e\u0440\u043e\u0448\u0435\u043d\u043a\u0430-\u041f\u0435\u0442\u0440\u043e \u041f\u043e\u0440\u043e\u0448\u0435\u043d\u043a\u043e-uk]
+PASSED tmp/test_role_based_normalization.py::test_role_based_slavic_normalization[\u0415\u0441\u0435\u043d\u0438\u043d \u0441. \u0430.-\u0415\u0441\u0435\u043d\u0438\u043d \u0421. \u0410.-ru]
+PASSED tmp/test_role_based_normalization.py::test_role_based_slavic_normalization[\u043f\u0443\u0448\u043a\u0438\u043d \u0430 \u0441-\u041f\u0443\u0448\u043a\u0438\u043d \u0410. \u0421.-ru]
+PASSED tmp/test_ru_uk_sentences.py::TestRussianUkrainianSentences::test_russian_complex_sentence
+PASSED tmp/test_ru_uk_sentences.py::TestRussianUkrainianSentences::test_ukrainian_complex_sentence
+PASSED tmp/test_ru_uk_sentences.py::TestRussianUkrainianSentences::test_mixed_case_names
+PASSED tmp/test_ru_uk_sentences.py::TestRussianUkrainianSentences::test_compound_surnames
+PASSED tmp/test_ru_uk_sentences.py::TestRussianUkrainianSentences::test_quoted_names
+PASSED tmp/test_ru_uk_sentences.py::TestRussianUkrainianSentences::test_organizations_with_personal_names
+PASSED tmp/test_ru_uk_sentences.py::TestRussianUkrainianSentences::test_diminutives_in_context
+PASSED tmp/test_ru_uk_sentences.py::TestRussianUkrainianSentences::test_ukrainian_diminutives_in_context
+PASSED tmp/test_ru_uk_sentences.py::TestRussianUkrainianSentences::test_english_names_in_ukrainian_context
+PASSED tmp/test_ru_uk_sentences.py::TestRussianUkrainianSentences::test_initial_handling_in_sentences
+PASSED tmp/test_ru_uk_sentences.py::TestRussianUkrainianSentences::test_patronymic_variations
+PASSED tmp/test_ru_uk_sentences.py::TestRussianUkrainianSentences::test_ukrainian_surname_variations
+PASSED tmp/test_ru_uk_sentences.py::TestRussianUkrainianSentences::test_error_handling_malformed_input
+PASSED tmp/test_ru_uk_sentences.py::TestRussianUkrainianSentences::test_confidence_scoring
+PASSED tmp/test_simple_normalization.py::test_normalization_directly
+PASSED tmp/test_strict_name_extraction.py::test_strict_name_extraction
+PASSED tmp/test_ukrainian_morphology_simple.py::test_ukrainian_morphology_simple
+PASSED tmp/test_ukrainian_normalization.py::TestUkrainianNormalization::test_ukrainian_text_normalization
+PASSED tmp/test_ukrainian_normalization.py::TestUkrainianNormalization::test_ukrainian_stemming_in_normalization
+PASSED tmp/test_ukrainian_normalization.py::TestUkrainianNormalization::test_ukrainian_language_detection
+PASSED tmp/test_ukrainian_normalization.py::TestUkrainianNormalization::test_ukrainian_stop_words_removal
+PASSED tmp/test_ukrainian_normalization.py::TestUkrainianNormalization::test_ukrainian_unicode_handling
+PASSED tmp/test_ukrainian_normalization.py::TestUkrainianNormalization::test_ukrainian_mixed_language_text
+PASSED tmp/test_ukrainian_normalization.py::TestUkrainianNormalization::test_ukrainian_empty_and_short_text
+PASSED tmp/test_ukrainian_normalization.py::TestUkrainianNormalization::test_ukrainian_special_characters
+PASSED tmp/test_ukrainian_normalization.py::TestUkrainianNormalization::test_ukrainian_performance
+FAILED tmp/test_e2e_sanctions_screening.py::TestE2ESanctionsScreening::test_russian_person_with_documents
+FAILED tmp/test_e2e_sanctions_screening.py::TestE2ESanctionsScreening::test_ukrainian_organization_with_legal_form
+FAILED tmp/test_e2e_sanctions_screening.py::TestE2ESanctionsScreening::test_english_mixed_script_name
+FAILED tmp/test_e2e_sanctions_screening.py::TestE2ESanctionsScreening::test_complex_payment_description
+FAILED tmp/test_e2e_sanctions_screening.py::TestE2ESanctionsScreening::test_edge_case_compound_names
+FAILED tmp/test_e2e_sanctions_screening.py::TestE2ESanctionsScreening::test_decision_engine_thresholds
+FAILED tmp/test_e2e_sanctions_screening.py::TestE2ESanctionsScreening::test_metrics_collection
+FAILED tmp/test_e2e_sanctions_screening.py::TestE2ESanctionsScreening::test_performance_benchmarks
+FAILED tmp/test_e2e_sanctions_screening.py::TestE2ESanctionsScreening::test_golden_dataset_stability
+FAILED tmp/test_full_normalization_suite.py::test_ukrainian_full_normalization[\u0414\u043b\u044f \u0416\u0435\u043d\u0456 \u0413\u0430\u043b\u0438\u0447\u0430 \u0437 \u0433\u0440\u0443\u043f\u0438 O.Torvald-\u0404\u0432\u0433\u0435\u043d \u0413\u0430\u043b\u0438\u0447]
+FAILED tmp/test_full_normalization_suite.py::test_ukrainian_full_normalization[\u0417\u0443\u0441\u0442\u0440\u0456\u0447 \u0437 \u041b\u0456\u043d\u043e\u044e \u041a\u043e\u0441\u0442\u0435\u043d\u043a\u043e-\u041b\u0456\u043d\u0430 \u041a\u043e\u0441\u0442\u0435\u043d\u043a\u043e]
+FAILED tmp/test_full_normalization_suite.py::test_ukrainian_full_normalization[\u0420\u043e\u0437\u043c\u043e\u0432\u043b\u044f\u0432 \u0437 \u0412\u0430\u043b\u0435\u0440\u0456\u0454\u043c \u0417\u0430\u043b\u0443\u0436\u043d\u0438\u043c-\u0412\u0430\u043b\u0435\u0440\u0456\u0439 \u0417\u0430\u043b\u0443\u0436\u043d\u0438\u0439]
+FAILED tmp/test_full_normalization_suite.py::test_russian_full_normalization[\u0414\u043b\u044f \u0410\u043b\u043b\u044b \u0411\u043e\u0440\u0438\u0441\u043e\u0432\u043d\u044b \u041f\u0443\u0433\u0430\u0447\u0435\u0432\u043e\u0439-\u0410\u043b\u043b\u0430 \u0411\u043e\u0440\u0438\u0441\u043e\u0432\u043d\u0430 \u041f\u0443\u0433\u0430\u0447\u0435\u0432\u0430]
+FAILED tmp/test_full_normalization_suite.py::test_russian_full_normalization[\u0411\u043b\u0430\u0433\u043e\u0434\u0430\u0440\u043d\u043e\u0441\u0442\u044c \u041f\u0435\u0442\u0440\u0443 \u0427\u0430\u0439\u043a\u043e\u0432\u0441\u043a\u043e\u043c\u0443-\u041f\u0435\u0442\u0440 \u0427\u0430\u0439\u043a\u043e\u0432\u0441\u043a\u0438\u0439]
+FAILED tmp/test_full_normalization_suite.py::test_russian_full_normalization[\u0412\u0441\u0442\u0440\u0435\u0447\u0430 \u0441 \u0410\u043d\u043d\u043e\u0439 \u0410\u0445\u043c\u0430\u0442\u043e\u0432\u043e\u0439-\u0410\u043d\u043d\u0430 \u0410\u0445\u043c\u0430\u0442\u043e\u0432\u0430]
+FAILED tmp/test_full_normalization_suite.py::test_english_full_normalization[Sent to ELON MUSK for X corp-Elon Musk]
+FAILED tmp/test_full_normalization_suite.py::test_critical_russian_normalization
+FAILED tmp/test_gender_adjustment.py::TestGenderAdjustmentIntegration::test_ukrainian_female_name_with_patronymic
+FAILED tmp/test_lang_order_unicode_first.py::TestUnicodeFirstLanguageDetectionOrder::test_unicode_normalization_before_language_detection
+FAILED tmp/test_lang_order_unicode_first.py::TestUnicodeFirstLanguageDetectionOrder::test_orchestrator_call_order_verification
+FAILED tmp/test_mixed_script_names.py::TestMixedScriptNames::test_ascii_names_with_cyrillic_surnames
+FAILED tmp/test_mixed_script_names.py::TestMixedScriptNames::test_ascii_names_no_morphology
+FAILED tmp/test_normalization_pipeline.py::TestNormalizationPipeline::test_ukrainian_name_pipeline
+FAILED tmp/test_normalization_pipeline.py::TestNormalizationPipeline::test_russian_name_pipeline
+FAILED tmp/test_normalization_pipeline.py::TestNormalizationPipeline::test_mixed_language_text_pipeline
+FAILED tmp/test_normalization_pipeline.py::TestNormalizationPipeline::test_compound_name_pipeline
+FAILED tmp/test_normalization_pipeline.py::TestNormalizationPipeline::test_error_resilience_pipeline
+FAILED tmp/test_normalization_pipeline.py::TestNormalizationPipeline::test_empty_text_pipeline
+FAILED tmp/test_normalization_pipeline.py::TestNormalizationPipeline::test_performance_pipeline
+FAILED tmp/test_normalization_pipeline.py::TestNormalizationPipeline::test_morphology_integration
+FAILED tmp/test_normalization_pipeline.py::TestNormalizationPipeline::test_transliteration_integration
+FAILED tmp/test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_high_risk_scenario
+FAILED tmp/test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_skip_scenario_smartfilter_false
+FAILED tmp/test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_medium_risk_scenario
+FAILED tmp/test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_low_risk_scenario
+FAILED tmp/test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_decision_engine_disabled
+FAILED tmp/test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_decision_input_creation
+FAILED tmp/test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_risk_level_determination
+FAILED tmp/test_orchestrator_decision_integration.py::TestOrchestratorDecisionIntegration::test_decision_reasons_generation
+FAILED tmp/test_pipeline_end2end.py::TestPipelineEnd2End::test_pipeline_integration[ukrainian_simple_name]
+FAILED tmp/test_pipeline_end2end.py::TestPipelineEnd2End::test_pipeline_integration[ukrainian_full_name_with_patronymic]
+FAILED tmp/test_pipeline_end2end.py::TestPipelineEnd2End::test_pipeline_integration[ukrainian_company_with_legal_form]
+FAILED tmp/test_pipeline_end2end.py::TestPipelineEnd2End::test_pipeline_integration[mixed_person_and_company]
+FAILED tmp/test_pipeline_end2end.py::TestPipelineEnd2End::test_pipeline_integration[person_with_birth_date]
+FAILED tmp/test_pipeline_end2end.py::TestPipelineEnd2End::test_pipeline_integration[person_with_inn]
+FAILED tmp/test_pipeline_end2end.py::TestPipelineEnd2End::test_pipeline_integration[mixed_script_names]
+FAILED tmp/test_pipeline_end2end.py::TestPipelineEnd2End::test_pipeline_integration[noise_context_should_filter]
+FAILED tmp/test_pipeline_end2end.py::TestPipelineEnd2End::test_pipeline_integration[quoted_company_with_person]
+FAILED tmp/test_pipeline_end2end.py::TestPipelineEnd2End::test_pipeline_integration[hyphenated_surname]
+FAILED tmp/test_pipeline_end2end.py::TestPipelineEnd2End::test_pipeline_integration[overfit_canary]
+FAILED tmp/test_pipeline_end2end.py::TestPipelineEnd2End::test_pipeline_integration[full_pipeline_stress_test]
+FAILED tmp/test_pipeline_end2end.py::TestPipelineEnd2End::test_normalization_flags_behavior
+FAILED tmp/test_pipeline_end2end.py::TestPipelineEnd2End::test_performance_requirements
+FAILED tmp/test_role_based_normalization.py::test_role_based_slavic_normalization[\u0410\u043b\u043b\u044b \u0411\u043e\u0440\u0438\u0441\u043e\u0432\u043d\u044b \u041f\u0443\u0433\u0430\u0447\u0435\u0432\u043e\u0439-\u0410\u043b\u043b\u0430 \u0411\u043e\u0440\u0438\u0441\u043e\u0432\u043d\u0430 \u041f\u0443\u0433\u0430\u0447\u0435\u0432\u0430-ru]
+FAILED tmp/test_role_based_normalization.py::test_role_based_slavic_normalization[\u041f\u0435\u0442\u0440\u0443 \u0427\u0430\u0439\u043a\u043e\u0432\u0441\u043a\u043e\u043c\u0443-\u041f\u0435\u0442\u0440 \u0427\u0430\u0439\u043a\u043e\u0432\u0441\u043a\u0438\u0439-ru]
+FAILED tmp/test_ru_uk_sentences.py::TestRussianUkrainianSentences::test_multiple_persons_same_surname
+FAILED tmp/test_ru_uk_sentences.py::TestRussianUkrainianSentences::test_surname_variations
+FAILED tmp/test_ru_uk_sentences.py::TestRussianUkrainianSentences::test_organization_legal_forms_filtering
+FAILED tmp/test_ru_uk_sentences.py::TestRussianUkrainianSentences::test_performance_with_long_text
+59 failed, 202 passed, 28 warnings in 43.15s
