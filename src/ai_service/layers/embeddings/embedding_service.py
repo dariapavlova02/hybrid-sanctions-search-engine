@@ -199,7 +199,7 @@ class EmbeddingService:
         to_numpy: bool = True,
         model_name: Optional[str] = None,
         normalize_embeddings: bool = True
-    ) -> Union[List[float], List[List[float]], Dict[str, Any]]:
+    ) -> Union[List[float], List[List[float]]]:
         """
         Encode texts to embeddings with backward compatibility
 
@@ -212,8 +212,8 @@ class EmbeddingService:
             normalize_embeddings: Whether to normalize embeddings
 
         Returns:
-            For single text: List[float] or Dict with metadata
-            For multiple texts: List[List[float]] or Dict with metadata
+            For single text: List[float]
+            For multiple texts: List[List[float]]
         """
         start_time = time.perf_counter()
         
@@ -233,18 +233,8 @@ class EmbeddingService:
             text_list = texts
             
         if not text_list:
-            # Return empty result with metadata
-            return {
-                "success": True,
-                "embeddings": [],
-                "model_name": model_name or self.config.model_name,
-                "text_count": 0,
-                "embedding_dimension": 0,
-                "processing_time": 0.0,
-                "normalized": normalize_embeddings,
-                "batch_size": batch_size or self.config.batch_size,
-                "timestamp": time.time()
-            }
+            # Return empty result
+            return [] if not is_single else []
         
         try:
             # Load model
@@ -259,17 +249,7 @@ class EmbeddingService:
                         normalized_texts.append(normalized)
             
             if not normalized_texts:
-                return {
-                    "success": True,
-                    "embeddings": [],
-                    "model_name": model_name or self.config.model_name,
-                    "text_count": 0,
-                    "embedding_dimension": 0,
-                    "processing_time": 0.0,
-                    "normalized": normalize_embeddings,
-                    "batch_size": batch_size or self.config.batch_size,
-                    "timestamp": time.time()
-                }
+                return [] if not is_single else []
             
             # Generate embeddings
             embeddings = model.encode(
@@ -286,91 +266,17 @@ class EmbeddingService:
             
             processing_time = time.perf_counter() - start_time
             
-            # Return format with metadata for backward compatibility
-            return {
-                "success": True,
-                "embeddings": embeddings,
-                "model_name": model_name or self.config.model_name,
-                "text_count": len(normalized_texts),
-                "embedding_dimension": len(embeddings[0]) if embeddings else 0,
-                "processing_time": processing_time,
-                "normalized": normalize_embeddings,
-                "batch_size": batch_size or self.config.batch_size,
-                "timestamp": time.time()
-            }
+            # Return just the embeddings for backward compatibility
+            if is_single:
+                return embeddings[0] if embeddings else []
+            else:
+                return embeddings
                 
         except Exception as e:
             self.logger.error(f"Failed to encode texts: {e}")
-            # Return empty result on error with metadata
-            return {
-                "success": False,
-                "embeddings": [],
-                "model_name": model_name or self.config.model_name,
-                "text_count": 0,
-                "embedding_dimension": 0,
-                "processing_time": 0.0,
-                "normalized": normalize_embeddings,
-                "batch_size": batch_size or self.config.batch_size,
-                "timestamp": time.time(),
-                "error": str(e)
-            }
+            # Return empty result on error
+            return [] if not is_single else []
 
-    def get_embeddings(
-        self, 
-        texts: Union[str, List[str]], 
-        model_name: Optional[str] = None, 
-        normalize: bool = True, 
-        batch_size: int = 32
-    ) -> Dict[str, Any]:
-        """
-        Get embeddings for texts (alias for encode method with different signature)
-        
-        Args:
-            texts: Single text string or list of text strings
-            model_name: Model name to use
-            normalize: Whether to normalize embeddings
-            batch_size: Batch size for processing
-            
-        Returns:
-            Dictionary with embeddings and metadata
-        """
-        return self.encode(
-            texts=texts,
-            model_name=model_name,
-            normalize_embeddings=normalize,
-            batch_size=batch_size
-        )
-
-    async def get_embeddings_async(
-        self, 
-        texts: Union[str, List[str]], 
-        model_name: Optional[str] = None, 
-        normalize: bool = True, 
-        batch_size: int = 32
-    ) -> Dict[str, Any]:
-        """
-        Get embeddings for texts asynchronously
-        
-        Args:
-            texts: Single text string or list of text strings
-            model_name: Model name to use
-            normalize: Whether to normalize embeddings
-            batch_size: Batch size for processing
-            
-        Returns:
-            Dictionary with embeddings and metadata
-        """
-        # Run the synchronous method in a thread pool
-        import asyncio
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            None, 
-            self.get_embeddings, 
-            texts, 
-            model_name, 
-            normalize, 
-            batch_size
-        )
 
     def get_embedding_dimension(self) -> int:
         """
@@ -397,229 +303,3 @@ class EmbeddingService:
             "max_seq_length": getattr(model, "max_seq_length", 512),
         }
 
-    def calculate_similarity(
-        self, 
-        text1: str, 
-        text2: str, 
-        metric: str = "cosine"
-    ) -> Dict[str, Any]:
-        """
-        Calculate similarity between two texts
-
-        Args:
-            text1: First text
-            text2: Second text
-            metric: Similarity metric ("cosine" or "dot")
-
-        Returns:
-            Dictionary with similarity result
-        """
-        try:
-            # Get embeddings for both texts
-            emb1 = self.encode_one(text1)
-            emb2 = self.encode_one(text2)
-            
-            if not emb1 or not emb2:
-                return {
-                    "success": False,
-                    "similarity": 0.0,
-                    "metric": metric,
-                    "model_name": self.config.model_name,
-                    "error": "Failed to generate embeddings"
-                }
-            
-            # Convert to numpy arrays for calculation
-            vec1 = np.array(emb1)
-            vec2 = np.array(emb2)
-            
-            # Calculate similarity
-            if metric == "cosine":
-                similarity = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-            elif metric == "dot":
-                similarity = np.dot(vec1, vec2)
-            else:
-                raise ValueError(f"Unsupported metric: {metric}")
-            
-            return {
-                "success": True,
-                "similarity": float(similarity),
-                "metric": metric,
-                "model_name": self.config.model_name
-            }
-            
-        except Exception as e:
-            self.logger.error(f"Failed to calculate similarity: {e}")
-            return {
-                "success": False,
-                "similarity": 0.0,
-                "metric": metric,
-                "model_name": self.config.model_name,
-                "error": str(e)
-            }
-
-    def find_similar_texts(
-        self, 
-        query: str, 
-        candidates: List[str], 
-        top_k: int = 5, 
-        threshold: float = 0.0
-    ) -> Dict[str, Any]:
-        """
-        Find most similar texts from candidates
-
-        Args:
-            query: Query text
-            candidates: List of candidate texts
-            top_k: Number of top results to return
-            threshold: Minimum similarity threshold
-
-        Returns:
-            Dictionary with similarity results
-        """
-        try:
-            if not candidates:
-                return {
-                    "success": True,
-                    "results": [],
-                    "query": query,
-                    "total_candidates": 0,
-                    "model_name": self.config.model_name
-                }
-            
-            # Get query embedding
-            query_emb = self.encode_one(query)
-            if not query_emb:
-                return {
-                    "success": False,
-                    "results": [],
-                    "query": query,
-                    "total_candidates": len(candidates),
-                    "model_name": self.config.model_name,
-                    "error": "Failed to generate query embedding"
-                }
-            
-            # Get candidate embeddings
-            candidate_embs = self.encode_batch(candidates)
-            if not candidate_embs:
-                return {
-                    "success": False,
-                    "results": [],
-                    "query": query,
-                    "total_candidates": len(candidates),
-                    "model_name": self.config.model_name,
-                    "error": "Failed to generate candidate embeddings"
-                }
-            
-            # Calculate similarities
-            similarities = []
-            for i, cand_emb in enumerate(candidate_embs):
-                if cand_emb:
-                    vec1 = np.array(query_emb)
-                    vec2 = np.array(cand_emb)
-                    similarity = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-                    similarities.append({
-                        "text": candidates[i],
-                        "similarity": float(similarity),
-                        "index": i
-                    })
-            
-            # Filter by threshold and sort
-            filtered_results = [r for r in similarities if r["similarity"] >= threshold]
-            filtered_results.sort(key=lambda x: x["similarity"], reverse=True)
-            
-            # Take top_k results
-            top_results = filtered_results[:top_k]
-            
-            return {
-                "success": True,
-                "results": top_results,
-                "query": query,
-                "total_candidates": len(candidates),
-                "model_name": self.config.model_name
-            }
-            
-        except Exception as e:
-            self.logger.error(f"Failed to find similar texts: {e}")
-            return {
-                "success": False,
-                "results": [],
-                "query": query,
-                "total_candidates": len(candidates),
-                "model_name": self.config.model_name,
-                "error": str(e)
-            }
-
-    def calculate_batch_similarity(
-        self, 
-        queries: List[str], 
-        candidates: List[str]
-    ) -> Dict[str, Any]:
-        """
-        Calculate similarity matrix between queries and candidates
-
-        Args:
-            queries: List of query texts
-            candidates: List of candidate texts
-
-        Returns:
-            Dictionary with similarity matrix
-        """
-        try:
-            if not queries or not candidates:
-                return {
-                    "success": True,
-                    "similarity_matrix": [],
-                    "queries": queries,
-                    "candidates": candidates,
-                    "model_name": self.config.model_name
-                }
-            
-            # Get embeddings
-            query_embs = self.encode_batch(queries)
-            candidate_embs = self.encode_batch(candidates)
-            
-            if not query_embs or not candidate_embs:
-                return {
-                    "success": False,
-                    "similarity_matrix": [],
-                    "queries": queries,
-                    "candidates": candidates,
-                    "model_name": self.config.model_name,
-                    "error": "Failed to generate embeddings"
-                }
-            
-            # Calculate similarity matrix
-            similarity_matrix = []
-            for query_emb in query_embs:
-                if query_emb:
-                    query_vec = np.array(query_emb)
-                    query_similarities = []
-                    for cand_emb in candidate_embs:
-                        if cand_emb:
-                            cand_vec = np.array(cand_emb)
-                            similarity = np.dot(query_vec, cand_vec) / (np.linalg.norm(query_vec) * np.linalg.norm(cand_vec))
-                            query_similarities.append(float(similarity))
-                        else:
-                            query_similarities.append(0.0)
-                    similarity_matrix.append(query_similarities)
-                else:
-                    similarity_matrix.append([0.0] * len(candidates))
-            
-            return {
-                "success": True,
-                "similarity_matrix": similarity_matrix,
-                "queries": queries,
-                "candidates": candidates,
-                "model_name": self.config.model_name
-            }
-            
-        except Exception as e:
-            self.logger.error(f"Failed to calculate batch similarity: {e}")
-            return {
-                "success": False,
-                "similarity_matrix": [],
-                "queries": queries,
-                "candidates": candidates,
-                "model_name": self.config.model_name,
-                "error": str(e)
-            }

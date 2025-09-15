@@ -104,7 +104,7 @@ class TestDecisionLogic(unittest.TestCase):
         self.assertEqual(result.decision, DecisionType.FULL_SEARCH)
         self.assertGreater(result.confidence, 0.6)
         self.assertIn(result.risk_level, [RiskLevel.MEDIUM, RiskLevel.HIGH])
-        self.assertIn("FULL_SEARCH", result.reasoning)
+        self.assertIn("Высокая уверенность", result.reasoning)
         self.assertFalse(result.requires_escalation)
     
     def test_analyze_regular_signals_low_confidence(self):

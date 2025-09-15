@@ -43,7 +43,7 @@ class UnicodeService:
 
             # Cyrillic characters that may have different Unicode representations
             "ё": "е",
-            "Ё": "Е",
+            "Ё": "е",
             "й": "и",
             "Й": "И",
             "і": "и",
@@ -277,8 +277,16 @@ class UnicodeService:
             return result
 
         # Idempotency check: if string is already NFC/NFKC normalized AND has no special characters to replace
+        # AND doesn't need whitespace cleanup AND has no invisible characters
+        # AND (doesn't need case normalization OR aggressive mode is enabled)
         has_special_chars = any(char in self.character_mapping for char in text)
-        if self._is_already_normalized(text) and not has_special_chars:
+        needs_whitespace_cleanup = re.search(r'\s{2,}', text) or text != text.strip()
+        has_invisible_chars = any(char in text for char in [
+            "\u200b", "\u200c", "\u200d", "\ufeff", "\u200e", "\u200f", 
+            "\u202a", "\u202b", "\u202c", "\u202d", "\u202e", "\u2060"
+        ])
+        needs_case_normalization = any(c.isupper() for c in text)
+        if self._is_already_normalized(text) and not has_special_chars and not needs_whitespace_cleanup and not has_invisible_chars and (not needs_case_normalization or aggressive):
             result = self._create_normalization_result(text, 1.0, 0, 0, 0)
             result["original"] = text
             result["idempotent"] = True
@@ -302,8 +310,9 @@ class UnicodeService:
         # 2. Basic Unicode normalization (NFD -> NFKC) after character replacements
         normalized_text = self._apply_unicode_normalization(normalized_text)
 
-        # 3. Case normalization (after character replacements and Unicode normalization)
-        normalized_text = self._normalize_case(normalized_text)
+        # 3. Case normalization (in aggressive mode or when needed for specific cases)
+        if aggressive or self._needs_case_normalization_for_cleanup(text) or char_replacements > 0:
+            normalized_text = self._normalize_case(normalized_text)
 
         # 4. ASCII folding (always in aggressive mode, or only if not aggressive)
         if aggressive:
@@ -353,6 +362,25 @@ class UnicodeService:
     def _normalize_case(self, text: str) -> str:
         """Case normalization"""
         return text.lower()
+
+    def _needs_case_normalization_for_cleanup(self, text: str) -> bool:
+        """Check if case normalization is needed for cleanup operations"""
+        # Normalize case if text contains invisible characters or RTL characters
+        # that need to be cleaned up
+        invisible_chars = [
+            "\u200b", "\u200c", "\u200d", "\ufeff", "\u200e", "\u200f", 
+            "\u202a", "\u202b", "\u202c", "\u202d", "\u202e", "\u2060"
+        ]
+        has_invisible_chars = any(char in text for char in invisible_chars)
+        
+        # Check for RTL characters (Hebrew, Arabic, etc.)
+        has_rtl_chars = any(ord(char) >= 0x0590 and ord(char) <= 0x05FF for char in text)  # Hebrew
+        has_rtl_chars |= any(ord(char) >= 0x0600 and ord(char) <= 0x06FF for char in text)  # Arabic
+        
+        # Check for diacritical marks that were normalized
+        has_diacritics = any(ord(char) >= 0x00C0 and ord(char) <= 0x017F for char in text)  # Latin with diacritics
+        
+        return has_invisible_chars or has_rtl_chars or has_diacritics
 
     def _replace_complex_characters(self, text: str) -> tuple[str, int]:
         """Replace complex characters"""

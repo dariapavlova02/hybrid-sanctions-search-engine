@@ -9,7 +9,7 @@ This module tests the complete gender adjustment pipeline including:
 """
 
 import pytest
-from src.ai_service.layers.normalization.normalization_service import NormalizationService
+from ai_service.layers.normalization.normalization_service import NormalizationService
 
 
 class TestGenderAdjustmentIntegration:

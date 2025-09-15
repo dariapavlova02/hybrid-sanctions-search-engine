@@ -9,7 +9,7 @@ and surname adjustment in the normalization pipeline.
 import pytest
 from typing import List, Dict, Any
 
-from src.ai_service.layers.normalization.normalization_service import NormalizationService
+from ai_service.layers.normalization.normalization_service import NormalizationService
 
 
 class TestPersonsGroupingIntegration:

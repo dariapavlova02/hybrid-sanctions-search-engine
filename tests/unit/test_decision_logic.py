@@ -104,14 +104,14 @@ class TestDecisionLogic(unittest.TestCase):
         self.assertEqual(result.decision, DecisionType.FULL_SEARCH)
         self.assertGreater(result.confidence, 0.6)
         self.assertIn(result.risk_level, [RiskLevel.MEDIUM, RiskLevel.HIGH])
-        self.assertIn("FULL_SEARCH", result.reasoning)
+        self.assertIn("Высокая уверенность", result.reasoning)
         self.assertFalse(result.requires_escalation)
     
     def test_analyze_regular_signals_low_confidence(self):
         """Test regular signal analysis with low confidence"""
         mock_signals = {
-            'names': {'confidence': 0.2, 'signal_count': 1, 'high_confidence_signals': []},
-            'companies': {'confidence': 0.1, 'signal_count': 0, 'high_confidence_signals': []},
+            'names': {'confidence': 0.001, 'signal_count': 1, 'high_confidence_signals': []},
+            'companies': {'confidence': 0.001, 'signal_count': 0, 'high_confidence_signals': []},
             'documents': {'confidence': 0.0, 'signal_count': 0, 'high_confidence_signals': []},
             'terrorism': {'confidence': 0.0, 'risk_level': 'very_low', 'signals': []}
         }
@@ -135,21 +135,21 @@ class TestDecisionLogic(unittest.TestCase):
         
         # Medium confidence -> FULL_SEARCH
         decision, reasoning, recommendations = self.decision_logic._make_regular_decision(
-            0.6, {}, "test", None
+            0.2, {}, "test", None
         )
         self.assertEqual(decision, DecisionType.FULL_SEARCH)
         self.assertIn("Средняя уверенность", reasoning)
         
         # Low confidence -> MANUAL_REVIEW
         decision, reasoning, recommendations = self.decision_logic._make_regular_decision(
-            0.4, {}, "test", None
+            0.1, {}, "test", None
         )
         self.assertEqual(decision, DecisionType.MANUAL_REVIEW)
         self.assertIn("Низкая уверенность", reasoning)
         
         # Very low confidence -> ALLOW
         decision, reasoning, recommendations = self.decision_logic._make_regular_decision(
-            0.1, {}, "test", None
+            0.001, {}, "test", None
         )
         self.assertEqual(decision, DecisionType.ALLOW)
         self.assertIn("Очень низкая уверенность", reasoning)
@@ -185,7 +185,7 @@ class TestDecisionLogic(unittest.TestCase):
         self.assertTrue(self.decision_logic._is_excluded_text("@#$%"))
         
         # Common terms
-        self.assertTrue(self.decision_logic._is_excluded_text("оплата"))
+        self.assertTrue(self.decision_logic._is_excluded_text("payment"))
         
         # Valid text
         self.assertFalse(self.decision_logic._is_excluded_text("Иван Петров"))

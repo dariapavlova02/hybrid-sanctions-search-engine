@@ -219,8 +219,8 @@ class OrchestratorFactory:
 
         return await OrchestratorFactory.create_orchestrator(
             enable_smart_filter=not minimal,
-            enable_variants=False,  # Usually not needed in tests
-            enable_embeddings=False,  # Usually not needed in tests
+            enable_variants=not minimal,  # Enable variants for full testing
+            enable_embeddings=not minimal,  # Enable embeddings for full testing
             allow_smart_filter_skip=False,  # Don't skip processing in tests
         )
 

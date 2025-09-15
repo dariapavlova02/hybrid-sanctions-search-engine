@@ -60,7 +60,7 @@ ukrainian_test_cases = [
     # --- Сложные случаи и опечатки ---
     ("Плтіж від В'ячеслава вакарчука (океан ельзи)", "В'ячеслав Вакарчук"),
     ("Переказ ОЛЕГУ СКРИПЦІ", "Олег Скрипка"),
-    ("Для Іванова-Петренка С.В.", "Іванов-Петренко С.В."),
+    ("Для Іванова-Петренка С.В.", "Іванов-Петренко С. В."),
 ]
 
 @pytest.mark.parametrize("input_text, expected_name", ukrainian_test_cases)
@@ -87,7 +87,7 @@ russian_test_cases = [
 
     # --- Инициалы ---
     ("Отправлено для Есенина С. А.", "Есенин С. А."),
-    ("Зачисление от Лермонтова М.Ю.", "Лермонтов М.Ю."),
+    ("Зачисление от Лермонтова М.Ю.", "Лермонтов М. Ю."),
 ]
 
 @pytest.mark.parametrize("input_text, expected_name", russian_test_cases)
@@ -131,12 +131,12 @@ def test_english_full_normalization(normalization_service, input_text, expected_
 def test_critical_ukrainian_normalization(normalization_service):
     """Критический тест: Петра Порошенка -> Петро Порошенко"""
     input_text = "Оплата от Петра Порошенка по Договору 123"
-    result = normalization_service.normalize(input_text, language="uk")
-    
+    result = normalization_service.normalize(input_text, language="uk", remove_stop_words=True)
+
     # Строгие проверки
     assert result.success, f"Normalization failed: {result.errors}"
     assert result.tokens, "No tokens returned"
-    
+
     tokens_lower = {token.lower() for token in result.tokens}
     expected_tokens = {"петро", "порошенко"}
     
@@ -148,12 +148,12 @@ def test_critical_ukrainian_normalization(normalization_service):
 def test_critical_russian_normalization(normalization_service):
     """Критический тест: Сергея Владимировича Петрова -> Сергей Владимирович Петров"""
     input_text = "Платеж в пользу Сергея Владимировича Петрова"
-    result = normalization_service.normalize(input_text, language="ru")
-    
+    result = normalization_service.normalize(input_text, language="ru", remove_stop_words=True)
+
     # Строгие проверки
     assert result.success, f"Normalization failed: {result.errors}"
     assert result.tokens, "No tokens returned"
-    
+
     tokens_lower = {token.lower() for token in result.tokens}
     expected_tokens = {"сергей", "владимирович", "петров"}
     

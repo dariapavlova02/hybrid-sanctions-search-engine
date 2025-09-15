@@ -63,17 +63,26 @@ class TestOrchestratorFactory:
         # Create async mocks for all services
         mock_validation_service = Mock()
         mock_validation_service.initialize = AsyncMock()
+        
+        mock_smart_filter = Mock()
+        mock_smart_filter.initialize = AsyncMock()
+        
+        mock_variants_service = Mock()
+        mock_variants_service.initialize = AsyncMock()
+        
+        mock_embeddings_service = Mock()
+        mock_embeddings_service.initialize = AsyncMock()
 
         with patch.multiple(
             'ai_service.core.orchestrator_factory',
             ValidationService=Mock(return_value=mock_validation_service),
-            SmartFilterAdapter=Mock(return_value=Mock()),
+            SmartFilterAdapter=Mock(return_value=mock_smart_filter),
             LanguageDetectionService=Mock(return_value=Mock()),
             UnicodeService=Mock(return_value=Mock()),
             NormalizationService=Mock(return_value=Mock()),
             SignalsService=Mock(return_value=Mock()),
-            VariantGenerationService=Mock(return_value=Mock()),
-            EmbeddingService=Mock(return_value=Mock())
+            VariantGenerationService=Mock(return_value=mock_variants_service),
+            EmbeddingService=Mock(return_value=mock_embeddings_service)
         ):
             orchestrator = await OrchestratorFactory.create_testing_orchestrator(minimal=False)
 
@@ -87,17 +96,26 @@ class TestOrchestratorFactory:
         # Create async mock for validation service
         mock_validation_service = Mock()
         mock_validation_service.initialize = AsyncMock()
+        
+        mock_smart_filter = Mock()
+        mock_smart_filter.initialize = AsyncMock()
+        
+        mock_variants_service = Mock()
+        mock_variants_service.initialize = AsyncMock()
+        
+        mock_embeddings_service = Mock()
+        mock_embeddings_service.initialize = AsyncMock()
 
         with patch.multiple(
             'ai_service.core.orchestrator_factory',
             ValidationService=Mock(return_value=mock_validation_service),
-            SmartFilterAdapter=Mock(return_value=Mock()),
+            SmartFilterAdapter=Mock(return_value=mock_smart_filter),
             LanguageDetectionService=Mock(return_value=Mock()),
             UnicodeService=Mock(return_value=Mock()),
             NormalizationService=Mock(return_value=Mock()),
             SignalsService=Mock(return_value=Mock()),
-            VariantGenerationService=Mock(return_value=Mock()),
-            EmbeddingService=Mock(return_value=Mock())
+            VariantGenerationService=Mock(return_value=mock_variants_service),
+            EmbeddingService=Mock(return_value=mock_embeddings_service)
         ):
             orchestrator = await OrchestratorFactory.create_production_orchestrator()
 
@@ -112,17 +130,23 @@ class TestOrchestratorFactory:
         # Create async mock for validation service
         mock_validation_service = Mock()
         mock_validation_service.initialize = AsyncMock()
+        
+        mock_smart_filter = Mock()
+        mock_smart_filter.initialize = AsyncMock()
+        
+        mock_embeddings_service = Mock()
+        mock_embeddings_service.initialize = AsyncMock()
 
         with patch.multiple(
             'ai_service.core.orchestrator_factory',
             ValidationService=Mock(return_value=mock_validation_service),
-            SmartFilterAdapter=Mock(return_value=Mock()),
+            SmartFilterAdapter=Mock(return_value=mock_smart_filter),
             LanguageDetectionService=Mock(return_value=Mock()),
             UnicodeService=Mock(return_value=Mock()),
             NormalizationService=Mock(return_value=Mock()),
             SignalsService=Mock(return_value=Mock()),
             VariantGenerationService=Mock(return_value=Mock()),
-            EmbeddingService=Mock(return_value=Mock())
+            EmbeddingService=Mock(return_value=mock_embeddings_service)
         ):
             orchestrator = await OrchestratorFactory.create_orchestrator(
                 enable_smart_filter=True,
@@ -138,7 +162,9 @@ class TestOrchestratorFactory:
     async def test_service_initialization_mocking(self):
         """Test that services are properly initialized and mocked"""
         mock_validation = Mock()
+        mock_validation.initialize = AsyncMock()
         mock_smart_filter = Mock()
+        mock_smart_filter.initialize = AsyncMock()
         mock_language = Mock()
         mock_unicode = Mock()
         mock_normalization = Mock()
@@ -157,7 +183,7 @@ class TestOrchestratorFactory:
 
             # Services should be injected into orchestrator
             assert orchestrator.validation_service == mock_validation
-            assert orchestrator.smart_filter == mock_smart_filter
+            assert orchestrator.smart_filter_service == mock_smart_filter
             assert orchestrator.language_service == mock_language
             assert orchestrator.unicode_service == mock_unicode
             assert orchestrator.normalization_service == mock_normalization
@@ -176,16 +202,28 @@ class TestOrchestratorFactory:
     @pytest.mark.asyncio
     async def test_optional_services_configuration(self):
         """Test that optional services are configured based on flags"""
+        mock_validation = Mock()
+        mock_validation.initialize = AsyncMock()
+        
+        mock_smart_filter = Mock()
+        mock_smart_filter.initialize = AsyncMock()
+        
+        mock_variants = Mock()
+        mock_variants.initialize = AsyncMock()
+        
+        mock_embeddings = Mock()
+        mock_embeddings.initialize = AsyncMock()
+
         with patch.multiple(
             'ai_service.core.orchestrator_factory',
-            ValidationService=Mock(),
-            SmartFilterAdapter=Mock(),
+            ValidationService=Mock(return_value=mock_validation),
+            SmartFilterAdapter=Mock(return_value=mock_smart_filter),
             LanguageDetectionService=Mock(),
             UnicodeService=Mock(),
             NormalizationService=Mock(),
             SignalsService=Mock(),
-            VariantsService=Mock(),
-            EmbeddingService=Mock()
+            VariantGenerationService=Mock(return_value=mock_variants),
+            EmbeddingService=Mock(return_value=mock_embeddings)
         ) as mocks:
 
             # Test with variants disabled
@@ -213,18 +251,20 @@ class TestOrchestratorFactory:
         service_classes = [
             'ValidationService', 'SmartFilterAdapter', 'LanguageDetectionService',
             'UnicodeService', 'NormalizationService', 'SignalsService',
-            'VariantsService', 'EmbeddingService'
+            'VariantGenerationService', 'EmbeddingService'
         ]
 
         for service in service_classes:
-            mock_services[service] = Mock(return_value=Mock())
+            mock_service = Mock()
+            mock_service.initialize = AsyncMock()
+            mock_services[service] = Mock(return_value=mock_service)
 
         with patch.multiple('ai_service.core.orchestrator_factory', **mock_services):
             orchestrator = await OrchestratorFactory.create_production_orchestrator()
 
             # All services should be initialized for production orchestrator
             assert orchestrator.validation_service is not None
-            assert orchestrator.smart_filter is not None
+            assert orchestrator.smart_filter_service is not None
             assert orchestrator.language_service is not None
             assert orchestrator.unicode_service is not None
             assert orchestrator.normalization_service is not None

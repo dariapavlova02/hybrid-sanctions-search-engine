@@ -30,7 +30,8 @@ class TestUnicodeService:
         text = "Hello World"
         result = self.service.normalize_text(text)
 
-        assert result["normalized"] == "hello world"
+        # Unicode service should not change case - that's the job of NormalizationService
+        assert result["normalized"] == "Hello World"  # Should preserve case
         assert isinstance(result, dict)
 
     def test_normalize_text_cyrillic_mapping(self):

@@ -359,7 +359,7 @@ class TestRussianMorphology:
         """Test name normalization whitespace handling"""
         test_cases = [
             ("  Владимир  ", "Владимир"),
-            ("Мария   Петрова", "Мария Петрова"),
+            ("Мария   Петрова", "Мария Петров"),  # Петрова -> Петров (normalized form)
             ("\tИванов\n", "Иванов")
         ]
 

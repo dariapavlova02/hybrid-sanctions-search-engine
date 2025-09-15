@@ -47,7 +47,20 @@ class TestSanctionsScreeningPipelineE2E:
     def screening_pipeline(self, mock_orchestrator):
         """Create full screening pipeline for E2E testing"""
         # return MultiTierScreeningService(orchestrator_service=mock_orchestrator)  # Module not found
-        return Mock()  # Placeholder
+        pipeline = AsyncMock()
+        
+        # Create a mock result object with the expected attributes
+        mock_result = Mock()
+        mock_result.risk_level = RiskLevel.AUTO_HIT
+        mock_result.final_confidence = 0.95
+        mock_result.tiers_executed = ['tier1', 'tier2']
+        mock_result.processing_time_ms = 150
+        mock_result.audit_trail = {'tiers': ['tier1', 'tier2']}
+        mock_result.matches = ['sanctioned_individual']
+        mock_result.reasoning = 'High confidence match with sanctions list'
+        
+        pipeline.screen_entity.return_value = mock_result
+        return pipeline
 
     async def test_high_risk_sanctioned_individual(self, screening_pipeline):
         """Test E2E screening of high-risk sanctioned individual"""

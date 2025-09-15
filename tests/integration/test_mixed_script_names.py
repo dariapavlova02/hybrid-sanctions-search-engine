@@ -8,7 +8,7 @@ Tests that ASCII names in Cyrillic context are properly handled:
 """
 
 import pytest
-from src.ai_service.layers.normalization.normalization_service import NormalizationService
+from ai_service.layers.normalization.normalization_service import NormalizationService
 
 
 class TestMixedScriptNames:

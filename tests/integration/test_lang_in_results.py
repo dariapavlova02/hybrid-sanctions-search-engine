@@ -8,15 +8,15 @@ NormalizationResult and ProcessingResult (UnifiedProcessingResult).
 import pytest
 from unittest.mock import Mock, AsyncMock
 
-from src.ai_service.core.unified_orchestrator import UnifiedOrchestrator
-from src.ai_service.layers.normalization.normalization_service import NormalizationService
-from src.ai_service.layers.language.language_detection_service import LanguageDetectionService
-from src.ai_service.layers.unicode.unicode_service import UnicodeService
-from src.ai_service.layers.signals.signals_service import SignalsService
-from src.ai_service.layers.validation.validation_service import ValidationService
-from src.ai_service.layers.smart_filter.smart_filter_service import SmartFilterService
-from src.ai_service.config import LANGUAGE_CONFIG
-from src.ai_service.utils.types import LanguageDetectionResult
+from ai_service.core.unified_orchestrator import UnifiedOrchestrator
+from ai_service.layers.normalization.normalization_service import NormalizationService
+from ai_service.layers.language.language_detection_service import LanguageDetectionService
+from ai_service.layers.unicode.unicode_service import UnicodeService
+from ai_service.layers.signals.signals_service import SignalsService
+from ai_service.layers.validation.validation_service import ValidationService
+from ai_service.layers.smart_filter.smart_filter_service import SmartFilterService
+from ai_service.config import LANGUAGE_CONFIG
+from ai_service.utils.types import LanguageDetectionResult
 
 
 class TestLanguageInResults:
@@ -79,13 +79,13 @@ class TestLanguageInResults:
     def smart_filter_service(self):
         """Mock smart filter service"""
         service = Mock(spec=SmartFilterService)
-        service.should_process_text = Mock(return_value=Mock(
+        service.should_process = AsyncMock(return_value=Mock(
             should_process=True,
             confidence=0.8,
+            classification="must_process",
             detected_signals=['name'],
-            signal_details={},
-            processing_recommendation="Process",
-            estimated_complexity="low"
+            details={},
+            processing_time=0.001
         ))
         return service
 
@@ -117,7 +117,7 @@ class TestLanguageInResults:
         language_service.detect_language_config_driven.return_value = lang_result
         
         # Mock normalization result
-        from src.ai_service.utils.trace import NormalizationResult, TokenTrace
+        from ai_service.utils.trace import NormalizationResult, TokenTrace
         norm_result = NormalizationResult(
             normalized="Иванову",
             tokens=["Иванову"],
@@ -165,7 +165,7 @@ class TestLanguageInResults:
         language_service.detect_language_config_driven.return_value = lang_result
         
         # Mock normalization result
-        from src.ai_service.utils.trace import NormalizationResult, TokenTrace
+        from ai_service.utils.trace import NormalizationResult, TokenTrace
         norm_result = NormalizationResult(
             normalized="Олені",
             tokens=["Олені"],
@@ -208,7 +208,7 @@ class TestLanguageInResults:
         language_service.detect_language_config_driven.return_value = lang_result
         
         # Mock normalization result
-        from src.ai_service.utils.trace import NormalizationResult, TokenTrace
+        from ai_service.utils.trace import NormalizationResult, TokenTrace
         norm_result = NormalizationResult(
             normalized="John Smith",
             tokens=["John", "Smith"],
@@ -249,7 +249,7 @@ class TestLanguageInResults:
         language_service.detect_language_config_driven.return_value = lang_result
         
         # Mock normalization result
-        from src.ai_service.utils.trace import NormalizationResult, TokenTrace
+        from ai_service.utils.trace import NormalizationResult, TokenTrace
         norm_result = NormalizationResult(
             normalized="Ivan Petrov Олени Петренко",
             tokens=["Ivan", "Petrov", "Олени", "Петренко"],
@@ -292,7 +292,7 @@ class TestLanguageInResults:
         language_service.detect_language_config_driven.return_value = lang_result
         
         # Mock normalization result
-        from src.ai_service.utils.trace import NormalizationResult, TokenTrace
+        from ai_service.utils.trace import NormalizationResult, TokenTrace
         norm_result = NormalizationResult(
             normalized="",
             tokens=[],
@@ -339,7 +339,7 @@ class TestLanguageInResults:
             language_service.detect_language_config_driven.return_value = lang_result
             
             # Mock normalization result
-            from src.ai_service.utils.trace import NormalizationResult
+            from ai_service.utils.trace import NormalizationResult
             norm_result = NormalizationResult(
                 normalized="Test",
                 tokens=["Test"],
@@ -364,7 +364,7 @@ class TestLanguageInResults:
 
     def test_normalization_result_language_fields(self):
         """Test that NormalizationResult has required language fields"""
-        from src.ai_service.utils.trace import NormalizationResult
+        from ai_service.utils.trace import NormalizationResult
         
         # Test that fields exist and can be set
         result = NormalizationResult(
@@ -382,8 +382,7 @@ class TestLanguageInResults:
 
     def test_processing_result_language_fields(self):
         """Test that UnifiedProcessingResult has required language fields"""
-        from src.ai_service.contracts.base_contracts import UnifiedProcessingResult
-        from src.ai_service.contracts.decision_contracts import SignalsResult
+        from ai_service.contracts.base_contracts import UnifiedProcessingResult, SignalsResult
         
         # Test that fields exist and can be set
         result = UnifiedProcessingResult(

@@ -249,7 +249,7 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
             self.logger.warning(f"Error getting POS tags for '{word}': {e}")
             return []
 
-    def _analyze_with_pymorphy(self, word: str) -> List[Dict[str, Any]]:
+    def _analyze_with_pymorphy(self, word: str) -> List[MorphologicalAnalysis]:
         """Analyze word through pymorphy3"""
         if not self.morph_analyzer:
             return [self._fallback_analysis(word)]
@@ -261,31 +261,20 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
 
             results = []
             for parse in parses:
-                analysis = {
-                    "lemma": parse.normal_form.lower(),  # Normalize to lowercase
-                    "pos": str(parse.tag.POS) if hasattr(parse.tag, "POS") else "UNKN",
-                    "case": str(parse.tag.case) if hasattr(parse.tag, "case") else None,
-                    "number": (
-                        str(parse.tag.number) if hasattr(parse.tag, "number") else None
-                    ),
-                    "gender": (
-                        str(parse.tag.gender) if hasattr(parse.tag, "gender") else None
-                    ),
-                    "person": (
-                        str(parse.tag.person) if hasattr(parse.tag, "person") else None
-                    ),
-                    "tense": (
-                        str(parse.tag.tense) if hasattr(parse.tag, "tense") else None
-                    ),
-                    "mood": str(parse.tag.mood) if hasattr(parse.tag, "mood") else None,
-                    "voice": (
-                        str(parse.tag.voice) if hasattr(parse.tag, "voice") else None
-                    ),
-                    "aspect": (
-                        str(parse.tag.aspect) if hasattr(parse.tag, "aspect") else None
-                    ),
-                    "confidence": parse.score if hasattr(parse, "score") else 1.0,
-                }
+                analysis = MorphologicalAnalysis(
+                    lemma=parse.normal_form.lower(),  # Normalize to lowercase
+                    part_of_speech=str(parse.tag.POS) if hasattr(parse.tag, "POS") else "UNKN",
+                    case=str(parse.tag.case) if hasattr(parse.tag, "case") else None,
+                    number=str(parse.tag.number) if hasattr(parse.tag, "number") else None,
+                    gender=str(parse.tag.gender) if hasattr(parse.tag, "gender") else None,
+                    person=str(parse.tag.person) if hasattr(parse.tag, "person") else None,
+                    tense=str(parse.tag.tense) if hasattr(parse.tag, "tense") else None,
+                    mood=str(parse.tag.mood) if hasattr(parse.tag, "mood") else None,
+                    voice=str(parse.tag.voice) if hasattr(parse.tag, "voice") else None,
+                    aspect=str(parse.tag.aspect) if hasattr(parse.tag, "aspect") else None,
+                    confidence=parse.score if hasattr(parse, "score") else 1.0,
+                    source="ukrainian_pymorphy",
+                )
                 results.append(analysis)
 
             return results

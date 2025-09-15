@@ -8,7 +8,7 @@ to decision engine risk assessment and API response.
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from src.ai_service.contracts.base_contracts import (
+from ai_service.contracts.base_contracts import (
     NormalizationResult,
     SignalsPerson,
     SignalsOrganization,
@@ -16,9 +16,9 @@ from src.ai_service.contracts.base_contracts import (
     SmartFilterResult,
     TokenTrace,
 )
-from src.ai_service.contracts.decision_contracts import RiskLevel
-from src.ai_service.core.orchestrator_factory import OrchestratorFactory
-from src.ai_service.core.unified_orchestrator import UnifiedOrchestrator
+from ai_service.contracts.decision_contracts import RiskLevel
+from ai_service.core.orchestrator_factory import OrchestratorFactory
+from ai_service.core.unified_orchestrator import UnifiedOrchestrator
 
 
 class TestOrchestratorDecisionIntegration:

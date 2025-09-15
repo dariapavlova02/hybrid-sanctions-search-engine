@@ -8,8 +8,8 @@ without requiring full orchestrator initialization.
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from src.ai_service.contracts.decision_contracts import DecisionOutput, RiskLevel
-from src.ai_service.core.unified_orchestrator import UnifiedOrchestrator
+from ai_service.contracts.decision_contracts import DecisionOutput, RiskLevel
+from ai_service.core.unified_orchestrator import UnifiedOrchestrator
 
 
 class TestAPIRiskResponse:

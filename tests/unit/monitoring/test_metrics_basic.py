@@ -28,9 +28,10 @@ def mock_services():
     )
 
     language_service = Mock()
-    language_service.detect_language = AsyncMock(
-        return_value={"language": "en", "confidence": 0.9}
-    )
+    language_result = Mock()
+    language_result.language = "en"
+    language_result.confidence = 0.9
+    language_service.detect_language_config_driven = Mock(return_value=language_result)
 
     unicode_service = Mock()
     unicode_service.normalize_unicode = AsyncMock(return_value="test text")
@@ -53,7 +54,7 @@ def mock_services():
 
     signals_service = Mock()
     signals_result = SignalsResult(confidence=0.8, persons=[], organizations=[])
-    signals_service.extract_async = AsyncMock(return_value=signals_result)
+    signals_service.extract_signals = AsyncMock(return_value=signals_result)
 
     return {
         "validation_service": validation_service,
@@ -97,6 +98,33 @@ async def test_orchestrator_with_metrics_service(mock_services, simple_metrics_s
 async def test_metrics_service_basic_operations(simple_metrics_service):
     """Test basic MetricsService operations"""
 
+    # Register test metrics first
+    from src.ai_service.monitoring.metrics_service import MetricDefinition, MetricType
+    simple_metrics_service.register_metric(MetricDefinition(
+        name="test.counter",
+        metric_type=MetricType.COUNTER,
+        description="Test counter",
+        labels=set()
+    ))
+    simple_metrics_service.register_metric(MetricDefinition(
+        name="test.gauge",
+        metric_type=MetricType.GAUGE,
+        description="Test gauge",
+        labels=set()
+    ))
+    simple_metrics_service.register_metric(MetricDefinition(
+        name="test.histogram",
+        metric_type=MetricType.HISTOGRAM,
+        description="Test histogram",
+        labels=set()
+    ))
+    simple_metrics_service.register_metric(MetricDefinition(
+        name="test.timer",
+        metric_type=MetricType.HISTOGRAM,
+        description="Test timer",
+        labels=set()
+    ))
+
     # Test counter increment
     simple_metrics_service.increment_counter("test.counter", 1)
     values = simple_metrics_service.get_metric_values("test.counter")
@@ -122,5 +150,5 @@ def test_metrics_service_initialization(simple_metrics_service):
     """Test basic MetricsService initialization"""
     assert simple_metrics_service.max_metric_history > 0
     assert simple_metrics_service.alert_cooldown_seconds > 0
-    assert len(simple_metrics_service.metric_definitions) == 0
+    assert len(simple_metrics_service.metric_definitions) > 0  # Has predefined metrics
     assert len(simple_metrics_service.metric_values) == 0

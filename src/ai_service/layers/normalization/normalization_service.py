@@ -2445,8 +2445,15 @@ class NormalizationService:
 
                 # Apply diminutive mapping if it's a given name
                 if role == "given" and enable_advanced_features:
+                    # Special handling for English names with apostrophes (like O'Brien) - for any language
+                    if "'" in base and re.match(r"^[A-Za-z]+\'[A-Za-z]+$", base):
+                        # Properly capitalize English names with apostrophes: O'brien -> O'Brien
+                        parts = base.split("'")
+                        normalized = "'".join(part.capitalize() for part in parts)
+                        rule = "english_name_apostrophe"
+
                     # Check for English nicknames in Ukrainian context
-                    if language == "uk":
+                    elif language == "uk":
                         from ...data.dicts.english_nicknames import ENGLISH_NICKNAMES
 
                         if base.lower() in ENGLISH_NICKNAMES:
@@ -2455,11 +2462,6 @@ class NormalizationService:
                         elif morphed and morphed.lower() in ENGLISH_NICKNAMES:
                             normalized = ENGLISH_NICKNAMES[morphed.lower()].capitalize()
                             rule = "english_nickname"
-                        # Special handling for English names with apostrophes (like O'Brien)
-                        elif "'" in base and re.match(r"^[A-Za-z]+\'[A-Za-z]+$", base):
-                            # Keep original case for English names with apostrophes
-                            normalized = base
-                            rule = "english_name_apostrophe"
                     # First try comprehensive diminutive dictionaries
                     if language in self.dim2full_maps:
                         token_lower = base.lower()
@@ -2487,6 +2489,19 @@ class NormalizationService:
                                     rule = "diminutive_dict"
                                 else:
                                     # Not found in diminutive map, use morphed form
+                                    if normalized is None:  # Only if not already set (e.g., apostrophe names)
+                                        if morphed and morphed[0].isupper():
+                                            normalized = morphed
+                                        else:
+                                            normalized = (
+                                                morphed.capitalize()
+                                                if morphed
+                                                else base.capitalize()
+                                            )
+                                        rule = "morph"
+                            else:
+                                # Use morphed form
+                                if normalized is None:  # Only if not already set (e.g., apostrophe names)
                                     if morphed and morphed[0].isupper():
                                         normalized = morphed
                                     else:
@@ -2496,20 +2511,15 @@ class NormalizationService:
                                             else base.capitalize()
                                         )
                                     rule = "morph"
-                            else:
-                                # Use morphed form
-                                if morphed and morphed[0].isupper():
-                                    normalized = morphed
-                                else:
-                                    normalized = (
-                                        morphed.capitalize()
-                                        if morphed
-                                        else base.capitalize()
-                                    )
-                                rule = "morph"
                 else:
                     # For non-given names, use morphed form or basic approach
-                    if enable_advanced_features and morphed:
+                    # Special handling for English names with apostrophes (like O'Brien) - for any role
+                    if "'" in base and re.match(r"^[A-Za-z]+\'[A-Za-z]+$", base):
+                        # Properly capitalize English names with apostrophes: O'brien -> O'Brien
+                        parts = base.split("'")
+                        normalized = "'".join(part.capitalize() for part in parts)
+                        rule = "english_name_apostrophe"
+                    elif enable_advanced_features and morphed:
                         # Always capitalize the first letter for proper nouns
                         normalized = morphed.capitalize()
                         rule = "morph"

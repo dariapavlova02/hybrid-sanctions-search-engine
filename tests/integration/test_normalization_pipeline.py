@@ -7,9 +7,9 @@ import pytest
 import asyncio
 from unittest.mock import patch
 
-from src.ai_service.layers.language.language_detection_service import LanguageDetectionService
-from src.ai_service.layers.normalization.normalization_service import NormalizationService
-from src.ai_service.layers.variants.variant_generation_service import VariantGenerationService
+from ai_service.layers.language.language_detection_service import LanguageDetectionService
+from ai_service.layers.normalization.normalization_service import NormalizationService
+from ai_service.layers.variants.variant_generation_service import VariantGenerationService
 
 
 class TestNormalizationPipeline:
@@ -30,16 +30,14 @@ class TestNormalizationPipeline:
         detected_language = language_result['language']
         
         # Step 2: Advanced normalization
-        normalization_result = await advanced_normalization_service.normalize_advanced(
+        normalization_result = await advanced_normalization_service.normalize_async(
             text=input_text,
-            language=detected_language,
-            enable_morphology=True,
-            enable_transliterations=True
+            language=detected_language
         )
         
         # Step 3: Variant generation
         variant_result = variant_generation_service.generate_variants(
-            text=normalization_result['normalized'],
+            text=normalization_result.normalized,
             language=detected_language,
             max_variants=20
         )
@@ -89,7 +87,7 @@ class TestNormalizationPipeline:
         
         # Act
         language_result = language_detection_service.detect_language(input_text)
-        normalization_result = await advanced_normalization_service.normalize_advanced(
+        normalization_result = await advanced_normalization_service.normalize_async(
             text=input_text,
             language=language_result['language'],
             enable_morphology=True
@@ -116,7 +114,7 @@ class TestNormalizationPipeline:
         
         # Act
         language_result = language_detection_service.detect_language(input_text)
-        normalization_result = await advanced_normalization_service.normalize_advanced(
+        normalization_result = await advanced_normalization_service.normalize_async(
             text=input_text,
             language=language_result['language'],
             enable_morphology=True
@@ -147,7 +145,7 @@ class TestNormalizationPipeline:
         
         # Act
         language_result = language_detection_service.detect_language(input_text)
-        normalization_result = await advanced_normalization_service.normalize_advanced(
+        normalization_result = await advanced_normalization_service.normalize_async(
             text=input_text,
             language=language_result['language'],
             enable_morphology=True
@@ -191,7 +189,7 @@ class TestNormalizationPipeline:
         language_result = language_detection_service.detect_language(problematic_text)
         assert language_result is not None
         
-        normalization_result = await advanced_normalization_service.normalize_advanced(
+        normalization_result = await advanced_normalization_service.normalize_async(
             text=problematic_text,
             language=language_result['language']
         )
@@ -211,7 +209,7 @@ class TestNormalizationPipeline:
         
         # Act
         language_result = language_detection_service.detect_language(empty_text)
-        normalization_result = await advanced_normalization_service.normalize_advanced(
+        normalization_result = await advanced_normalization_service.normalize_async(
             text=empty_text,
             language=language_result['language']
         )
@@ -245,7 +243,7 @@ class TestNormalizationPipeline:
         results = []
         for name in test_names:
             language_result = language_detection_service.detect_language(name)
-            normalization_result = await advanced_normalization_service.normalize_advanced(
+            normalization_result = await advanced_normalization_service.normalize_async(
                 text=name,
                 language=language_result['language'],
                 enable_morphology=True
@@ -287,7 +285,7 @@ class TestNormalizationPipeline:
         
         # Act
         language_result = language_detection_service.detect_language(ukrainian_name)
-        normalization_result = await advanced_normalization_service.normalize_advanced(
+        normalization_result = await advanced_normalization_service.normalize_async(
             text=ukrainian_name,
             language=language_result['language'],
             enable_morphology=True,
@@ -320,7 +318,7 @@ class TestNormalizationPipeline:
         
         # Act
         language_result = language_detection_service.detect_language(cyrillic_name)
-        normalization_result = await advanced_normalization_service.normalize_advanced(
+        normalization_result = await advanced_normalization_service.normalize_async(
             text=cyrillic_name,
             language=language_result['language'],
             enable_transliterations=True
