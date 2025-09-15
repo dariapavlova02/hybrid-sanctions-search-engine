@@ -261,6 +261,7 @@ class TestEnhancedSmartFilter:
         """Test that async methods still work with enhanced functionality"""
         import asyncio
 
+        @pytest.mark.asyncio
         async def test_async():
             text = "Тестовий платіж"
             result = await smart_filter_with_ac.should_process_text_async(text)

@@ -10,6 +10,7 @@ class TestPipelineMixedEnglishCases:
     """Test cases for English names and mixed language scenarios"""
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_english_full_name(self, orchestrator_service):
         """Test English full name"""
         # Arrange

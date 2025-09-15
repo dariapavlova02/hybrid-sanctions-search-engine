@@ -846,10 +846,21 @@ class NormalizationService:
         return False
 
     def _is_initial(self, token: str) -> bool:
-        """Check if token is an initial (like 'А.' or 'P.' or 'с.')"""
+        """Check if token is an initial (like 'А.' or 'P.') but not prepositions/conjunctions"""
         # Pattern: one or more letters each followed by a dot (case insensitive)
         pattern = r"^[A-Za-zА-Яа-яІЇЄҐіїєґ]\.(?:[A-Za-zА-Яа-яІЇЄҐіїєґ]\.)*$"
-        return bool(re.match(pattern, token))
+        if not re.match(pattern, token):
+            return False
+        
+        # Exclude prepositions/conjunctions that look like initials
+        base_letter = token[0].lower()
+        prepositions = {"и", "й", "йо", "і", "в", "у", "з", "с", "со", "та", "до", "по", "на"}
+        
+        # Check if it's a single letter (not multi-initial) and is a preposition
+        if len(token) == 2 and token[1] == '.' and base_letter in prepositions:
+            return False
+            
+        return True
 
     def _split_multi_initial(self, token: str) -> List[str]:
         """Split multi-initial token like 'П.І.' into ['П.', 'І.']"""
@@ -1204,8 +1215,9 @@ class NormalizationService:
         """Classify token as personal name role (given/surname/patronymic/unknown)"""
         # Check for initials first (highest priority)
         if (len(base) == 1 and base.isalpha()) or self._is_initial(base):
-            # But not if it's a conjunction
-            if base.lower() not in ["и", "and", "i"]:
+            # But not if it's a conjunction or preposition
+            prepositions = {"и", "й", "йо", "і", "в", "у", "з", "с", "со", "та", "до", "по", "на", "and", "i"}
+            if base.lower() not in prepositions:
                 return "initial"
 
         # Check for ASCII names in Cyrillic context (ru/uk/mixed)
@@ -2376,11 +2388,30 @@ class NormalizationService:
     ) -> str:
         """
         Adjust surname gender based on person's gender
-        First normalize to base masculine form, then adjust based on gender
+        Preserve feminine forms when they're already correct
         """
         normalized_lower = normalized.lower()
+        original_lower = original_token.lower()
 
-        # Always try to adjust surname for gender, even if normalized == original_token
+        # Check if original form is clearly feminine and should be preserved
+        feminine_endings = ["ова", "ева", "іна", "їна", "ина", "ська", "ская", "енка"]
+        feminine_case_endings = ["овой", "евой", "иной", "ской", "ской", "енкой", "ой", "ей"]
+        if (any(original_lower.endswith(ending) for ending in feminine_endings) or
+            any(original_lower.endswith(ending) for ending in feminine_case_endings)):
+            # Always preserve feminine forms unless explicitly male
+            if person_gender != "masc" and person_gender != "male":
+                # If the normalized form is the same as the original, return nominative form
+                if normalized == original_token:
+                    # Convert genitive case to nominative
+                    if original_lower.endswith("ой"):
+                        return original_token[:-2] + "а"
+                    elif original_lower.endswith("ей"):
+                        return original_token[:-2] + "а"
+                    elif original_lower.endswith("ы"):
+                        return original_token[:-1] + "а"
+                    elif original_lower.endswith("и"):
+                        return original_token[:-1] + "а"
+                return original_token
 
         # Step 1: Convert to base masculine form
         base_form = normalized
@@ -2466,15 +2497,35 @@ class NormalizationService:
                     # Check gender from canonical name
                     return self._get_name_gender(canonical_name, language)
 
-                # Try morphological base form
+                # Try original form first (more reliable for names)
+                gender = self._get_name_gender(token, language)
+                if gender:
+                    return gender
+
+                # Try morphological base form as fallback
                 base_form = self._morph_nominal(token, language, True)
                 base_form_capitalized = base_form.capitalize()
                 gender = self._get_name_gender(base_form_capitalized, language)
                 if gender:
                     return gender
-
-                # Check directly as fallback
-                return self._get_name_gender(token, language)
+                
+                # Try converting genitive case to nominative for better gender detection
+                if language in ["ru", "uk"] and token.endswith(("ы", "и", "ой", "ей")):
+                    # Try removing genitive endings to get nominative form
+                    nominative_candidates = []
+                    if token.endswith("ы"):
+                        nominative_candidates.append(token[:-1] + "а")
+                    elif token.endswith("и"):
+                        nominative_candidates.append(token[:-1] + "а")
+                    elif token.endswith("ой"):
+                        nominative_candidates.append(token[:-2] + "а")
+                    elif token.endswith("ей"):
+                        nominative_candidates.append(token[:-2] + "а")
+                    
+                    for candidate in nominative_candidates:
+                        gender = self._get_name_gender(candidate, language)
+                        if gender:
+                            return gender
 
         return None
 
@@ -2497,6 +2548,33 @@ class NormalizationService:
 
         # Fallback: simple heuristics for Russian/Ukrainian names (always available)
         name_lower = name.lower()
+        
+        # First, try to convert genitive case to nominative for better detection
+        if language in ["ru", "uk"] and name_lower.endswith(("ы", "и", "ой", "ей")):
+            # Try converting genitive to nominative
+            if name_lower.endswith("ы"):
+                nominative = name_lower[:-1] + "а"
+            elif name_lower.endswith("и"):
+                nominative = name_lower[:-1] + "а"
+            elif name_lower.endswith("ой"):
+                nominative = name_lower[:-2] + "а"
+            elif name_lower.endswith("ей"):
+                nominative = name_lower[:-2] + "а"
+            else:
+                nominative = name_lower
+            
+            # Check if the nominative form is a known female name
+            female_names = [
+                "дарья", "дарія", "дар'я", "анна", "ганна", "елена", "олена",
+                "мария", "марія", "ірина", "ирина", "ольга", "наталия", "наталія",
+                "наталья", "екатерина", "катерина", "светлана", "світлана",
+                "людмила", "валентина", "галина", "татьяна", "тетяна", "вера",
+                "віра", "надежда", "надія", "любовь", "любов", "александра",
+                "олександра", "юлия", "юлія",
+            ]
+            if nominative in female_names:
+                return "femn"
+        
         # Common female ending patterns
         if name_lower.endswith(
             ("а", "я", "і", "ія", "іна", "ова", "ева", "ина", "ька")
@@ -2510,40 +2588,12 @@ class NormalizationService:
         else:
             # For ambiguous cases, check if it's a known female name
             female_names = [
-                "дарья",
-                "дарія",
-                "дар'я",
-                "анна",
-                "ганна",
-                "елена",
-                "олена",
-                "мария",
-                "марія",
-                "ірина",
-                "ирина",
-                "ольга",
-                "наталия",
-                "наталія",
-                "наталья",
-                "екатерина",
-                "катерина",
-                "светлана",
-                "світлана",
-                "людмила",
-                "валентина",
-                "галина",
-                "татьяна",
-                "тетяна",
-                "вера",
-                "віра",
-                "надежда",
-                "надія",
-                "любовь",
-                "любов",
-                "александра",
-                "олександра",
-                "юлия",
-                "юлія",
+                "дарья", "дарія", "дар'я", "анна", "ганна", "елена", "олена",
+                "мария", "марія", "ірина", "ирина", "ольга", "наталия", "наталія",
+                "наталья", "екатерина", "катерина", "светлана", "світлана",
+                "людмила", "валентина", "галина", "татьяна", "тетяна", "вера",
+                "віра", "надежда", "надія", "любовь", "любов", "александра",
+                "олександра", "юлия", "юлія",
             ]
             if name_lower in female_names:
                 return "femn"
@@ -3122,13 +3172,33 @@ class NormalizationService:
             return None
 
     def _reconstruct_text(self, tokens: List[str], traces: List[TokenTrace]) -> str:
-        """Reconstruct text, just joining with spaces"""
+        """Reconstruct text, handling initials spacing properly"""
         if not tokens:
             return ""
 
-        # Simple approach - just join with spaces
-        # This preserves the tokenization structure
-        return " ".join(tokens)
+        # Handle initials spacing: consecutive initials should not have spaces
+        result = []
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
+            
+            # Check if this is an initial
+            if token.endswith('.') and len(token) == 2 and token[0].isalpha():
+                # Collect consecutive initials
+                initials_group = [token]
+                j = i + 1
+                while j < len(tokens) and tokens[j].endswith('.') and len(tokens[j]) == 2 and tokens[j][0].isalpha():
+                    initials_group.append(tokens[j])
+                    j += 1
+                
+                # Join initials without spaces
+                result.append(''.join(initials_group))
+                i = j
+            else:
+                result.append(token)
+                i += 1
+        
+        return " ".join(result)
 
     def _reconstruct_text_with_multiple_persons(
         self, tokens: List[str], traces: List[TokenTrace], language: str

@@ -10,6 +10,7 @@ class TestPipelineInitialsOrgsCase:
     """Test cases for initials and organization names"""
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_initials_only(self, orchestrator_service):
         """Test processing of initials only"""
         # Arrange

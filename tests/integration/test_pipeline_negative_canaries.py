@@ -10,6 +10,7 @@ class TestPipelineNegativeCanaries:
     """Test cases for negative scenarios and edge cases"""
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_empty_text(self, orchestrator_service):
         """Test empty text input"""
         # Arrange

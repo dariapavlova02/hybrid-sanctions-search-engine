@@ -16,6 +16,7 @@ class TestNormalizationPipeline:
     """Integration tests for normalization pipeline"""
     
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_ukrainian_name_pipeline(self, language_detection_service, advanced_normalization_service, variant_generation_service):
         """
         Full pipeline test for Ukrainian name

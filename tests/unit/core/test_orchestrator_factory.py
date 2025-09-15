@@ -278,6 +278,7 @@ class TestOrchestratorFactoryIntegration:
     """Integration tests for OrchestratorFactory with real services"""
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_real_service_creation(self):
         """Test creating orchestrator with real service instances"""
         # This test would use real services - commented out for unit testing

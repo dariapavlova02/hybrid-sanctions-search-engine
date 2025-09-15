@@ -11,6 +11,7 @@ class TestPipelineRuUkCases:
     """Test cases for Russian and Ukrainian names with patronymics"""
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_ukrainian_full_name_with_patronymic(self, orchestrator_service):
         """Test Ukrainian full name with patronymic"""
         # Arrange
