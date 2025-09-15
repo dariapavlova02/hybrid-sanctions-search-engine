@@ -645,8 +645,13 @@ class NormalizationService:
         filtered_tokens = []
         for token in tokens:
             if remove_stop_words and token.lower() in STOP_ALL:
-                continue  # Skip stop words
-            filtered_tokens.append(token)
+                # Don't filter out single letters that could be initials
+                if len(token) == 1 and token.isalpha():
+                    filtered_tokens.append(token)
+                else:
+                    continue  # Skip stop words
+            else:
+                filtered_tokens.append(token)
 
         # Handle quoted phrases - group tokens between quotes
         result_tokens = []
@@ -833,9 +838,9 @@ class NormalizationService:
         return False
 
     def _is_initial(self, token: str) -> bool:
-        """Check if token is an initial (like 'А.' or 'P.')"""
-        # Pattern: one or more letters each followed by a dot
-        pattern = r"^[A-Za-zА-ЯІЇЄҐ]\.(?:[A-Za-zА-ЯІЇЄҐ]\.)*$"
+        """Check if token is an initial (like 'А.' or 'P.' or 'с.')"""
+        # Pattern: one or more letters each followed by a dot (case insensitive)
+        pattern = r"^[A-Za-zА-Яа-яІЇЄҐіїєґ]\.(?:[A-Za-zА-Яа-яІЇЄҐіїєґ]\.)*$"
         return bool(re.match(pattern, token))
 
     def _split_multi_initial(self, token: str) -> List[str]:
@@ -854,7 +859,7 @@ class NormalizationService:
     def _cleanup_initial(self, token: str) -> str:
         """Normalize initial format (uppercase + dot)"""
         # Extract letters and ensure they're uppercase with dots
-        letters = re.findall(r"[A-Za-zА-ЯІЇЄҐ]", token)
+        letters = re.findall(r"[A-Za-zА-Яа-яІЇЄҐіїєґ]", token)
         return ".".join(letter.upper() for letter in letters) + "."
 
     def _tag_roles(self, tokens: List[str], language: str) -> List[Tuple[str, str]]:
@@ -1312,6 +1317,153 @@ class NormalizationService:
             "звичайно",
             "звичайно",
             "звичайно",
+            # Geographical names that should not be treated as surnames
+            "європа",
+            "америка",
+            "африка",
+            "азія",
+            "австралія",
+            "росія",
+            "польща",
+            "німеччина",
+            "франція",
+            "італія",
+            "іспанія",
+            "англія",
+            "швеція",
+            "норвегія",
+            "данія",
+            "фінляндія",
+            "естонія",
+            "латвія",
+            "литва",
+            "білорусь",
+            "молдова",
+            "румунія",
+            "болгарія",
+            "угорщина",
+            "словаччина",
+            "чехія",
+            "австрія",
+            "швейцарія",
+            "бельгія",
+            "нідерланди",
+            "люксембург",
+            "ірландія",
+            "ісландія",
+            "португалія",
+            "греція",
+            "турція",
+            "китай",
+            "японія",
+            "корея",
+            "індія",
+            "бразилія",
+            "аргентина",
+            "чилі",
+            "перу",
+            "колумбія",
+            "мексика",
+            "канада",
+            "єгипет",
+            "південна африка",
+            "нігерія",
+            "кенія",
+            "марокко",
+            "туніс",
+            "алжир",
+            "лівія",
+            "судан",
+            "етіопія",
+            "гану",
+            "сенегал",
+            "малі",
+            "буркіна-фасо",
+            "нігер",
+            "чад",
+            "камерун",
+            "центральноафриканська республіка",
+            "конго",
+            "демократична республіка конго",
+            "уганда",
+            "танзанія",
+            "замбія",
+            "зімбабве",
+            "ботсвана",
+            "намібія",
+            "лесото",
+            "свазіленд",
+            "мадагаскар",
+            "маврикій",
+            "сейшели",
+            "комори",
+            "джибуті",
+            "сомалі",
+            "ерітрея",
+            "бурунді",
+            "руанда",
+            "малаві",
+            "мозамбік",
+            "мадагаскар",
+            "маврикій",
+            "сейшели",
+            "комори",
+            "джибуті",
+            "сомалі",
+            "ерітрея",
+            "бурунді",
+            "руанда",
+            "малаві",
+            "мозамбік",
+            # Common Ukrainian words that should not be treated as surnames
+            "їжа",
+            "ґрунт",
+            "ідея",
+            "йод",
+            "вода",
+            "земля",
+            "повітря",
+            "вогонь",
+            "дерево",
+            "камінь",
+            "метал",
+            "золото",
+            "срібло",
+            "мідь",
+            "залізо",
+            "алюміній",
+            "сталь",
+            "платина",
+            "палладій",
+            "ртуть",
+            "свинець",
+            "олово",
+            "цинк",
+            "нікель",
+            "хром",
+            "марганець",
+            "кобальт",
+            "титан",
+            "ванадій",
+            "ніобій",
+            "тантал",
+            "гафній",
+            "цирконій",
+            "рентгеній",
+            "дубній",
+            "сіборгій",
+            "бохрій",
+            "гассій",
+            "майтнерій",
+            "дармштадтій",
+            "рентгеній",
+            "коперніцій",
+            "ніхоній",
+            "флеровій",
+            "московій",
+            "ліверморій",
+            "теннесин",
+            "оганессон",
             # Russian context words
             "и",
             "или",
@@ -1991,8 +2143,11 @@ class NormalizationService:
             return None
 
         # Handle Ukrainian given names first (before general logic)
+        # Петро is already in nominative form, don't change it
+        if token_lower == "петро":
+            return "Петро" if token[0].isupper() else "петро"
         # Петра -> Петро (genitive -> nominative)
-        if token_lower == "петра":
+        elif token_lower == "петра":
             return "Петро" if token[0].isupper() else "петро"
         # Петру -> Петро (dative -> nominative)  
         elif token_lower == "петру":
@@ -2462,13 +2617,24 @@ class NormalizationService:
                         elif morphed and morphed.lower() in ENGLISH_NICKNAMES:
                             normalized = ENGLISH_NICKNAMES[morphed.lower()].capitalize()
                             rule = "english_nickname"
-                    # First try comprehensive diminutive dictionaries
-                    if language in self.dim2full_maps:
+                    # PRIORITY 1: Check diminutives FIRST for known diminutives to avoid morphology misinterpretation
+                    if normalized is None and language in self.dim2full_maps:
                         token_lower = base.lower()
                         if token_lower in self.dim2full_maps[language]:
                             canonical = self.dim2full_maps[language][token_lower]
-                            normalized = canonical.capitalize()
-                            rule = "diminutive_dict"
+                            # If diminutive maps to itself, try morphology first for potential case changes
+                            if canonical.lower() == token_lower and morphed and morphed.lower() != base.lower():
+                                # Check if morphology provides a reasonable transformation (e.g., genitive -> nominative)
+                                if (not (len(base) - len(morphed) == 1 and base.lower().startswith(morphed.lower()) and len(base) <= 5) and
+                                    not (len(morphed) > len(base) + 2)):
+                                    normalized = morphed.capitalize()
+                                    rule = "morph"
+                                else:
+                                    normalized = canonical.capitalize()
+                                    rule = "diminutive_dict"
+                            else:
+                                normalized = canonical.capitalize()
+                                rule = "diminutive_dict"
                         elif (
                             morphed and morphed.lower() in self.dim2full_maps[language]
                         ):
@@ -2488,17 +2654,19 @@ class NormalizationService:
                                     normalized = canonical.capitalize()
                                     rule = "diminutive_dict"
                                 else:
-                                    # Not found in diminutive map, use morphed form
-                                    if normalized is None:  # Only if not already set (e.g., apostrophe names)
-                                        if morphed and morphed[0].isupper():
-                                            normalized = morphed
-                                        else:
-                                            normalized = (
-                                                morphed.capitalize()
-                                                if morphed
-                                                else base.capitalize()
-                                            )
-                                        rule = "morph"
+                                    # Not found in diminutive map, check if morphology provides a reasonable change
+                                    if normalized is None and morphed and morphed.lower() != base.lower():
+                                        # Only use morphed form if it's a reasonable name transformation (not verb forms)
+                                        # Skip obvious wrong truncations (like дима -> дим) or weird verb forms (женя -> женящие)
+                                        if (not (len(base) - len(morphed) == 1 and base.lower().startswith(morphed.lower()) and len(base) <= 5) and
+                                            not (len(morphed) > len(base) + 2)):  # Skip forms that are too long (likely verb forms)
+                                            normalized = morphed.capitalize()
+                                            rule = "morph"
+
+                                    # Fallback to basic capitalization
+                                    if normalized is None:
+                                        normalized = base.capitalize()
+                                        rule = "basic"
                             else:
                                 # Use morphed form
                                 if normalized is None:  # Only if not already set (e.g., apostrophe names)

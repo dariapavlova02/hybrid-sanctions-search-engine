@@ -109,12 +109,11 @@ class DecisionLogic:
             "companies": 0.7,  # Medium priority (companies) - increased
         }
 
+        # Import exclusion patterns from centralized dictionary
+        from ai_service.data.dicts.smart_filter_patterns import EXCLUSION_PATTERNS
+        
         # Exclusion patterns (do not require verification)
-        self.exclusion_patterns = [
-            r"^\d+$",  # Only digits
-            r"^[^\w\s]+$",  # Only special characters
-            r"^(payment|transfer|transaction)$",  # Common terms
-        ]
+        self.exclusion_patterns = EXCLUSION_PATTERNS
 
         self.logger.info(
             f"DecisionLogic initialized (terrorism detection: {enable_terrorism_detection})"

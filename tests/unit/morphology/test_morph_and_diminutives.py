@@ -85,7 +85,7 @@ class TestMorphologyAndDiminutives:
         ]
         
         for diminutive, expected in test_cases:
-            result = service._normalize_sync(f"{diminutive} Петров", language="ru")
+            result = service._normalize_sync(f"{diminutive} Петров", language="ru", enable_advanced_features=True)
             assert expected in result.normalized
             assert diminutive.capitalize() not in result.normalized
     
@@ -104,7 +104,7 @@ class TestMorphologyAndDiminutives:
         ]
         
         for diminutive, expected in test_cases:
-            result = service._normalize_sync(f"{diminutive} Коваленко", language="uk")
+            result = service._normalize_sync(f"{diminutive} Коваленко", language="uk", enable_advanced_features=True)
             assert expected in result.normalized
             assert diminutive.capitalize() not in result.normalized
     
@@ -123,7 +123,7 @@ class TestMorphologyAndDiminutives:
         ]
         
         for nickname, expected in test_cases:
-            result = service._normalize_sync(f"{nickname} Smith", language="en")                                
+            result = service._normalize_sync(f"{nickname} Smith", language="en", enable_advanced_features=True)                                
             assert expected in result.normalized
             # Check that the original nickname is not in the result (exact match, case-insensitive)
             assert f" {nickname.lower()} " not in f" {result.normalized.lower()} "

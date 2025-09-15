@@ -19,7 +19,7 @@ role_based_test_cases = [
     ("Петра Иванова", "Петро Иванов", "uk"),
 
     # Patronymics with case
-    ("от Александра Александровича", "Александра Александрович", "ru"),
+    ("от Александра Александровича", "Александр Александрович", "ru"),
     ("для Іванівни", "Іванівна", "uk"), # Assuming 'Іванівна' is a valid standalone name part for testing
 
     # Hyphenated names
@@ -30,8 +30,8 @@ role_based_test_cases = [
     ("Оплата від Петра Порошенка", "Петро Порошенко", "uk"),
 
     # Initials spacing/case
-    ("Есенин с. а.", "Есенин", "ru"),  # Lowercase initials filtered as stopwords
-    ("пушкин а с", "Пушкин .", "ru"),  # Lowercase letters filtered, period remains
+    ("Есенин с. а.", "Есенин С. А.", "ru"),
+    ("пушкин а с", "Пушкин А. С.", "ru"),
 ]
 
 @pytest.mark.parametrize("input_text, expected_name, lang", role_based_test_cases)

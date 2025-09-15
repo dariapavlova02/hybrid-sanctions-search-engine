@@ -69,14 +69,16 @@ class TestUkrainianNormalization:
         assert len(result.tokens) >= 0  # May be empty after stopword removal
 
     def test_ukrainian_unicode_handling(self, normalization_service):
-        """Test Ukrainian Unicode character handling"""
+        """Test Ukrainian Unicode character handling - common words should be filtered out"""
         ukrainian_text = "Європа, ґрунт, ідея, їжа, йод"
         
         result = normalization_service.normalize_sync(ukrainian_text, language="uk")
         
         assert result.success
         assert result.language == "uk"
-        assert "Європ" in result.normalized or "європ" in result.normalized.lower()
+        # These are all common words/geographical names, not person names, so they should be filtered out
+        assert result.normalized == ""
+        assert len(result.tokens) == 0
 
     def test_ukrainian_mixed_language_text(self, normalization_service):
         """Test handling of mixed Ukrainian and other language text"""

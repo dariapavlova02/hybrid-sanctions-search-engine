@@ -138,7 +138,7 @@ class TestNormalizationContracts:
             person_core = result.persons_core[0]
             assert isinstance(person_core, list)
 
-            # Should contain name components
+            # Should contain name components (normalized forms)
             expected_components = ["Петро", "Іванович", "Коваленко"]
             for component in expected_components:
                 assert component in person_core
