@@ -72,61 +72,68 @@ class TestAPIRiskResponse:
         # Configure the mock orchestrator
         mock_orchestrator.process = AsyncMock(return_value=mock_result)
         
-        # Test the response format logic (simulating what happens in main.py)
+        # Test the ProcessResponse model structure
         response = {
-            "success": mock_result.success,
-            "original_text": mock_result.original_text,
             "normalized_text": mock_result.normalized_text,
-            "language": mock_result.language,
-            "language_confidence": mock_result.language_confidence,
             "tokens": mock_result.tokens,
-            "trace": [],
+            "trace": mock_result.trace,
+            "language": mock_result.language,
+            "success": mock_result.success,
+            "errors": mock_result.errors,
+            "processing_time": mock_result.processing_time,
             "signals": {
-                "persons": mock_result.signals.persons,
-                "organizations": mock_result.signals.organizations,
+                "persons": [
+                    {
+                        "core": person.core,
+                        "full_name": person.full_name,
+                        "dob": person.dob,
+                        "ids": person.ids,
+                        "confidence": person.confidence,
+                        "evidence": person.evidence,
+                    }
+                    for person in mock_result.signals.persons
+                ],
+                "organizations": [
+                    {
+                        "core": org.core,
+                        "legal_form": org.legal_form,
+                        "full_name": org.full_name,
+                        "ids": org.ids,
+                        "confidence": org.confidence,
+                        "evidence": org.evidence,
+                    }
+                    for org in mock_result.signals.organizations
+                ],
                 "confidence": mock_result.signals.confidence,
             },
-            "variants": mock_result.variants,
-            "processing_time": mock_result.processing_time,
-            "has_embeddings": mock_result.embeddings is not None,
-            "errors": mock_result.errors,
-        }
-        
-        # Add decision/risk information if available
-        if mock_result.decision:
-            response.update({
+            "decision": {
                 "risk_level": mock_result.decision.risk.value,
                 "risk_score": mock_result.decision.score,
                 "decision_reasons": mock_result.decision.reasons,
                 "decision_details": mock_result.decision.details,
-            })
-        else:
-            # Provide default values when decision engine is not enabled
-            response.update({
-                "risk_level": "unknown",
-                "risk_score": None,
-                "decision_reasons": ["decision_engine_not_enabled"],
-                "decision_details": {},
-            })
+            } if mock_result.decision else None,
+            "embedding": mock_result.embeddings,
+        }
         
-        # Verify the response format
+        # Verify the ProcessResponse format
         assert response["success"] is True
-        assert response["original_text"] == "John Doe from ACME Corp"
         assert response["normalized_text"] == "JOHN DOE ACME CORP"
+        assert response["tokens"] == ["JOHN", "DOE", "ACME", "CORP"]
+        assert response["language"] == "en"
+        assert response["errors"] == []
         
-        # Verify risk fields are present
-        assert "risk_level" in response
-        assert "risk_score" in response
-        assert "decision_reasons" in response
-        assert "decision_details" in response
+        # Verify signals section
+        assert response["signals"] is not None
+        assert response["signals"]["confidence"] == 0.8
         
-        # Verify risk field values
-        assert response["risk_level"] == "high"
-        assert response["risk_score"] == 0.87
-        assert response["decision_reasons"] == ["High person confidence: 0.9", "ID match bonus applied", "Risk level: high"]
-        assert response["decision_details"]["calculated_score"] == 0.87
-        assert response["decision_details"]["thresholds"]["thr_high"] == 0.85
-        assert response["decision_details"]["thresholds"]["thr_medium"] == 0.65
+        # Verify decision section
+        assert response["decision"] is not None
+        assert response["decision"]["risk_level"] == "high"
+        assert response["decision"]["risk_score"] == 0.87
+        assert response["decision"]["decision_reasons"] == ["High person confidence: 0.9", "ID match bonus applied", "Risk level: high"]
+        assert response["decision"]["decision_details"]["calculated_score"] == 0.87
+        assert response["decision"]["decision_details"]["thresholds"]["thr_high"] == 0.85
+        assert response["decision"]["decision_details"]["thresholds"]["thr_medium"] == 0.65
     
     def test_process_endpoint_response_without_decision_engine(self):
         """Test response format when decision engine is not enabled"""
@@ -150,52 +157,37 @@ class TestAPIRiskResponse:
         mock_result.errors = []
         mock_result.decision = None  # No decision engine
         
-        # Test the response format logic
+        # Test the ProcessResponse model structure without decision
         response = {
-            "success": mock_result.success,
-            "original_text": mock_result.original_text,
             "normalized_text": mock_result.normalized_text,
-            "language": mock_result.language,
-            "language_confidence": mock_result.language_confidence,
             "tokens": mock_result.tokens,
-            "trace": [],
+            "trace": mock_result.trace,
+            "language": mock_result.language,
+            "success": mock_result.success,
+            "errors": mock_result.errors,
+            "processing_time": mock_result.processing_time,
             "signals": {
-                "persons": mock_result.signals.persons,
-                "organizations": mock_result.signals.organizations,
+                "persons": [],
+                "organizations": [],
                 "confidence": mock_result.signals.confidence,
             },
-            "variants": mock_result.variants,
-            "processing_time": mock_result.processing_time,
-            "has_embeddings": mock_result.embeddings is not None,
-            "errors": mock_result.errors,
+            "decision": None,  # No decision engine
+            "embedding": None,  # No embeddings
         }
         
-        # Add decision/risk information if available
-        if mock_result.decision:
-            response.update({
-                "risk_level": mock_result.decision.risk.value,
-                "risk_score": mock_result.decision.score,
-                "decision_reasons": mock_result.decision.reasons,
-                "decision_details": mock_result.decision.details,
-            })
-        else:
-            # Provide default values when decision engine is not enabled
-            response.update({
-                "risk_level": "unknown",
-                "risk_score": None,
-                "decision_reasons": ["decision_engine_not_enabled"],
-                "decision_details": {},
-            })
-        
-        # Verify the response format
+        # Verify the ProcessResponse format
         assert response["success"] is True
-        assert response["original_text"] == "John Doe"
+        assert response["normalized_text"] == "JOHN DOE"
+        assert response["tokens"] == ["JOHN", "DOE"]
+        assert response["language"] == "en"
+        assert response["errors"] == []
         
-        # Verify risk fields are present with default values
-        assert response["risk_level"] == "unknown"
-        assert response["risk_score"] is None
-        assert response["decision_reasons"] == ["decision_engine_not_enabled"]
-        assert response["decision_details"] == {}
+        # Verify signals section
+        assert response["signals"] is not None
+        assert response["signals"]["confidence"] == 0.5
+        
+        # Verify decision section is None (no decision engine)
+        assert response["decision"] is None
     
     def test_decision_output_serialization(self):
         """Test that DecisionOutput can be serialized to dict"""

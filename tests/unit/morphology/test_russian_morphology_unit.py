@@ -60,7 +60,7 @@ class TestRussianMorphologyAnalyzer:
         # Check result structure
         assert isinstance(result, list)
         assert len(result) > 0
-        assert isinstance(result[0], MorphologicalAnalysis)
+        assert isinstance(result[0], dict)
 
     def test_gender_detection_male(self):
         """Test gender detection for male names"""
@@ -181,10 +181,10 @@ class TestRussianMorphologyAnalyzer:
     def test_is_russian_name(self):
         """Test is_russian_name detection"""
         # Test known Russian names
-        assert self.analyzer.is_known_word('Сергей') == True
+        assert self.analyzer.is_russian_name('Сергей') == True
         
         # Test unknown names
-        assert self.analyzer.is_known_word('Unknown') == False
+        assert self.analyzer.is_russian_name('Unknown') == False
 
     def test_name_complexity(self):
         """Test name complexity analysis"""
@@ -247,7 +247,7 @@ class TestRussianMorphologyAnalyzer:
         assert isinstance(result, list)
         assert len(result) > 0
         if result:  # If there are results
-            assert isinstance(result[0], MorphologicalAnalysis)
+            assert isinstance(result[0], dict)
 
     def test_analyze_name_with_language(self):
         """Test analyze_name with language parameter"""
@@ -260,7 +260,7 @@ class TestRussianMorphologyAnalyzer:
         assert isinstance(result, list)
         assert len(result) > 0
         if result:  # If there are results
-            assert isinstance(result[0], MorphologicalAnalysis)
+            assert isinstance(result[0], dict)
 
     def test_analyze_name_empty_input(self):
         """Test analyze_name with empty input"""

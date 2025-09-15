@@ -110,7 +110,7 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
             "Ґ": "G",
         }
 
-    def analyze_word(self, word: str) -> List[MorphologicalAnalysis]:
+    def analyze_word(self, word: str) -> List[Dict[str, Any]]:
         """
         Analyze single word morphologically
 
@@ -118,52 +118,46 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
             word: Word to analyze
 
         Returns:
-            List of morphological analysis results
+            List of morphological analysis results as dictionaries
         """
         if not word or not word.strip():
             return []
 
         word = word.strip()
         if len(word) < 2:
-            return [
-                MorphologicalAnalysis(
-                    lemma=word,
-                    part_of_speech="UNKN",
-                    confidence=0.1,
-                    source="ukrainian_short",
-                )
-            ]
+            return [{
+                "token": word,
+                "lemma": word,
+                "pos": "UNKN",
+                "case": None,
+                "gender": None,
+                "confidence": 0.1,
+                "source": "ukrainian_short",
+            }]
 
         try:
             # Analysis through pymorphy3
             morph_analysis = self._analyze_with_pymorphy(word)
 
-            # Convert to MorphologicalAnalysis objects
+            # Convert to dictionaries
             results = []
             for analysis in morph_analysis:
-                results.append(
-                    MorphologicalAnalysis(
-                        lemma=analysis.get("lemma", word),
-                        part_of_speech=analysis.get("pos", "UNKN"),
-                        case=analysis.get("case"),
-                        number=analysis.get("number"),
-                        gender=analysis.get("gender"),
-                        person=analysis.get("person"),
-                        tense=analysis.get("tense"),
-                        mood=analysis.get("mood"),
-                        voice=analysis.get("voice"),
-                        aspect=analysis.get("aspect"),
-                        confidence=analysis.get("confidence", 1.0),
-                        source="ukrainian_pymorphy",
-                    )
-                )
+                results.append({
+                    "token": word,
+                    "lemma": analysis.get("lemma", word),
+                    "pos": analysis.get("pos", "UNKN"),
+                    "case": analysis.get("case"),
+                    "gender": analysis.get("gender"),
+                    "confidence": analysis.get("confidence", 1.0),
+                    "source": "ukrainian_pymorphy",
+                })
 
             return results
 
         except Exception as e:
             self.logger.warning(f"Error analyzing word '{word}': {e}")
             # Fallback analysis
-            return [self._fallback_analysis(word)]
+            return [self._fallback_analysis_dict(word)]
 
     def analyze_text(self, text: str) -> Dict[str, List[MorphologicalAnalysis]]:
         """
@@ -378,6 +372,103 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
                 return "neut"
 
         return None
+
+    def _guess_pos_by_endings(self, word: str) -> str:
+        """Guess part of speech by word endings"""
+        word_lower = word.lower()
+        
+        # Common Ukrainian name endings
+        name_endings = ["енко", "ук", "юк", "чук", "ів", "івна", "ович", "евич"]
+        for ending in name_endings:
+            if word_lower.endswith(ending):
+                return "NOUN"
+        
+        return "UNKN"
+
+    def _guess_gender_by_endings(self, word: str) -> str:
+        """Guess gender by word endings"""
+        word_lower = word.lower()
+        
+        # Masculine endings
+        masc_endings = ["енко", "ук", "юк", "чук", "ович", "евич"]
+        for ending in masc_endings:
+            if word_lower.endswith(ending):
+                return "masc"
+        
+        # Feminine endings
+        fem_endings = ["івна", "а", "я"]
+        for ending in fem_endings:
+            if word_lower.endswith(ending):
+                return "femn"
+        
+        return None
+
+    def pick_best_parse(self, parses: List[Any]) -> Any:
+        """
+        Pick the best parse from a list of parses with preference for Name/Surn + nomn
+        
+        Args:
+            parses: List of parse objects from pymorphy3
+            
+        Returns:
+            Best parse object
+        """
+        if not parses:
+            return None
+            
+        # First preference: Name/Surn + nomn (nominative case)
+        name_nomn_parses = []
+        for parse in parses:
+            if hasattr(parse, 'tag'):
+                tag_str = str(parse.tag)
+                if ('Name' in tag_str or 'Surn' in tag_str) and 'nomn' in tag_str:
+                    name_nomn_parses.append(parse)
+        
+        if name_nomn_parses:
+            return max(name_nomn_parses, key=lambda p: p.score if hasattr(p, 'score') else 1.0)
+        
+        # Second preference: Name/Surn in any case
+        name_parses = []
+        for parse in parses:
+            if hasattr(parse, 'tag'):
+                tag_str = str(parse.tag)
+                if 'Name' in tag_str or 'Surn' in tag_str:
+                    name_parses.append(parse)
+        
+        if name_parses:
+            return max(name_parses, key=lambda p: p.score if hasattr(p, 'score') else 1.0)
+        
+        # Fallback: highest scoring parse
+        return max(parses, key=lambda p: p.score if hasattr(p, 'score') else 1.0)
+
+    def _fallback_analysis_dict(self, word: str) -> Dict[str, Any]:
+        """Fallback analysis when pymorphy3 fails - returns dict"""
+        # Check special names
+        if word in self.special_names:
+            name_info = self.special_names[word]
+            return {
+                "token": word,
+                "lemma": name_info.get("lemma", word.lower()),
+                "pos": name_info.get("pos", "NOUN"),
+                "case": None,
+                "gender": name_info.get("gender"),
+                "confidence": 0.8,
+                "source": "ukrainian_special_names",
+            }
+
+        # Basic analysis based on endings
+        pos = self._guess_pos_by_endings(word)
+        gender = self._guess_gender_by_endings(word)
+
+        return {
+            "token": word,
+            "lemma": word.lower(),
+            "pos": pos,
+            "case": None,
+            "gender": gender,
+            "confidence": 0.3,
+            "source": "ukrainian_fallback",
+        }
 
     def get_word_forms(self, lemma: str, pos: str = None) -> List[str]:
         """

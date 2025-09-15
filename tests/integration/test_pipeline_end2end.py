@@ -303,10 +303,10 @@ class TestPipelineEnd2End:
     orchestrator = None
 
     @classmethod
-    async def setup_class(cls):
+    def setup_class(cls):
         """Setup orchestrator for all tests"""
         logger.info("Setting up orchestrator for integration tests...")
-        cls.orchestrator = await OrchestratorFactory.create_testing_orchestrator(minimal=False)
+        cls.orchestrator = asyncio.run(OrchestratorFactory.create_testing_orchestrator(minimal=False))
         logger.info("Orchestrator initialized successfully")
 
     @pytest.mark.parametrize("test_case", INTEGRATION_TEST_CASES, ids=lambda tc: tc.name)
@@ -440,7 +440,7 @@ if __name__ == "__main__":
     async def run_tests():
         """Run integration tests standalone"""
         test_instance = TestPipelineEnd2End()
-        await test_instance.setup_class()
+        test_instance.setup_class()
 
         print("🚀 Running End-to-End Integration Tests")
         print("=" * 60)

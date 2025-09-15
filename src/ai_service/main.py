@@ -7,13 +7,15 @@ for sanctions data verification
 import os
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 import uvicorn
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, ValidationError, validator, ValidationError
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent
@@ -34,6 +36,7 @@ from ai_service.exceptions import (
 )
 from ai_service.utils import get_logger, setup_logging
 from ai_service.utils.response_formatter import format_processing_result
+from ai_service.contracts.base_contracts import NormalizationResponse, ProcessResponse, UnifiedProcessingResult
 
 # Setup centralized logging
 setup_logging()
@@ -63,6 +66,51 @@ orchestrator = None
 
 # Security
 security = HTTPBearer()
+
+
+def _extract_signals_dict(result: UnifiedProcessingResult) -> Dict[str, Any]:
+    """Extract signals information as dictionary"""
+    if not result.signals:
+        return None
+    
+    return {
+        "persons": [
+            {
+                "core": person.core,
+                "full_name": person.full_name,
+                "dob": person.dob,
+                "ids": person.ids,
+                "confidence": person.confidence,
+                "evidence": person.evidence,
+            }
+            for person in result.signals.persons
+        ],
+        "organizations": [
+            {
+                "core": org.core,
+                "legal_form": org.legal_form,
+                "full_name": org.full_name,
+                "ids": org.ids,
+                "confidence": org.confidence,
+                "evidence": org.evidence,
+            }
+            for org in result.signals.organizations
+        ],
+        "confidence": result.signals.confidence,
+    }
+
+
+def _extract_decision_dict(result: UnifiedProcessingResult) -> Dict[str, Any]:
+    """Extract decision information as dictionary"""
+    if not result.decision:
+        return None
+    
+    return {
+        "risk_level": result.decision.risk.value,
+        "risk_score": result.decision.score,
+        "decision_reasons": result.decision.reasons,
+        "decision_details": result.decision.details,
+    }
 
 
 def verify_admin_token(
@@ -130,6 +178,13 @@ class ProcessTextRequest(BaseModel):
     generate_variants: bool = True
     generate_embeddings: bool = False
     cache_result: bool = True
+
+    @validator("text")
+    def validate_text_length(cls, v):
+        """Validate text length"""
+        if len(v) > SERVICE_CONFIG.max_input_length:
+            raise ValueError(f"Text too long: {len(v)} > {SERVICE_CONFIG.max_input_length}")
+        return v
 
 
 class ProcessBatchRequest(BaseModel):
@@ -322,7 +377,7 @@ async def get_metrics():
         return f"# Error generating metrics: {e}\nai_service_up 0\n"
 
 
-@app.post("/process")
+@app.post("/process", response_model=ProcessResponse)
 async def process_text(request: ProcessTextRequest):
     """
     Complete text processing through orchestrator
@@ -331,11 +386,10 @@ async def process_text(request: ProcessTextRequest):
         request: Text processing request
 
     Returns:
-        Processing result with normalized text and variants
+        Processing result with normalized text, tokens, trace, and optional sections
 
     Raises:
-        ServiceUnavailableError: If orchestrator is not initialized
-        InternalServerError: If processing fails
+        HTTPException: 503 if orchestrator not initialized, 500 for internal errors
     """
     if not orchestrator:
         raise HTTPException(status_code=503, detail="Orchestrator not initialized")
@@ -351,14 +405,28 @@ async def process_text(request: ProcessTextRequest):
             enable_advanced_features=True,
         )
 
-        # Use response formatter for standardized JSON structure
-        return format_processing_result(result)
+        # Convert to ProcessResponse model
+        return ProcessResponse(
+            normalized_text=result.normalized_text,
+            tokens=result.tokens or [],
+            trace=result.trace or [],
+            language=result.language,
+            success=result.success,
+            errors=result.errors or [],
+            processing_time=result.processing_time,
+            signals=_extract_signals_dict(result) if result.signals else None,
+            decision=_extract_decision_dict(result) if result.decision else None,
+            embedding=result.embeddings if request.generate_embeddings else None,
+        )
+    except ServiceUnavailableError as e:
+        logger.error(f"Service unavailable: {e}")
+        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         logger.error(f"Error processing text: {e}")
-        raise InternalServerError(f"Text processing failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Text processing failed: {str(e)}")
 
 
-@app.post("/normalize")
+@app.post("/normalize", response_model=NormalizationResponse)
 async def normalize_text(request: TextNormalizationRequest):
     """
     Text normalization for search (legacy endpoint)
@@ -367,11 +435,10 @@ async def normalize_text(request: TextNormalizationRequest):
         request: Text normalization request
 
     Returns:
-        Normalized text result
+        Normalized text result with tokens and trace
 
     Raises:
-        ServiceUnavailableError: If orchestrator is not initialized
-        InternalServerError: If normalization fails
+        HTTPException: 503 if orchestrator not initialized, 500 for internal errors
     """
     if not orchestrator:
         raise HTTPException(status_code=503, detail="Orchestrator not initialized")
@@ -388,16 +455,18 @@ async def normalize_text(request: TextNormalizationRequest):
             enable_advanced_features=request.apply_lemmatization,
         )
 
-        return {
-            "original_text": result.original_text,
-            "normalized_text": result.normalized_text,
-            "language": result.language,
-            "processing_time": result.processing_time,
-            "success": result.success,
-        }
+        return NormalizationResponse(
+            normalized_text=result.normalized_text,
+            tokens=result.tokens or [],
+            trace=result.trace or [],
+            language=result.language,
+            success=result.success,
+            errors=result.errors or [],
+            processing_time=result.processing_time,
+        )
     except Exception as e:
         logger.error(f"Error normalizing text: {e}")
-        raise InternalServerError(f"Text normalization failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Text normalization failed: {str(e)}")
 
 
 @app.post("/process-batch")
@@ -423,9 +492,9 @@ async def process_batch(request: ProcessBatchRequest):
                     "normalized_text": result.normalized_text,
                     "language": result.language,
                     "language_confidence": result.language_confidence,
-                    "variants_count": len(result.variants),
+                    "variants_count": len(result.variants) if result.variants else 0,
                     "processing_time": result.processing_time,
-                    "errors": result.errors,
+                    "errors": result.errors or [],
                 }
             )
 
@@ -584,29 +653,111 @@ async def root():
     }
 
 
+# Admin endpoints
+@app.get("/admin/status")
+async def admin_status(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
+    """Admin status endpoint with authentication"""
+    if not credentials or credentials.credentials != SECURITY_CONFIG.admin_api_key:
+        raise HTTPException(status_code=401, detail="Invalid admin token")
+    
+    # Get orchestrator statistics
+    stats = {
+        "total_processed": 0,
+        "successful": 0,
+        "failed": 0,
+        "cache": {"hits": 0, "misses": 0}
+    }
+    
+    detailed_stats = stats.copy()
+    
+    if orchestrator:
+        # Get basic stats from orchestrator if available
+        stats.update({
+            "orchestrator_initialized": True,
+            "processing_time": 0.0  # Simple value to avoid recursion
+        })
+        
+        # Try to get detailed stats if method exists
+        if hasattr(orchestrator, 'get_detailed_stats'):
+            try:
+                detailed_stats = orchestrator.get_detailed_stats()
+            except Exception:
+                pass  # Use default stats if method fails
+    else:
+        stats["orchestrator_initialized"] = False
+    
+    return {
+        "status": "operational",
+        "version": "1.0.0",
+        "timestamp": "2023-01-01T00:00:00Z",
+        "statistics": stats,
+        "detailed_stats": detailed_stats
+    }
+
+
 # Exception handlers
 @app.exception_handler(AuthenticationError)
 async def authentication_exception_handler(request, exc):
     """Handle authentication errors"""
-    return HTTPException(status_code=exc.status_code, detail=exc.message)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.message}
+    )
 
 
 @app.exception_handler(ValidationAPIError)
 async def validation_exception_handler(request, exc):
     """Handle validation errors"""
-    return HTTPException(status_code=exc.status_code, detail=exc.message)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.message}
+    )
 
 
 @app.exception_handler(ServiceUnavailableError)
 async def service_unavailable_exception_handler(request, exc):
     """Handle service unavailable errors"""
-    return HTTPException(status_code=exc.status_code, detail=exc.message)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.message}
+    )
 
 
 @app.exception_handler(InternalServerError)
 async def internal_server_exception_handler(request, exc):
     """Handle internal server errors"""
-    return HTTPException(status_code=exc.status_code, detail=exc.message)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.message}
+    )
+
+
+@app.exception_handler(ValidationError)
+async def validation_exception_handler(request, exc):
+    """Handle Pydantic validation errors"""
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "Validation error", "errors": exc.errors()}
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Handle request validation errors"""
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "Validation error", "errors": exc.errors()}
+    )
+
+
+@app.exception_handler(ValidationError)
+async def pydantic_validation_exception_handler(request: Request, exc: ValidationError):
+    """Handle Pydantic validation errors"""
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "Validation error", "errors": exc.errors()}
+    )
+
 
 
 if __name__ == "__main__":

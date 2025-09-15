@@ -18,9 +18,8 @@ class TestNameDetector(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures"""
-        # Mock the dictionaries import to avoid dependency issues
-        with patch('ai_service.layers.smart_filter.name_detector.DICTIONARIES_AVAILABLE', False):
-            self.name_detector = NameDetector()
+        # Create name detector instance
+        self.name_detector = NameDetector()
     
     def test_initialization(self):
         """Test name detector initialization"""
@@ -36,9 +35,9 @@ class TestNameDetector(unittest.TestCase):
         result = self.name_detector.detect_name_signals("")
         
         self.assertEqual(result['confidence'], 0.0)
-        self.assertEqual(result['signal_count'], 0)
-        self.assertEqual(result['detected_names'], [])
-        self.assertTrue(result['analysis_complete'])
+        self.assertEqual(result['name_count'], 0)
+        self.assertEqual(result['names'], [])
+        self.assertTrue(result['has_names'])
     
     def test_detect_name_signals_full_name(self):
         """Test detection of full names"""
@@ -46,9 +45,9 @@ class TestNameDetector(unittest.TestCase):
         result = self.name_detector.detect_name_signals(test_text)
         
         self.assertGreater(result['confidence'], 0.0)
-        self.assertGreater(result['signal_count'], 0)
-        self.assertGreater(len(result['detected_names']), 0)
-        self.assertTrue(result['analysis_complete'])
+        self.assertGreater(result['name_count'], 0)
+        self.assertGreater(len(result['names']), 0)
+        self.assertTrue(result['has_names'])
     
     def test_detect_full_names(self):
         """Test full name detection method"""
@@ -224,15 +223,13 @@ class TestNameDetector(unittest.TestCase):
     
     def test_create_empty_result(self):
         """Test empty result creation"""
-        result = self.name_detector._create_empty_result()
+        # Test detect_name_signals with empty text
+        result = self.name_detector.detect_name_signals("")
         
         self.assertEqual(result['confidence'], 0.0)
-        self.assertEqual(result['signals'], [])
-        self.assertEqual(result['signal_count'], 0)
-        self.assertEqual(result['high_confidence_signals'], [])
-        self.assertEqual(result['detected_names'], [])
-        self.assertEqual(result['text_length'], 0)
-        self.assertTrue(result['analysis_complete'])
+        self.assertEqual(result['has_names'], False)
+        self.assertEqual(result['name_count'], 0)
+        self.assertEqual(result['names'], [])
 
 
 class TestNameDetectorIntegration(unittest.TestCase):
@@ -285,7 +282,7 @@ class TestNameDetectorIntegration(unittest.TestCase):
                 result = self.name_detector.detect_name_signals(full_name)
                 self.assertGreater(result['confidence'], 0.0, 
                     f"Should detect full name pattern: {full_name}")
-                self.assertGreater(result['signal_count'], 0,
+                self.assertGreater(result['name_count'], 0,
                     f"Should have signals for: {full_name}")
     
     def test_requirement_names_and_surnames(self):

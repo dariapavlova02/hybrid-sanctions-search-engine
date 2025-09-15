@@ -15,16 +15,16 @@ class TestOrchestratorService:
     """Tests for OrchestratorService"""
     
     @pytest.mark.asyncio
-    async def test_process_text_basic_functionality(self, orchestrator_service):
-        """Test basic process_text functionality"""
+    async def test_process_basic_functionality(self, orchestrator_service):
+        """Test basic process functionality"""
         # Arrange
         test_text = "Test text"
         
         # Mock all services
         with patch.object(orchestrator_service.unicode_service, 'normalize_text') as mock_unicode, \
-             patch.object(orchestrator_service.language_service, 'detect_language') as mock_language, \
-             patch.object(orchestrator_service.normalization_service, 'normalize') as mock_normalize, \
-             patch.object(orchestrator_service.variant_service, 'generate_variants') as mock_variants:
+             patch.object(orchestrator_service.language_service, 'detect_language', new_callable=AsyncMock) as mock_language, \
+             patch.object(orchestrator_service.normalization_service, 'normalize', new_callable=AsyncMock) as mock_normalize, \
+             patch.object(orchestrator_service.variants_service, 'generate_variants', new_callable=AsyncMock) as mock_variants:
             
             mock_unicode.return_value = {'normalized': 'test text'}
             mock_language.return_value = {'language': 'en', 'confidence': 0.9}
@@ -32,7 +32,7 @@ class TestOrchestratorService:
             mock_variants.return_value = {'variants': ['test text', 'test']}
             
             # Act
-            result = await orchestrator_service.process_text(test_text)
+            result = await orchestrator_service.process(test_text)
             
             # Assert
             assert isinstance(result, UnifiedProcessingResult)
@@ -45,8 +45,8 @@ class TestOrchestratorService:
             assert result.processing_time > 0
     
     @pytest.mark.asyncio
-    async def test_process_text_with_cache_hit(self, orchestrator_service):
-        """Test process_text with cache hit"""
+    async def test_process_with_cache_hit(self, orchestrator_service):
+        """Test process with cache hit"""
         # Arrange
         test_text = "Cached text"
         cached_result = UnifiedProcessingResult(
@@ -63,15 +63,15 @@ class TestOrchestratorService:
             mock_get.return_value = cached_result
             
             # Act
-            result = await orchestrator_service.process_text(test_text, cache_result=True)
+            result = await orchestrator_service.process(test_text, cache_result=True)
             
             # Assert
             assert result == cached_result
             assert orchestrator_service.processing_stats['cache_hits'] == 1
     
     @pytest.mark.asyncio
-    async def test_process_text_with_cache_miss(self, orchestrator_service):
-        """Test process_text with cache miss"""
+    async def test_process_with_cache_miss(self, orchestrator_service):
+        """Test process with cache miss"""
         # Arrange
         test_text = "Uncached text"
         
@@ -88,7 +88,7 @@ class TestOrchestratorService:
             mock_normalize.return_value = {'normalized': test_text}
             
             # Act
-            result = await orchestrator_service.process_text(test_text, cache_result=True)
+            result = await orchestrator_service.process(test_text, cache_result=True)
             
             # Assert
             assert result.success is True
@@ -96,8 +96,8 @@ class TestOrchestratorService:
             mock_set.assert_called_once()  # Result should be cached
     
     @pytest.mark.asyncio
-    async def test_process_text_with_embeddings(self, orchestrator_service):
-        """Test process_text with embeddings generation"""
+    async def test_process_with_embeddings(self, orchestrator_service):
+        """Test process with embeddings generation"""
         # Arrange
         test_text = "Test for embeddings"
         
@@ -115,7 +115,7 @@ class TestOrchestratorService:
             }
             
             # Act
-            result = await orchestrator_service.process_text(test_text, generate_embeddings=True)
+            result = await orchestrator_service.process(test_text, generate_embeddings=True)
             
             # Assert
             assert result.success is True
@@ -124,8 +124,8 @@ class TestOrchestratorService:
             mock_embeddings.assert_called_once()
     
     @pytest.mark.asyncio
-    async def test_process_text_error_handling(self, orchestrator_service):
-        """Test error handling in process_text"""
+    async def test_process_error_handling(self, orchestrator_service):
+        """Test error handling in process"""
         # Arrange
         test_text = "Error test"
         
@@ -133,7 +133,7 @@ class TestOrchestratorService:
             mock_unicode.side_effect = Exception("Unicode service error")
             
             # Act
-            result = await orchestrator_service.process_text(test_text)
+            result = await orchestrator_service.process(test_text)
             
             # Assert
             assert result.success is False
@@ -148,8 +148,8 @@ class TestOrchestratorService:
         # Arrange
         texts = ["Text 1", "Text 2", "Text 3"]
         
-        # Mock process_text to return successful results
-        with patch.object(orchestrator_service, 'process_text') as mock_process:
+        # Mock process to return successful results
+        with patch.object(orchestrator_service, 'process') as mock_process:
             mock_results = [
                 UnifiedProcessingResult(
                     original_text=text,
@@ -176,7 +176,7 @@ class TestOrchestratorService:
         # Arrange
         texts = ["Good text", "Bad text"]
         
-        with patch.object(orchestrator_service, 'process_text') as mock_process:
+        with patch.object(orchestrator_service, 'process') as mock_process:
             # First successful, second with error
             mock_process.side_effect = [
                 UnifiedProcessingResult(
@@ -236,7 +236,7 @@ class TestOrchestratorService:
         candidates = ["Jon Smith", "John Smyth"]
         
         with patch.object(orchestrator_service.embedding_service, 'find_similar_texts') as mock_search, \
-             patch.object(orchestrator_service.variant_service, 'find_best_matches') as mock_fallback:
+             patch.object(orchestrator_service.variants_service, 'find_best_matches') as mock_fallback:
             
             mock_search.return_value = {'success': False}
             mock_fallback.return_value = [
@@ -431,7 +431,7 @@ class TestOrchestratorService:
             mock_normalize.return_value = {'normalized': 'new result'}
             
             # Act
-            result = await orchestrator_service.process_text(
+            result = await orchestrator_service.process(
                 test_text,
                 force_reprocess=True
             )
@@ -453,7 +453,7 @@ class TestOrchestratorService:
         assert orchestrator.unicode_service is not None
         assert orchestrator.language_service is not None
         assert orchestrator.normalization_service is not None
-        assert orchestrator.variant_service is not None
+        assert orchestrator.variants_service is not None
         assert orchestrator.pattern_service is not None
         assert orchestrator.template_builder is not None
         assert orchestrator.embedding_service is not None
@@ -465,7 +465,7 @@ class TestOrchestratorService:
         assert orchestrator.processing_stats['failed'] == 0
     
     @pytest.mark.asyncio
-    async def test_process_text_language_service_failure(self, orchestrator_service):
+    async def test_process_language_service_failure(self, orchestrator_service):
         """Test resilience to language_service.detect_language failure"""
         # Arrange
         test_text = "Test text for language service failure"
@@ -480,7 +480,7 @@ class TestOrchestratorService:
             mock_normalize.return_value = {'normalized': test_text}
             
             # Act
-            result = await orchestrator_service.process_text(test_text)
+            result = await orchestrator_service.process(test_text)
             
             # Assert
             assert isinstance(result, UnifiedProcessingResult)
@@ -496,7 +496,7 @@ class TestOrchestratorService:
                 assert len(result.errors) > 0
     
     @pytest.mark.asyncio
-    async def test_process_text_normalization_service_exception(self, orchestrator_service):
+    async def test_process_normalization_service_exception(self, orchestrator_service):
         """Test resilience to normalization_service.normalize exception"""
         # Arrange
         test_text = "Test text for normalization service exception"
@@ -511,7 +511,7 @@ class TestOrchestratorService:
             mock_normalize.side_effect = Exception("Normalization service error")
             
             # Act
-            result = await orchestrator_service.process_text(test_text)
+            result = await orchestrator_service.process(test_text)
             
             # Assert
             assert isinstance(result, UnifiedProcessingResult)

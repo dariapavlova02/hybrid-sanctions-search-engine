@@ -64,6 +64,50 @@ russian_test_cases = [
 def test_russian_full_normalization(normalization_service, input_text, expected_name):
     """Проверяет полную нормализацию русских имен."""
     result = normalization_service.normalize(input_text, language="ru")
+
+    # Debug output for failing cases
+    if "Высоцкого" in input_text:
+        print(f"\nDEBUG - Input: '{input_text}'")
+        print(f"DEBUG - Expected: '{expected_name}'")
+        print(f"DEBUG - Actual: '{result.normalized}'")
+
+        # Force create a fresh service to bypass any caching issues
+        from ai_service.layers.normalization.normalization_service import NormalizationService
+        fresh_service = NormalizationService()
+
+        # Test with fresh service
+        fresh_result = fresh_service.normalize(input_text, language="ru")
+        print(f"DEBUG - Fresh service result: '{fresh_result.normalized}'")
+
+        # Test morphology with fresh service
+        fresh_morph_test = fresh_service._morph_nominal('Высоцкого', 'ru')
+        print(f"DEBUG - Fresh _morph_nominal('Высоцкого', 'ru') = '{fresh_morph_test}'")
+
+        fresh_ru_morph = fresh_service._get_morph('ru')
+        if fresh_ru_morph:
+            print(f"DEBUG - Fresh ru_morph available: {fresh_ru_morph.morph_analyzer is not None}")
+            if fresh_ru_morph.morph_analyzer:
+                print(f"DEBUG - Fresh ru_morph type: {type(fresh_ru_morph.morph_analyzer)}")
+            else:
+                # Test direct pymorphy3 initialization in test environment
+                print("DEBUG - Testing direct pymorphy3 in test env:")
+                import sys
+                print(f"DEBUG - Python executable: {sys.executable}")
+                print(f"DEBUG - Python path length: {len(sys.path)}")
+                try:
+                    import pymorphy3
+                    test_analyzer = pymorphy3.MorphAnalyzer(lang="ru")
+                    test_parses = test_analyzer.parse('Высоцкого')
+                    print(f"DEBUG - Direct pymorphy3 works: {len(test_parses)} parses")
+                    print(f"DEBUG - Direct result: {test_parses[0].normal_form if test_parses else 'No parses'}")
+                except Exception as e:
+                    print(f"DEBUG - Direct pymorphy3 error: {e}")
+                    print(f"DEBUG - Type of error: {type(e)}")
+                    import traceback
+                    print(f"DEBUG - Traceback: {traceback.format_exc()}")
+        else:
+            print("DEBUG - Fresh ru_morph is None!")
+
     assert_normalized_name(result, expected_name)
 
 # Категория 3: АНГЛИЙСКИЕ ИМЕНА (полная нормализация)

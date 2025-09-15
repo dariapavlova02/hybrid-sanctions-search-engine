@@ -75,25 +75,29 @@ def orchestrator_service():
         from unittest.mock import Mock
         
         # Create mock services for required dependencies
-        from unittest.mock import AsyncMock
+        from unittest.mock import AsyncMock, Mock
         
         mock_validation_service = AsyncMock()
-        mock_language_service = AsyncMock()
-        mock_unicode_service = AsyncMock()
+        mock_language_service = Mock()
+        mock_unicode_service = Mock()
         mock_normalization_service = AsyncMock()
         mock_signals_service = AsyncMock()
         
         # Configure mock responses
-        def mock_validation(text):
+        async def mock_validation(text):
             return {"is_valid": True, "sanitized_text": text}
         
-        def mock_language(text):
-            return {"language": "uk", "confidence": 0.9}
+        def mock_language_config_driven(text, config=None):
+            from src.ai_service.utils.types import LanguageDetectionResult
+            return LanguageDetectionResult(language="uk", confidence=0.9, details={})
         
-        def mock_unicode(text):
+        def mock_unicode_normalize_text(text, aggressive=False):
+            return {"normalized_text": text, "original_text": text}
+        
+        def mock_unicode_normalize_unicode(text):
             return text
         
-        def mock_normalization(text, **kwargs):
+        async def mock_normalization(text, **kwargs):
             return type('obj', (object,), {
                 'normalized': text,
                 'tokens': text.split(),
@@ -102,7 +106,7 @@ def orchestrator_service():
                 'errors': []
             })()
         
-        def mock_signals(original_text, normalization_result, **kwargs):
+        async def mock_signals(text, normalization_result, language, **kwargs):
             return type('obj', (object,), {
                 'persons': [],
                 'organizations': [],
@@ -111,8 +115,9 @@ def orchestrator_service():
             })()
         
         mock_validation_service.validate_and_sanitize.side_effect = mock_validation
-        mock_language_service.detect_language.side_effect = mock_language
-        mock_unicode_service.normalize_unicode.side_effect = mock_unicode
+        mock_language_service.detect_language_config_driven.side_effect = mock_language_config_driven
+        mock_unicode_service.normalize_text.side_effect = mock_unicode_normalize_text
+        mock_unicode_service.normalize_unicode.side_effect = mock_unicode_normalize_unicode
         mock_normalization_service.normalize_async.side_effect = mock_normalization
         mock_signals_service.extract_signals.side_effect = mock_signals
         

@@ -208,7 +208,27 @@ make test-cov
 
 # Specific test file
 poetry run pytest tests/unit/test_orchestrator_service.py -v
+
+# Test collection only (verify configuration)
+poetry run pytest --collect-only -q
+
+# Run specific test markers
+poetry run pytest -m unit -v
+poetry run pytest -m integration -v
+poetry run pytest -m skip_heavy_deps -v
 ```
+
+### Pytest Configuration
+
+The project uses `pytest.ini` for test configuration with the following features:
+
+- **Timeout**: 300 seconds per test (configurable via `timeout = 300`)
+- **Markers**: Support for `unit`, `integration`, `slow`, `performance`, `skip_heavy_deps`
+- **Async Support**: Automatic async test detection (`asyncio_mode = auto`)
+- **Warning Filters**: Deprecation and user warnings are filtered out
+- **Test Discovery**: Automatically finds tests in `tests/` directory
+
+**Note**: Some tests require heavy dependencies (ML libraries). Use `-m skip_heavy_deps` to skip these tests if dependencies are not installed.
 
 ### Code Quality
 

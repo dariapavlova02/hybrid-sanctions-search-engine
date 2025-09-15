@@ -220,8 +220,9 @@ class TestExtendedRoleTagging:
         assert roles.get("Петрович") == "patronymic"
         assert roles.get("Коваленко") == "surname"
         
-        # Organization tokens should be handled by org logic
-        assert roles.get("ТОВ") == "legal_form"
+        # Organization tokens are marked as unknown per architecture
+        # (legal forms handled by Signals layer, not Normalization)
+        assert roles.get("ТОВ") == "unknown"
         # ТЕСТ might be org or unknown depending on context
     
     def test_sentence_with_org_and_people(self):

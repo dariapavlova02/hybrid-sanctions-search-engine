@@ -20,8 +20,8 @@ class TestSmartFilterService(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures"""
         # Mock the dependencies to avoid import issues
-        with patch('ai_service.layers.smart_filter.smart_filter_service.SignalService'):
-            with patch('ai_service.layers.smart_filter.smart_filter_service.DecisionLogic'):
+        with patch('ai_service.layers.signals.signals_service.SignalsService'):
+            with patch('ai_service.layers.smart_filter.decision_logic.DecisionLogic'):
                 self.smart_filter = SmartFilterService(enable_terrorism_detection=False)
     
     def test_initialization(self):

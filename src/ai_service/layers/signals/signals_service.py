@@ -192,11 +192,19 @@ class SignalsService:
         else:
             persons_core = self.person_extractor.extract(text, language)
 
+        # Ensure persons_core is not None
+        if persons_core is None:
+            persons_core = []
+
         # Извлекаем организации
         if normalization_result and "organizations_core" in normalization_result:
             organizations_core = normalization_result["organizations_core"]
         else:
             organizations_core = self.organization_extractor.extract(text, language)
+
+        # Ensure organizations_core is not None
+        if organizations_core is None:
+            organizations_core = []
 
         return persons_core, organizations_core
 

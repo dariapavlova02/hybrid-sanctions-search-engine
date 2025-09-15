@@ -36,6 +36,7 @@ def format_processing_result(result: UnifiedProcessingResult) -> Dict[str, Any]:
         
         # Variants and tokens
         "variants": result.variants or [],
+        "tokens": result.tokens or [],
         "token_variants": _extract_token_variants(result),
         
         # Risk assessment (from decision engine)

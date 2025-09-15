@@ -7,9 +7,47 @@ import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
+
+# ============================================================================
+# API Response Models
+# ============================================================================
+
+
+class NormalizationResponse(BaseModel):
+    """Response model for normalization endpoint"""
+    
+    normalized_text: str
+    tokens: List[str]
+    trace: List["TokenTrace"]
+    language: str
+    success: bool
+    errors: List[str] = []
+    processing_time: float = 0.0
+
+
+class ProcessResponse(BaseModel):
+    """Response model for process endpoint with full processing pipeline"""
+    
+    # Core fields
+    normalized_text: str
+    tokens: List[str]
+    trace: List["TokenTrace"]
+    language: str
+    success: bool
+    errors: List[str] = []
+    processing_time: float = 0.0
+    
+    # Additional sections for /process endpoint
+    signals: Optional[Dict[str, Any]] = None
+    decision: Optional[Dict[str, Any]] = None
+    embedding: Optional[List[float]] = None
+
 
 # ============================================================================
 # Core Processing Contracts
@@ -37,7 +75,7 @@ class NormalizationResult(BaseModel):
     # Core output
     normalized: str  # clean names only (person tokens)
     tokens: List[str]
-    trace: List[TokenTrace]
+    trace: List["TokenTrace"]
     errors: List[str] = []
 
     # Metadata
@@ -52,6 +90,13 @@ class NormalizationResult(BaseModel):
     # Organizations core (NOT in normalized text)
     persons_core: Optional[List[List[str]]] = None  # [[given, surname], ...]
     organizations_core: Optional[List[str]] = None  # ["GAZPROM", ...]
+    
+    # Persons data with gender and confidence
+    persons: List[Dict[str, Any]] = []
+    
+    # Overall gender information (for single person cases)
+    person_gender: Optional[str] = None  # "masc", "femn", or None
+    gender_confidence: Optional[float] = None  # 0.0 to 1.0
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
@@ -135,7 +180,7 @@ class UnifiedProcessingResult:
     # Normalization
     normalized_text: str
     tokens: List[str]
-    trace: List[TokenTrace]
+    trace: List["TokenTrace"]
 
     # Signals
     signals: SignalsResult
