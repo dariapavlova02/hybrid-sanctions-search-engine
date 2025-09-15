@@ -1875,40 +1875,44 @@ class NormalizationService:
         Prioritizes Name/Surn parts of speech and nominative case.
         Uses async-compatible cache for better performance.
         """
+        # Normalize characters before morphological analysis
+        # This ensures consistent handling of ё/е and other character variations
+        normalized_token = self._normalize_characters(token)
+        
         # Check cache first
-        cached_result = _async_morph_cache.get(token, primary_lang)
+        cached_result = _async_morph_cache.get(normalized_token, primary_lang)
         if cached_result is not None:
             return cached_result
 
         morph_analyzer = self._get_morph(primary_lang)
         if not morph_analyzer:
-            result = token  # Preserve original case
-            _async_morph_cache.put(token, primary_lang, result)
+            result = normalized_token  # Preserve original case
+            _async_morph_cache.put(normalized_token, primary_lang, result)
             return result
 
         # Special handling for Ukrainian surnames that get misanalyzed
         if primary_lang == "uk":
-            result = self._ukrainian_surname_normalization(token)
+            result = self._ukrainian_surname_normalization(normalized_token)
             if result:
-                _async_morph_cache.put(token, primary_lang, result)
+                _async_morph_cache.put(normalized_token, primary_lang, result)
                 return result
 
         # Check if pymorphy3 is actually available
         if not hasattr(morph_analyzer, "morph_analyzer"):
             # pymorphy3 is not available, use fallback methods
             if primary_lang == "uk":
-                result = self._ukrainian_surname_normalization(token)
+                result = self._ukrainian_surname_normalization(normalized_token)
                 if result:
-                    _async_morph_cache.put(token, primary_lang, result)
+                    _async_morph_cache.put(normalized_token, primary_lang, result)
                     return result
             elif primary_lang == "ru":
-                result = self._russian_fallback_normalization(token)
+                result = self._russian_fallback_normalization(normalized_token)
                 if result:
-                    _async_morph_cache.put(token, primary_lang, result)
+                    _async_morph_cache.put(normalized_token, primary_lang, result)
                     return result
             # If no fallback worked, return original token
-            result = token
-            _async_morph_cache.put(token, primary_lang, result)
+            result = normalized_token
+            _async_morph_cache.put(normalized_token, primary_lang, result)
             return result
 
         # Check if pymorphy3 is actually working by trying to parse a test token
@@ -1917,62 +1921,69 @@ class NormalizationService:
             if not test_parses:
                 # pymorphy3 is not working, use fallback methods
                 if primary_lang == "uk":
-                    result = self._ukrainian_surname_normalization(token)
+                    result = self._ukrainian_surname_normalization(normalized_token)
                     if result:
-                        _async_morph_cache.put(token, primary_lang, result)
+                        _async_morph_cache.put(normalized_token, primary_lang, result)
                         return result
                 elif primary_lang == "ru":
-                    result = self._russian_fallback_normalization(token)
+                    result = self._russian_fallback_normalization(normalized_token)
                     if result:
-                        _async_morph_cache.put(token, primary_lang, result)
+                        _async_morph_cache.put(normalized_token, primary_lang, result)
                         return result
                 # If no fallback worked, return original token
-                result = token
-                _async_morph_cache.put(token, primary_lang, result)
+                result = normalized_token
+                _async_morph_cache.put(normalized_token, primary_lang, result)
                 return result
         except Exception:
             # pymorphy3 is not working, use fallback methods
             if primary_lang == "uk":
-                result = self._ukrainian_surname_normalization(token)
+                result = self._ukrainian_surname_normalization(normalized_token)
                 if result:
-                    _async_morph_cache.put(token, primary_lang, result)
+                    _async_morph_cache.put(normalized_token, primary_lang, result)
                     return result
             elif primary_lang == "ru":
-                result = self._russian_fallback_normalization(token)
+                result = self._russian_fallback_normalization(normalized_token)
                 if result:
-                    _async_morph_cache.put(token, primary_lang, result)
+                    _async_morph_cache.put(normalized_token, primary_lang, result)
                     return result
             # If no fallback worked, return original token
-            result = token
-            _async_morph_cache.put(token, primary_lang, result)
+            result = normalized_token
+            _async_morph_cache.put(normalized_token, primary_lang, result)
             return result
 
         # Special handling for patronymics - don't normalize to masculine form
-        if self._is_patronymic(token, primary_lang):
-            result = token  # Keep original patronymic form
-            _async_morph_cache.put(token, primary_lang, result)
+        if self._is_patronymic(normalized_token, primary_lang):
+            result = normalized_token  # Keep original patronymic form
+            _async_morph_cache.put(normalized_token, primary_lang, result)
             return result
+
+        # Special handling for male names in genitive case
+        if primary_lang == "ru":
+            fallback_result = self._russian_fallback_normalization(normalized_token)
+            if fallback_result:
+                _async_morph_cache.put(normalized_token, primary_lang, fallback_result)
+                return fallback_result
 
         # Note: Removed surname blocking - surnames should be normalized like other words
         # The gender adjustment happens later in _gender_adjust_surname
 
         try:
             # Use pymorphy3 directly
-            parses = morph_analyzer.morph_analyzer.parse(token)
+            parses = morph_analyzer.morph_analyzer.parse(normalized_token)
             if not parses:
                 # Try fallback methods first before returning original token
                 if primary_lang == "uk":
-                    result = self._ukrainian_surname_normalization(token)
+                    result = self._ukrainian_surname_normalization(normalized_token)
                     if result:
-                        _async_morph_cache.put(token, primary_lang, result)
+                        _async_morph_cache.put(normalized_token, primary_lang, result)
                         return result
                 elif primary_lang == "ru":
-                    result = self._russian_fallback_normalization(token)
+                    result = self._russian_fallback_normalization(normalized_token)
                     if result:
-                        _async_morph_cache.put(token, primary_lang, result)
+                        _async_morph_cache.put(normalized_token, primary_lang, result)
                         return result
-                result = token  # Preserve original case
-                _async_morph_cache.put(token, primary_lang, result)
+                result = normalized_token  # Preserve original case
+                _async_morph_cache.put(normalized_token, primary_lang, result)
                 return result
 
             # Prefer parses marked with Surn/Name grammemes (not POS)
@@ -2055,7 +2066,7 @@ class NormalizationService:
                 else:
                     result = result[0].upper() + result[1:]
 
-            _async_morph_cache.put(token, primary_lang, result)
+            _async_morph_cache.put(normalized_token, primary_lang, result)
             return result
 
         except Exception as e:
@@ -2077,13 +2088,13 @@ class NormalizationService:
                     result = "-".join(capitalized_parts)
                 else:
                     result = result[0].upper() + result[1:]
-            _async_morph_cache.put(token, primary_lang, result)
+            _async_morph_cache.put(normalized_token, primary_lang, result)
             return result
 
         except Exception as e:
-            self.logger.warning(f"Morphological analysis failed for '{token}': {e}")
-            result = self._normalize_characters(token)
-            _async_morph_cache.put(token, primary_lang, result)
+            self.logger.warning(f"Morphological analysis failed for '{normalized_token}': {e}")
+            result = self._normalize_characters(normalized_token)
+            _async_morph_cache.put(normalized_token, primary_lang, result)
             return result
 
     def _is_surname(self, token: str, language: str) -> bool:
@@ -2329,6 +2340,19 @@ class NormalizationService:
         if tl.endswith("ы") and len(tl) > 3 and tl[-2] not in ru_vowels:
             cand = tl[:-1]
             return cand.capitalize()
+
+        # Genitive of -а ending male names: -а -> (remove ending)
+        # This covers cases like Петра -> Петр, Ивана -> Иван
+        if tl.endswith("а") and len(tl) > 3 and tl[-2] not in ru_vowels:
+            # Check if this could be a male name in genitive case
+            # Common male names ending in -а in genitive: Петра, Ивана, Сергея, etc.
+            male_names_genitive = {
+                "петра", "ивана", "сергея", "александра", "владимира", "михаила",
+                "николая", "дмитрия", "алексея", "андрея", "максима", "артема"
+            }
+            if tl in male_names_genitive:
+                cand = tl[:-1]
+                return cand.capitalize()
 
         return None
 

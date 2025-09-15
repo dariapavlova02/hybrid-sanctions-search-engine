@@ -164,8 +164,8 @@ class TestMorphologyIntegration:
         # Same name should give similar results on different calls
         test_name = "Сергей"
         
-        result1 = advanced_normalization_service._analyze_single_name(test_name, 'ru')
-        result2 = advanced_normalization_service._analyze_single_name(test_name, 'ru')
+        result1 = advanced_normalization_service.normalize_sync(test_name, language='ru')
+        result2 = advanced_normalization_service.normalize_sync(test_name, language='ru')
         
         assert result1 is not None
         assert result2 is not None
@@ -179,7 +179,7 @@ class TestMorphologyIntegration:
         # Create situation that may cause error
         problematic_name = "А" * 1000  # Very long name
         
-        result = advanced_normalization_service._analyze_single_name(problematic_name, 'ru')
+        result = advanced_normalization_service.normalize_sync(problematic_name, language='ru')
         
         # Should handle correctly, even if there are problems
         assert result is not None
