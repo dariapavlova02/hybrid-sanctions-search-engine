@@ -40,6 +40,11 @@ class NormalizationResult(BaseModel):
     token_count: Optional[int] = None
     processing_time: Optional[float] = None
     success: Optional[bool] = None
+    
+    # Integration test compatibility fields
+    original_text: Optional[str] = None
+    token_variants: Optional[Dict[str, List[str]]] = None
+    total_variants: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization"""
@@ -56,6 +61,10 @@ class NormalizationResult(BaseModel):
     def get(self, k, default=None):
         """Enable dict-like access with default value"""
         return self.model_dump().get(k, default)
+    
+    def __contains__(self, k):
+        """Enable 'in' operator for dict-like access"""
+        return k in self.model_dump()
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "NormalizationResult":
@@ -126,6 +135,8 @@ class TraceCollector:
         language: Optional[str] = None,
         confidence: Optional[float] = None,
         original_length: Optional[int] = None,
+        original_text: Optional[str] = None,
+        token_variants: Optional[Dict[str, List[str]]] = None,
     ) -> NormalizationResult:
         """Create a NormalizationResult from collected traces"""
         return NormalizationResult(
@@ -140,6 +151,10 @@ class TraceCollector:
             token_count=len(tokens),
             processing_time=self.get_processing_time(),
             success=len(self.errors) == 0,
+            # Integration test compatibility fields
+            original_text=original_text,
+            token_variants=token_variants,
+            total_variants=len(token_variants) if token_variants else 0,
         )
 
     def reset(self) -> None:

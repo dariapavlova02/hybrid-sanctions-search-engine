@@ -105,9 +105,8 @@ class TestNormalizationResultFields:
         text = "Переказ коштів на ім'я Петро Іванович Коваленко"
         result = service.normalize(text, language="uk")
         
-        # Test conversion to dict using dataclasses.asdict
-        import dataclasses
-        result_dict = dataclasses.asdict(result)
+        # Test conversion to dict using Pydantic model_dump
+        result_dict = result.to_dict()
         assert isinstance(result_dict, dict)
         assert 'normalized' in result_dict
         assert 'tokens' in result_dict

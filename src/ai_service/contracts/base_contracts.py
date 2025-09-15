@@ -97,6 +97,11 @@ class NormalizationResult(BaseModel):
     # Overall gender information (for single person cases)
     person_gender: Optional[str] = None  # "masc", "femn", or None
     gender_confidence: Optional[float] = None  # 0.0 to 1.0
+    
+    # Integration test compatibility fields
+    original_text: Optional[str] = None
+    token_variants: Optional[Dict[str, List[str]]] = None
+    total_variants: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
@@ -113,6 +118,10 @@ class NormalizationResult(BaseModel):
     def get(self, k, default=None):
         """Enable dict-like access with default value"""
         return self.model_dump().get(k, default)
+    
+    def __contains__(self, k):
+        """Enable 'in' operator for dict-like access"""
+        return k in self.model_dump()
 
 
 @dataclass
