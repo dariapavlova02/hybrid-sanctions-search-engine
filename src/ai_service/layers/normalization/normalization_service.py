@@ -16,6 +16,15 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+# Import gender rules for surname post-processing
+from .morphology.gender_rules import (
+    looks_like_feminine_ru,
+    looks_like_feminine_uk,
+    is_invariable_surname,
+    infer_gender_evidence,
+    feminine_nominative_from,
+)
+
 # Async-compatible cache for morphological analysis
 class AsyncMorphCache:
     """Async-compatible cache for morphological analysis results"""
@@ -2394,7 +2403,7 @@ class NormalizationService:
         original_lower = original_token.lower()
 
         # Check if original form is clearly feminine and should be preserved
-        feminine_endings = ["ова", "ева", "іна", "їна", "ина", "ська", "ская", "енка"]
+        feminine_endings = ["ова", "ева", "іна", "їна", "ина", "ська", "ская", "енка", "ка"]
         feminine_case_endings = ["овой", "евой", "иной", "ской", "ской", "енкой", "ой", "ей"]
         if (any(original_lower.endswith(ending) for ending in feminine_endings) or
             any(original_lower.endswith(ending) for ending in feminine_case_endings)):
@@ -2479,6 +2488,140 @@ class NormalizationService:
 
         # For unknown gender, return base form
         return base_form
+
+    def _postfix_feminine_surname(
+        self, 
+        normalized: str, 
+        original_token: str, 
+        given_names: List[str], 
+        patronymic: Optional[str], 
+        language: str
+    ) -> str:
+        """
+        Post-process surname to preserve feminine forms and restore feminine nominative
+        from oblique cases based on gender evidence.
+        
+        Args:
+            normalized: Morphologically normalized surname
+            original_token: Original surname token
+            given_names: List of given names for gender inference
+            patronymic: Patronymic name (if any)
+            language: Language code ('ru' or 'uk')
+            
+        Returns:
+            Post-processed surname with feminine form if appropriate
+        """
+        # Skip invariable surnames
+        if is_invariable_surname(original_token):
+            return normalized
+            
+        # Infer gender evidence from given names and patronymic
+        fem_evidence = infer_gender_evidence(given_names, patronymic, language)
+        
+        if fem_evidence == "fem":
+            # Strong evidence of female gender - convert to feminine nominative
+            return feminine_nominative_from(original_token, language)
+        else:
+            # Check if the original token looks like a feminine form
+            if language == "ru":
+                looks_fem, fem_nom = looks_like_feminine_ru(original_token)
+            elif language == "uk":
+                looks_fem, fem_nom = looks_like_feminine_uk(original_token)
+            else:
+                return normalized
+                
+            if looks_fem and fem_nom:
+                return fem_nom
+                
+        return normalized
+
+    def _postfix_masculine_surname(
+        self, 
+        normalized: str, 
+        original_token: str, 
+        language: str
+    ) -> str:
+        """
+        Post-process surname to convert feminine forms to masculine forms
+        when gender evidence indicates masculine gender.
+        
+        Args:
+            normalized: Morphologically normalized surname
+            original_token: Original surname token
+            language: Language code ('ru' or 'uk')
+            
+        Returns:
+            Post-processed surname with masculine form if appropriate
+        """
+        # Skip invariable surnames
+        if is_invariable_surname(original_token):
+            return normalized
+            
+        # Check if the original token looks like a feminine form
+        if language == "ru":
+            looks_fem, fem_nom = looks_like_feminine_ru(original_token)
+        elif language == "uk":
+            looks_fem, fem_nom = looks_like_feminine_uk(original_token)
+        else:
+            return normalized
+            
+        if looks_fem and fem_nom:
+            # Convert feminine form to masculine
+            if language == "ru":
+                return self._to_masculine_ru(fem_nom)
+            elif language == "uk":
+                return self._to_masculine_uk(fem_nom)
+                
+        return normalized
+
+    def _to_masculine_ru(self, feminine_form: str) -> str:
+        """Convert Russian feminine surname to masculine form."""
+        feminine_lower = feminine_form.lower()
+        
+        if feminine_lower.endswith("ова"):
+            return feminine_form[:-1]  # Иванова -> Иванов
+        elif feminine_lower.endswith("ева"):
+            return feminine_form[:-1]  # Пугачева -> Пугачев
+        elif feminine_lower.endswith("ина"):
+            return feminine_form[:-1] + "ин"  # Ахматова -> Ахматов
+        elif feminine_lower.endswith("ская"):
+            return feminine_form[:-2] + "ский"  # Толстая -> Толстой
+        elif feminine_lower.endswith("ка"):
+            return feminine_form[:-1] + "ко"  # Порошенка -> Порошенко
+        
+        return feminine_form
+
+    def _to_masculine_uk(self, feminine_form: str) -> str:
+        """Convert Ukrainian feminine surname to masculine form."""
+        feminine_lower = feminine_form.lower()
+        
+        if feminine_lower.endswith("ова"):
+            return feminine_form[:-1]  # Павлова -> Павлов
+        elif feminine_lower.endswith("ева"):
+            return feminine_form[:-1]  # Пугачева -> Пугачев
+        elif feminine_lower.endswith("іна"):
+            return feminine_form[:-1] + "ін"  # Ахматова -> Ахматов
+        elif feminine_lower.endswith("ська"):
+            return feminine_form[:-2] + "ський"  # Толстая -> Толстой
+        elif feminine_lower.endswith("ка"):
+            return feminine_form[:-1] + "ко"  # Порошенка -> Порошенко
+        
+        return feminine_form
+
+    def _to_nominative_if_invariable(self, token: str, lang: str) -> str:
+        """Грубая, но безопасная номинативизация для инвариантных фамилий на -енко/-ко."""
+        s = token
+        low = s.lower()
+        # Только если основа действительно на -енко/-ко в номинативе:
+        # Распознаём типичные косвенные хвосты для -енко:
+        if low.endswith("енка") or low.endswith("енку") or low.endswith("енком") or low.endswith("енке") or low.endswith("енці") or low.endswith("енком"):
+            base = s[:-4] + "енко"  # '…енка' → '…енко'
+            return base
+        if low.endswith("ка") and (s[:-2] + "ко").lower().endswith("ко"):
+            # универсальный fallback: '…ка' → '…ко' (Петренка → Петренко)
+            return s[:-2] + "ко"
+        # Аналогично можно расширить для -ко в падежах, если встречаете.
+        return s
 
     def _get_person_gender(
         self, tagged_tokens: List[Tuple[str, str]], language: str
@@ -2796,8 +2939,8 @@ class NormalizationService:
                     normalized = base.capitalize()
                     rule = "fallback_capitalize"
 
-                # Gender adjustment for surnames (including compound surnames)
-                if role == "surname" and enable_advanced_features:
+                # Gender adjustment for surnames and given names (including compound surnames)
+                if role in ["surname", "given"] and enable_advanced_features:
                     if "-" in normalized:
                         # Handle compound surnames
                         parts = normalized.split("-")
@@ -2818,6 +2961,74 @@ class NormalizationService:
                     if adjusted != normalized:
                         normalized = adjusted
                         rule = "morph_gender_adjusted"
+                    
+                    # НОМИНАТИВ для инвариантных фамилий (до пост-обработки)
+                    from .morphology.gender_rules import is_invariable_surname
+                    if is_invariable_surname(token):
+                        nominative = self._to_nominative_if_invariable(token, language)
+                        if nominative != normalized:
+                            normalized = nominative
+                            rule = "invariable_nominative"
+                    
+                    # Post-process for gender adjustment (surnames and given names)
+                    # Apply based on gender evidence from given names and patronymic
+                    given_names = [t for t, r in tagged_tokens if r == "given"]
+                    patronymic = next((t for t, r in tagged_tokens if r == "patronymic"), None)
+                    
+                    # Apply post-processing based on gender evidence
+                    gender_evidence = infer_gender_evidence(given_names, patronymic, language)
+                    
+                    if role == "surname":
+                        # Apply surname-specific post-processing
+                        if gender_evidence == "fem":
+                            # Apply feminine post-processing (handle compound surnames)
+                            if "-" in normalized:
+                                # Handle compound surnames
+                                parts = normalized.split("-")
+                                post_processed_parts = []
+                                for part in parts:
+                                    post_processed_part = self._postfix_feminine_surname(
+                                        part, part, given_names, patronymic, language
+                                    )
+                                    post_processed_parts.append(post_processed_part)
+                                post_processed = "-".join(post_processed_parts)
+                            else:
+                                post_processed = self._postfix_feminine_surname(
+                                    normalized, token, given_names, patronymic, language
+                                )
+                            
+                            if post_processed != normalized:
+                                normalized = post_processed
+                                rule = "morph_gender_adjusted_feminine"
+                        elif gender_evidence == "masc":
+                            # Apply masculine post-processing - convert feminine surnames to masculine
+                            if "-" in normalized:
+                                # Handle compound surnames
+                                parts = normalized.split("-")
+                                post_processed_parts = []
+                                for part in parts:
+                                    post_processed_part = self._postfix_masculine_surname(
+                                        part, part, language
+                                    )
+                                    post_processed_parts.append(post_processed_part)
+                                post_processed = "-".join(post_processed_parts)
+                            else:
+                                post_processed = self._postfix_masculine_surname(
+                                    normalized, token, language
+                                )
+                            
+                            if post_processed != normalized:
+                                normalized = post_processed
+                                rule = "morph_gender_adjusted_masculine"
+                    elif role == "given":
+                        # Apply given name-specific post-processing
+                        if gender_evidence == "fem":
+                            # Convert declined given names to feminine nominative
+                            from .morphology.gender_rules import convert_given_name_to_nominative
+                            post_processed = convert_given_name_to_nominative(token, language)
+                            if post_processed != normalized:
+                                normalized = post_processed
+                                rule = "morph_gender_adjusted_feminine"
 
                 normalized_tokens.append(normalized)
 
