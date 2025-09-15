@@ -17,16 +17,16 @@ class TestUnifiedOrchestrator:
     def orchestrator_service(self):
         """Create a UnifiedOrchestrator instance for testing"""
         # Mock all required services
-        validation_service = Mock()
+        validation_service = AsyncMock()
         language_service = Mock()
-        unicode_service = Mock()
-        normalization_service = Mock()
-        signals_service = Mock()
+        unicode_service = AsyncMock()
+        normalization_service = AsyncMock()
+        signals_service = AsyncMock()
         
         # Mock optional services
         smart_filter_service = Mock()
-        variants_service = Mock()
-        embeddings_service = Mock()
+        variants_service = AsyncMock()
+        embeddings_service = AsyncMock()
         decision_engine = Mock()
         
         return UnifiedOrchestrator(
@@ -42,7 +42,8 @@ class TestUnifiedOrchestrator:
             enable_smart_filter=True,
             enable_variants=True,
             enable_embeddings=True,
-            enable_decision_engine=True
+            enable_decision_engine=True,
+            allow_smart_filter_skip=True
         )
     
     @pytest.mark.asyncio
@@ -52,20 +53,20 @@ class TestUnifiedOrchestrator:
         test_text = "Test text"
         
         # Mock all services
-        with patch.object(orchestrator_service.validation_service, 'validate_text') as mock_validation, \
+        with patch.object(orchestrator_service.validation_service, 'validate_and_sanitize', new_callable=AsyncMock) as mock_validation, \
              patch.object(orchestrator_service.smart_filter_service, 'should_skip') as mock_smart_filter, \
-             patch.object(orchestrator_service.language_service, 'detect_language') as mock_language, \
-             patch.object(orchestrator_service.unicode_service, 'normalize_text') as mock_unicode, \
-             patch.object(orchestrator_service.normalization_service, 'normalize') as mock_normalize, \
-             patch.object(orchestrator_service.signals_service, 'get_name_signals') as mock_signals, \
-             patch.object(orchestrator_service.variants_service, 'generate_variants') as mock_variants, \
-             patch.object(orchestrator_service.embeddings_service, 'encode') as mock_embeddings, \
-             patch.object(orchestrator_service.decision_engine, 'make_decision') as mock_decision:
+             patch.object(orchestrator_service.language_service, 'detect_language_config_driven') as mock_language, \
+             patch.object(orchestrator_service.unicode_service, 'normalize_unicode', new_callable=AsyncMock) as mock_unicode, \
+             patch.object(orchestrator_service.normalization_service, 'normalize_async', new_callable=AsyncMock) as mock_normalize, \
+             patch.object(orchestrator_service.signals_service, 'extract_signals', new_callable=AsyncMock) as mock_signals, \
+             patch.object(orchestrator_service.variants_service, 'generate_variants', new_callable=AsyncMock) as mock_variants, \
+             patch.object(orchestrator_service.embeddings_service, 'generate_embeddings', new_callable=AsyncMock) as mock_embeddings, \
+             patch.object(orchestrator_service.decision_engine, 'decide') as mock_decision:
             
             # Setup mocks
-            mock_validation.return_value = {'valid': True, 'errors': []}
+            mock_validation.return_value = {'sanitized_text': test_text, 'should_process': True, 'warnings': [], 'risk_level': 'low', 'is_valid': True}
             mock_smart_filter.return_value = False  # Don't skip
-            mock_language.return_value = {'language': 'en', 'confidence': 0.9}
+            mock_language.return_value = Mock(language='en', confidence=0.9)
             mock_unicode.return_value = {'normalized': 'test text'}
             
             # Mock normalization result
@@ -78,12 +79,23 @@ class TestUnifiedOrchestrator:
             
             # Mock signals result
             mock_signals_result = Mock()
-            mock_signals_result.signals = {'gender': 'unknown', 'confidence': 0.5}
+            mock_signals_result.persons = []
+            mock_signals_result.organizations = []
+            mock_signals_result.confidence = 0.5
+            mock_signals_result.extras = {}
             mock_signals.return_value = mock_signals_result
             
-            mock_variants.return_value = {'variants': ['test text', 'test']}
-            mock_embeddings.return_value = [0.1, 0.2, 0.3]
-            mock_decision.return_value = {'risk_level': 'low', 'confidence': 0.8}
+            mock_variants.return_value = ['test text', 'test']
+            mock_embeddings.return_value = [0.1] * 384  # 384-dimensional embedding
+            
+            from ai_service.contracts.decision_contracts import DecisionOutput, RiskLevel
+            mock_decision_result = DecisionOutput(
+                risk=RiskLevel.LOW,
+                score=0.2,
+                reasons=['Low risk name'],
+                details={}
+            )
+            mock_decision.return_value = mock_decision_result
             
             # Act
             result = await orchestrator_service.process(test_text)
@@ -98,7 +110,7 @@ class TestUnifiedOrchestrator:
             assert result.tokens == ['test', 'text']
             assert len(result.trace) > 0
             assert result.variants == ['test text', 'test']
-            assert result.embeddings == [0.1, 0.2, 0.3]
+            assert result.embeddings == [0.1] * 384
             assert result.processing_time > 0
     
     @pytest.mark.asyncio
@@ -107,11 +119,20 @@ class TestUnifiedOrchestrator:
         # Arrange
         test_text = "Test text"
         
-        with patch.object(orchestrator_service.validation_service, 'validate_text') as mock_validation, \
-             patch.object(orchestrator_service.smart_filter_service, 'should_skip') as mock_smart_filter:
+        with patch.object(orchestrator_service.validation_service, 'validate_and_sanitize', new_callable=AsyncMock) as mock_validation, \
+             patch.object(orchestrator_service.smart_filter_service, 'should_process', new_callable=AsyncMock) as mock_smart_filter:
             
-            mock_validation.return_value = {'valid': True, 'errors': []}
-            mock_smart_filter.return_value = True  # Skip processing
+            mock_validation.return_value = {'sanitized_text': test_text, 'should_process': True, 'warnings': [], 'risk_level': 'low', 'is_valid': True}
+            
+            # Mock SmartFilterResult for skip
+            from ai_service.contracts.base_contracts import SmartFilterResult
+            mock_smart_filter.return_value = SmartFilterResult(
+                should_process=False,  # Skip processing
+                confidence=0.9,
+                classification='skip',
+                detected_signals=[],
+                details={}
+            )
             
             # Act
             result = await orchestrator_service.process(test_text)
@@ -128,8 +149,8 @@ class TestUnifiedOrchestrator:
         # Arrange
         test_text = "Invalid text"
         
-        with patch.object(orchestrator_service.validation_service, 'validate_text') as mock_validation:
-            mock_validation.return_value = {'valid': False, 'errors': ['Invalid input']}
+        with patch.object(orchestrator_service.validation_service, 'validate_and_sanitize', new_callable=AsyncMock) as mock_validation:
+            mock_validation.return_value = {'sanitized_text': test_text, 'should_process': False, 'warnings': ['Invalid input'], 'risk_level': 'high', 'is_valid': False}
             
             # Act
             result = await orchestrator_service.process(test_text)
@@ -137,7 +158,7 @@ class TestUnifiedOrchestrator:
             # Assert
             assert isinstance(result, UnifiedProcessingResult)
             assert result.success is False
-            assert 'Invalid input' in result.errors
+            assert 'Input validation failed' in result.errors
     
     @pytest.mark.asyncio
     async def test_process_with_language_detection_failure(self, orchestrator_service):
@@ -145,11 +166,11 @@ class TestUnifiedOrchestrator:
         # Arrange
         test_text = "Test text"
         
-        with patch.object(orchestrator_service.validation_service, 'validate_text') as mock_validation, \
+        with patch.object(orchestrator_service.validation_service, 'validate_and_sanitize', new_callable=AsyncMock) as mock_validation, \
              patch.object(orchestrator_service.smart_filter_service, 'should_skip') as mock_smart_filter, \
              patch.object(orchestrator_service.language_service, 'detect_language') as mock_language:
             
-            mock_validation.return_value = {'valid': True, 'errors': []}
+            mock_validation.return_value = {'sanitized_text': test_text, 'should_process': True, 'warnings': [], 'risk_level': 'low', 'is_valid': True}
             mock_smart_filter.return_value = False
             mock_language.side_effect = Exception("Language detection failed")
             
@@ -166,13 +187,13 @@ class TestUnifiedOrchestrator:
         # Arrange
         test_text = "Test text"
         
-        with patch.object(orchestrator_service.validation_service, 'validate_text') as mock_validation, \
+        with patch.object(orchestrator_service.validation_service, 'validate_and_sanitize', new_callable=AsyncMock) as mock_validation, \
              patch.object(orchestrator_service.smart_filter_service, 'should_skip') as mock_smart_filter, \
              patch.object(orchestrator_service.language_service, 'detect_language') as mock_language, \
-             patch.object(orchestrator_service.unicode_service, 'normalize_text') as mock_unicode, \
-             patch.object(orchestrator_service.normalization_service, 'normalize') as mock_normalize:
+             patch.object(orchestrator_service.unicode_service, 'normalize_unicode', new_callable=AsyncMock) as mock_unicode, \
+             patch.object(orchestrator_service.normalization_service, 'normalize_async', new_callable=AsyncMock) as mock_normalize:
             
-            mock_validation.return_value = {'valid': True, 'errors': []}
+            mock_validation.return_value = {'sanitized_text': test_text, 'should_process': True, 'warnings': [], 'risk_level': 'low', 'is_valid': True}
             mock_smart_filter.return_value = False
             mock_language.return_value = {'language': 'en', 'confidence': 0.9}
             mock_unicode.return_value = {'normalized': 'test text'}
@@ -207,11 +228,11 @@ class TestUnifiedOrchestrator:
     def test_orchestrator_without_optional_services(self):
         """Test orchestrator initialization without optional services"""
         # Mock required services
-        validation_service = Mock()
+        validation_service = AsyncMock()
         language_service = Mock()
-        unicode_service = Mock()
-        normalization_service = Mock()
-        signals_service = Mock()
+        unicode_service = AsyncMock()
+        normalization_service = AsyncMock()
+        signals_service = AsyncMock()
         
         # Create orchestrator without optional services
         orchestrator = UnifiedOrchestrator(
