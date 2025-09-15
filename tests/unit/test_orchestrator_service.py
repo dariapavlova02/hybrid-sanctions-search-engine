@@ -8,6 +8,7 @@ from unittest.mock import Mock, patch, AsyncMock
 from datetime import datetime
 
 from src.ai_service.core.unified_orchestrator import UnifiedOrchestrator
+from src.ai_service.contracts.base_contracts import UnifiedProcessingResult
 
 
 class TestOrchestratorService:
@@ -34,7 +35,7 @@ class TestOrchestratorService:
             result = await orchestrator_service.process_text(test_text)
             
             # Assert
-            assert isinstance(result, ProcessingResult)
+            assert isinstance(result, UnifiedProcessingResult)
             assert result.success is True
             assert result.original_text == test_text
             assert result.normalized_text == 'test text'
@@ -48,7 +49,7 @@ class TestOrchestratorService:
         """Test process_text with cache hit"""
         # Arrange
         test_text = "Cached text"
-        cached_result = ProcessingResult(
+        cached_result = UnifiedProcessingResult(
             original_text=test_text,
             normalized_text="cached text",
             language="en",
@@ -150,7 +151,7 @@ class TestOrchestratorService:
         # Mock process_text to return successful results
         with patch.object(orchestrator_service, 'process_text') as mock_process:
             mock_results = [
-                ProcessingResult(
+                UnifiedProcessingResult(
                     original_text=text,
                     normalized_text=text.lower(),
                     language="en",
@@ -166,7 +167,7 @@ class TestOrchestratorService:
             
             # Assert
             assert len(results) == len(texts)
-            assert all(isinstance(r, ProcessingResult) for r in results)
+            assert all(isinstance(r, UnifiedProcessingResult) for r in results)
             assert mock_process.call_count == len(texts)
     
     @pytest.mark.asyncio
@@ -178,7 +179,7 @@ class TestOrchestratorService:
         with patch.object(orchestrator_service, 'process_text') as mock_process:
             # First successful, second with error
             mock_process.side_effect = [
-                ProcessingResult(
+                UnifiedProcessingResult(
                     original_text="Good text",
                     normalized_text="good text",
                     language="en",
@@ -411,7 +412,7 @@ class TestOrchestratorService:
         """Test that force_reprocess ignores cache"""
         # Arrange
         test_text = "Force reprocess test"
-        cached_result = ProcessingResult(
+        cached_result = UnifiedProcessingResult(
             original_text=test_text,
             normalized_text="old cached result",
             language="en",
@@ -482,7 +483,7 @@ class TestOrchestratorService:
             result = await orchestrator_service.process_text(test_text)
             
             # Assert
-            assert isinstance(result, ProcessingResult)
+            assert isinstance(result, UnifiedProcessingResult)
             # Check that we have either a successful result or an error
             if result.success:
                 assert result.language == 'en'  # Should use fallback
@@ -513,7 +514,7 @@ class TestOrchestratorService:
             result = await orchestrator_service.process_text(test_text)
             
             # Assert
-            assert isinstance(result, ProcessingResult)
+            assert isinstance(result, UnifiedProcessingResult)
             assert result.success is False
             # Check that we have either a successful result or an error
             if result.success:

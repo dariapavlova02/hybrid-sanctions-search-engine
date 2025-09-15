@@ -49,7 +49,7 @@ class WordNormalizer:
     def _load_diminutives(self) -> Dict[str, str]:
         """Load diminutives dictionary (diminutive -> full name)"""
         try:
-            from ...data.dicts.diminutives_extra import (
+            from ....data.dicts.diminutives_extra import (
                 EXTRA_DIMINUTIVES_RU,
                 EXTRA_DIMINUTIVES_UK,
             )

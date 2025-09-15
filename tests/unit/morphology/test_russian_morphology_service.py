@@ -21,7 +21,7 @@ class TestRussianMorphology:
         assert service is not None
         assert hasattr(service, 'morph_analyzer')
 
-    def test_get_morphological_forms_basic_name(self, service):
+    def test_get_all_forms_basic_name(self, service):
         """Test morphological forms generation for basic Russian names"""
         # Test with mock morphological analyzer
         with patch.object(service, 'morph_analyzer') as mock_morph:
@@ -37,14 +37,14 @@ class TestRussianMorphology:
 
             mock_morph.parse.return_value = [mock_parse_result]
 
-            result = service.get_morphological_forms("Владимир")
+            result = service.get_all_forms("Владимир")
 
             assert isinstance(result, list)
             assert len(result) > 0
             assert "Владимир" in result  # Original should be included
             mock_morph.parse.assert_called_with("Владимир")
 
-    def test_get_morphological_forms_feminine_name(self, service):
+    def test_get_all_forms_feminine_name(self, service):
         """Test morphological forms for feminine Russian names"""
         with patch.object(service, 'morph_analyzer') as mock_morph:
             mock_parse_result = Mock()
@@ -63,13 +63,13 @@ class TestRussianMorphology:
             mock_parse_result.inflect.side_effect = inflected_mocks
             mock_morph.parse.return_value = [mock_parse_result]
 
-            result = service.get_morphological_forms("Мария")
+            result = service.get_all_forms("Мария")
 
             assert isinstance(result, list)
             assert "Мария" in result
             assert len(result) >= 1
 
-    def test_get_morphological_forms_surname(self, service):
+    def test_get_all_forms_surname(self, service):
         """Test morphological forms for Russian surnames"""
         with patch.object(service, 'morph_analyzer') as mock_morph:
             mock_parse_result = Mock()
@@ -83,12 +83,12 @@ class TestRussianMorphology:
 
             mock_morph.parse.return_value = [mock_parse_result]
 
-            result = service.get_morphological_forms("Петров")
+            result = service.get_all_forms("Петров")
 
             assert isinstance(result, list)
             assert "Петров" in result
 
-    def test_get_morphological_forms_patronymic(self, service):
+    def test_get_all_forms_patronymic(self, service):
         """Test morphological forms for Russian patronymics"""
         with patch.object(service, 'morph_analyzer') as mock_morph:
             mock_parse_result = Mock()
@@ -102,12 +102,12 @@ class TestRussianMorphology:
 
             mock_morph.parse.return_value = [mock_parse_result]
 
-            result = service.get_morphological_forms("Иванович")
+            result = service.get_all_forms("Иванович")
 
             assert isinstance(result, list)
             assert "Иванович" in result
 
-    def test_get_morphological_forms_compound_name(self, service):
+    def test_get_all_forms_compound_name(self, service):
         """Test morphological forms for compound names"""
         with patch.object(service, 'morph_analyzer') as mock_morph:
             mock_parse_result = Mock()
@@ -119,47 +119,47 @@ class TestRussianMorphology:
 
             mock_morph.parse.return_value = [mock_parse_result]
 
-            result = service.get_morphological_forms("Анна-Мария")
+            result = service.get_all_forms("Анна-Мария")
 
             assert isinstance(result, list)
             assert "Анна-Мария" in result
 
-    def test_get_morphological_forms_empty_input(self, service):
+    def test_get_all_forms_empty_input(self, service):
         """Test morphological forms with empty input"""
-        result = service.get_morphological_forms("")
+        result = service.get_all_forms("")
 
         assert isinstance(result, list)
         assert len(result) == 1
         assert result[0] == ""
 
-    def test_get_morphological_forms_whitespace_input(self, service):
+    def test_get_all_forms_whitespace_input(self, service):
         """Test morphological forms with whitespace input"""
-        result = service.get_morphological_forms("   ")
+        result = service.get_all_forms("   ")
 
         assert isinstance(result, list)
         assert len(result) >= 1
 
-    def test_get_morphological_forms_non_russian_text(self, service):
+    def test_get_all_forms_non_russian_text(self, service):
         """Test morphological forms with non-Russian text"""
         with patch.object(service, 'morph_analyzer') as mock_morph:
             mock_morph.parse.return_value = []  # No parse results
 
-            result = service.get_morphological_forms("John")
+            result = service.get_all_forms("John")
 
             assert isinstance(result, list)
             assert "John" in result  # Should still include original
 
-    def test_get_morphological_forms_numbers(self, service):
+    def test_get_all_forms_numbers(self, service):
         """Test morphological forms with numeric input"""
         with patch.object(service, 'morph_analyzer') as mock_morph:
             mock_morph.parse.return_value = []
 
-            result = service.get_morphological_forms("123")
+            result = service.get_all_forms("123")
 
             assert isinstance(result, list)
             assert "123" in result
 
-    def test_get_morphological_forms_mixed_text(self, service):
+    def test_get_all_forms_mixed_text(self, service):
         """Test morphological forms with mixed Cyrillic and Latin text"""
         with patch.object(service, 'morph_analyzer') as mock_morph:
             mock_parse_result = Mock()
@@ -171,24 +171,24 @@ class TestRussianMorphology:
 
             mock_morph.parse.return_value = [mock_parse_result]
 
-            result = service.get_morphological_forms("Vladimir Владимир")
+            result = service.get_all_forms("Vladimir Владимир")
 
             assert isinstance(result, list)
             assert len(result) >= 1
 
-    def test_get_morphological_forms_with_exception(self, service):
+    def test_get_all_forms_with_exception(self, service):
         """Test morphological forms handling when parser throws exception"""
         with patch.object(service, 'morph_analyzer') as mock_morph:
             mock_morph.parse.side_effect = Exception("Parser error")
 
-            result = service.get_morphological_forms("Тест")
+            result = service.get_all_forms("Тест")
 
             assert isinstance(result, list)
             assert "Тест" in result  # Should fallback to original
 
-    def test_get_diminutive_forms_masculine(self, service):
+    def test__generate_diminutives_masculine(self, service):
         """Test diminutive forms for masculine names"""
-        result = service.get_diminutive_forms("Владимир")
+        result = service._generate_diminutives("Владимир")
 
         assert isinstance(result, list)
         assert len(result) > 0
@@ -196,9 +196,9 @@ class TestRussianMorphology:
         expected_diminutives = ["Володя", "Володька", "Влад", "Владик"]
         assert any(dim in result for dim in expected_diminutives)
 
-    def test_get_diminutive_forms_feminine(self, service):
+    def test__generate_diminutives_feminine(self, service):
         """Test diminutive forms for feminine names"""
-        result = service.get_diminutive_forms("Мария")
+        result = service._generate_diminutives("Мария")
 
         assert isinstance(result, list)
         assert len(result) > 0
@@ -206,22 +206,22 @@ class TestRussianMorphology:
         expected_diminutives = ["Маша", "Машенька", "Машка", "Марья"]
         assert any(dim in result for dim in expected_diminutives)
 
-    def test_get_diminutive_forms_unknown_name(self, service):
+    def test__generate_diminutives_unknown_name(self, service):
         """Test diminutive forms for unknown names"""
-        result = service.get_diminutive_forms("УнknownНame")
+        result = service._generate_diminutives("УнknownНame")
 
         assert isinstance(result, list)
         # Should return original name when no diminutives found
         assert "УнknownНame" in result
 
-    def test_get_diminutive_forms_empty_input(self, service):
+    def test__generate_diminutives_empty_input(self, service):
         """Test diminutive forms with empty input"""
-        result = service.get_diminutive_forms("")
+        result = service._generate_diminutives("")
 
         assert isinstance(result, list)
         assert "" in result
 
-    def test_get_declensions_all_cases(self, service):
+    def test_get_word_forms_all_cases(self, service):
         """Test declension generation for all Russian cases"""
         with patch.object(service, 'morph_analyzer') as mock_morph:
             mock_parse_result = Mock()
@@ -240,13 +240,13 @@ class TestRussianMorphology:
             mock_parse_result.inflect.side_effect = inflected_forms
             mock_morph.parse.return_value = [mock_parse_result]
 
-            result = service.get_declensions("Владимир")
+            result = service.get_word_forms("Владимир")
 
             assert isinstance(result, list)
             assert len(result) >= 1
             assert "Владимир" in result
 
-    def test_get_declensions_multiple_parses(self, service):
+    def test_get_word_forms_multiple_parses(self, service):
         """Test declension with multiple parse results"""
         with patch.object(service, 'morph_analyzer') as mock_morph:
             # Mock multiple parse results
@@ -268,12 +268,12 @@ class TestRussianMorphology:
 
             mock_morph.parse.return_value = [mock_parse1, mock_parse2]
 
-            result = service.get_declensions("Тест")
+            result = service.get_word_forms("Тест")
 
             assert isinstance(result, list)
             assert "Тест" in result
 
-    def test_get_declensions_inflection_failure(self, service):
+    def test_get_word_forms_inflection_failure(self, service):
         """Test declension when inflection returns None"""
         with patch.object(service, 'morph_analyzer') as mock_morph:
             mock_parse_result = Mock()
@@ -282,12 +282,12 @@ class TestRussianMorphology:
 
             mock_morph.parse.return_value = [mock_parse_result]
 
-            result = service.get_declensions("Тест")
+            result = service.get_word_forms("Тест")
 
             assert isinstance(result, list)
             assert "Тест" in result
 
-    def test_get_declensions_non_noun(self, service):
+    def test_get_word_forms_non_noun(self, service):
         """Test declension with non-noun parts of speech"""
         with patch.object(service, 'morph_analyzer') as mock_morph:
             mock_parse_result = Mock()
@@ -295,7 +295,7 @@ class TestRussianMorphology:
 
             mock_morph.parse.return_value = [mock_parse_result]
 
-            result = service.get_declensions("Бегать")
+            result = service.get_word_forms("Бегать")
 
             assert isinstance(result, list)
             assert "Бегать" in result
@@ -342,7 +342,7 @@ class TestRussianMorphology:
         # Very short
         assert service.is_russian_name("А") == False
 
-    def test_normalize_name_capitalization(self, service):
+    def test_analyze_name_capitalization(self, service):
         """Test name normalization for proper capitalization"""
         test_cases = [
             ("владимир", "Владимир"),
@@ -352,10 +352,10 @@ class TestRussianMorphology:
         ]
 
         for input_name, expected in test_cases:
-            result = service.normalize_name(input_name)
+            result = service.analyze_name(input_name)
             assert result == expected
 
-    def test_normalize_name_whitespace_handling(self, service):
+    def test_analyze_name_whitespace_handling(self, service):
         """Test name normalization whitespace handling"""
         test_cases = [
             ("  Владимир  ", "Владимир"),
@@ -364,25 +364,25 @@ class TestRussianMorphology:
         ]
 
         for input_name, expected in test_cases:
-            result = service.normalize_name(input_name)
+            result = service.analyze_name(input_name)
             assert result == expected
 
-    def test_normalize_name_empty_input(self, service):
+    def test_analyze_name_empty_input(self, service):
         """Test name normalization with empty input"""
-        assert service.normalize_name("") == ""
-        assert service.normalize_name("   ") == ""
+        assert service.analyze_name("") == ""
+        assert service.analyze_name("   ") == ""
 
-    def test_get_name_variants_comprehensive(self, service):
+    def test__generate_variants_comprehensive(self, service):
         """Test comprehensive name variant generation"""
-        with patch.object(service, 'get_morphological_forms') as mock_morph, \
-             patch.object(service, 'get_diminutive_forms') as mock_dim, \
-             patch.object(service, 'get_declensions') as mock_decl:
+        with patch.object(service, 'get_all_forms') as mock_morph, \
+             patch.object(service, '_generate_diminutives') as mock_dim, \
+             patch.object(service, 'get_word_forms') as mock_decl:
 
             mock_morph.return_value = ["Владимир", "Владимира", "Владимиру"]
             mock_dim.return_value = ["Володя", "Влад", "Владик"]
             mock_decl.return_value = ["Владимир", "Владимира", "Владимиром"]
 
-            result = service.get_name_variants("Владимир")
+            result = service._generate_variants("Владимир")
 
             assert isinstance(result, list)
             assert len(result) > 0
@@ -390,29 +390,29 @@ class TestRussianMorphology:
             # Should include morphological, diminutive, and declension forms
             assert any(form in result for form in ["Владимира", "Володя", "Владимиром"])
 
-    def test_get_name_variants_deduplication(self, service):
+    def test__generate_variants_deduplication(self, service):
         """Test that name variants are deduplicated"""
-        with patch.object(service, 'get_morphological_forms') as mock_morph, \
-             patch.object(service, 'get_diminutive_forms') as mock_dim, \
-             patch.object(service, 'get_declensions') as mock_decl:
+        with patch.object(service, 'get_all_forms') as mock_morph, \
+             patch.object(service, '_generate_diminutives') as mock_dim, \
+             patch.object(service, 'get_word_forms') as mock_decl:
 
             # Return overlapping variants
             mock_morph.return_value = ["Мария", "Марии"]
             mock_dim.return_value = ["Мария", "Маша"]  # Duplicate "Мария"
             mock_decl.return_value = ["Мария", "Марией"]  # Another duplicate
 
-            result = service.get_name_variants("Мария")
+            result = service._generate_variants("Мария")
 
             # Should have no duplicates
             assert len(result) == len(set(result))
             assert "Мария" in result
             assert "Маша" in result
 
-    def test_get_name_variants_max_variants_limit(self, service):
+    def test__generate_variants_max_variants_limit(self, service):
         """Test that name variants respect maximum limit"""
-        with patch.object(service, 'get_morphological_forms') as mock_morph, \
-             patch.object(service, 'get_diminutive_forms') as mock_dim, \
-             patch.object(service, 'get_declensions') as mock_decl:
+        with patch.object(service, 'get_all_forms') as mock_morph, \
+             patch.object(service, '_generate_diminutives') as mock_dim, \
+             patch.object(service, 'get_word_forms') as mock_decl:
 
             # Return many variants
             many_variants = [f"Variant{i}" for i in range(100)]
@@ -420,7 +420,7 @@ class TestRussianMorphology:
             mock_dim.return_value = many_variants[50:80]
             mock_decl.return_value = many_variants[80:]
 
-            result = service.get_name_variants("Тест", max_variants=20)
+            result = service._generate_variants("Тест", max_variants=20)
 
             assert len(result) <= 20
 
@@ -428,7 +428,7 @@ class TestRussianMorphology:
         """Test batch processing of multiple names"""
         names = ["Владимир", "Мария", "Александр"]
 
-        with patch.object(service, 'get_name_variants') as mock_variants:
+        with patch.object(service, '_generate_variants') as mock_variants:
             mock_variants.side_effect = [
                 ["Владимир", "Володя"],
                 ["Мария", "Маша"],
@@ -459,7 +459,7 @@ class TestRussianMorphology:
         """Test batch processing handling errors gracefully"""
         names = ["Владимир", "ErrorName", "Мария"]
 
-        with patch.object(service, 'get_name_variants') as mock_variants:
+        with patch.object(service, '_generate_variants') as mock_variants:
             mock_variants.side_effect = [
                 ["Владимир", "Володя"],
                 Exception("Processing error"),  # Error for second name
@@ -487,7 +487,7 @@ class TestRussianMorphologyIntegration:
         """Test real name processing integration (if pymorphy2 available)"""
         try:
             # Test with actual morphological processing
-            result = service.get_name_variants("Владимир", max_variants=10)
+            result = service._generate_variants("Владимир", max_variants=10)
 
             assert isinstance(result, list)
             assert len(result) > 0
@@ -523,7 +523,7 @@ class TestRussianMorphologyIntegration:
 
         # Process many names
         for i in range(100):
-            service.get_name_variants(f"Тест{i}", max_variants=5)
+            service._generate_variants(f"Тест{i}", max_variants=5)
 
         final_size = sys.getsizeof(service)
 

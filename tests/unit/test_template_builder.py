@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 from datetime import datetime
 
 from src.ai_service.layers.variants.template_builder import TemplateBuilder, EntityTemplate
-from src.ai_service.layers.patterns.unified_pattern_service import UnifiedPatternService
+from src.ai_service.layers.patterns.unified_pattern_service import UnifiedPatternService, UnifiedPattern
 
 
 class TestTemplateBuilder:
@@ -24,9 +24,9 @@ class TestTemplateBuilder:
         
         # Mock PatternService
         mock_patterns = [
-            NamePattern("test", "exact", "en", 0.95, {}),
-            NamePattern("entity", "exact", "en", 0.90, {}),
-            NamePattern("test entity", "full", "en", 1.0, {})
+            UnifiedPattern("test", "exact", "en", 0.95, {}),
+            UnifiedPattern("entity", "exact", "en", 0.90, {}),
+            UnifiedPattern("test entity", "full", "en", 1.0, {})
         ]
         
         with patch.object(template_builder, '_generate_search_patterns') as mock_generate:
@@ -66,7 +66,7 @@ class TestTemplateBuilder:
         """Test EntityTemplate initialization"""
         # Arrange
         entity = {"name": "Test"}
-        patterns = [NamePattern("test", "exact", "en", 0.9, {})]
+        patterns = [UnifiedPattern("test", "exact", "en", 0.9, {})]
         variants = ["test", "tset"]
         
         # Act
@@ -91,7 +91,7 @@ class TestTemplateBuilder:
         """Test template conversion to dictionary"""
         # Arrange
         entity = {"name": "Test"}
-        patterns = [NamePattern("test", "exact", "en", 0.9, {})]
+        patterns = [UnifiedPattern("test", "exact", "en", 0.9, {})]
         variants = ["test"]
         embeddings = [0.1, 0.2, 0.3]
         
@@ -123,7 +123,7 @@ class TestTemplateBuilder:
         # Arrange
         import numpy as np
         entity = {"name": "Test"}
-        patterns = [NamePattern("test", "exact", "en", 0.9, {})]
+        patterns = [UnifiedPattern("test", "exact", "en", 0.9, {})]
         variants = ["test"]
         numpy_embeddings = np.array([0.1, 0.2, 0.3])
         
@@ -151,9 +151,9 @@ class TestTemplateBuilder:
         """Test search keywords retrieval"""
         # Arrange
         patterns = [
-            NamePattern("john", "exact", "en", 0.9, {}),
-            NamePattern("doe", "exact", "en", 0.8, {}),
-            NamePattern("john doe", "full", "en", 1.0, {})
+            UnifiedPattern("john", "exact", "en", 0.9, {}),
+            UnifiedPattern("doe", "exact", "en", 0.8, {}),
+            UnifiedPattern("john doe", "full", "en", 1.0, {})
         ]
         variants = ["john doe", "j doe", "john d"]
         
@@ -209,7 +209,7 @@ class TestTemplateBuilder:
         language_confidences = [0.9, 0.8]
         variants_list = [["entity 1", "ent 1"], ["entity 2", "ent 2"]]
         
-        mock_patterns = [NamePattern("test", "exact", "en", 0.9, {})]
+        mock_patterns = [UnifiedPattern("test", "exact", "en", 0.9, {})]
         
         with patch.object(template_builder, '_generate_search_patterns') as mock_generate:
             mock_generate.return_value = ["test"]
@@ -241,7 +241,7 @@ class TestTemplateBuilder:
         variants_list = [["test"]]
         embeddings_list = [[0.1, 0.2, 0.3]]
         
-        mock_patterns = [NamePattern("test", "exact", "en", 0.9, {})]
+        mock_patterns = [UnifiedPattern("test", "exact", "en", 0.9, {})]
         
         with patch.object(template_builder, '_generate_search_patterns') as mock_generate:
             mock_generate.return_value = ["test"]
@@ -310,10 +310,10 @@ class TestTemplateBuilder:
     def test_get_templates_statistics(self, template_builder):
         """Test template statistics retrieval"""
         # Arrange
-        patterns1 = [NamePattern("test", "exact", "en", 0.9, {})]
+        patterns1 = [UnifiedPattern("test", "exact", "en", 0.9, {})]
         patterns2 = [
-            NamePattern("complex", "exact", "en", 0.8, {}),
-            NamePattern("pattern", "partial", "en", 0.7, {})
+            UnifiedPattern("complex", "exact", "en", 0.8, {}),
+            UnifiedPattern("pattern", "partial", "en", 0.7, {})
         ]
         
         templates = [
@@ -371,8 +371,8 @@ class TestTemplateBuilder:
     def test_export_templates_for_aho_corasick(self, template_builder):
         """Test template export for Aho-Corasick"""
         # Arrange
-        high_confidence_pattern = NamePattern("high", "exact", "en", 0.9, {})
-        low_confidence_pattern = NamePattern("low", "exact", "en", 0.5, {})
+        high_confidence_pattern = UnifiedPattern("high", "exact", "en", 0.9, {})
+        low_confidence_pattern = UnifiedPattern("low", "exact", "en", 0.5, {})
         
         templates = [
             EntityTemplate(

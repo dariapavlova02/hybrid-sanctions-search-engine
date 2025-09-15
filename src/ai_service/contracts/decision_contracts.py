@@ -12,11 +12,32 @@ from typing import Any, Dict, List, Optional, Union
 
 class RiskLevel(Enum):
     """Risk levels for decision making"""
-    
+
     HIGH = "high"
-    MEDIUM = "medium" 
+    MEDIUM = "medium"
     LOW = "low"
     SKIP = "skip"
+
+
+class MatchDecision(Enum):
+    """Match decision types for sanctions screening"""
+
+    HIT = "hit"          # Strong match - requires review/blocking
+    REVIEW = "review"    # Potential match - needs manual review
+    NO_MATCH = "no_match"  # No significant match found
+    MATCH = "match"      # Strong match
+    WEAK_MATCH = "weak_match"  # Weak match
+    NEEDS_REVIEW = "needs_review"  # Needs review
+
+
+class ConfidenceLevel(Enum):
+    """Confidence levels for decision making"""
+
+    VERY_LOW = "very_low"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    VERY_HIGH = "very_high"
 
 
 @dataclass
@@ -75,3 +96,30 @@ class DecisionOutput:
             "reasons": self.reasons,
             "details": self.details
         }
+
+
+@dataclass
+class DecisionResult:
+    """Decision result for test compatibility"""
+    
+    decision: MatchDecision
+    confidence: float
+    confidence_level: ConfidenceLevel
+    review_required: bool
+    risk_factors: List[str] = field(default_factory=list)
+    evidence: List["MatchEvidence"] = field(default_factory=list)
+    reasoning: str = ""
+    processing_time: float = 0.0
+    risk: RiskLevel = RiskLevel.LOW
+    score: float = 0.0
+
+
+@dataclass
+class MatchEvidence:
+    """Evidence for match decisions"""
+    
+    source: str
+    evidence_type: str
+    confidence: float
+    weight: float
+    description: str = ""

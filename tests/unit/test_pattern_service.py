@@ -5,16 +5,16 @@ Unit tests for PatternService
 import pytest
 from unittest.mock import Mock, patch
 
-from src.ai_service.layers.patterns.unified_pattern_service import UnifiedPatternService
+from src.ai_service.layers.patterns.unified_pattern_service import UnifiedPatternService, UnifiedPattern
 
 
 class TestPatternService:
     """Tests for PatternService"""
     
     def test_name_pattern_creation(self, pattern_service):
-        """Test NamePattern creation"""
+        """Test UnifiedPattern creation"""
         # Arrange & Act
-        pattern = NamePattern(
+        pattern = UnifiedPattern(
             pattern="john doe",
             pattern_type="full_name",
             language="en",
@@ -38,7 +38,7 @@ class TestPatternService:
         assert len(patterns) > 0
         
         for pattern in patterns:
-            assert isinstance(pattern, NamePattern)
+            assert isinstance(pattern, UnifiedPattern)
             assert isinstance(pattern.pattern, str)
             assert len(pattern.pattern) > 0
             assert isinstance(pattern.confidence, (int, float))

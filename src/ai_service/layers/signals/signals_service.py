@@ -138,6 +138,10 @@ class SignalsService:
         if not text or not text.strip():
             return self._empty_result()
 
+        # Convert NormalizationResult object to dict if needed
+        if normalization_result and hasattr(normalization_result, 'to_dict'):
+            normalization_result = normalization_result.to_dict()
+
         # Сохраняем текст для proximity matching
         self._current_text = text
 
@@ -332,10 +336,20 @@ class SignalsService:
         self, persons: List[PersonSignal], organizations: List[OrganizationSignal]
     ) -> Dict[str, Any]:
         """Формирует финальный результат."""
+        # Calculate overall confidence as average of entity confidences
+        all_confidences = []
+        if persons:
+            all_confidences.extend([p.confidence for p in persons])
+        if organizations:
+            all_confidences.extend([o.confidence for o in organizations])
+
+        overall_confidence = sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
+
         return {
             "persons": [self._person_to_dict(p) for p in persons],
             "organizations": [self._org_to_dict(o) for o in organizations],
             "extras": {"dates": [], "amounts": []},
+            "confidence": overall_confidence,
         }
 
     def _extract_legal_forms(
@@ -1030,7 +1044,97 @@ class SignalsService:
             "persons": [],
             "organizations": [],
             "extras": {"dates": [], "amounts": []},
+            "confidence": 0.0,
         }
+
+    # Backward compatibility methods for tests
+    def _extract_persons(self, text: str, normalization_result: Optional[Dict] = None) -> List[Dict]:
+        """Backward compatibility method for tests"""
+        persons_core, _ = self._get_entity_cores(text, normalization_result, "auto")
+        person_signals = self._create_person_signals(persons_core)
+        return [
+            {
+                "core": signal.core,
+                "full_name": signal.full_name,
+                "confidence": signal.confidence,
+                "evidence": signal.evidence,
+                "dob": signal.dob,
+                "ids": signal.ids
+            }
+            for signal in person_signals
+        ]
+
+    def _extract_organizations(self, text: str, normalization_result: Optional[Dict] = None) -> List[Dict]:
+        """Backward compatibility method for tests"""
+        _, organizations_core = self._get_entity_cores(text, normalization_result, "auto")
+        org_signals = self._create_organization_signals(text, organizations_core)
+        return [
+            {
+                "core": signal.core,
+                "legal_form": signal.legal_form,
+                "full": signal.full,
+                "confidence": signal.confidence,
+                "evidence": signal.evidence,
+                "ids": signal.ids
+            }
+            for signal in org_signals
+        ]
+
+    def _extract_persons_from_normalization(self, normalization_result: Dict) -> List[Dict]:
+        """Backward compatibility method for tests"""
+        return self._extract_persons("", normalization_result)
+
+    def _extract_organizations_from_normalization(self, normalization_result: Dict) -> List[Dict]:
+        """Backward compatibility method for tests"""
+        return self._extract_organizations("", normalization_result)
+
+    def _extract_organization_ids(self, text: str) -> List[Dict]:
+        """Backward compatibility method for tests"""
+        return self._extract_org_ids(text)
+
+    def _extract_extras(self, text: str) -> Dict[str, List]:
+        """Backward compatibility method for tests"""
+        birthdates = self._extract_birthdates(text)
+        return {
+            "dates": birthdates,
+            "amounts": []  # Amounts not implemented yet
+        }
+
+    async def extract_signals(self, text: str, normalization_result: Optional[Dict] = None,
+                            language: str = "auto"):
+        """Backward compatibility method for tests - returns result with object attributes"""
+        result_dict = await self.extract_async(text, normalization_result, language)
+
+        # Create a simple object wrapper for backward compatibility
+        class ResultWrapper:
+            def __init__(self, result_dict):
+                # Convert person dicts to simple objects with attributes
+                self.persons = []
+                for person_dict in result_dict.get("persons", []):
+                    person_obj = type('PersonObj', (), {})()
+                    for key, value in person_dict.items():
+                        setattr(person_obj, key, value)
+                    self.persons.append(person_obj)
+
+                # Convert organization dicts to simple objects with attributes
+                self.organizations = []
+                for org_dict in result_dict.get("organizations", []):
+                    org_obj = type('OrgObj', (), {})()
+                    for key, value in org_dict.items():
+                        # Map 'full' to 'full_name' for backward compatibility
+                        if key == "full":
+                            setattr(org_obj, "full_name", value)
+                            setattr(org_obj, key, value)  # Keep original too
+                        else:
+                            setattr(org_obj, key, value)
+                    self.organizations.append(org_obj)
+
+                # Copy other attributes directly
+                for key, value in result_dict.items():
+                    if key not in ["persons", "organizations"]:
+                        setattr(self, key, value)
+
+        return ResultWrapper(result_dict)
 
     def _extract_person_tokens(self, text: str, language: str) -> List[List[str]]:
         """

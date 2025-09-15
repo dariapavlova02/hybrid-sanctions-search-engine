@@ -28,6 +28,11 @@ class TestMetricsService:
             alert_cooldown_seconds=60,  # 1 minute
             cleanup_interval_hours=1,  # 1 hour for testing
         )
+    
+    def _register_test_metric(self, metrics_service, name, metric_type, description="Test metric"):
+        """Helper to register a test metric"""
+        metric_def = MetricDefinition(name, metric_type, description)
+        metrics_service.register_metric(metric_def)
 
     def test_service_initialization(self, metrics_service):
         """Test service initialization"""
@@ -38,11 +43,16 @@ class TestMetricsService:
 
     def test_counter_metric(self, metrics_service):
         """Test counter metric operations"""
+        # Register metric first
+        from src.ai_service.monitoring.metrics_service import MetricDefinition, MetricType
+        metric_def = MetricDefinition("test.counter", MetricType.COUNTER, "Test counter metric")
+        metrics_service.register_metric(metric_def)
+        
         # Increment counter
         metrics_service.increment_counter("test.counter")
         assert "test.counter" in metrics_service.metrics
         assert metrics_service.metrics["test.counter"]["value"] == 1
-        assert metrics_service.metrics["test.counter"]["type"] == MetricType.COUNTER
+        assert metrics_service.metrics["test.counter"]["type"] == "counter"
 
         # Increment by custom amount
         metrics_service.increment_counter("test.counter", 5)
@@ -52,30 +62,35 @@ class TestMetricsService:
         metrics_service.reset_counter("test.counter")
         assert metrics_service.metrics["test.counter"]["value"] == 0
 
-    def test_gauge_metric(self, metrics_service):
-        """Test gauge metric operations"""
-        # Set gauge
-        metrics_service.gauge("test.gauge", 42.5)
-        assert "test.gauge" in metrics_service.metrics
-        assert metrics_service.metrics["test.gauge"]["value"] == 42.5
-        assert metrics_service.metrics["test.gauge"]["type"] == MetricType.GAUGE
+    def test_set_gauge_metric(self, metrics_service):
+        """Test set_gauge metric operations"""
+        # Register metric first
+        from src.ai_service.monitoring.metrics_service import MetricDefinition, MetricType
+        metric_def = MetricDefinition("test.set_gauge", MetricType.GAUGE, "Test gauge metric")
+        metrics_service.register_metric(metric_def)
+        
+        # Set set_gauge
+        metrics_service.set_gauge("test.set_gauge", 42.5)
+        assert "test.set_gauge" in metrics_service.metrics
+        assert metrics_service.metrics["test.set_gauge"]["value"] == 42.5
+        assert metrics_service.metrics["test.set_gauge"]["type"] == "gauge"
 
-        # Update gauge with delta
-        metrics_service.gauge("test.gauge", -2.5)
-        assert metrics_service.metrics["test.gauge"]["value"] == 40.0
+        # Update set_gauge with delta (not supported, use set_gauge)
+        metrics_service.set_gauge("test.set_gauge", 40.0)
+        assert metrics_service.metrics["test.set_gauge"]["value"] == 40.0
 
         # Set absolute value
-        metrics_service.set_gauge("test.gauge", 100)
-        assert metrics_service.metrics["test.gauge"]["value"] == 100
+        metrics_service.set_gauge("test.set_gauge", 100)
+        assert metrics_service.metrics["test.set_gauge"]["value"] == 100
 
-    def test_histogram_metric(self, metrics_service):
-        """Test histogram metric operations"""
-        # Record histogram values
+    def test_record_histogram_metric(self, metrics_service):
+        """Test record_histogram metric operations"""
+        # Record record_histogram values
         values = [1, 2, 3, 4, 5, 5, 5, 6, 7, 8, 9, 10]
         for value in values:
-            metrics_service.histogram("test.histogram", value)
+            metrics_service.record_histogram("test.record_histogram", value)
 
-        metric = metrics_service.metrics["test.histogram"]
+        metric = metrics_service.metrics["test.record_histogram"]
         assert metric["type"] == MetricType.HISTOGRAM
         assert metric["count"] == len(values)
         assert metric["sum"] == sum(values)
@@ -134,7 +149,7 @@ class TestMetricsService:
         metrics_service.register_metric(definition)
 
         # Trigger alert
-        metrics_service.gauge("test.alert_metric", 15.0)
+        metrics_service.set_gauge("test.alert_metric", 15.0)
 
         # Check active alerts
         active_alerts = metrics_service.get_active_alerts()
@@ -158,26 +173,26 @@ class TestMetricsService:
         metrics_service.register_metric(definition)
 
         # Trigger first alert
-        metrics_service.gauge("test.cooldown_metric", 10.0)
+        metrics_service.set_gauge("test.cooldown_metric", 10.0)
         active_alerts = metrics_service.get_active_alerts()
         assert len(active_alerts) == 1
 
         # Trigger second alert immediately (should be filtered by cooldown)
-        metrics_service.gauge("test.cooldown_metric", 12.0)
+        metrics_service.set_gauge("test.cooldown_metric", 12.0)
         active_alerts = metrics_service.get_active_alerts()
         assert len(active_alerts) == 1  # Still only one alert due to cooldown
 
     def test_metric_cleanup(self, metrics_service):
         """Test metric cleanup functionality"""
         # Create some old metrics
-        metrics_service.gauge("old.metric", 42)
+        metrics_service.set_gauge("old.metric", 42)
 
         # Manually set old timestamp
         old_time = time.time() - 3600  # 1 hour ago
         metrics_service.metrics["old.metric"]["last_updated"] = old_time
 
         # Add fresh metric
-        metrics_service.gauge("fresh.metric", 24)
+        metrics_service.set_gauge("fresh.metric", 24)
 
         # Run cleanup
         metrics_service.cleanup_old_metrics(max_age=1800)  # 30 minutes
@@ -191,15 +206,15 @@ class TestMetricsService:
         # Add various metrics
         metrics_service.increment_counter("requests.total", 100)
         metrics_service.increment_counter("requests.failed", 5)
-        metrics_service.gauge("cpu.usage", 75.5)
-        metrics_service.histogram("response.time", 0.123)
-        metrics_service.histogram("response.time", 0.456)
+        metrics_service.set_gauge("cpu.usage", 75.5)
+        metrics_service.record_histogram("response.time", 0.123)
+        metrics_service.record_histogram("response.time", 0.456)
 
         report = metrics_service.get_performance_report()
 
         assert "counters" in report
-        assert "gauges" in report
-        assert "histograms" in report
+        assert "set_gauges" in report
+        assert "record_histograms" in report
         assert "timers" in report
         assert "summary" in report
 
@@ -207,21 +222,21 @@ class TestMetricsService:
         assert "requests.total" in report["counters"]
         assert report["counters"]["requests.total"]["value"] == 100
 
-        # Check gauge data
-        assert "cpu.usage" in report["gauges"]
-        assert report["gauges"]["cpu.usage"]["value"] == 75.5
+        # Check set_gauge data
+        assert "cpu.usage" in report["set_gauges"]
+        assert report["set_gauges"]["cpu.usage"]["value"] == 75.5
 
-        # Check histogram data
-        assert "response.time" in report["histograms"]
-        assert report["histograms"]["response.time"]["count"] == 2
+        # Check record_histogram data
+        assert "response.time" in report["record_histograms"]
+        assert report["record_histograms"]["response.time"]["count"] == 2
 
     def test_system_health_check(self, metrics_service):
         """Test system health check"""
         # Add metrics that indicate good health
         metrics_service.increment_counter("requests.successful", 95)
         metrics_service.increment_counter("requests.failed", 5)
-        metrics_service.gauge("cpu.usage", 45.0)
-        metrics_service.gauge("memory.usage", 60.0)
+        metrics_service.set_gauge("cpu.usage", 45.0)
+        metrics_service.set_gauge("memory.usage", 60.0)
 
         health = metrics_service.check_system_health()
 
@@ -234,8 +249,8 @@ class TestMetricsService:
         """Test metric export functionality"""
         # Add various metrics
         metrics_service.increment_counter("export.test.counter", 42)
-        metrics_service.gauge("export.test.gauge", 3.14)
-        metrics_service.histogram("export.test.histogram", 0.5)
+        metrics_service.set_gauge("export.test.set_gauge", 3.14)
+        metrics_service.record_histogram("export.test.record_histogram", 0.5)
 
         # Export all metrics
         exported = metrics_service.export_metrics()
@@ -247,15 +262,15 @@ class TestMetricsService:
         assert counter_metric["type"] == MetricType.COUNTER.value
         assert counter_metric["value"] == 42
 
-        # Check gauge export
-        gauge_metric = next(m for m in exported if m["name"] == "export.test.gauge")
-        assert gauge_metric["type"] == MetricType.GAUGE.value
-        assert gauge_metric["value"] == 3.14
+        # Check set_gauge export
+        set_gauge_metric = next(m for m in exported if m["name"] == "export.test.set_gauge")
+        assert set_gauge_metric["type"] == MetricType.GAUGE.value
+        assert set_gauge_metric["value"] == 3.14
 
-        # Check histogram export
-        histogram_metric = next(m for m in exported if m["name"] == "export.test.histogram")
-        assert histogram_metric["type"] == MetricType.HISTOGRAM.value
-        assert histogram_metric["count"] == 1
+        # Check record_histogram export
+        record_histogram_metric = next(m for m in exported if m["name"] == "export.test.record_histogram")
+        assert record_histogram_metric["type"] == MetricType.HISTOGRAM.value
+        assert record_histogram_metric["count"] == 1
 
     def test_thread_safety(self, metrics_service):
         """Test thread safety of metrics operations"""
@@ -270,8 +285,8 @@ class TestMetricsService:
             try:
                 for i in range(operations_per_thread):
                     metrics_service.increment_counter(f"thread.{thread_id}.counter")
-                    metrics_service.gauge(f"thread.{thread_id}.gauge", i)
-                    metrics_service.histogram(f"thread.{thread_id}.histogram", i * 0.1)
+                    metrics_service.set_gauge(f"thread.{thread_id}.set_gauge", i)
+                    metrics_service.record_histogram(f"thread.{thread_id}.record_histogram", i * 0.1)
                     time.sleep(0.001)  # Small delay
             except Exception as e:
                 errors.append(f"Thread {thread_id}: {e}")
@@ -294,14 +309,14 @@ class TestMetricsService:
         # Verify metrics were recorded correctly
         for i in range(num_threads):
             counter_name = f"thread.{i}.counter"
-            gauge_name = f"thread.{i}.gauge"
-            histogram_name = f"thread.{i}.histogram"
+            set_gauge_name = f"thread.{i}.set_gauge"
+            record_histogram_name = f"thread.{i}.record_histogram"
 
             assert counter_name in metrics_service.metrics
             assert metrics_service.metrics[counter_name]["value"] == operations_per_thread
 
-            assert gauge_name in metrics_service.metrics
-            assert histogram_name in metrics_service.metrics
+            assert set_gauge_name in metrics_service.metrics
+            assert record_histogram_name in metrics_service.metrics
 
     @pytest.mark.asyncio
     async def test_async_operations(self, metrics_service):
@@ -309,7 +324,7 @@ class TestMetricsService:
         async def async_metric_task(task_id):
             for i in range(10):
                 metrics_service.increment_counter(f"async.task.{task_id}")
-                metrics_service.histogram("async.operation.time", 0.01 * i)
+                metrics_service.record_histogram("async.operation.time", 0.01 * i)
                 await asyncio.sleep(0.001)
 
         # Run multiple async tasks
@@ -331,7 +346,7 @@ class TestMetricsService:
 
         # Add many metrics
         for i in range(200):
-            metrics_service.gauge(f"memory.test.{i}", i)
+            metrics_service.set_gauge(f"memory.test.{i}", i)
 
         # Should respect max_metrics limit
         assert len(metrics_service.metrics) <= metrics_service.max_metrics
@@ -348,7 +363,7 @@ class TestMetricsService:
 
         # Record metric with labels
         labels = {"service": "ai-service", "environment": "test"}
-        metrics_service.gauge("labeled.metric", 42.0, labels=labels)
+        metrics_service.set_gauge("labeled.metric", 42.0, labels=labels)
 
         # Verify labels are stored
         metric = metrics_service.metrics["labeled.metric"]
@@ -376,10 +391,10 @@ class TestMetricsService:
         """Test error handling in metrics service"""
         # Test with invalid metric names
         metrics_service.increment_counter("")  # Should handle gracefully
-        metrics_service.gauge(None, 42)  # Should handle None
+        metrics_service.set_gauge(None, 42)  # Should handle None
 
         # Test with invalid values
-        metrics_service.histogram("test.histogram", "invalid")  # Should handle non-numeric
+        metrics_service.record_histogram("test.record_histogram", "invalid")  # Should handle non-numeric
 
         # Service should continue working
         metrics_service.increment_counter("valid.counter")

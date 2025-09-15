@@ -18,13 +18,13 @@ sys.path.insert(0, str(project_root))
 
 from ai_service.core.unified_orchestrator import UnifiedOrchestrator
 from ai_service.contracts import (
+    UnifiedProcessingResult,
     NormalizationResult,
     SignalsResult,
     SmartFilterResult,
     TokenTrace,
     SignalsPerson,
-    SignalsOrganization,
-    UnifiedProcessingResult
+    SignalsOrganization
 )
 from ai_service.exceptions import ServiceInitializationError
 
@@ -134,7 +134,7 @@ class TestUnifiedOrchestrator:
         )
 
         # Verify result structure
-        assert isinstance(result, UnifiedProcessingResult)
+        assert isinstance(result, UnifiedUnifiedProcessingResult)
         assert result.success is True
         assert result.original_text == "Test input Іван Петров"
         assert result.language == "uk"

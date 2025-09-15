@@ -28,8 +28,9 @@ class TestOrchestratorMetrics:
         )
 
         language_service = Mock()
-        language_service.detect_language = AsyncMock(
-            return_value={"language": "en", "confidence": 0.9}
+        from ai_service.utils.types import LanguageDetectionResult
+        language_service.detect_language_config_driven = Mock(
+            return_value=LanguageDetectionResult(language="en", confidence=0.9, details={})
         )
 
         unicode_service = Mock()
@@ -53,7 +54,7 @@ class TestOrchestratorMetrics:
 
         signals_service = Mock()
         signals_result = SignalsResult(confidence=0.8, persons=[], organizations=[])
-        signals_service.extract_async = AsyncMock(return_value=signals_result)
+        signals_service.extract_signals = AsyncMock(return_value=signals_result)
 
         smart_filter_service = Mock()
         filter_result = Mock()
@@ -62,7 +63,7 @@ class TestOrchestratorMetrics:
         filter_result.classification = "person"
         filter_result.detected_signals = []
         filter_result.details = {}
-        smart_filter_service.should_process_text_async = AsyncMock(
+        smart_filter_service.should_process = AsyncMock(
             return_value=filter_result
         )
 
@@ -73,17 +74,19 @@ class TestOrchestratorMetrics:
         embeddings_service.generate_embeddings = AsyncMock(return_value=[0.1, 0.2, 0.3])
 
         decision_engine = Mock()
-        from ai_service.contracts.decision_contracts import DecisionResult, MatchDecision, ConfidenceLevel, MatchEvidence
+        from ai_service.contracts.decision_contracts import DecisionResult, MatchDecision, ConfidenceLevel, MatchEvidence, RiskLevel
         decision_result = DecisionResult(
             decision=MatchDecision.MATCH,
             confidence=0.9,
             confidence_level=ConfidenceLevel.HIGH,
-            evidence=[MatchEvidence(source="test", evidence_type="name_similarity", confidence=0.9, details={"match": "Strong signal match"}, weight=1.0)],
+            review_required=False,
+            evidence=[MatchEvidence(source="test", evidence_type="name_similarity", confidence=0.9, weight=1.0, description="Strong signal match")],
             reasoning="Test decision",
             processing_time=0.001,
-            used_layers=["normalization", "signals"]
+            risk=RiskLevel.HIGH,
+            score=0.9
         )
-        decision_engine.make_decision = AsyncMock(return_value=decision_result)
+        decision_engine.decide = Mock(return_value=decision_result)
 
         return {
             "validation_service": validation_service,
@@ -124,12 +127,28 @@ class TestOrchestratorMetrics:
         
         # Register other metrics
         service.register_metric(MetricDefinition("decision.result.match", MetricType.COUNTER, "Match decisions"))
+        service.register_metric(MetricDefinition("decision.result.high", MetricType.COUNTER, "High risk decisions"))
+        service.register_metric(MetricDefinition("decision.score", MetricType.HISTOGRAM, "Decision score"))
         service.register_metric(MetricDefinition("language_detection.detected.en", MetricType.COUNTER, "English detections"))
+        service.register_metric(MetricDefinition("language_detection.detected.ru", MetricType.COUNTER, "Russian detections"))
+        service.register_metric(MetricDefinition("language_detection.detected.uk", MetricType.COUNTER, "Ukrainian detections"))
         service.register_metric(MetricDefinition("normalization.token_count", MetricType.HISTOGRAM, "Token count"))
         service.register_metric(MetricDefinition("signals.persons_count", MetricType.HISTOGRAM, "Persons count"))
         service.register_metric(MetricDefinition("signals.organizations_count", MetricType.HISTOGRAM, "Organizations count"))
         service.register_metric(MetricDefinition("variants.count", MetricType.HISTOGRAM, "Variants count"))
         service.register_metric(MetricDefinition("embeddings.dimension", MetricType.HISTOGRAM, "Embedding dimension"))
+        
+        # Register failure metrics
+        service.register_metric(MetricDefinition("processing.validation.failed", MetricType.COUNTER, "Validation failures"))
+        service.register_metric(MetricDefinition("processing.smart_filter.skipped", MetricType.COUNTER, "Smart filter skips"))
+        service.register_metric(MetricDefinition("processing.normalization.failed", MetricType.COUNTER, "Normalization failures"))
+        service.register_metric(MetricDefinition("processing.variants.failed", MetricType.COUNTER, "Variants failures"))
+        service.register_metric(MetricDefinition("processing.embeddings.failed", MetricType.COUNTER, "Embeddings failures"))
+        service.register_metric(MetricDefinition("processing.decision.failed", MetricType.COUNTER, "Decision failures"))
+        service.register_metric(MetricDefinition("processing.slow_requests", MetricType.COUNTER, "Slow requests"))
+        service.register_metric(MetricDefinition("processing.exceptions", MetricType.COUNTER, "Processing exceptions"))
+        service.register_metric(MetricDefinition("processing.requests.failed", MetricType.COUNTER, "Failed requests"))
+        service.register_metric(MetricDefinition("processing.error_count", MetricType.HISTOGRAM, "Error count"))
         
         return service
 
@@ -240,7 +259,7 @@ class TestOrchestratorMetrics:
         filter_result.classification = "noise"
         filter_result.detected_signals = []
         filter_result.details = {}
-        mock_services["smart_filter_service"].should_process_text_async = AsyncMock(
+        mock_services["smart_filter_service"].should_process = AsyncMock(
             return_value=filter_result
         )
 
@@ -320,7 +339,7 @@ class TestOrchestratorMetrics:
     async def test_decision_failure_metrics(self, orchestrator, metrics_service, mock_services):
         """Test metrics when decision engine fails"""
         # Configure decision engine to fail
-        mock_services["decision_engine"].make_decision = AsyncMock(
+        mock_services["decision_engine"].decide = Mock(
             side_effect=Exception("Decision failed")
         )
 
@@ -335,21 +354,20 @@ class TestOrchestratorMetrics:
         """Test metrics for slow processing"""
         # Mock a slow processing scenario
         with patch('time.time') as mock_time:
-            # Start time
-            mock_time.side_effect = [
-                1000.0,  # Start time
-                1000.05,  # After validation
-                1000.1,   # After smart filter
-                1000.15,  # After language detection
-                1000.2,   # After unicode normalization
-                1000.25,  # After normalization
-                1000.3,   # After signals
-                1000.35,  # After variants
-                1000.4,   # After embeddings
-                1000.45,  # After decision
-                1000.5,   # Processing time calculation
-                1000.5,   # Final processing time
-            ]
+            # Mock time to simulate slow processing
+            # Use a counter to track calls and return appropriate values
+            call_count = 0
+            def time_side_effect():
+                nonlocal call_count
+                call_count += 1
+                if call_count == 1:
+                    return 1000.0  # Start time
+                elif call_count <= 12:
+                    return 1000.0 + (call_count - 1) * 0.05  # Layer times
+                else:
+                    return 1000.5  # All other calls (metrics timestamps)
+            
+            mock_time.side_effect = time_side_effect
 
             result = await orchestrator.process("test input")
 
@@ -361,7 +379,7 @@ class TestOrchestratorMetrics:
     async def test_exception_handling_metrics(self, orchestrator, metrics_service, mock_services):
         """Test metrics when an unexpected exception occurs"""
         # Configure a service to raise an unexpected exception
-        mock_services["language_service"].detect_language = AsyncMock(
+        mock_services["language_service"].detect_language_config_driven = Mock(
             side_effect=RuntimeError("Unexpected error")
         )
 
@@ -403,8 +421,9 @@ class TestOrchestratorMetrics:
         languages = ["en", "ru", "uk"]
 
         for lang in languages:
-            mock_services["language_service"].detect_language = AsyncMock(
-                return_value={"language": lang, "confidence": 0.9}
+            from ai_service.utils.types import LanguageDetectionResult
+            mock_services["language_service"].detect_language_config_driven = Mock(
+                return_value=LanguageDetectionResult(language=lang, confidence=0.9, details={})
             )
             await orchestrator.process("test input")
 

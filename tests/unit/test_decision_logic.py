@@ -22,11 +22,11 @@ class TestDecisionLogic(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures"""
         # Mock all the detector dependencies
-        with patch('ai_service.services.smart_filter.decision_logic.NameDetector'):
-            with patch('ai_service.services.smart_filter.decision_logic.CompanyDetector'):
-                with patch('ai_service.services.smart_filter.decision_logic.DocumentDetector'):
-                    with patch('ai_service.services.smart_filter.decision_logic.TerrorismDetector'):
-                        with patch('ai_service.services.smart_filter.decision_logic.ConfidenceScorer'):
+        with patch('ai_service.layers.smart_filter.decision_logic.NameDetector'):
+            with patch('ai_service.layers.smart_filter.decision_logic.CompanyDetector'):
+                with patch('ai_service.layers.smart_filter.decision_logic.DocumentDetector'):
+                    with patch('ai_service.layers.smart_filter.decision_logic.TerrorismDetector'):
+                        with patch('ai_service.layers.smart_filter.decision_logic.ConfidenceScorer'):
                             self.decision_logic = DecisionLogic(enable_terrorism_detection=False)
     
     def test_initialization(self):
@@ -40,11 +40,11 @@ class TestDecisionLogic(unittest.TestCase):
     
     def test_initialization_with_terrorism_detection(self):
         """Test initialization with terrorism detection"""
-        with patch('ai_service.services.smart_filter.decision_logic.NameDetector'):
-            with patch('ai_service.services.smart_filter.decision_logic.CompanyDetector'):
-                with patch('ai_service.services.smart_filter.decision_logic.DocumentDetector'):
-                    with patch('ai_service.services.smart_filter.decision_logic.TerrorismDetector'):
-                        with patch('ai_service.services.smart_filter.decision_logic.ConfidenceScorer'):
+        with patch('ai_service.layers.smart_filter.decision_logic.NameDetector'):
+            with patch('ai_service.layers.smart_filter.decision_logic.CompanyDetector'):
+                with patch('ai_service.layers.smart_filter.decision_logic.DocumentDetector'):
+                    with patch('ai_service.layers.smart_filter.decision_logic.TerrorismDetector'):
+                        with patch('ai_service.layers.smart_filter.decision_logic.ConfidenceScorer'):
                             decision_logic = DecisionLogic(enable_terrorism_detection=True)
                             self.assertIsNotNone(decision_logic.terrorism_detector)
     
@@ -225,6 +225,7 @@ class TestDecisionLogic(unittest.TestCase):
                 risk_level=RiskLevel.VERY_LOW,
                 reasoning="Test",
                 detected_signals={},
+                recommendations=[],
                 processing_time=0.001,
                 requires_escalation=False,
                 metadata={}
@@ -235,6 +236,7 @@ class TestDecisionLogic(unittest.TestCase):
                 risk_level=RiskLevel.HIGH,
                 reasoning="Test",
                 detected_signals={},
+                recommendations=[],
                 processing_time=0.002,
                 requires_escalation=True,
                 metadata={}
@@ -260,6 +262,7 @@ class TestDecisionLogic(unittest.TestCase):
             risk_level=RiskLevel.MEDIUM,
             reasoning="Test analysis",
             detected_signals={'names': {'confidence': 0.8}},
+            recommendations=[],
             processing_time=0.001,
             requires_escalation=False,
             metadata={'test': 'data'}
@@ -288,6 +291,7 @@ class TestDecisionResult(unittest.TestCase):
             risk_level=RiskLevel.LOW,
             reasoning="Test reasoning",
             detected_signals={'test': 'data'},
+            recommendations=[],
             processing_time=0.001,
             requires_escalation=False,
             metadata={'key': 'value'}

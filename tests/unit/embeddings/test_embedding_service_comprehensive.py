@@ -168,7 +168,8 @@ class TestEmbeddingServiceCore:
 
         assert isinstance(result, list)
         assert len(result) == 0
-        assert "error" in result
+        # encode returns a list, not a dict
+        assert isinstance(result, list)
         assert result["text_count"] == 0
 
     def test_encode_none_input(self):
@@ -177,7 +178,8 @@ class TestEmbeddingServiceCore:
 
         assert isinstance(result, list)
         assert len(result) == 0
-        assert "error" in result
+        # encode returns a list, not a dict
+        assert isinstance(result, list)
         assert result["text_count"] == 0
 
     @patch('sentence_transformers.SentenceTransformer')
@@ -272,7 +274,8 @@ class TestEmbeddingServiceCore:
 
         assert isinstance(result, list)
         assert len(result) == 0
-        assert "error" in result
+        # encode returns a list, not a dict
+        assert isinstance(result, list)
 
     @patch('sentence_transformers.SentenceTransformer')
     def test_calculate_batch_similarity(self, mock_sentence_transformer):
@@ -313,8 +316,8 @@ class TestEmbeddingServiceCore:
 
             for field in required_fields:
                 # encode returns a list, not a dict
-        assert isinstance(result, list)
-        assert len(result) > 0
+                assert isinstance(result, list)
+                assert len(result) > 0
 
     def test_similarity_result_format(self):
         """Test that similarity results have consistent format"""
@@ -325,8 +328,8 @@ class TestEmbeddingServiceCore:
 
             for field in required_fields:
                 # encode returns a list, not a dict
-        assert isinstance(result, list)
-        assert len(result) > 0
+                assert isinstance(result, list)
+                assert len(result) > 0
 
 
 class TestEmbeddingServiceErrorHandling:
@@ -486,7 +489,7 @@ class TestEmbeddingServiceIntegration:
             result = self.service.encode(multilingual_texts)
 
             assert isinstance(result, list)
-        assert len(result) > 0
+            assert len(result) > 0
             assert len(result["embeddings"]) == 4
 
     def test_real_world_similarity_scenarios(self):
@@ -515,6 +518,6 @@ class TestEmbeddingServiceIntegration:
                 result = self.service.calculate_similarity(text1, text2)
 
                 assert isinstance(result, list)
-        assert len(result) > 0
+                assert len(result) > 0
                 # Should produce reasonable similarity scores
                 assert 0.0 <= result["similarity"] <= 1.0

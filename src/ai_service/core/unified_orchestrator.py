@@ -287,8 +287,8 @@ class UnifiedOrchestrator:
             logger.debug("Stage 6: Signals Extraction")
             layer_start = time.time()
 
-            signals_result = await self.signals_service.extract_async(
-                text=context.original_text, normalization_result=norm_result
+            signals_result = await self.signals_service.extract_signals(
+                text=context.original_text, normalization_result=norm_result, language=context.language
             )
 
             if self.metrics_service:
@@ -307,9 +307,12 @@ class UnifiedOrchestrator:
                 logger.debug("Stage 7: Variant Generation")
                 layer_start = time.time()
                 try:
-                    variants = await self.variants_service.generate_variants(
-                        norm_result.normalized, context.language
-                    )
+                    if self.variants_service is not None:
+                        variants = await self.variants_service.generate_variants(
+                            norm_result.normalized, context.language
+                        )
+                    else:
+                        logger.debug("Variants service not available - skipping variant generation")
                     if self.metrics_service:
                         self.metrics_service.record_timer('processing.layer.variants', time.time() - layer_start)
                         if variants:
@@ -330,9 +333,12 @@ class UnifiedOrchestrator:
                 logger.debug("Stage 8: Embedding Generation")
                 layer_start = time.time()
                 try:
-                    embeddings = await self.embeddings_service.generate_embeddings(
-                        norm_result.normalized
-                    )
+                    if self.embeddings_service is not None:
+                        embeddings = await self.embeddings_service.generate_embeddings(
+                            norm_result.normalized
+                        )
+                    else:
+                        logger.debug("Embeddings service not available - skipping embedding generation")
                     if self.metrics_service:
                         self.metrics_service.record_timer('processing.layer.embeddings', time.time() - layer_start)
                         if embeddings is not None:
@@ -531,7 +537,7 @@ class UnifiedOrchestrator:
                     break
         
         # Check for date matches in extras
-        if hasattr(signals_result, 'extras') and signals_result.extras.dates:
+        if hasattr(signals_result, 'extras') and isinstance(signals_result.extras, dict) and signals_result.extras.get('dates'):
             date_match = True
         
         # Create evidence dict

@@ -845,9 +845,9 @@ class NormalizationService:
             base, is_quoted = self._strip_quoted(token)
             cf = base.casefold()
 
-            # 1) Legal form - mark but don't skip
+            # 1) Legal form - mark as unknown (per architecture: normalization doesn't handle legal forms)
             if self._is_legal_form(cf):
-                tagged.append((token, "legal_form"))
+                tagged.append((token, "unknown"))
                 continue
             # 2) Organization core/acronym in quotes or outside
             elif is_quoted and self._looks_like_org(base):
@@ -872,12 +872,9 @@ class NormalizationService:
             else:
                 prelim_org = False
 
-            # 3) Initials - split multi-initials
+            # 3) Initials - keep multi-initials as a single token (e.g., 'С.В.')
             if self._is_initial(base):
-                # Split multi-initials like "П.І." into separate initials
-                split_initials = self._split_multi_initial(base)
-                for initial in split_initials:
-                    tagged.append((initial, "initial"))
+                tagged.append((base, "initial"))
                 continue
 
             # 4) Personal name classification (existing logic)
@@ -895,12 +892,13 @@ class NormalizationService:
             # 6) Otherwise - unknown (positional defaults will be applied later)
             tagged.append((token, "unknown"))
 
-        # 7) Apply positional defaults for personal tokens only (exclude context words)
+        # 7) Apply positional defaults for personal tokens only (exclude context words and legal forms)
         person_indices = [
             i
             for i, (token, role) in enumerate(tagged)
             if role in {"unknown", "given", "surname", "patronymic", "initial"}
             and not self._is_context_word(token, language)
+            and not self._is_legal_form(self._strip_quoted(token)[0].casefold())
         ]
         tagged = self._apply_positional_heuristics(tagged, language, person_indices)
 
@@ -939,6 +937,8 @@ class NormalizationService:
             "працювала",
             "разом",
             "окремо",
+            "група",
+            "групи",
             "тут",
             "там",
             "тепер",
@@ -1032,6 +1032,10 @@ class NormalizationService:
             "позже",
             "всегда",
             "никогда",
+            "дата",
+            "рождения",
+            "паспорт",
+            "номер",
             "очень",
             "довольно",
             "почти",
@@ -1204,6 +1208,8 @@ class NormalizationService:
             "працювала",
             "разом",
             "окремо",
+            "група",
+            "групи",
             "тут",
             "там",
             "тепер",
@@ -1297,6 +1303,10 @@ class NormalizationService:
             "позже",
             "всегда",
             "никогда",
+            "дата",
+            "рождения",
+            "паспорт",
+            "номер",
             "очень",
             "довольно",
             "почти",
@@ -1631,17 +1641,21 @@ class NormalizationService:
                 _async_morph_cache.put(token, primary_lang, result)
                 return result
 
+        # Special handling for Russian common cases when morphology is unavailable
+        if primary_lang == "ru":
+            result = self._russian_fallback_normalization(token)
+            if result:
+                _async_morph_cache.put(token, primary_lang, result)
+                return result
+
         # Special handling for patronymics - don't normalize to masculine form
         if self._is_patronymic(token, primary_lang):
             result = token  # Keep original patronymic form
             _async_morph_cache.put(token, primary_lang, result)
             return result
 
-        # Special handling for surnames - preserve gender form
-        if self._is_surname(token, primary_lang):
-            result = token  # Keep original surname form
-            _async_morph_cache.put(token, primary_lang, result)
-            return result
+        # Note: Removed surname blocking - surnames should be normalized like other words
+        # The gender adjustment happens later in _gender_adjust_surname
 
         try:
             if hasattr(morph_analyzer, "morph_analyzer"):
@@ -1652,29 +1666,41 @@ class NormalizationService:
                     _async_morph_cache.put(token, primary_lang, result)
                     return result
 
-                # Prefer Name/Surn parts of speech for proper nouns
-                name_parses = []
-                other_parses = []
+                # Prefer parses marked with Surn/Name grammemes (not POS)
+                def _has_gram(p, gram: str) -> bool:
+                    try:
+                        return (gram in p.tag) or (gram in str(p.tag))
+                    except Exception:
+                        return gram in str(p.tag)
 
-                for parse in parses:
-                    pos = str(parse.tag.POS) if hasattr(parse.tag, "POS") else ""
-                    if pos in ["Name", "Surn"]:
-                        name_parses.append(parse)
-                    else:
-                        other_parses.append(parse)
+                surname_parses = [p for p in parses if _has_gram(p, "Surn")]
+                name_parses = [p for p in parses if _has_gram(p, "Name")]
+                others = [p for p in parses if p not in surname_parses and p not in name_parses]
 
-                # Use name parses if available, otherwise use all parses
-                target_parses = name_parses if name_parses else other_parses
+                # Target order: surnames first, then personal names, then others
+                target_parses = surname_parses + name_parses + others
 
-                # Find the best parse - prefer parses with better normal forms
+                # Find the best parse - prefer surname parses first
                 best_parse = None
-                for parse in target_parses:
-                    # Prefer parses that don't match the original word (indicating proper normalization)
-                    if parse.normal_form != parse.word:
-                        best_parse = parse
-                        break
-                    elif best_parse is None:
-                        best_parse = parse
+
+                if surname_parses:
+                    # Prefer surname parses that show normalization
+                    for parse in surname_parses:
+                        if parse.normal_form != parse.word:
+                            best_parse = parse
+                            break
+                    if not best_parse:
+                        best_parse = surname_parses[0]
+
+                # If no surname parse, use original logic
+                if not best_parse:
+                    for parse in target_parses:
+                        # Prefer parses that don't match the original word (indicating proper normalization)
+                        if parse.normal_form != parse.word:
+                            best_parse = parse
+                            break
+                        elif best_parse is None:
+                            best_parse = parse
 
                 # If no nominative found, try to inflect any parse to nominative
                 if not best_parse:
@@ -1795,6 +1821,22 @@ class NormalizationService:
     def _ukrainian_surname_normalization(self, token: str) -> Optional[str]:
         """Special normalization for Ukrainian surnames that get misanalyzed"""
         token_lower = token.lower()
+        # Apply only to capitalized tokens to reduce false positives
+        if not token or not token[0].isupper():
+            return None
+
+        # Handle compound (hyphenated) surnames by normalizing each part
+        if "-" in token:
+            parts = token.split("-")
+            normalized_parts = []
+            changed_any = False
+            for part in parts:
+                normalized_part = self._ukrainian_surname_normalization(part) or part
+                normalized_parts.append(normalized_part)
+                if normalized_part != part:
+                    changed_any = True
+            if changed_any:
+                return "-".join(normalized_parts)
 
         # Keep -енко surnames indeclinable (they don't change by gender)
         if token_lower.endswith("енко"):
@@ -1869,6 +1911,74 @@ class NormalizationService:
             # These don't usually change in Ukrainian
             return token
 
+        # Generic adjectival surname handling (e.g., Залужним -> Залужний)
+        # Instrumental masculine: -им -> -ий, Dative: -ому -> -ий, Genitive: -ого -> -ий
+        # Locative masculine variants may appear as -ім
+        for ending, repl in [("им", "ий"), ("ому", "ий"), ("ого", "ий"), ("ім", "ій")]:
+            if token_lower.endswith(ending) and len(token_lower) > len(ending) + 1:
+                base = token_lower[: -len(ending)]
+                candidate = base + repl
+                return candidate.capitalize() if token[0].isupper() else candidate
+
+        # Consonant-ending surnames in oblique cases:
+        # Genitive: -а -> nominative (Жадана -> Жадан), Dative: -у -> nominative (Жадану -> Жадан)
+        uk_vowels = set("аеєиіїоуюя")
+        if token_lower.endswith("а") and len(token_lower) > 3:
+            prev = token_lower[-2]
+            if prev not in uk_vowels and not any(
+                token_lower.endswith(x) for x in ["ова", "ева", "іна", "ська", "цька"]
+            ):
+                candidate = token_lower[:-1]
+                return candidate.capitalize() if token[0].isupper() else candidate
+        if token_lower.endswith("у") and len(token_lower) > 3:
+            prev = token_lower[-2]
+            if prev not in uk_vowels:
+                candidate = token_lower[:-1]
+                return candidate.capitalize() if token[0].isupper() else candidate
+
+        return None
+
+    def _russian_fallback_normalization(self, token: str) -> Optional[str]:
+        """Minimal Russian normalization when pymorphy is unavailable"""
+        if not token or not token[0].isupper():
+            return None
+
+        t = token
+        tl = token.lower()
+
+        # Handle hyphenated tokens
+        if "-" in token:
+            parts = token.split("-")
+            normalized_parts = []
+            changed = False
+            for p in parts:
+                np = self._russian_fallback_normalization(p) or p
+                normalized_parts.append(np)
+                if np != p:
+                    changed = True
+            if changed:
+                return "-".join(normalized_parts)
+
+        # Feminine surnames -> masculine
+        for fem, masc in [("ова", "ов"), ("ева", "ев"), ("ина", "ин")]:
+            if tl.endswith(fem) and len(tl) > len(fem) + 1:
+                cand = tl[: -len(fem)] + masc
+                return cand.capitalize()
+
+        # Genitive/dative of consonant-ending surnames: -а/-у -> nominative
+        ru_vowels = set("аеёиоуыэюя")
+        if tl.endswith("а") and len(tl) > 3 and tl[-2] not in ru_vowels:
+            cand = tl[:-1]
+            return cand.capitalize()
+        if tl.endswith("у") and len(tl) > 3 and tl[-2] not in ru_vowels:
+            cand = tl[:-1]
+            return cand.capitalize()
+
+        # Given names like Сергей: 'Сергея' -> 'Сергей'
+        if tl.endswith("ея") and len(tl) > 3:
+            cand = tl[:-2] + "ей"
+            return cand.capitalize()
+
         return None
 
     def _normalize_characters(self, text: str) -> str:
@@ -1930,7 +2040,14 @@ class NormalizationService:
             elif base_lower.endswith("цький"):
                 return base_form[:-2] + "а"
 
-        # Step 3: If no gender specified, check if the original token is already feminine
+        # Step 3: If gender is explicitly specified, use it regardless of original form
+        if person_gender == "masc":
+            return base_form  # Use masculine form
+        elif person_gender == "female":
+            # This case is already handled above in Step 2
+            pass
+
+        # Step 4: If no gender specified, check if the original token is already feminine
         # and preserve it
         original_lower = original_token.lower()
         if (
@@ -1940,7 +2057,7 @@ class NormalizationService:
         ):
             return original_token  # Keep original feminine form
 
-        # For male or unknown gender, return base form
+        # For unknown gender, return base form
         return base_form
 
     def _get_person_gender(

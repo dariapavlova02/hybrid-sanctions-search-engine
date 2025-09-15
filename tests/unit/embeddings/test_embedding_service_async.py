@@ -16,7 +16,9 @@ class TestEmbeddingServiceAsync:
     @pytest.fixture
     def service(self):
         """Create EmbeddingService instance"""
-        return EmbeddingService()
+        from src.ai_service.config import EmbeddingConfig
+        config = EmbeddingConfig()
+        return EmbeddingService(config)
 
     @pytest.mark.asyncio
     async def test_get_embeddings_async_success(self, service):

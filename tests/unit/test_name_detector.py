@@ -19,7 +19,7 @@ class TestNameDetector(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures"""
         # Mock the dictionaries import to avoid dependency issues
-        with patch('ai_service.services.smart_filter.name_detector.DICTIONARIES_AVAILABLE', False):
+        with patch('ai_service.layers.smart_filter.name_detector.DICTIONARIES_AVAILABLE', False):
             self.name_detector = NameDetector()
     
     def test_initialization(self):
@@ -240,7 +240,7 @@ class TestNameDetectorIntegration(unittest.TestCase):
     
     def setUp(self):
         """Set up integration test fixtures"""
-        with patch('ai_service.services.smart_filter.name_detector.DICTIONARIES_AVAILABLE', False):
+        with patch('ai_service.layers.smart_filter.name_detector.DICTIONARIES_AVAILABLE', False):
             self.name_detector = NameDetector()
     
     def test_requirement_surname_patterns(self):

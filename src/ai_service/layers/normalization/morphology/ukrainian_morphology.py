@@ -72,7 +72,7 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
     def _load_special_names(self) -> Dict[str, Any]:
         """Load special names dictionary"""
         try:
-            from ...data.dicts.ukrainian_names import UKRAINIAN_NAMES
+            from ....data.dicts.ukrainian_names import UKRAINIAN_NAMES
 
             return UKRAINIAN_NAMES
         except ImportError:
@@ -82,7 +82,7 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
     def _load_lemmatization_blacklist(self) -> Set[str]:
         """Load lemmatization blacklist"""
         try:
-            from ...data.dicts.lemmatization_blacklist import LEMMATIZATION_BLACKLIST
+            from ....data.dicts.lemmatization_blacklist import LEMMATIZATION_BLACKLIST
 
             return set(LEMMATIZATION_BLACKLIST)
         except ImportError:
@@ -209,7 +209,12 @@ class UkrainianMorphologyAnalyzer(BaseMorphologyAnalyzer):
             if self.morph_analyzer:
                 parses = self.morph_analyzer.parse(word)
                 if parses:
-                    best_parse = max(parses, key=lambda p: p.score)
+                    # Prefer surname parses for names
+                    surname_parses = [p for p in parses if 'Surn' in str(p.tag)]
+                    if surname_parses:
+                        best_parse = max(surname_parses, key=lambda p: p.score)
+                    else:
+                        best_parse = max(parses, key=lambda p: p.score)
                     return best_parse.normal_form.lower()  # Normalize to lowercase
         except Exception as e:
             self.logger.warning(f"Error getting lemma for '{word}': {e}")

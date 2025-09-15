@@ -689,7 +689,7 @@ class TestNormalizationResult:
         assert result.normalized_length == 9
         assert result.token_count == 2
         assert result.processing_time == 0.1
-        assert result.errors is None
+        assert result.errors == []
 
     def test_normalization_result_error_case(self):
         """Test NormalizationResult for error scenarios"""
@@ -697,6 +697,7 @@ class TestNormalizationResult:
             success=False,
             normalized="Test text",
             tokens=[],
+            trace=[],
             language="unknown",
             confidence=0.0,
             original_length=9,

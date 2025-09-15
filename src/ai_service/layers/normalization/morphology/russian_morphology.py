@@ -72,7 +72,7 @@ class RussianMorphologyAnalyzer(BaseMorphologyAnalyzer):
     def _load_special_names(self) -> Dict[str, Any]:
         """Load special names dictionary"""
         try:
-            from ...data.dicts.russian_names import RUSSIAN_NAMES
+            from ....data.dicts.russian_names import RUSSIAN_NAMES
 
             return RUSSIAN_NAMES
         except ImportError:
@@ -82,7 +82,7 @@ class RussianMorphologyAnalyzer(BaseMorphologyAnalyzer):
     def _load_lemmatization_blacklist(self) -> Set[str]:
         """Load lemmatization blacklist"""
         try:
-            from ...data.dicts.lemmatization_blacklist import LEMMATIZATION_BLACKLIST
+            from ....data.dicts.lemmatization_blacklist import LEMMATIZATION_BLACKLIST
 
             return set(LEMMATIZATION_BLACKLIST)
         except ImportError:
@@ -706,3 +706,19 @@ class RussianMorphologyAnalyzer(BaseMorphologyAnalyzer):
             }
         )
         return stats
+    
+    def batch_process_names(self, names: List[str]) -> List[Dict[str, Any]]:
+        """Process multiple names in batch"""
+        results = []
+        for name in names:
+            try:
+                analysis = self.analyze_name(name)
+                results.append(analysis)
+            except Exception as e:
+                self.logger.warning(f"Error processing name '{name}': {e}")
+                results.append({
+                    "name": name,
+                    "error": str(e),
+                    "success": False
+                })
+        return results

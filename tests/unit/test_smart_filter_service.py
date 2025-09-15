@@ -20,8 +20,8 @@ class TestSmartFilterService(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures"""
         # Mock the dependencies to avoid import issues
-        with patch('ai_service.services.smart_filter.smart_filter_service.SignalService'):
-            with patch('ai_service.services.smart_filter.smart_filter_service.DecisionLogic'):
+        with patch('ai_service.layers.smart_filter.smart_filter_service.SignalService'):
+            with patch('ai_service.layers.smart_filter.smart_filter_service.DecisionLogic'):
                 self.smart_filter = SmartFilterService(enable_terrorism_detection=False)
     
     def test_initialization(self):
@@ -34,9 +34,9 @@ class TestSmartFilterService(unittest.TestCase):
     
     def test_initialization_with_terrorism_detection(self):
         """Test service initialization with terrorism detection enabled"""
-        with patch('ai_service.services.smart_filter.smart_filter_service.SignalService'):
-            with patch('ai_service.services.smart_filter.smart_filter_service.DecisionLogic'):
-                with patch('ai_service.services.smart_filter.smart_filter_service.TerrorismDetector'):
+        with patch('ai_service.layers.smart_filter.smart_filter_service.SignalService'):
+            with patch('ai_service.layers.smart_filter.smart_filter_service.DecisionLogic'):
+                with patch('ai_service.layers.smart_filter.smart_filter_service.TerrorismDetector'):
                     smart_filter = SmartFilterService(enable_terrorism_detection=True)
                     self.assertIsNotNone(smart_filter.terrorism_detector)
     
@@ -80,7 +80,7 @@ class TestSmartFilterService(unittest.TestCase):
                     self.assertIn('company', result.detected_signals)
                     self.assertIn('name', result.detected_signals)
     
-    @patch('ai_service.services.smart_filter.smart_filter_service.DecisionLogic')
+    @patch('ai_service.layers.smart_filter.smart_filter_service.DecisionLogic')
     def test_make_smart_decision(self, mock_decision_logic):
         """Test smart decision making"""
         # Mock decision result
@@ -97,7 +97,7 @@ class TestSmartFilterService(unittest.TestCase):
         
         mock_decision_logic.return_value.make_decision.return_value = mock_decision_result
         
-        with patch('ai_service.services.smart_filter.smart_filter_service.SignalService'):
+        with patch('ai_service.layers.smart_filter.smart_filter_service.SignalService'):
             smart_filter = SmartFilterService()
             result = smart_filter.make_smart_decision("test text")
             

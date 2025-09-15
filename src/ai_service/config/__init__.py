@@ -14,6 +14,7 @@ from .settings import (
     IntegrationConfig,
     LanguageConfig,
     LoggingConfig,
+    NormalizationConfig,
     PerformanceConfig,
     SecurityConfig,
     ServiceConfig,
@@ -83,6 +84,7 @@ LANGUAGE_CONFIG = config.language
 DEPLOYMENT_CONFIG = config.deployment
 PERFORMANCE_CONFIG = config.performance
 LOGGING_CONFIG = config.logging
+NORMALIZATION_CONFIG = NormalizationConfig()
 
 __all__ = [
     "Config",
@@ -94,4 +96,5 @@ __all__ = [
     "DEPLOYMENT_CONFIG",
     "PERFORMANCE_CONFIG",
     "LOGGING_CONFIG",
+    "NORMALIZATION_CONFIG",
 ]

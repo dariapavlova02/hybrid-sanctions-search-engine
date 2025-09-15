@@ -117,6 +117,24 @@ class MetricsService:
 
         self.logger.info("MetricsService initialized")
 
+    @property
+    def metrics(self) -> Dict[str, Dict[str, Any]]:
+        """Get current metric values as a dictionary"""
+        result = {}
+        with self.metrics_lock:
+            for name, values in self.metric_values.items():
+                if values:
+                    latest = values[-1]
+                    metric_def = self.metric_definitions.get(name)
+                    result[name] = {
+                        "value": latest.value,
+                        "type": metric_def.metric_type.value if metric_def else "unknown",
+                        "timestamp": latest.timestamp,
+                        "labels": latest.labels,
+                        "count": len(values)
+                    }
+        return result
+
     def _initialize_core_metrics(self):
         """Initialize core system metrics"""
         core_metrics = [

@@ -321,6 +321,32 @@ class EmbeddingConfig(BaseModel):
         }
 
 
+class NormalizationConfig(BaseModel):
+    """Normalization service configuration settings"""
+    
+    model_config = {"validate_assignment": True}
+    
+    max_tokens: int = Field(default_factory=lambda: int(os.getenv("NORMALIZATION_MAX_TOKENS", "100")))
+    preserve_names: bool = Field(default_factory=lambda: os.getenv("NORMALIZATION_PRESERVE_NAMES", "true").lower() == "true")
+    clean_unicode: bool = Field(default_factory=lambda: os.getenv("NORMALIZATION_CLEAN_UNICODE", "true").lower() == "true")
+    enable_morphology: bool = Field(default_factory=lambda: os.getenv("NORMALIZATION_ENABLE_MORPHOLOGY", "true").lower() == "true")
+    enable_transliterations: bool = Field(default_factory=lambda: os.getenv("NORMALIZATION_ENABLE_TRANSLITERATIONS", "true").lower() == "true")
+    remove_stop_words: bool = Field(default_factory=lambda: os.getenv("NORMALIZATION_REMOVE_STOP_WORDS", "true").lower() == "true")
+    enable_advanced_features: bool = Field(default_factory=lambda: os.getenv("NORMALIZATION_ENABLE_ADVANCED_FEATURES", "true").lower() == "true")
+    
+    def model_dump(self) -> Dict[str, Any]:
+        """Return model as dictionary"""
+        return {
+            "max_tokens": self.max_tokens,
+            "preserve_names": self.preserve_names,
+            "clean_unicode": self.clean_unicode,
+            "enable_morphology": self.enable_morphology,
+            "enable_transliterations": self.enable_transliterations,
+            "remove_stop_words": self.remove_stop_words,
+            "enable_advanced_features": self.enable_advanced_features
+        }
+
+
 class DecisionConfig(BaseModel):
     """Decision engine configuration settings with ENV override support"""
     
@@ -364,5 +390,6 @@ LOGGING_CONFIG = LoggingConfig()
 LANGUAGE_CONFIG = LanguageConfig()
 PERFORMANCE_CONFIG = PerformanceConfig()
 EMBEDDING_CONFIG = EmbeddingConfig()
+NORMALIZATION_CONFIG = NormalizationConfig()
 DECISION_CONFIG = DecisionConfig()  # Now supports ENV overrides
     
