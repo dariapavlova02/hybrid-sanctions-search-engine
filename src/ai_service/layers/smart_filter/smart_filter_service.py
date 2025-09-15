@@ -900,3 +900,8 @@ class SmartFilterService:
             self.should_process_text,
             text
         )
+
+
+# Legacy alias for tests expecting SignalService in this module
+from ai_service.layers.signals.signals_service import SignalsService as _SignalsServiceLegacy
+SignalService = _SignalsServiceLegacy
