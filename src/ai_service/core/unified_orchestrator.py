@@ -237,7 +237,11 @@ class UnifiedOrchestrator:
             unicode_result = await self._maybe_await(self.unicode_service.normalize_unicode(
                 context.sanitized_text
             ))
-            unicode_normalized = unicode_result.get("normalized", context.sanitized_text)
+            # Handle both legacy string return and new dict return
+            if isinstance(unicode_result, str):
+                unicode_normalized = unicode_result
+            else:
+                unicode_normalized = unicode_result.get("normalized", context.sanitized_text)
 
             if self.metrics_service:
                 self.metrics_service.record_timer('processing.layer.unicode_normalization', time.time() - layer_start)
@@ -602,7 +606,11 @@ class UnifiedOrchestrator:
         sanitized = validation_result.get("sanitized_text", text)
 
         unicode_result = await self._maybe_await(self.unicode_service.normalize_unicode(sanitized))
-        unicode_normalized = unicode_result.get("normalized", sanitized)
+        # Handle both legacy string return and new dict return
+        if isinstance(unicode_result, str):
+            unicode_normalized = unicode_result
+        else:
+            unicode_normalized = unicode_result.get("normalized", sanitized)
 
         return await self._maybe_await(self.normalization_service.normalize_async(
             unicode_normalized, **norm_flags

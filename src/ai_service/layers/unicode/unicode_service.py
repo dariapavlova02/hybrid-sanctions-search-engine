@@ -262,30 +262,36 @@ class UnicodeService:
 
     async def normalize_unicode(self, text: str, aggressive: bool = False) -> Dict[str, Any]:
         """
-        Async wrapper for normalize_text method
+        Unicode normalization with guaranteed dict return format.
         
         Args:
-            text: Input text
+            text: Input text to normalize
             aggressive: Aggressive normalization (may change meaning)
             
         Returns:
-            Dict with normalized text and metadata
+            Dict with structure: {"normalized": str, "aggressive": bool, "notes": Optional[str], ...}
+            
+        Example:
+            >>> result = await unicode_service.normalize_unicode("Héllo Wörld")
+            >>> result["normalized"]  # "Hello World"
+            >>> result["aggressive"]  # False
         """
         return self.normalize_text(text, aggressive)
 
     def normalize_text(self, text: str, aggressive: bool = False) -> Dict[str, Any]:
         """
-        Unicode normalization of text with focus on preventing FN
+        Unicode normalization of text with focus on preventing FN.
+        Always returns a dict with guaranteed structure.
 
         Args:
             text: Input text
             aggressive: Aggressive normalization (may change meaning)
 
         Returns:
-            Dict with normalized text and metadata
+            Dict with structure: {"normalized": str, "aggressive": bool, "notes": Optional[str], ...}
         """
         if not text:
-            result = self._create_normalization_result("", 1.0, 0, 0, 0)
+            result = self._create_normalization_result("", 1.0, 0, 0, 0, aggressive)
             result["original"] = text  # Preserve None or empty string
             return result
 
@@ -300,7 +306,7 @@ class UnicodeService:
         ])
         needs_case_normalization = any(c.isupper() for c in text)
         if self._is_already_normalized(text) and not has_special_chars and not needs_whitespace_cleanup and not has_invisible_chars and (not needs_case_normalization or aggressive):
-            result = self._create_normalization_result(text, 1.0, 0, 0, 0)
+            result = self._create_normalization_result(text, 1.0, 0, 0, 0, aggressive)
             result["original"] = text
             result["idempotent"] = True
             return result
@@ -346,6 +352,7 @@ class UnicodeService:
             changes_count,
             char_replacements,
             len(original_text),
+            aggressive,
         )
         # Add original text to result
         result["original"] = original_text
@@ -618,8 +625,10 @@ class UnicodeService:
         changes_count: int,
         char_replacements: int,
         original_length: int,
+        aggressive: bool = False,
+        notes: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Create normalization result"""
+        """Create normalization result with guaranteed structure"""
         # Create changes list for tracking what was changed
         changes = []
         if char_replacements > 0:
@@ -627,6 +636,8 @@ class UnicodeService:
 
         return {
             "normalized": normalized_text,
+            "aggressive": aggressive,
+            "notes": notes,
             "original": normalized_text,  # For backward compatibility
             "confidence": confidence,
             "changes_count": changes_count,

@@ -151,7 +151,7 @@ class TestUnifiedOrchestrator:
         )
 
         # Verify result structure
-        assert isinstance(result, UnifiedUnifiedProcessingResult)
+        assert isinstance(result, UnifiedProcessingResult)
         assert result.success is True
         assert result.original_text == "Test input Іван Петров"
         assert result.language == "uk"
