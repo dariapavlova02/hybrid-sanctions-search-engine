@@ -49,6 +49,14 @@ class NormalizationResult(BaseModel):
         """Convert to JSON string"""
         return self.model_dump_json()
 
+    def __getitem__(self, k):
+        """Enable dict-like access using square brackets"""
+        return self.model_dump().get(k)
+    
+    def get(self, k, default=None):
+        """Enable dict-like access with default value"""
+        return self.model_dump().get(k, default)
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "NormalizationResult":
         """Create from dictionary"""
