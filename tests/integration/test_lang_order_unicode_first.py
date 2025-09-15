@@ -65,12 +65,11 @@ class TestUnicodeFirstLanguageDetectionOrder:
         orchestrator.unicode_service.normalize_unicode = Mock(side_effect=mock_normalize_unicode)
         
         # Mock language service to return detection result
-        lang_result = {
-            "language": "ru",
-            "confidence": 0.8,
-            "method": "config_driven"
-        }
-        orchestrator.language_service.detect_language = Mock(return_value=lang_result)
+        lang_result = Mock()
+        lang_result.language = "ru"
+        lang_result.confidence = 0.8
+        lang_result.method = "config_driven"
+        orchestrator.language_service.detect_language_config_driven = Mock(return_value=lang_result)
         
         # Mock other services
         async def mock_validate_and_sanitize(text):
@@ -92,14 +91,16 @@ class TestUnicodeFirstLanguageDetectionOrder:
         
         orchestrator.normalization_service.normalize_async = Mock(side_effect=mock_normalize_async)
         
-        async def mock_extract_async(text, normalization_result):
-            return Mock(
-                confidence=0.8,
+        from ai_service.contracts.base_contracts import SignalsResult
+        
+        async def mock_extract_async(text, normalization_result, language=None):
+            return SignalsResult(
                 persons=[],
-                organizations=[]
+                organizations=[],
+                confidence=0.8
             )
         
-        orchestrator.signals_service.extract_async = Mock(side_effect=mock_extract_async)
+        orchestrator.signals_service.extract_signals = Mock(side_effect=mock_extract_async)
         
         # Run the orchestrator
         import asyncio
@@ -109,13 +110,14 @@ class TestUnicodeFirstLanguageDetectionOrder:
         orchestrator.unicode_service.normalize_unicode.assert_called_once_with(test_text)
         
         # Verify language detection was called with normalized text
-        orchestrator.language_service.detect_language.assert_called_once_with(
-            unicode_result["normalized"]
+        orchestrator.language_service.detect_language_config_driven.assert_called_once_with(
+            unicode_result["normalized"], 
+            orchestrator.language_service.detect_language_config_driven.call_args[0][1]  # LANGUAGE_CONFIG
         )
         
         # Verify the call order: unicode first, then language detection
         unicode_call = orchestrator.unicode_service.normalize_unicode.call_args
-        lang_call = orchestrator.language_service.detect_language.call_args
+        lang_call = orchestrator.language_service.detect_language_config_driven.call_args
         
         # Both should be called
         assert unicode_call is not None
@@ -236,10 +238,10 @@ class TestUnicodeFirstLanguageDetectionOrder:
         
         orchestrator.unicode_service.normalize_unicode = mock_normalize_unicode
         
-        orchestrator.language_service.detect_language = Mock(return_value={
-            "language": "ru",
-            "confidence": 0.8
-        })
+        lang_result = Mock()
+        lang_result.language = "ru"
+        lang_result.confidence = 0.8
+        orchestrator.language_service.detect_language_config_driven = Mock(return_value=lang_result)
         
         async def mock_normalize_async(text, **kwargs):
             return Mock(
@@ -251,11 +253,11 @@ class TestUnicodeFirstLanguageDetectionOrder:
         orchestrator.normalization_service.normalize_async = mock_normalize_async
         
         async def mock_extract_async(text, normalization_result):
-            return Mock(
-                confidence=0.8,
-                persons=[],
-                organizations=[]
-            )
+            mock_result = Mock()
+            mock_result.confidence = 0.8
+            mock_result.persons = []
+            mock_result.organizations = []
+            return mock_result
         
         orchestrator.signals_service.extract_async = mock_extract_async
         
@@ -281,13 +283,13 @@ class TestUnicodeFirstLanguageDetectionOrder:
         
         def track_lang_call(*args, **kwargs):
             call_order.append("language")
-            return {
-                "language": "ru",
-                "confidence": 0.8
-            }
+            lang_result = Mock()
+            lang_result.language = "ru"
+            lang_result.confidence = 0.8
+            return lang_result
         
         orchestrator.unicode_service.normalize_unicode = Mock(side_effect=track_unicode_call)
-        orchestrator.language_service.detect_language = Mock(side_effect=track_lang_call)
+        orchestrator.language_service.detect_language_config_driven = Mock(side_effect=track_lang_call)
         
         # Run orchestrator
         import asyncio

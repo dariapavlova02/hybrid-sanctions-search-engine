@@ -260,6 +260,19 @@ class UnicodeService:
 
         return text
 
+    async def normalize_unicode(self, text: str, aggressive: bool = False) -> Dict[str, Any]:
+        """
+        Async wrapper for normalize_text method
+        
+        Args:
+            text: Input text
+            aggressive: Aggressive normalization (may change meaning)
+            
+        Returns:
+            Dict with normalized text and metadata
+        """
+        return self.normalize_text(text, aggressive)
+
     def normalize_text(self, text: str, aggressive: bool = False) -> Dict[str, Any]:
         """
         Unicode normalization of text with focus on preventing FN

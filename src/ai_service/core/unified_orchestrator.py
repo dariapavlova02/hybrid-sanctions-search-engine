@@ -133,6 +133,11 @@ class UnifiedOrchestrator:
             f"variants={self.enable_variants}, embeddings={self.enable_embeddings}"
         )
 
+    async def _maybe_await(self, x):
+        """Helper to await if needed"""
+        import inspect
+        return await x if inspect.isawaitable(x) else x
+
     async def process(
         self,
         text: str,
@@ -199,9 +204,9 @@ class UnifiedOrchestrator:
                 logger.debug("Stage 2: Smart Filter")
                 layer_start = time.time()
 
-                filter_result = await self.smart_filter_service.should_process(
+                filter_result = await self._maybe_await(self.smart_filter_service.should_process(
                     context.sanitized_text
-                )
+                ))
                 context.should_process = filter_result.should_process
                 context.metadata["smart_filter"] = {
                     "should_process": filter_result.should_process,
@@ -229,10 +234,10 @@ class UnifiedOrchestrator:
             layer_start = time.time()
 
             # Language detection EXPECTS unicode-normalized input
-            unicode_result = self.unicode_service.normalize_text(
+            unicode_result = await self.unicode_service.normalize_unicode(
                 context.sanitized_text
             )
-            unicode_normalized = unicode_result.get("normalized_text", context.sanitized_text)
+            unicode_normalized = unicode_result.get("normalized", context.sanitized_text)
 
             if self.metrics_service:
                 self.metrics_service.record_timer('processing.layer.unicode_normalization', time.time() - layer_start)
@@ -287,9 +292,9 @@ class UnifiedOrchestrator:
             logger.debug("Stage 6: Signals Extraction")
             layer_start = time.time()
 
-            signals_result = await self.signals_service.extract_signals(
+            signals_result = await self._maybe_await(self.signals_service.extract_signals(
                 text=context.original_text, normalization_result=norm_result, language=context.language
-            )
+            ))
 
             if self.metrics_service:
                 self.metrics_service.record_timer('processing.layer.signals', time.time() - layer_start)
@@ -308,9 +313,9 @@ class UnifiedOrchestrator:
                 layer_start = time.time()
                 try:
                     if self.variants_service is not None:
-                        variants = await self.variants_service.generate_variants(
+                        variants = await self._maybe_await(self.variants_service.generate_variants(
                             norm_result.normalized, context.language
-                        )
+                        ))
                     else:
                         logger.debug("Variants service not available - skipping variant generation")
                     if self.metrics_service:
@@ -334,9 +339,9 @@ class UnifiedOrchestrator:
                 layer_start = time.time()
                 try:
                     if self.embeddings_service is not None:
-                        embeddings = await self.embeddings_service.generate_embeddings(
+                        embeddings = await self._maybe_await(self.embeddings_service.generate_embeddings(
                             norm_result.normalized
-                        )
+                        ))
                     else:
                         logger.debug("Embeddings service not available - skipping embedding generation")
                     if self.metrics_service:
@@ -596,7 +601,8 @@ class UnifiedOrchestrator:
         validation_result = await self.validation_service.validate_and_sanitize(text)
         sanitized = validation_result.get("sanitized_text", text)
 
-        unicode_normalized = await self.unicode_service.normalize_unicode(sanitized)
+        unicode_result = await self.unicode_service.normalize_unicode(sanitized)
+        unicode_normalized = unicode_result.get("normalized", sanitized)
 
         return await self.normalization_service.normalize_async(
             unicode_normalized, **norm_flags
