@@ -2003,13 +2003,20 @@ class NormalizationService:
 
             # If no surname parse, use original logic
             if not best_parse:
+                # First, try to find a parse that's already in nominative case
                 for parse in target_parses:
-                    # Prefer parses that don't match the original word (indicating proper normalization)
-                    if parse.normal_form != parse.word:
+                    if "nomn" in str(parse.tag.case):
                         best_parse = parse
                         break
-                    elif best_parse is None:
-                        best_parse = parse
+                
+                # If no nominative found, prefer parses that don't match the original word
+                if not best_parse:
+                    for parse in target_parses:
+                        if parse.normal_form != parse.word:
+                            best_parse = parse
+                            break
+                        elif best_parse is None:
+                            best_parse = parse
 
             # If no nominative found, try to inflect any parse to nominative
             if not best_parse:
@@ -2315,6 +2322,12 @@ class NormalizationService:
         # Given names like Сергей: 'Сергея' -> 'Сергей'
         if tl.endswith("ея") and len(tl) > 3:
             cand = tl[:-2] + "ей"
+            return cand.capitalize()
+
+        # Genitive/dative of -ы ending names: -ы -> (remove ending)
+        # This covers cases like Александры -> Александр, Петры -> Петр
+        if tl.endswith("ы") and len(tl) > 3 and tl[-2] not in ru_vowels:
+            cand = tl[:-1]
             return cand.capitalize()
 
         return None

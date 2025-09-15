@@ -18,33 +18,35 @@ class TestMorphologyIntegration:
     
     def test_service_initialization(self, advanced_normalization_service):
         """Test service initialization with both analyzers"""
-        assert hasattr(advanced_normalization_service, 'uk_morphology')
-        assert hasattr(advanced_normalization_service, 'ru_morphology')
+        assert hasattr(advanced_normalization_service, 'morph_analyzers')
         
         # Check that both analyzers are initialized
-        assert advanced_normalization_service.uk_morphology is not None
-        assert advanced_normalization_service.ru_morphology is not None
+        assert 'uk' in advanced_normalization_service.morph_analyzers
+        assert 'ru' in advanced_normalization_service.morph_analyzers
+        assert advanced_normalization_service.morph_analyzers['uk'] is not None
+        assert advanced_normalization_service.morph_analyzers['ru'] is not None
         
         # Check types
         from src.ai_service.layers.normalization.morphology.ukrainian_morphology import UkrainianMorphologyAnalyzer
         from src.ai_service.layers.normalization.morphology.russian_morphology import RussianMorphologyAnalyzer
         
-        assert isinstance(advanced_normalization_service.uk_morphology, UkrainianMorphologyAnalyzer)
-        assert isinstance(advanced_normalization_service.ru_morphology, RussianMorphologyAnalyzer)
+        assert isinstance(advanced_normalization_service.morph_analyzers['uk'], UkrainianMorphologyAnalyzer)
+        assert isinstance(advanced_normalization_service.morph_analyzers['ru'], RussianMorphologyAnalyzer)
     
     def test_ukrainian_name_analysis(self, advanced_normalization_service):
         """Test Ukrainian name analysis through Ukrainian analyzer"""
         # Ukrainian name with characteristic symbols
         uk_name = "Сергій"
         
-        result = advanced_normalization_service._analyze_single_name(uk_name, 'uk')
+        result = advanced_normalization_service.normalize_sync(uk_name, language='uk')
         
         assert result is not None
         # Check that result contains expected fields
-        assert 'name' in result or 'normalized_text' in result
+        assert hasattr(result, 'normalized')
+        assert hasattr(result, 'tokens')
         
         # Check that Ukrainian analyzer is used
-        uk_analyzer = advanced_normalization_service.uk_morphology
+        uk_analyzer = advanced_normalization_service.morph_analyzers['uk']
         uk_result = uk_analyzer.analyze_word(uk_name)
         # May be empty if morphology is not working properly
         # assert len(uk_result) > 0
@@ -54,14 +56,15 @@ class TestMorphologyIntegration:
         # Russian name with characteristic symbols
         ru_name = "Сергей"
         
-        result = advanced_normalization_service._analyze_single_name(ru_name, 'ru')
+        result = advanced_normalization_service.normalize_sync(ru_name, language='ru')
         
         assert result is not None
         # Check that result contains expected fields
-        assert 'name' in result or 'normalized_text' in result
+        assert hasattr(result, 'normalized')
+        assert hasattr(result, 'tokens')
         
         # Check that Russian analyzer is used
-        ru_analyzer = advanced_normalization_service.ru_morphology
+        ru_analyzer = advanced_normalization_service.morph_analyzers['ru']
         ru_result = ru_analyzer.analyze_word(ru_name)
         # May be empty if morphology is not working properly
         # assert len(ru_result) > 0
@@ -98,17 +101,17 @@ class TestMorphologyIntegration:
         for name in names:
             if 'і' in name or 'ї' in name or 'є' in name:
                 # Ukrainian name
-                result = advanced_normalization_service._analyze_single_name(name, 'uk')
+                result = advanced_normalization_service.normalize_sync(name, language='uk')
                 assert result is not None
                 # Ukrainian name analyzed
             elif 'ё' in name or 'ъ' in name or 'ы' in name:
                 # Russian name
-                result = advanced_normalization_service._analyze_single_name(name, 'ru')
+                result = advanced_normalization_service.normalize_sync(name, language='ru')
                 assert result is not None
                 # Russian name analyzed
             else:
                 # English name
-                result = advanced_normalization_service._analyze_single_name(name, 'en')
+                result = advanced_normalization_service.normalize_sync(name, language='en')
                 assert result is not None
                 # English name analyzed
     
@@ -116,14 +119,14 @@ class TestMorphologyIntegration:
         """Test fallback behavior on errors"""
         # Test with invalid data
         invalid_name = None
-        result = advanced_normalization_service._analyze_single_name(invalid_name, 'ru')
+        result = advanced_normalization_service.normalize_sync(invalid_name, language='ru')
         
         # Should return basic result for None input
         assert result is not None
         
         # Test with empty name
         empty_name = ""
-        result = advanced_normalization_service._analyze_single_name(empty_name, 'ru')
+        result = advanced_normalization_service.normalize_sync(empty_name, language='ru')
         
         # Should handle correctly
         assert result is not None
@@ -132,13 +135,13 @@ class TestMorphologyIntegration:
         """Test complete advanced normalization pipeline"""
         # Test Ukrainian text
         uk_text = "Сергій"
-        uk_result = advanced_normalization_service._analyze_single_name(uk_text, 'uk')
+        uk_result = advanced_normalization_service.normalize_sync(uk_text, language='uk')
         
         assert uk_result is not None
         
         # Test Russian text
         ru_text = "Сергей"
-        ru_result = advanced_normalization_service._analyze_single_name(ru_text, 'ru')
+        ru_result = advanced_normalization_service.normalize_sync(ru_text, language='ru')
         
         assert ru_result is not None
     
@@ -146,13 +149,13 @@ class TestMorphologyIntegration:
         """Test automatic language detection"""
         # Text with Ukrainian symbols
         uk_text = "Сергій Володимир"
-        uk_result = advanced_normalization_service._analyze_single_name(uk_text, 'uk')
+        uk_result = advanced_normalization_service.normalize_sync(uk_text, language='uk')
         
         assert uk_result is not None
         
         # Text with Russian symbols
         ru_text = "Сергей Владимир"
-        ru_result = advanced_normalization_service._analyze_single_name(ru_text, 'ru')
+        ru_result = advanced_normalization_service.normalize_sync(ru_text, language='ru')
         
         assert ru_result is not None
     
