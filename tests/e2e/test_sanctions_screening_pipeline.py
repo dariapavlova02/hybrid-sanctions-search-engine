@@ -24,22 +24,24 @@ class TestSanctionsScreeningPipelineE2E:
         # Mock embedding service
         orchestrator.embedding_service = Mock()
         orchestrator.embedding_service.generate_embeddings = AsyncMock(
-            return_value={'embeddings': [0.1] * 384}  # Valid 384-dim vector
+            return_value={"embeddings": [0.1] * 384}  # Valid 384-dim vector
         )
 
         # Mock language detection
         orchestrator.language_service = Mock()
         orchestrator.language_service.detect_language.return_value = {
-            'language': 'uk',
-            'confidence': 0.9,
-            'method': 'cyrillic_ukrainian'
+            "language": "uk",
+            "confidence": 0.9,
+            "method": "cyrillic_ukrainian",
         }
 
         # Mock normalization
         orchestrator.normalization_service = Mock()
         mock_norm_result = Mock()
-        mock_norm_result.normalized = 'normalized text'
-        orchestrator.normalization_service.normalize = AsyncMock(return_value=mock_norm_result)
+        mock_norm_result.normalized = "normalized text"
+        orchestrator.normalization_service.normalize = AsyncMock(
+            return_value=mock_norm_result
+        )
 
         return orchestrator
 
@@ -48,29 +50,26 @@ class TestSanctionsScreeningPipelineE2E:
         """Create full screening pipeline for E2E testing"""
         # return MultiTierScreeningService(orchestrator_service=mock_orchestrator)  # Module not found
         pipeline = AsyncMock()
-        
+
         # Create a mock result object with the expected attributes
         mock_result = Mock()
         mock_result.risk_level = RiskLevel.AUTO_HIT
         mock_result.final_confidence = 0.95
-        mock_result.tiers_executed = ['tier1', 'tier2']
+        mock_result.tiers_executed = ["tier1", "tier2"]
         mock_result.processing_time_ms = 150
-        mock_result.audit_trail = {'tiers': ['tier1', 'tier2']}
-        mock_result.matches = ['sanctioned_individual']
-        mock_result.reasoning = 'High confidence match with sanctions list'
-        
+        mock_result.audit_trail = {"tiers": ["tier1", "tier2"]}
+        mock_result.matches = ["sanctioned_individual"]
+        mock_result.reasoning = "High confidence match with sanctions list"
+
         pipeline.screen_entity.return_value = mock_result
         return pipeline
 
+    @pytest.mark.asyncio
     async def test_high_risk_sanctioned_individual(self, screening_pipeline):
         """Test E2E screening of high-risk sanctioned individual"""
         # Arrange
         sanctioned_name = "Vladimir Putin"
-        metadata = {
-            'entity_type': 'PERSON',
-            'country': 'RU',
-            'birthdate': '1952-10-07'
-        }
+        metadata = {"entity_type": "PERSON", "country": "RU", "birthdate": "1952-10-07"}
 
         # Act
         result = await screening_pipeline.screen_entity(sanctioned_name, metadata)
@@ -80,16 +79,14 @@ class TestSanctionsScreeningPipelineE2E:
         assert result.final_confidence > 0.7
         assert len(result.tiers_executed) > 0
         assert result.processing_time_ms > 0
-        assert 'tiers' in result.audit_trail
+        assert "tiers" in result.audit_trail
 
+    @pytest.mark.asyncio
     async def test_ukrainian_surname_pattern_detection(self, screening_pipeline):
         """Test E2E screening with Ukrainian surname pattern"""
         # Arrange
         ukrainian_name = "Petro Poroshenko"
-        metadata = {
-            'entity_type': 'PERSON',
-            'country': 'UA'
-        }
+        metadata = {"entity_type": "PERSON", "country": "UA"}
 
         # Act
         result = await screening_pipeline.screen_entity(ukrainian_name, metadata)
@@ -100,18 +97,18 @@ class TestSanctionsScreeningPipelineE2E:
         assert result.processing_time_ms > 0
 
         # Should detect Ukrainian patterns in some tier
-        tier_methods = [tier.get('method', '') for tier in result.audit_trail.get('tiers', [])]
+        tier_methods = [
+            tier.get("method", "") for tier in result.audit_trail.get("tiers", [])
+        ]
         # Note: Method names may have changed, so we just check that tiers were executed
         assert len(tier_methods) > 0, "Should have executed some tiers"
 
+    @pytest.mark.asyncio
     async def test_low_risk_common_name(self, screening_pipeline):
         """Test E2E screening of low-risk common name"""
         # Arrange
         common_name = "John Smith"
-        metadata = {
-            'entity_type': 'PERSON',
-            'country': 'US'
-        }
+        metadata = {"entity_type": "PERSON", "country": "US"}
 
         # Act
         result = await screening_pipeline.screen_entity(common_name, metadata)
@@ -137,6 +134,7 @@ class TestSanctionsScreeningPipelineE2E:
         assert len(result.tiers_executed) > 0
         assert result.processing_time_ms > 0
 
+    @pytest.mark.asyncio
     async def test_homoglyph_obfuscation_detection(self, screening_pipeline):
         """Test E2E detection of homoglyph obfuscation"""
         # Arrange
@@ -180,11 +178,7 @@ class TestSanctionsScreeningPipelineE2E:
         """Test E2E screening in payment context"""
         # Arrange
         payment_description = "Transfer to Petro Poroshenko for consulting services"
-        metadata = {
-            'transaction_type': 'PAYMENT',
-            'amount': 10000,
-            'currency': 'USD'
-        }
+        metadata = {"transaction_type": "PAYMENT", "amount": 10000, "currency": "USD"}
 
         # Act
         result = await screening_pipeline.screen_entity(payment_description, metadata)
@@ -194,6 +188,7 @@ class TestSanctionsScreeningPipelineE2E:
         assert result.processing_time_ms > 0
         # Should extract and process the name from payment context
 
+    @pytest.mark.asyncio
     async def test_early_stopping_high_confidence(self, screening_pipeline):
         """Test E2E early stopping on high confidence match"""
         # Arrange
@@ -211,10 +206,10 @@ class TestSanctionsScreeningPipelineE2E:
         """Test E2E screening with multi-language entity variants"""
         # Arrange
         multilang_variants = [
-            "Владимир Путин",      # Russian
-            "Vladimir Putin",      # English
-            "Володимир Путін",     # Ukrainian
-            "Путин В.В."          # Abbreviated
+            "Владимир Путин",  # Russian
+            "Vladimir Putin",  # English
+            "Володимир Путін",  # Ukrainian
+            "Путин В.В.",  # Abbreviated
         ]
 
         results = []
@@ -242,14 +237,11 @@ class TestSanctionsScreeningPipelineE2E:
             "John Smith",
             "Maria Gonzalez",
             "Test Name",  # Chinese characters
-            "Mohammed Ali"  # Arabic characters
+            "Mohammed Ali",  # Arabic characters
         ]
 
         # Act - Process concurrently
-        tasks = [
-            screening_pipeline.screen_entity(entity)
-            for entity in test_entities
-        ]
+        tasks = [screening_pipeline.screen_entity(entity) for entity in test_entities]
         results = await asyncio.gather(*tasks)
 
         # Assert
@@ -270,17 +262,20 @@ class TestSanctionsScreeningPipelineE2E:
         test_text = "Error Recovery Test"
 
         # Mock one tier to fail
-        with patch.object(screening_pipeline, '_execute_ac_tier',
-                         side_effect=Exception("AC tier failed")):
-
+        with patch.object(
+            screening_pipeline,
+            "_execute_ac_tier",
+            side_effect=Exception("AC tier failed"),
+        ):
             # Act
             result = await screening_pipeline.screen_entity(test_text)
 
             # Assert
             # Should still complete with other tiers
-            assert hasattr(result, 'input_text')
+            assert hasattr(result, "input_text")
             # May have fewer tiers executed due to error
 
+    @pytest.mark.asyncio
     async def test_audit_trail_completeness(self, screening_pipeline):
         """Test E2E audit trail completeness"""
         # Arrange
@@ -290,13 +285,12 @@ class TestSanctionsScreeningPipelineE2E:
         result = await screening_pipeline.screen_entity(test_entity)
 
         # Assert
-        assert 'tiers' in result.audit_trail
-        assert 'start_time' in result.audit_trail
-
-        if 'tiers' in result.audit_trail:
-            for tier_info in result.audit_trail['tiers']:
-                assert 'tier' in tier_info
-                assert 'execution_time_ms' in tier_info
+        assert "tiers" in result.audit_trail
+        assert "start_time" in result.audit_trail
+        if "tiers" in result.audit_trail:
+            for tier_info in result.audit_trail["tiers"]:
+                assert "tier" in tier_info
+                assert "execution_time_ms" in tier_info
 
     async def test_risk_level_classification_accuracy(self, screening_pipeline):
         """Test E2E risk level classification accuracy"""
@@ -312,7 +306,9 @@ class TestSanctionsScreeningPipelineE2E:
             result = await screening_pipeline.screen_entity(test_name)
 
             # Note: Risk level classification may have changed, so we just check that risk level is valid
-            assert result.risk_level is not None, f"Entity '{test_name}' should have a valid risk level"
+            assert (
+                result.risk_level is not None
+            ), f"Entity '{test_name}' should have a valid risk level"
 
     async def test_vector_similarity_integration(self, screening_pipeline):
         """Test E2E vector similarity integration in kNN tier"""
@@ -334,15 +330,15 @@ class TestSanctionsScreeningPipelineE2E:
         metrics = screening_pipeline.get_screening_metrics()
 
         # Assert
-        assert 'total_screenings' in metrics
-        assert 'tier_executions' in metrics
-        assert 'tier_performance' in metrics
-        assert 'risk_level_distribution' in metrics
-        assert 'early_stops' in metrics
+        assert "total_screenings" in metrics
+        assert "tier_executions" in metrics
+        assert "tier_performance" in metrics
+        assert "risk_level_distribution" in metrics
+        assert "early_stops" in metrics
 
         # All tier types should be represented
-        for tier_name in ['ac_exact', 'blocking', 'knn_vector', 'reranking']:
-            assert tier_name in metrics['tier_executions']
+        for tier_name in ["ac_exact", "blocking", "knn_vector", "reranking"]:
+            assert tier_name in metrics["tier_executions"]
 
     async def test_configuration_driven_processing(self, screening_pipeline):
         """Test E2E configuration-driven processing"""
@@ -361,30 +357,32 @@ class TestSanctionsScreeningPipelineE2E:
 
         # Execution should respect configuration
         config_issues = screening_config.validate_config()
-        assert len([issue for issue in config_issues if "critical" in issue.lower()]) == 0
+        assert (
+            len([issue for issue in config_issues if "critical" in issue.lower()]) == 0
+        )
 
+    @pytest.mark.asyncio
     async def test_sanctions_data_format_compatibility(self, screening_pipeline):
         """Test E2E compatibility with actual sanctions data format"""
         # Arrange - Simulate real sanctions data structure
         sanctions_entity = {
-            'name': 'Test Entity',
-            'name_en': 'Test Entity',
-            'name_ru': 'Test Entity',
-            'entity_type': 'PERSON',
-            'birthdate': '1970-01-01',
-            'itn': '1234567890',
-            'status': 'ACTIVE',
-            'source': 'TEST_SANCTIONS_LIST'
+            "name": "Test Entity",
+            "name_en": "Test Entity",
+            "name_ru": "Test Entity",
+            "entity_type": "PERSON",
+            "birthdate": "1970-01-01",
+            "itn": "1234567890",
+            "status": "ACTIVE",
+            "source": "TEST_SANCTIONS_LIST",
         }
 
         # Act
         result = await screening_pipeline.screen_entity(
-            sanctions_entity['name'],
-            entity_metadata=sanctions_entity
+            sanctions_entity["name"], entity_metadata=sanctions_entity
         )
 
         # Assert
-        assert result.input_text == sanctions_entity['name']
+        assert result.input_text == sanctions_entity["name"]
         assert len(result.tiers_executed) > 0
         assert result.processing_time_ms > 0
 
@@ -395,7 +393,7 @@ class TestSanctionsScreeningPipelineE2E:
             ("English Name", "en"),
             ("Ukrainian Name", "uk"),
             ("Russian Name", "ru"),
-            ("Mixed Ukrainian English", "uk")  # Should prioritize Cyrillic
+            ("Mixed Ukrainian English", "uk"),  # Should prioritize Cyrillic
         ]
 
         # Act & Assert
@@ -416,7 +414,7 @@ class TestSanctionsScreeningRobustness:
         mock_orchestrator = Mock()
         mock_orchestrator.embedding_service = Mock()
         mock_orchestrator.embedding_service.generate_embeddings = AsyncMock(
-            return_value={'embeddings': [0.1] * 384}
+            return_value={"embeddings": [0.1] * 384}
         )
         # return MultiTierScreeningService(orchestrator_service=mock_orchestrator)  # Module not found
         return Mock()  # Placeholder
@@ -439,10 +437,10 @@ class TestSanctionsScreeningRobustness:
         # Arrange
         unicode_test_cases = [
             "Test Name",  # Emoji
-            "Test\u0000Name",      # Null character
-            "Test\u200eName",      # Left-to-right mark
-            "Hebrew Name Arabic",   # Mixed RTL/LTR
-            "Test\U0001F4A9Name"   # 4-byte Unicode
+            "Test\u0000Name",  # Null character
+            "Test\u200eName",  # Left-to-right mark
+            "Hebrew Name Arabic",  # Mixed RTL/LTR
+            "Test\U0001f4a9Name",  # 4-byte Unicode
         ]
 
         # Act & Assert
@@ -461,8 +459,7 @@ class TestSanctionsScreeningRobustness:
         # Act
         start_time = asyncio.get_event_loop().time()
         tasks = [
-            robust_screening_pipeline.screen_entity(entity)
-            for entity in test_entities
+            robust_screening_pipeline.screen_entity(entity) for entity in test_entities
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         end_time = asyncio.get_event_loop().time()

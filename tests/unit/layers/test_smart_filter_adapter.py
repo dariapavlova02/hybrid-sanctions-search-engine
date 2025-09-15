@@ -6,18 +6,19 @@ Tests the adapter that wraps SmartFilterService to match new contracts
 and implements CLAUDE.md specification.
 """
 
-import pytest
 import sys
 from pathlib import Path
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 
 # Add project to path
 project_root = Path(__file__).parent.parent.parent.parent / "src"
 sys.path.insert(0, str(project_root))
 
+from ai_service.contracts import SmartFilterResult
 from ai_service.layers.smart_filter.smart_filter_adapter import SmartFilterAdapter
 from ai_service.layers.smart_filter.smart_filter_service import FilterResult
-from ai_service.contracts import SmartFilterResult
 
 
 class TestSmartFilterAdapter:
@@ -34,6 +35,7 @@ class TestSmartFilterAdapter:
 
         return adapter, mock_service
 
+    @pytest.mark.asyncio
     async def test_should_process_basic(self, adapter):
         """Test basic should_process functionality"""
         adapter_instance, mock_service = adapter
@@ -47,16 +49,16 @@ class TestSmartFilterAdapter:
                 "name_detector": {
                     "has_proper_names": True,
                     "has_initials": False,
-                    "confidence": 0.8
+                    "confidence": 0.8,
                 },
                 "company_detector": {
                     "has_legal_forms": True,
                     "has_quoted_names": True,
-                    "confidence": 0.9
-                }
+                    "confidence": 0.9,
+                },
             },
             processing_recommendation="recommend",
-            estimated_complexity="medium"
+            estimated_complexity="medium",
         )
 
         mock_service.should_process_text = Mock(return_value=mock_filter_result)
@@ -68,7 +70,9 @@ class TestSmartFilterAdapter:
         assert isinstance(result, SmartFilterResult)
         assert result.should_process is True
         assert result.confidence == 0.85
-        assert result.classification == "must_process"  # High confidence (0.85) maps to must_process
+        assert (
+            result.classification == "must_process"
+        )  # High confidence (0.85) maps to must_process
         assert "name" in result.detected_signals
         assert "company" in result.detected_signals
 
@@ -78,6 +82,7 @@ class TestSmartFilterAdapter:
         assert result.details["name_signals"]["has_capitals"] is True
         assert result.details["company_signals"]["has_legal_forms"] is True
 
+    @pytest.mark.asyncio
     async def test_classification_mapping(self, adapter):
         """Test confidence to classification mapping per CLAUDE.md"""
         adapter_instance, mock_service = adapter
@@ -96,16 +101,18 @@ class TestSmartFilterAdapter:
                 detected_signals=[],
                 signal_details={},
                 processing_recommendation="test",
-                estimated_complexity="test"
+                estimated_complexity="test",
             )
 
             mock_service.should_process_text = Mock(return_value=mock_result)
 
             result = await adapter_instance.should_process("test text")
 
-            assert result.classification == expected_classification, \
-                f"Confidence {confidence} should map to {expected_classification}, got {result.classification}"
+            assert (
+                result.classification == expected_classification
+            ), f"Confidence {confidence} should map to {expected_classification}, got {result.classification}"
 
+    @pytest.mark.asyncio
     async def test_name_signals_extraction(self, adapter):
         """Test name signals extraction per CLAUDE.md specification"""
         adapter_instance, mock_service = adapter
@@ -120,11 +127,11 @@ class TestSmartFilterAdapter:
                     "has_initials": True,
                     "has_patronymic_patterns": True,
                     "has_diminutives": False,
-                    "confidence": 0.85
+                    "confidence": 0.85,
                 }
             },
             processing_recommendation="recommend",
-            estimated_complexity="medium"
+            estimated_complexity="medium",
         )
 
         mock_service.should_process_text = Mock(return_value=mock_result)
@@ -152,11 +159,11 @@ class TestSmartFilterAdapter:
                     "has_banking_keywords": False,
                     "has_quoted_names": True,
                     "has_organization_patterns": True,
-                    "confidence": 0.9
+                    "confidence": 0.9,
                 }
             },
             processing_recommendation="must_process",
-            estimated_complexity="high"
+            estimated_complexity="high",
         )
 
         mock_service.should_process_text = Mock(return_value=mock_result)
@@ -170,6 +177,7 @@ class TestSmartFilterAdapter:
         assert company_signals["has_org_patterns"] is True
         assert company_signals["confidence"] == 0.9
 
+    @pytest.mark.asyncio
     async def test_payment_signals_extraction(self, adapter):
         """Test payment context signals extraction per CLAUDE.md specification"""
         adapter_instance, mock_service = adapter
@@ -182,11 +190,11 @@ class TestSmartFilterAdapter:
                 "payment_detector": {
                     "has_payment_context": True,
                     "payment_keywords": ["платеж", "оплата"],
-                    "payment_confidence": 0.8
+                    "payment_confidence": 0.8,
                 }
             },
             processing_recommendation="recommend",
-            estimated_complexity="medium"
+            estimated_complexity="medium",
         )
 
         mock_service.should_process_text = Mock(return_value=mock_result)
@@ -214,6 +222,7 @@ class TestSmartFilterAdapter:
         assert "fallback" in result.detected_signals
         assert "error" in result.details
 
+    @pytest.mark.asyncio
     async def test_initialization_required(self):
         """Test that adapter requires initialization"""
         adapter = SmartFilterAdapter()
@@ -231,11 +240,11 @@ class TestSmartFilterAdapter:
             detected_signals=[
                 "name_pattern",
                 {"type": "company_legal_form", "details": "ТОВ"},
-                "payment_context"
+                "payment_context",
             ],
             signal_details={},
             processing_recommendation="recommend",
-            estimated_complexity="medium"
+            estimated_complexity="medium",
         )
 
         mock_service.should_process_text = Mock(return_value=mock_result)
@@ -256,7 +265,7 @@ class TestSmartFilterAdapter:
             detected_signals=[],
             signal_details={},
             processing_recommendation="recommend",
-            estimated_complexity="low"
+            estimated_complexity="low",
         )
 
         mock_service.should_process_text = Mock(return_value=mock_result)
@@ -270,6 +279,7 @@ class TestSmartFilterAdapter:
 class TestSmartFilterAdapterIntegration:
     """Integration tests for SmartFilterAdapter with actual service"""
 
+    @pytest.mark.asyncio
     async def test_full_initialization(self):
         """Test full adapter initialization"""
         adapter = SmartFilterAdapter()
@@ -277,14 +287,17 @@ class TestSmartFilterAdapterIntegration:
         # Should initialize without errors
         await adapter.initialize()
 
+    @pytest.mark.asyncio
+    async def test_should_process_basic_functionality(self):
+        """Test basic should_process functionality"""
         # Should be able to process
         result = await adapter.should_process("ТОВ Тестова Компанія")
 
         assert isinstance(result, SmartFilterResult)
-        assert hasattr(result, 'should_process')
-        assert hasattr(result, 'confidence')
-        assert hasattr(result, 'classification')
-        assert hasattr(result, 'detected_signals')
+        assert hasattr(result, "should_process")
+        assert hasattr(result, "confidence")
+        assert hasattr(result, "classification")
+        assert hasattr(result, "detected_signals")
 
     async def test_claude_md_compliance(self):
         """Test compliance with CLAUDE.md Layer 2 specification"""
@@ -295,7 +308,10 @@ class TestSmartFilterAdapterIntegration:
         test_cases = [
             ("Іван Петрович Коваленко", ["name"]),
             ('ТОВ "ПриватБанк"', ["company"]),
-            ("Платеж в пользу ФОП Іваненко", ["name", "company"]),  # payment_context detection may not work in test environment
+            (
+                "Платеж в пользу ФОП Іваненко",
+                ["name", "company"],
+            ),  # payment_context detection may not work in test environment
             ("клавиатура дисплей стіл", []),  # Should not detect names
         ]
 
@@ -304,14 +320,20 @@ class TestSmartFilterAdapterIntegration:
 
             # Verify basic structure
             assert isinstance(result, SmartFilterResult)
-            assert result.classification in ["must_process", "recommend", "maybe", "skip"]
+            assert result.classification in [
+                "must_process",
+                "recommend",
+                "maybe",
+                "skip",
+            ]
             assert 0.0 <= result.confidence <= 1.0
 
             # Verify signal detection aligns with expectations
             for expected_type in expected_signal_types:
                 # Should have some signal related to expected type
-                assert any(expected_type in signal for signal in result.detected_signals), \
-                    f"Expected {expected_type} signal for text '{text}', got {result.detected_signals}"
+                assert any(
+                    expected_type in signal for signal in result.detected_signals
+                ), f"Expected {expected_type} signal for text '{text}', got {result.detected_signals}"
 
 
 if __name__ == "__main__":

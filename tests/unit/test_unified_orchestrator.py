@@ -24,7 +24,7 @@ from ai_service.contracts import (
     SmartFilterResult,
     TokenTrace,
     SignalsPerson,
-    SignalsOrganization
+    SignalsOrganization,
 )
 from ai_service.exceptions import ServiceInitializationError
 
@@ -38,29 +38,32 @@ class TestUnifiedOrchestrator:
 
         # Mock validation service
         validation_service = Mock()
-        validation_service.validate_and_sanitize = AsyncMock(return_value={
-            "sanitized_text": "test input",
-            "should_process": True,
-            "warnings": [],
-            "is_valid": True
-        })
+        validation_service.validate_and_sanitize = AsyncMock(
+            return_value={
+                "sanitized_text": "test input",
+                "should_process": True,
+                "warnings": [],
+                "is_valid": True,
+            }
+        )
 
         # Mock smart filter service
         smart_filter_service = Mock()
-        smart_filter_service.should_process_text_async = AsyncMock(return_value=SmartFilterResult(
-            should_process=True,
-            confidence=0.8,
-            classification="recommend",
-            detected_signals=["name"],
-            details={"name_signals": {"has_capitals": True}}
-        ))
+        smart_filter_service.should_process_text_async = AsyncMock(
+            return_value=SmartFilterResult(
+                should_process=True,
+                confidence=0.8,
+                classification="recommend",
+                detected_signals=["name"],
+                details={"name_signals": {"has_capitals": True}},
+            )
+        )
 
         # Mock language service
         language_service = Mock()
-        language_service.detect_language = AsyncMock(return_value={
-            "language": "uk",
-            "confidence": 0.9
-        })
+        language_service.detect_language = AsyncMock(
+            return_value={"language": "uk", "confidence": 0.9}
+        )
 
         # Mock unicode service
         unicode_service = Mock()
@@ -68,23 +71,36 @@ class TestUnifiedOrchestrator:
 
         # Mock normalization service (THE CORE)
         normalization_service = Mock()
-        normalization_service.normalize_async = AsyncMock(return_value=NormalizationResult(
-            normalized="Іван Петров",
-            tokens=["Іван", "Петров"],
-            trace=[
-                TokenTrace(token="Іван", role="given", rule="dictionary", output="Іван"),
-                TokenTrace(token="Петров", role="surname", rule="dictionary", output="Петров")
-            ],
-            success=True,
-            persons_core=[["Іван", "Петров"]]
-        ))
+        normalization_service.normalize_async = AsyncMock(
+            return_value=NormalizationResult(
+                normalized="Іван Петров",
+                tokens=["Іван", "Петров"],
+                trace=[
+                    TokenTrace(
+                        token="Іван", role="given", rule="dictionary", output="Іван"
+                    ),
+                    TokenTrace(
+                        token="Петров",
+                        role="surname",
+                        rule="dictionary",
+                        output="Петров",
+                    ),
+                ],
+                success=True,
+                persons_core=[["Іван", "Петров"]],
+            )
+        )
 
         # Mock signals service
         signals_service = Mock()
-        signals_service.extract_async = AsyncMock(return_value=SignalsResult(
-            persons=[SignalsPerson(core=["Іван", "Петров"], full_name="Іван Петров")],
-            confidence=0.85
-        ))
+        signals_service.extract_async = AsyncMock(
+            return_value=SignalsResult(
+                persons=[
+                    SignalsPerson(core=["Іван", "Петров"], full_name="Іван Петров")
+                ],
+                confidence=0.85,
+            )
+        )
 
         # Mock optional services
         variants_service = Mock()
@@ -101,7 +117,7 @@ class TestUnifiedOrchestrator:
             "normalization_service": normalization_service,
             "signals_service": signals_service,
             "variants_service": variants_service,
-            "embeddings_service": embeddings_service
+            "embeddings_service": embeddings_service,
         }
 
     @pytest.fixture
@@ -118,9 +134,10 @@ class TestUnifiedOrchestrator:
             embeddings_service=mock_services["embeddings_service"],
             enable_smart_filter=True,
             enable_variants=True,
-            enable_embeddings=True
+            enable_embeddings=True,
         )
 
+    @pytest.mark.asyncio
     async def test_complete_pipeline(self, orchestrator, mock_services):
         """Test complete 9-layer pipeline execution"""
 
@@ -130,7 +147,7 @@ class TestUnifiedOrchestrator:
             preserve_names=True,
             enable_advanced_features=True,
             generate_variants=True,
-            generate_embeddings=True
+            generate_embeddings=True,
         )
 
         # Verify result structure
@@ -148,7 +165,9 @@ class TestUnifiedOrchestrator:
 
         # Verify all services were called in order
         mock_services["validation_service"].validate_and_sanitize.assert_called_once()
-        mock_services["smart_filter_service"].should_process_text_async.assert_called_once()
+        mock_services[
+            "smart_filter_service"
+        ].should_process_text_async.assert_called_once()
         mock_services["language_service"].detect_language.assert_called_once()
         mock_services["unicode_service"].normalize_unicode.assert_called_once()
         mock_services["normalization_service"].normalize_async.assert_called_once()
@@ -156,14 +175,17 @@ class TestUnifiedOrchestrator:
         mock_services["variants_service"].generate_variants.assert_called_once()
         mock_services["embeddings_service"].generate_embeddings.assert_called_once()
 
-    async def test_normalization_flags_passed_correctly(self, orchestrator, mock_services):
+    @pytest.mark.asyncio
+    async def test_normalization_flags_passed_correctly(
+        self, orchestrator, mock_services
+    ):
         """Test that normalization flags are passed correctly to the service"""
 
         await orchestrator.process(
             text="Test",
             remove_stop_words=False,
             preserve_names=False,
-            enable_advanced_features=False
+            enable_advanced_features=False,
         )
 
         # Verify normalization service received correct flags
@@ -172,6 +194,7 @@ class TestUnifiedOrchestrator:
         assert call_args[1]["preserve_names"] is False
         assert call_args[1]["enable_advanced_features"] is False
 
+    @pytest.mark.asyncio
     async def test_smart_filter_skip_behavior(self, orchestrator, mock_services):
         """Test smart filter skip behavior when allow_smart_filter_skip=True"""
 
@@ -179,13 +202,15 @@ class TestUnifiedOrchestrator:
         orchestrator.allow_smart_filter_skip = True
 
         # Configure smart filter to suggest skipping
-        mock_services["smart_filter_service"].should_process = AsyncMock(return_value=SmartFilterResult(
-            should_process=False,
-            confidence=0.2,
-            classification="skip",
-            detected_signals=[],
-            details={}
-        ))
+        mock_services["smart_filter_service"].should_process = AsyncMock(
+            return_value=SmartFilterResult(
+                should_process=False,
+                confidence=0.2,
+                classification="skip",
+                detected_signals=[],
+                details={},
+            )
+        )
 
         result = await orchestrator.process(text="irrelevant noise text")
 
@@ -211,7 +236,7 @@ class TestUnifiedOrchestrator:
             # No optional services
             enable_smart_filter=False,
             enable_variants=False,
-            enable_embeddings=False
+            enable_embeddings=False,
         )
 
         result = await orchestrator.process(text="Test")
@@ -228,6 +253,7 @@ class TestUnifiedOrchestrator:
         mock_services["variants_service"].generate_variants.assert_not_called()
         mock_services["embeddings_service"].generate_embeddings.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_error_handling(self, orchestrator, mock_services):
         """Test error handling in the pipeline"""
 
@@ -248,13 +274,11 @@ class TestUnifiedOrchestrator:
 
         # Make normalization artificially slow
         import asyncio
+
         async def slow_normalize(*args, **kwargs):
             await asyncio.sleep(0.15)  # 150ms - above 100ms threshold
             return NormalizationResult(
-                normalized="test",
-                tokens=["test"],
-                trace=[],
-                success=True
+                normalized="test", tokens=["test"], trace=[], success=True
             )
 
         mock_services["normalization_service"].normalize_async = slow_normalize
@@ -270,9 +294,7 @@ class TestUnifiedOrchestrator:
 
         # Test normalize_async method
         result = await orchestrator.normalize_async(
-            text="Test",
-            language="uk",
-            remove_stop_words=True
+            text="Test", language="uk", remove_stop_words=True
         )
 
         assert isinstance(result, NormalizationResult)
@@ -280,9 +302,7 @@ class TestUnifiedOrchestrator:
 
         # Test extract_signals method
         norm_result = NormalizationResult(
-            normalized="Test",
-            tokens=["Test"],
-            trace=[]
+            normalized="Test", tokens=["Test"], trace=[] @ pytest.mark.asyncio
         )
 
         signals = await orchestrator.extract_signals("Test", norm_result)
@@ -300,8 +320,11 @@ class TestUnifiedOrchestrator:
         assert call_args is not None  # Service was called
         # Check that original text and normalization result were passed
         if len(call_args[0]) > 0:
-            assert isinstance(call_args[0][1], NormalizationResult)  # normalization result
+            assert isinstance(
+                call_args[0][1], NormalizationResult
+            )  # normalization result
 
+    @pytest.mark.asyncio
     async def test_trace_preservation(self, orchestrator, mock_services):
         """Test that token traces are preserved through the pipeline"""
 
@@ -317,10 +340,7 @@ class TestUnifiedOrchestrator:
     async def test_language_hint(self, orchestrator, mock_services):
         """Test language hint override"""
 
-        await orchestrator.process(
-            text="Test",
-            language_hint="en"
-        )
+        await orchestrator.process(text="Test", language_hint="en")
 
         # Should use hint instead of detection
         call_args = mock_services["normalization_service"].normalize_async.call_args
@@ -352,29 +372,32 @@ class TestUnifiedOrchestratorConstructor:
 
         # Mock validation service
         validation_service = Mock()
-        validation_service.validate_and_sanitize = AsyncMock(return_value={
-            "sanitized_text": "test input",
-            "should_process": True,
-            "warnings": [],
-            "is_valid": True
-        })
+        validation_service.validate_and_sanitize = AsyncMock(
+            return_value={
+                "sanitized_text": "test input",
+                "should_process": True,
+                "warnings": [],
+                "is_valid": True,
+            }
+        )
 
         # Mock smart filter service
         smart_filter_service = Mock()
-        smart_filter_service.should_process_text_async = AsyncMock(return_value=SmartFilterResult(
-            should_process=True,
-            confidence=0.8,
-            classification="recommend",
-            detected_signals=["name"],
-            details={"name_signals": {"has_capitals": True}}
-        ))
+        smart_filter_service.should_process_text_async = AsyncMock(
+            return_value=SmartFilterResult(
+                should_process=True,
+                confidence=0.8,
+                classification="recommend",
+                detected_signals=["name"],
+                details={"name_signals": {"has_capitals": True}},
+            )
+        )
 
         # Mock language service
         language_service = Mock()
-        language_service.detect_language = AsyncMock(return_value={
-            "language": "uk",
-            "confidence": 0.9
-        })
+        language_service.detect_language = AsyncMock(
+            return_value={"language": "uk", "confidence": 0.9}
+        )
 
         # Mock unicode service
         unicode_service = Mock()
@@ -382,23 +405,36 @@ class TestUnifiedOrchestratorConstructor:
 
         # Mock normalization service (THE CORE)
         normalization_service = Mock()
-        normalization_service.normalize_async = AsyncMock(return_value=NormalizationResult(
-            normalized="Іван Петров",
-            tokens=["Іван", "Петров"],
-            trace=[
-                TokenTrace(token="Іван", role="given", rule="dictionary", output="Іван"),
-                TokenTrace(token="Петров", role="surname", rule="dictionary", output="Петров")
-            ],
-            success=True,
-            persons_core=[["Іван", "Петров"]]
-        ))
+        normalization_service.normalize_async = AsyncMock(
+            return_value=NormalizationResult(
+                normalized="Іван Петров",
+                tokens=["Іван", "Петров"],
+                trace=[
+                    TokenTrace(
+                        token="Іван", role="given", rule="dictionary", output="Іван"
+                    ),
+                    TokenTrace(
+                        token="Петров",
+                        role="surname",
+                        rule="dictionary",
+                        output="Петров",
+                    ),
+                ],
+                success=True,
+                persons_core=[["Іван", "Петров"]],
+            )
+        )
 
         # Mock signals service
         signals_service = Mock()
-        signals_service.extract_async = AsyncMock(return_value=SignalsResult(
-            persons=[SignalsPerson(core=["Іван", "Петров"], full_name="Іван Петров")],
-            confidence=0.85
-        ))
+        signals_service.extract_async = AsyncMock(
+            return_value=SignalsResult(
+                persons=[
+                    SignalsPerson(core=["Іван", "Петров"], full_name="Іван Петров")
+                ],
+                confidence=0.85,
+            )
+        )
 
         # Mock optional services
         variants_service = Mock()
@@ -415,7 +451,7 @@ class TestUnifiedOrchestratorConstructor:
             "normalization_service": normalization_service,
             "signals_service": signals_service,
             "variants_service": variants_service,
-            "embeddings_service": embeddings_service
+            "embeddings_service": embeddings_service,
         }
 
     def test_constructor_with_valid_services(self, mock_services):
@@ -425,9 +461,9 @@ class TestUnifiedOrchestratorConstructor:
             language_service=mock_services["language_service"],
             unicode_service=mock_services["unicode_service"],
             normalization_service=mock_services["normalization_service"],
-            signals_service=mock_services["signals_service"]
+            signals_service=mock_services["signals_service"],
         )
-        
+
         assert orchestrator.validation_service is not None
         assert orchestrator.language_service is not None
         assert orchestrator.unicode_service is not None
@@ -436,57 +472,67 @@ class TestUnifiedOrchestratorConstructor:
 
     def test_constructor_with_none_validation_service(self, mock_services):
         """Test constructor raises error when validation_service is None"""
-        with pytest.raises(ServiceInitializationError, match="validation_service cannot be None"):
+        with pytest.raises(
+            ServiceInitializationError, match="validation_service cannot be None"
+        ):
             UnifiedOrchestrator(
                 validation_service=None,
                 language_service=mock_services["language_service"],
                 unicode_service=mock_services["unicode_service"],
                 normalization_service=mock_services["normalization_service"],
-                signals_service=mock_services["signals_service"]
+                signals_service=mock_services["signals_service"],
             )
 
     def test_constructor_with_none_language_service(self, mock_services):
         """Test constructor raises error when language_service is None"""
-        with pytest.raises(ServiceInitializationError, match="language_service cannot be None"):
+        with pytest.raises(
+            ServiceInitializationError, match="language_service cannot be None"
+        ):
             UnifiedOrchestrator(
                 validation_service=mock_services["validation_service"],
                 language_service=None,
                 unicode_service=mock_services["unicode_service"],
                 normalization_service=mock_services["normalization_service"],
-                signals_service=mock_services["signals_service"]
+                signals_service=mock_services["signals_service"],
             )
 
     def test_constructor_with_none_unicode_service(self, mock_services):
         """Test constructor raises error when unicode_service is None"""
-        with pytest.raises(ServiceInitializationError, match="unicode_service cannot be None"):
+        with pytest.raises(
+            ServiceInitializationError, match="unicode_service cannot be None"
+        ):
             UnifiedOrchestrator(
                 validation_service=mock_services["validation_service"],
                 language_service=mock_services["language_service"],
                 unicode_service=None,
                 normalization_service=mock_services["normalization_service"],
-                signals_service=mock_services["signals_service"]
+                signals_service=mock_services["signals_service"],
             )
 
     def test_constructor_with_none_normalization_service(self, mock_services):
         """Test constructor raises error when normalization_service is None"""
-        with pytest.raises(ServiceInitializationError, match="normalization_service cannot be None"):
+        with pytest.raises(
+            ServiceInitializationError, match="normalization_service cannot be None"
+        ):
             UnifiedOrchestrator(
                 validation_service=mock_services["validation_service"],
                 language_service=mock_services["language_service"],
                 unicode_service=mock_services["unicode_service"],
                 normalization_service=None,
-                signals_service=mock_services["signals_service"]
+                signals_service=mock_services["signals_service"],
             )
 
     def test_constructor_with_none_signals_service(self, mock_services):
         """Test constructor raises error when signals_service is None"""
-        with pytest.raises(ServiceInitializationError, match="signals_service cannot be None"):
+        with pytest.raises(
+            ServiceInitializationError, match="signals_service cannot be None"
+        ):
             UnifiedOrchestrator(
                 validation_service=mock_services["validation_service"],
                 language_service=mock_services["language_service"],
                 unicode_service=mock_services["unicode_service"],
                 normalization_service=mock_services["normalization_service"],
-                signals_service=None
+                signals_service=None,
             )
 
     def test_constructor_with_optional_services_none(self, mock_services):
@@ -499,9 +545,9 @@ class TestUnifiedOrchestratorConstructor:
             signals_service=mock_services["signals_service"],
             smart_filter_service=None,
             variants_service=None,
-            embeddings_service=None
+            embeddings_service=None,
         )
-        
+
         assert orchestrator.smart_filter_service is None
         assert orchestrator.variants_service is None
         assert orchestrator.embeddings_service is None
@@ -518,18 +564,20 @@ class TestUnifiedOrchestratorEdgeCases:
 
         # Create minimal orchestrator with mocks
         validation_service = Mock()
-        validation_service.validate_and_sanitize = AsyncMock(return_value={
-            "sanitized_text": "",
-            "should_process": False,
-            "is_valid": False
-        })
+        validation_service.validate_and_sanitize = AsyncMock(
+            return_value={
+                "sanitized_text": "",
+                "should_process": False,
+                "is_valid": False,
+            }
+        )
 
         orchestrator = UnifiedOrchestrator(
             validation_service=validation_service,
             language_service=Mock(),
             unicode_service=Mock(),
             normalization_service=Mock(),
-            signals_service=Mock()
+            signals_service=Mock(),
         )
 
         result = await orchestrator.process(text="")
@@ -537,6 +585,7 @@ class TestUnifiedOrchestratorEdgeCases:
         assert result.success is False
         assert result.normalized_text == ""
 
+    @pytest.mark.asyncio
     async def test_service_initialization_failure(self):
         """Test behavior when services have initialization issues"""
 
@@ -546,11 +595,13 @@ class TestUnifiedOrchestratorEdgeCases:
             language_service=Mock(),
             unicode_service=Mock(),
             normalization_service=Mock(),
-            signals_service=Mock()
+            signals_service=Mock(),
         )
 
         # Configure a service to fail
-        orchestrator.validation_service.validate_and_sanitize = AsyncMock(side_effect=Exception("Service failed"))
+        orchestrator.validation_service.validate_and_sanitize = AsyncMock(
+            side_effect=Exception("Service failed")
+        )
 
         # Should handle the error gracefully
         result = await orchestrator.process("Test text")

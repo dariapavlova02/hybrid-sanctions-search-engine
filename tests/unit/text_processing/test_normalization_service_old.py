@@ -3,19 +3,20 @@ Unit tests for NormalizationService
 This addresses the critical coverage gap (53.8% -> 85%)
 """
 
-import pytest
 import os
 import sys
-from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 # Add project to path
 project_root = Path(__file__).parent.parent.parent.parent / "src"
 sys.path.insert(0, str(project_root))
 
-from ai_service.layers.normalization.normalization_service import NormalizationService
 from ai_service.contracts.base_contracts import NormalizationResult
-from ai_service.exceptions import NormalizationError, LanguageDetectionError
+from ai_service.exceptions import LanguageDetectionError, NormalizationError
+from ai_service.layers.normalization.normalization_service import NormalizationService
 
 
 class TestNormalizationService:
@@ -24,27 +25,30 @@ class TestNormalizationService:
     @pytest.fixture
     def service(self):
         """Create a clean NormalizationService instance for testing"""
-        with patch('ai_service.layers.normalization.normalization_service.LanguageDetectionService') as mock_lang_service, \
-             patch('ai_service.layers.normalization.normalization_service.UnicodeService') as mock_unicode_service:
-            
+        with patch(
+            "ai_service.layers.normalization.normalization_service.LanguageDetectionService"
+        ) as mock_lang_service, patch(
+            "ai_service.layers.normalization.normalization_service.UnicodeService"
+        ) as mock_unicode_service:
+
             # Mock the services
             mock_lang_service.return_value = Mock()
             mock_unicode_service.return_value = Mock()
-            
+
             return NormalizationService()
 
     def test_initialization(self, service):
         """Test NormalizationService initialization"""
         assert service.language_service is not None
         assert service.unicode_service is not None
-        assert hasattr(service, 'morph_analyzers')
-        assert hasattr(service, 'name_dictionaries')
-        assert hasattr(service, 'diminutive_maps')
+        assert hasattr(service, "morph_analyzers")
+        assert hasattr(service, "name_dictionaries")
+        assert hasattr(service, "diminutive_maps")
 
     def test_normalize_english_text(self, service):
         """Test normalization of English text"""
         result = service.normalize("Hello world", language="en")
-        
+
         assert result.success
         assert "Hello world" in result.normalized
         assert len(result.tokens) > 0
@@ -52,7 +56,7 @@ class TestNormalizationService:
     def test_normalize_russian_text(self, service):
         """Test normalization of Russian text"""
         result = service.normalize("Привет мир", language="ru")
-        
+
         assert result.success
         assert "Привет" in result.normalized
         assert len(result.tokens) > 0
@@ -60,7 +64,7 @@ class TestNormalizationService:
     def test_normalize_ukrainian_text(self, service):
         """Test normalization of Ukrainian text"""
         result = service.normalize("Привіт світ", language="uk")
-        
+
         assert result.success
         assert "Привіт" in result.normalized
         assert len(result.tokens) > 0
@@ -68,9 +72,11 @@ class TestNormalizationService:
     def test_tokenize_text_fallback_to_nltk(self, service):
         """Test tokenization fallback to NLTK when SpaCy model not available"""
         # Set spacy model to None to force fallback
-        service.language_configs['en']['spacy_model'] = None
+        service.language_configs["en"]["spacy_model"] = None
 
-        with patch('src.ai_service.layers.normalization.normalization_service._word_tokenize') as mock_tokenize:
+        with patch(
+            "src.ai_service.layers.normalization.normalization_service._word_tokenize"
+        ) as mock_tokenize:
             mock_tokenize.return_value = ["Hello", "world"]
 
             result = service.tokenize_text("Hello world", "en")
@@ -81,9 +87,12 @@ class TestNormalizationService:
     def test_tokenize_text_basic_fallback(self, service):
         """Test tokenization basic fallback when neither SpaCy nor NLTK available"""
         # Set both spacy model and NLTK to None to force basic fallback
-        service.language_configs['en']['spacy_model'] = None
+        service.language_configs["en"]["spacy_model"] = None
 
-        with patch('src.ai_service.layers.normalization.normalization_service._word_tokenize', None):
+        with patch(
+            "src.ai_service.layers.normalization.normalization_service._word_tokenize",
+            None,
+        ):
             result = service.tokenize_text("Hello world", "en")
 
             # Basic split fallback
@@ -92,7 +101,7 @@ class TestNormalizationService:
     def test_remove_stop_words_english(self, service):
         """Test stop words removal for English"""
         # Mock stop words directly in language_configs
-        service.language_configs['en']['stop_words'] = {"the", "is", "a", "an"}
+        service.language_configs["en"]["stop_words"] = {"the", "is", "a", "an"}
 
         tokens = ["the", "cat", "is", "sleeping"]
         result = service.remove_stop_words(tokens, "en")
@@ -102,7 +111,7 @@ class TestNormalizationService:
     def test_remove_stop_words_russian(self, service):
         """Test stop words removal for Russian"""
         # Mock stop words directly in language_configs
-        service.language_configs['ru']['stop_words'] = {"и", "в", "на", "с"}
+        service.language_configs["ru"]["stop_words"] = {"и", "в", "на", "с"}
 
         tokens = ["кот", "спит", "на", "диване"]
         result = service.remove_stop_words(tokens, "ru")
@@ -111,7 +120,10 @@ class TestNormalizationService:
 
     def test_remove_stop_words_fallback(self, service):
         """Test stop words removal fallback when NLTK not available"""
-        with patch('src.ai_service.layers.normalization.normalization_service._nltk_stopwords', None):
+        with patch(
+            "src.ai_service.layers.normalization.normalization_service._nltk_stopwords",
+            None,
+        ):
 
             tokens = ["the", "cat", "is", "sleeping"]
             result = service.remove_stop_words(tokens, "en")
@@ -124,7 +136,7 @@ class TestNormalizationService:
         # Mock the stemmer in the language config directly
         mock_stemmer = Mock()
         mock_stemmer.stem.side_effect = ["run", "jump", "sleep"]
-        service.language_configs['en']['stemmer'] = mock_stemmer
+        service.language_configs["en"]["stemmer"] = mock_stemmer
 
         tokens = ["running", "jumped", "sleeping"]
         result = service.apply_stemming(tokens, "en")
@@ -137,7 +149,7 @@ class TestNormalizationService:
         # Mock the stemmer in the language config directly
         mock_stemmer = Mock()
         mock_stemmer.stem.side_effect = ["бег", "прыжк", "сп"]
-        service.language_configs['ru']['stemmer'] = mock_stemmer
+        service.language_configs["ru"]["stemmer"] = mock_stemmer
 
         tokens = ["бегает", "прыжки", "спит"]
         result = service.apply_stemming(tokens, "ru")
@@ -150,7 +162,7 @@ class TestNormalizationService:
         # Mock the stemmer in the language config directly
         mock_stemmer = Mock()
         mock_stemmer.stem.side_effect = ["біг", "стрибк", "сп"]
-        service.language_configs['uk']['stemmer'] = mock_stemmer
+        service.language_configs["uk"]["stemmer"] = mock_stemmer
 
         tokens = ["бігає", "стрибки", "спить"]
         result = service.apply_stemming(tokens, "uk")
@@ -161,7 +173,7 @@ class TestNormalizationService:
     def test_apply_stemming_fallback(self, service):
         """Test stemming fallback when stemmers not available"""
         # Set stemmer to None in language config
-        service.language_configs['en']['stemmer'] = None
+        service.language_configs["en"]["stemmer"] = None
 
         tokens = ["running", "jumped", "sleeping"]
         result = service.apply_stemming(tokens, "en")
@@ -183,8 +195,8 @@ class TestNormalizationService:
         mock_doc = Mock()
         mock_doc.__iter__ = Mock(return_value=iter([mock_token1, mock_token2]))
         mock_nlp.return_value = mock_doc
-        
-        service.language_configs['en']['spacy_model'] = mock_nlp
+
+        service.language_configs["en"]["spacy_model"] = mock_nlp
 
         tokens = ["running", "jumped"]
         result = service.apply_lemmatization(tokens, "en")
@@ -203,8 +215,8 @@ class TestNormalizationService:
         mock_doc = Mock()
         mock_doc.__iter__ = Mock(return_value=iter([mock_token1]))
         mock_nlp.return_value = mock_doc
-        
-        service.language_configs['ru']['spacy_model'] = mock_nlp
+
+        service.language_configs["ru"]["spacy_model"] = mock_nlp
 
         tokens = ["бегает"]
         result = service.apply_lemmatization(tokens, "ru")
@@ -215,7 +227,7 @@ class TestNormalizationService:
     def test_apply_lemmatization_fallback(self, service):
         """Test lemmatization fallback when SpaCy not available"""
         # Set spacy model to None in language config
-        service.language_configs['en']['spacy_model'] = None
+        service.language_configs["en"]["spacy_model"] = None
 
         tokens = ["running", "jumped"]
         result = service.apply_lemmatization(tokens, "en")
@@ -223,6 +235,7 @@ class TestNormalizationService:
         # Should return original tokens
         assert result == tokens
 
+    @pytest.mark.asyncio
     async def test_normalize_success(self, service):
         """Test successful normalization with all features"""
         test_text = "The cats are running quickly"
@@ -239,11 +252,13 @@ class TestNormalizationService:
             normalized_length=len("The cats are running quickly"),
             token_count=3,
             processing_time=0.1,
-            errors=[]
+            errors=[],
         )
 
-        with patch.object(service, '_normalize_sync', return_value=mock_result):
-            result = await service.normalize_async(test_text, apply_lemmatization=True, remove_stop_words=True)
+        with patch.object(service, "_normalize_sync", return_value=mock_result):
+            result = await service.normalize_async(
+                test_text, apply_lemmatization=True, remove_stop_words=True
+            )
 
             assert isinstance(result, NormalizationResult)
             assert result.success == True
@@ -254,6 +269,7 @@ class TestNormalizationService:
             assert result.token_count == 3
             assert result.processing_time > 0
 
+    @pytest.mark.asyncio
     async def test_normalize_without_optional_processing(self, service):
         """Test normalization without lemmatization and stop words removal"""
         test_text = "Simple test"
@@ -270,16 +286,19 @@ class TestNormalizationService:
             normalized_length=len("Simple test"),
             token_count=2,
             processing_time=0.1,
-            errors=[]
+            errors=[],
         )
 
-        with patch.object(service, '_normalize_sync', return_value=mock_result):
-            result = await service.normalize_async(test_text, apply_lemmatization=False, remove_stop_words=False)
+        with patch.object(service, "_normalize_sync", return_value=mock_result):
+            result = await service.normalize_async(
+                test_text, apply_lemmatization=False, remove_stop_words=False
+            )
 
             assert result.success == True
             assert result.tokens == ["Simple", "test"]
             assert result.token_count == 2
 
+    @pytest.mark.asyncio
     async def test_normalize_ukrainian_with_forms(self):
         """Test normalization with Ukrainian morphological forms"""
         test_text = "Українські імена"
@@ -287,7 +306,7 @@ class TestNormalizationService:
         # Create a mock service to avoid hanging
         mock_service = Mock(spec=NormalizationService)
         mock_service.normalize = Mock()
-        
+
         # Create expected result
         expected_result = NormalizationResult(
             normalized="Українські імена",
@@ -300,9 +319,9 @@ class TestNormalizationService:
             token_count=4,
             processing_time=0.1,
             success=True,
-            errors=[]
+            errors=[],
         )
-        
+
         mock_service.normalize_async.return_value = expected_result
 
         result = await mock_service.normalize_async(test_text, apply_lemmatization=True)
@@ -325,10 +344,10 @@ class TestNormalizationService:
             normalized_length=0,
             token_count=1,
             processing_time=0.001,
-            errors=[]
+            errors=[],
         )
 
-        with patch.object(service, '_normalize_sync', return_value=mock_result):
+        with patch.object(service, "_normalize_sync", return_value=mock_result):
             result = await service.normalize_async("")
 
             assert result.success == True
@@ -336,6 +355,7 @@ class TestNormalizationService:
             assert result.tokens == [""]
             assert result.token_count == 1
 
+    @pytest.mark.asyncio
     async def test_normalize_whitespace_only(self, service):
         """Test normalization with whitespace-only text"""
         test_text = "   \n\t   "
@@ -352,10 +372,10 @@ class TestNormalizationService:
             normalized_length=0,
             token_count=1,
             processing_time=0.001,
-            errors=[]
+            errors=[],
         )
 
-        with patch.object(service, '_normalize_sync', return_value=mock_result):
+        with patch.object(service, "_normalize_sync", return_value=mock_result):
             result = await service.normalize_async(test_text)
 
             assert result.success == True
@@ -375,10 +395,10 @@ class TestNormalizationService:
             normalized_length=9,
             token_count=0,
             processing_time=0.001,
-            errors=["Unicode error"]
+            errors=["Unicode error"],
         )
 
-        with patch.object(service, '_normalize_sync', return_value=mock_result):
+        with patch.object(service, "_normalize_sync", return_value=mock_result):
             result = await service.normalize_async("Test text")
 
             assert result.success == False
@@ -398,10 +418,9 @@ class TestNormalizationService:
             normalized_length=9,
             token_count=0,
             processing_time=0.001,
-            errors=["Detection failed"]
+            errors=["Detection failed"],
         )
-
-        with patch.object(service, '_normalize_sync', return_value=mock_result):
+        with patch.object(service, "_normalize_sync", return_value=mock_result):
             result = await service.normalize_async("Test text")
 
             assert result.success == False
@@ -421,10 +440,10 @@ class TestNormalizationService:
             normalized_length=9,
             token_count=0,
             processing_time=0.001,
-            errors=["Tokenization failed"]
+            errors=["Tokenization failed"],
         )
 
-        with patch.object(service, '_normalize_sync', return_value=mock_result):
+        with patch.object(service, "_normalize_sync", return_value=mock_result):
             result = await service.normalize_async("Test text")
 
             assert result.success == False
@@ -439,6 +458,7 @@ class TestNormalizationServiceEdgeCases:
         # No need to patch nlp_* as they don't exist in normalization_service.py
         return NormalizationService()
 
+    @pytest.mark.asyncio
     async def test_normalize_very_long_text(self, service):
         """Test normalization with very long text"""
         long_text = "word " * 1000  # 1000 words
@@ -455,10 +475,10 @@ class TestNormalizationServiceEdgeCases:
             normalized_length=len(long_text.strip()),
             token_count=1000,
             processing_time=0.1,
-            errors=[]
+            errors=[],
         )
 
-        with patch.object(service, '_normalize_sync', return_value=mock_result):
+        with patch.object(service, "_normalize_sync", return_value=mock_result):
             result = await service.normalize_async(long_text)
 
             assert result.success == True
@@ -480,10 +500,10 @@ class TestNormalizationServiceEdgeCases:
             normalized_length=len(special_text),
             token_count=4,
             processing_time=0.01,
-            errors=[]  # Change from None to empty list
+            errors=[],  # Change from None to empty list
         )
 
-        with patch.object(service, '_normalize_sync', return_value=mock_result):
+        with patch.object(service, "_normalize_sync", return_value=mock_result):
             result = await service.normalize_async(special_text)
 
             assert result.success == True
@@ -505,10 +525,10 @@ class TestNormalizationServiceEdgeCases:
             normalized_length=len(mixed_text),
             token_count=4,
             processing_time=0.01,
-            errors=[]
+            errors=[],
         )
 
-        with patch.object(service, '_normalize_sync', return_value=mock_result):
+        with patch.object(service, "_normalize_sync", return_value=mock_result):
             result = await service.normalize_async(mixed_text)
 
             assert result.success == True
@@ -528,23 +548,24 @@ class TestNormalizationServiceEdgeCases:
             normalized_length=17,
             token_count=3,
             processing_time=0.01,
-            errors=[]
+            errors=[],
         )
 
-        with patch.object(service, '_normalize_sync', return_value=mock_result):
+        with patch.object(service, "_normalize_sync", return_value=mock_result):
             result = await service.normalize_async("Texto em português")
 
             assert result.success == True
             assert result.language == "pt"
             # Should still process even with unsupported language
 
+    @pytest.mark.asyncio
     async def test_ukrainian_normalization_basic(self, service):
         """Test Ukrainian normalization basic functionality"""
         text = "Петро Іванович"
-        
+
         # Test basic normalization
         result = await service.normalize_async(text, language="uk")
-        
+
         # Should return a valid result
         assert result.success
         assert result.normalized is not None
@@ -557,34 +578,54 @@ class TestNormalizationServiceConfiguration:
 
     def test_initialization_without_spacy(self):
         """Test service initialization when SpaCy is not available"""
-        with patch('src.ai_service.layers.normalization.normalization_service.SPACY_AVAILABLE', False), \
-             patch('src.ai_service.layers.normalization.normalization_service.nlp_en', None), \
-             patch('src.ai_service.layers.normalization.normalization_service.nlp_ru', None), \
-             patch('src.ai_service.layers.normalization.normalization_service.nlp_uk', None):
+        with patch(
+            "src.ai_service.layers.normalization.normalization_service.SPACY_AVAILABLE",
+            False,
+        ), patch(
+            "src.ai_service.layers.normalization.normalization_service.nlp_en", None
+        ), patch(
+            "src.ai_service.layers.normalization.normalization_service.nlp_ru", None
+        ), patch(
+            "src.ai_service.layers.normalization.normalization_service.nlp_uk", None
+        ):
 
             service = NormalizationService()
             assert service is not None
 
+    @pytest.mark.asyncio
     def test_initialization_without_nltk(self):
         """Test service initialization when NLTK is not available"""
-        with patch('src.ai_service.layers.normalization.normalization_service.NLTK_AVAILABLE', False), \
-             patch('src.ai_service.layers.normalization.normalization_service._nltk_stopwords', None), \
-             patch('src.ai_service.layers.normalization.normalization_service.porter_stemmer', None):
+        with patch(
+            "src.ai_service.layers.normalization.normalization_service.NLTK_AVAILABLE",
+            False,
+        ), patch(
+            "src.ai_service.layers.normalization.normalization_service._nltk_stopwords",
+            None,
+        ), patch(
+            "src.ai_service.layers.normalization.normalization_service.porter_stemmer",
+            None,
+        ):
 
             service = NormalizationService()
             assert service is not None
 
+    @pytest.mark.asyncio
     async def test_initialization_minimal_dependencies(self):
         """Test service initialization with minimal dependencies"""
-        with patch('src.ai_service.layers.normalization.normalization_service.SPACY_AVAILABLE', False), \
-             patch('src.ai_service.layers.normalization.normalization_service.NLTK_AVAILABLE', False):
+        with patch(
+            "src.ai_service.layers.normalization.normalization_service.SPACY_AVAILABLE",
+            False,
+        ), patch(
+            "src.ai_service.layers.normalization.normalization_service.NLTK_AVAILABLE",
+            False,
+        ):
 
             service = NormalizationService()
 
             # Mock the result to avoid async issues
             mock_result = NormalizationResult(
                 success=True,
-            trace=[],
+                trace=[],
                 normalized="Simple text",
                 tokens=["Simple", "text"],
                 language="unknown",
@@ -593,24 +634,28 @@ class TestNormalizationServiceConfiguration:
                 normalized_length=11,
                 token_count=2,
                 processing_time=0.01,
-                errors=[]
+                errors=[],
             )
 
-            with patch.object(service, '_normalize_sync', return_value=mock_result):
+            with patch.object(service, "_normalize_sync", return_value=mock_result):
                 # Should still work with basic text processing
                 result = await service.normalize_async("Simple text")
                 assert result.success == True
 
     async def test_cache_functionality(self):
         """Test caching functionality"""
-        with patch('src.ai_service.layers.normalization.normalization_service.nlp_en'), \
-             patch('src.ai_service.layers.normalization.normalization_service.nlp_ru'), \
-             patch('src.ai_service.layers.normalization.normalization_service.nlp_uk'):
+        with patch(
+            "src.ai_service.layers.normalization.normalization_service.nlp_en"
+        ), patch(
+            "src.ai_service.layers.normalization.normalization_service.nlp_ru"
+        ), patch(
+            "src.ai_service.layers.normalization.normalization_service.nlp_uk"
+        ):
 
             service = NormalizationService()
 
             # Mock the normalization process
-            with patch.object(service, 'normalize') as mock_normalize:
+            with patch.object(service, "normalize") as mock_normalize:
                 mock_result = Mock()
                 mock_result.success = True
                 mock_normalize.return_value = mock_result
@@ -641,7 +686,7 @@ class TestNormalizationResult:
             normalized_length=9,
             token_count=2,
             processing_time=0.1,
-            errors=[]
+            errors=[],
         )
 
         assert result.success == True
@@ -668,7 +713,7 @@ class TestNormalizationResult:
             normalized_length=9,
             token_count=0,
             processing_time=0.05,
-            errors=["Processing failed"]
+            errors=["Processing failed"],
         )
 
         assert result.success == False
