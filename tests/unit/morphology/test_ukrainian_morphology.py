@@ -3,6 +3,7 @@ Unit tests for UkrainianMorphologyAnalyzer
 """
 
 import pytest
+from ai_service.layers.normalization.morphology.base_morphology import MorphologicalAnalysis
 from unittest.mock import Mock, patch, MagicMock
 
 from src.ai_service.layers.normalization.morphology.ukrainian_morphology import UkrainianMorphologyAnalyzer
@@ -34,8 +35,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
     
     @pytest.mark.parametrize("name,expected_diminutives", [
         ("Сергій", ["Сергійко", "Сержик", "Сергійчик", "Сергійонько", "Сірко"]),
@@ -49,8 +50,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
     
     @pytest.mark.parametrize("name,expected_transliteration", [
         ("Сергій", "serhii"),
@@ -66,8 +67,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
     
     @pytest.mark.parametrize("name,expected_endings", [
         ("Петренко", ["ко"]),
@@ -83,8 +84,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
     
     @pytest.mark.parametrize("input_name,expected_result", [
         ("", {'name': '', 'total_forms': 0}),
@@ -100,8 +101,8 @@ class TestUkrainianMorphologyAnalyzer:
             result = results[0]
             
             # Assert
-            assert isinstance(result, dict)
-            assert result.get("lemma") is not None
+            assert isinstance(result, MorphologicalAnalysis)
+            assert result.lemma is not None
     
     @pytest.mark.parametrize("name,expected_ukrainian_chars", [
         ("Сергій", ["і"]),
@@ -118,8 +119,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
         # Check that Ukrainian symbols are present
         for char in expected_ukrainian_chars:
             assert char in name
@@ -138,8 +139,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
         
         # Check expected complexity factors
         for factor in expected_complexity_factors:
@@ -163,8 +164,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
     
     def test_analyze_name_basic_functionality(self):
         """Test basic functionality of name analysis"""
@@ -174,8 +175,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
     
     def test_empty_name_handling(self):
         """Test handling of empty name"""
@@ -185,8 +186,8 @@ class TestUkrainianMorphologyAnalyzer:
             result = results[0]
             
             # Assert
-            assert isinstance(result, dict)
-            assert result.get("lemma") is not None
+            assert isinstance(result, MorphologicalAnalysis)
+            assert result.lemma is not None
     
     def test_short_name_handling(self):
         """Test handling of too short name"""
@@ -196,8 +197,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
     
     def test_auto_language_detection(self):
         """Test automatic language detection"""
@@ -214,10 +215,10 @@ class TestUkrainianMorphologyAnalyzer:
         ru_result = ru_results[0]
         
         # Assert
-        assert isinstance(uk_result, dict)
-        assert isinstance(ru_result, dict)
-        assert uk_result.get("lemma") is not None
-        assert ru_result.get("lemma") is not None
+        assert isinstance(uk_result, MorphologicalAnalysis)
+        assert isinstance(ru_result, MorphologicalAnalysis)
+        assert uk_result.lemma is not None
+        assert ru_result.lemma is not None
     
     def test_pymorphy3_initialization_success(self):
         """Test successful pymorphy3 initialization"""
@@ -235,16 +236,16 @@ class TestUkrainianMorphologyAnalyzer:
             results = self.analyzer.analyze_word(male_name)
             assert len(results) > 0
             result = results[0]
-            assert isinstance(result, dict)
-            assert result.get("lemma") is not None
+            assert isinstance(result, MorphologicalAnalysis)
+            assert result.lemma is not None
         
         # Check female names
         for female_name in ['Дарія', 'Марія', 'Олена', 'Анна']:
             results = self.analyzer.analyze_word(female_name)
             assert len(results) > 0
             result = results[0]
-            assert isinstance(result, dict)
-            assert result.get("lemma") is not None
+            assert isinstance(result, MorphologicalAnalysis)
+            assert result.lemma is not None
     
     def test_diminutives_generation(self):
         """Test generation of diminutive forms"""
@@ -254,8 +255,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
     
     def test_transliteration_generation(self):
         """Test generation of transliterations"""
@@ -265,8 +266,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
     
     def test_phonetic_variants_generation(self):
         """Test generation of phonetic variants"""
@@ -279,8 +280,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
     
     def test_regional_transliterations(self):
         """Test regional transliterations"""
@@ -293,8 +294,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
     
     def test_get_all_forms_method(self):
         """Test method for getting all name forms"""
@@ -304,8 +305,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
     
     def test_is_ukrainian_name_detection(self):
         """Test Ukrainian name detection"""
@@ -321,12 +322,12 @@ class TestUkrainianMorphologyAnalyzer:
         result3 = results3[0]
         
         # Assert
-        assert isinstance(result1, dict)
-        assert isinstance(result2, dict)
-        assert isinstance(result3, dict)
-        assert result1.get("lemma") is not None
-        assert result2.get("lemma") is not None
-        assert result3.get("lemma") is not None
+        assert isinstance(result1, MorphologicalAnalysis)
+        assert isinstance(result2, MorphologicalAnalysis)
+        assert isinstance(result3, MorphologicalAnalysis)
+        assert result1.lemma is not None
+        assert result2.lemma is not None
+        assert result3.lemma is not None
     
     def test_name_complexity_analysis(self):
         """Test name complexity analysis"""
@@ -336,8 +337,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
     
     def test_complexity_level_calculation(self):
         """Test complexity level calculation"""
@@ -345,8 +346,8 @@ class TestUkrainianMorphologyAnalyzer:
         results = self.analyzer.analyze_word("Сергій")
         assert len(results) > 0
         result = results[0]
-        assert result.get("confidence", 0.0) >= 0.0
-        assert result.get("confidence", 1.0) <= 1.0
+        assert result.confidence >= 0.0
+        assert result.confidence <= 1.0
     
     def test_basic_transliteration(self):
         """Test basic transliteration"""
@@ -356,8 +357,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
     
     def test_language_detection_internal(self):
         """Test internal language detection"""
@@ -370,8 +371,8 @@ class TestUkrainianMorphologyAnalyzer:
         result2 = results2[0]
         
         # Check that analysis works for both variants
-        assert isinstance(result1, dict)
-        assert isinstance(result2, dict)
+        assert isinstance(result1, MorphologicalAnalysis)
+        assert isinstance(result2, MorphologicalAnalysis)
     
     @patch.object(UkrainianMorphologyAnalyzer, '_analyze_with_pymorphy')
     def test_pymorphy_analysis_failure_handling(self, mock_pymorphy):
@@ -386,8 +387,8 @@ class TestUkrainianMorphologyAnalyzer:
         
         # Assert
         # Should work even with pymorphy error
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
     
     def test_generate_pymorphy_declensions(self):
         """Test generation of declensions via pymorphy3"""
@@ -397,8 +398,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
     
     def test_extract_gender_with_name_tags(self):
         """Test extraction of gender with name tags"""
@@ -408,8 +409,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
     
     def test_extract_gender_by_endings(self):
         """Test gender determination by endings"""
@@ -422,10 +423,10 @@ class TestUkrainianMorphologyAnalyzer:
         result2 = results2[0]
         
         # Assert
-        assert isinstance(result1, dict)
-        assert isinstance(result2, dict)
-        assert result1.get("lemma") is not None
-        assert result2.get("lemma") is not None
+        assert isinstance(result1, MorphologicalAnalysis)
+        assert isinstance(result2, MorphologicalAnalysis)
+        assert result1.lemma is not None
+        assert result2.lemma is not None
     
     def test_apply_regional_transliteration(self):
         """Test application of regional transliteration"""
@@ -435,8 +436,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
     
     def test_whitespace_name_handling(self):
         """Test handling of names with whitespace"""
@@ -446,8 +447,8 @@ class TestUkrainianMorphologyAnalyzer:
         result = results[0]
         
         # Assert
-        assert isinstance(result, dict)
-        assert result.get("lemma") is not None
+        assert isinstance(result, MorphologicalAnalysis)
+        assert result.lemma is not None
     
     def test_none_name_handling(self):
         """Test handling of None as a name"""
@@ -457,6 +458,6 @@ class TestUkrainianMorphologyAnalyzer:
             result = results[0]
             
             # Assert
-            assert isinstance(result, dict)
+            assert isinstance(result, MorphologicalAnalysis)
             # With None input, a fallback result should be returned
-            assert result.get("lemma") is not None
+            assert result.lemma is not None

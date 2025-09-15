@@ -3,6 +3,7 @@ Unit tests for RussianMorphologyAnalyzer using pytest fixtures
 """
 
 import pytest
+from ai_service.layers.normalization.morphology.base_morphology import MorphologicalAnalysis
 from unittest.mock import Mock, patch, MagicMock
 
 from src.ai_service.layers.normalization.morphology.russian_morphology import RussianMorphologyAnalyzer
@@ -60,7 +61,7 @@ class TestRussianMorphologyAnalyzer:
         # Check result structure
         assert isinstance(result, list)
         assert len(result) > 0
-        assert isinstance(result[0], dict)
+        assert isinstance(result[0], MorphologicalAnalysis)
 
     def test_gender_detection_male(self):
         """Test gender detection for male names"""
@@ -247,7 +248,7 @@ class TestRussianMorphologyAnalyzer:
         assert isinstance(result, list)
         assert len(result) > 0
         if result:  # If there are results
-            assert isinstance(result[0], dict)
+            assert isinstance(result[0], MorphologicalAnalysis)
 
     def test_analyze_name_with_language(self):
         """Test analyze_name with language parameter"""
@@ -260,7 +261,7 @@ class TestRussianMorphologyAnalyzer:
         assert isinstance(result, list)
         assert len(result) > 0
         if result:  # If there are results
-            assert isinstance(result[0], dict)
+            assert isinstance(result[0], MorphologicalAnalysis)
 
     def test_analyze_name_empty_input(self):
         """Test analyze_name with empty input"""

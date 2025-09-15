@@ -3,6 +3,7 @@ Unit tests for UkrainianMorphologyAnalyzer using pytest fixtures
 """
 
 import pytest
+from ai_service.layers.normalization.morphology.base_morphology import MorphologicalAnalysis
 from unittest.mock import Mock, patch, MagicMock
 
 from src.ai_service.layers.normalization.morphology.ukrainian_morphology import UkrainianMorphologyAnalyzer
@@ -60,7 +61,7 @@ class TestUkrainianMorphologyAnalyzer:
         # Check result structure
         assert isinstance(result, list)
         assert len(result) > 0
-        assert isinstance(result[0], dict)
+        assert isinstance(result[0], MorphologicalAnalysis)
 
     def test_analyze_word_gender_detection_daria(self):
         """Test that analyze_word correctly determines gender for "Дарія" """
@@ -76,7 +77,7 @@ class TestUkrainianMorphologyAnalyzer:
         # Check result structure
         assert isinstance(result, list)
         assert len(result) > 0
-        assert isinstance(result[0], dict)
+        assert isinstance(result[0], MorphologicalAnalysis)
 
     def test_analyze_word_unknown_name(self):
         """Test analysis of unknown name"""
@@ -93,7 +94,7 @@ class TestUkrainianMorphologyAnalyzer:
         assert isinstance(result, list)
         assert len(result) > 0
         if result:  # If there are results
-            assert isinstance(result[0], dict)
+            assert isinstance(result[0], MorphologicalAnalysis)
 
     def test_analyze_word_short_name(self):
         """Test analysis of short name"""
@@ -103,7 +104,7 @@ class TestUkrainianMorphologyAnalyzer:
         assert isinstance(result, list)
         assert len(result) > 0
         if result:  # If there are results
-            assert isinstance(result[0], dict)
+            assert isinstance(result[0], MorphologicalAnalysis)
 
     def test_get_lemma_special_name(self):
         """Test getting lemma for special name"""
@@ -145,7 +146,7 @@ class TestUkrainianMorphologyAnalyzer:
         
         # Should return analysis results for special names
         assert len(result) > 0
-        assert isinstance(result[0], dict)
+        assert isinstance(result[0], MorphologicalAnalysis)
 
     def test_analyze_word_unknown_name(self):
         """Test analyze_word for unknown name"""
@@ -162,7 +163,7 @@ class TestUkrainianMorphologyAnalyzer:
         
         # Should return analysis results even for unknown names
         assert len(result) > 0
-        assert isinstance(result[0], dict)
+        assert isinstance(result[0], MorphologicalAnalysis)
 
     def test_get_gender_special_name(self):
         """Test gender detection for special name"""
@@ -173,7 +174,7 @@ class TestUkrainianMorphologyAnalyzer:
         
         result = results[0]
         # Should return correct gender for special names
-        assert result.get("gender") == 'masc'  # Petro is masculine
+        assert result.gender == 'masc'  # Petro is masculine
 
     def test_get_gender_unknown_name(self):
         """Test gender detection for unknown name"""
@@ -184,9 +185,9 @@ class TestUkrainianMorphologyAnalyzer:
         if len(results) > 0:
             result = results[0]
             # Should return analysis result, gender may be None for unknown words
-            assert isinstance(result.get("lemma"), str)
+            assert isinstance(result.lemma, str)
             # Gender can be None, 'masc', 'femn', or other values
-            assert result.get("gender") is None or result.get("gender") in ['masc', 'femn', 'neut']
+            assert result.gender is None or result.gender in ['masc', 'femn', 'neut']
 
     def test_get_variants_special_name(self):
         """Test getting variants for special name"""
@@ -197,9 +198,9 @@ class TestUkrainianMorphologyAnalyzer:
         if len(results) > 0:
             result = results[0]
             # Should return analysis result with lemma and gender
-            assert isinstance(result.get("lemma"), str)
-            assert result.get("lemma") in ['петро', 'Петро']  # May be either form
-            assert result.get("gender") == 'masc'  # Petro is masculine
+            assert isinstance(result.lemma, str)
+            assert result.lemma in ['петро', 'Петро']  # May be either form
+            assert result.gender == 'masc'  # Petro is masculine
 
     def test_get_variants_unknown_name(self):
         """Test getting variants for unknown name"""
@@ -210,8 +211,8 @@ class TestUkrainianMorphologyAnalyzer:
         
         result = results[0]
         # Should return analysis result with lemma
-        assert isinstance(result.get("lemma"), str)
-        assert result.get("lemma") == 'тест'  # Should be normalized to lowercase
+        assert isinstance(result.lemma, str)
+        assert result.lemma == 'тест'  # Should be normalized to lowercase
 
     def test_get_diminutives_special_name(self):
         """Test getting diminutives for special name"""
@@ -222,8 +223,8 @@ class TestUkrainianMorphologyAnalyzer:
         if len(results) > 0:
             result = results[0]
             # Should return analysis result with lemma and gender
-            assert isinstance(result.get("lemma"), str)
-            assert result.get("gender") == 'masc'  # Petro is masculine
+            assert isinstance(result.lemma, str)
+            assert result.gender == 'masc'  # Petro is masculine
             # Note: diminutives are not part of MorphologicalAnalysis
             # They would be available through a separate method if needed
 
@@ -236,8 +237,8 @@ class TestUkrainianMorphologyAnalyzer:
         if len(results) > 0:
             result = results[0]
             # Should return analysis result with lemma
-            assert isinstance(result.get("lemma"), str)
-            assert result.get("lemma") == 'тест'  # Should be normalized to lowercase
+            assert isinstance(result.lemma, str)
+            assert result.lemma == 'тест'  # Should be normalized to lowercase
 
     def test_analyze_name_basic_functionality(self):
         """Test basic analyze_name functionality"""
@@ -249,7 +250,7 @@ class TestUkrainianMorphologyAnalyzer:
         assert isinstance(result, list)
         # May return empty results for unknown words
         if len(result) > 0:
-            assert isinstance(result[0], dict)
+            assert isinstance(result[0], MorphologicalAnalysis)
 
     def test_analyze_name_with_language_detection(self):
         """Test analyze_name with language detection"""
@@ -261,7 +262,7 @@ class TestUkrainianMorphologyAnalyzer:
         assert isinstance(result, list)
         # May return empty results for unknown words
         if len(result) > 0:
-            assert isinstance(result[0], dict)
+            assert isinstance(result[0], MorphologicalAnalysis)
 
     def test_analyze_name_empty_string(self):
         """Test analyze_name with empty string"""

@@ -104,7 +104,7 @@ class RussianMorphologyAnalyzer(BaseMorphologyAnalyzer):
             "ru_passport": {"ё": "e", "ъ": "", "ь": "", "Ё": "E", "Ъ": "", "Ь": ""},
         }
 
-    def analyze_word(self, word: str) -> List[Dict[str, Any]]:
+    def analyze_word(self, word: str) -> List[MorphologicalAnalysis]:
         """
         Analyze single word morphologically
 
@@ -112,46 +112,33 @@ class RussianMorphologyAnalyzer(BaseMorphologyAnalyzer):
             word: Word to analyze
 
         Returns:
-            List of morphological analysis results as dictionaries
+            List of morphological analysis results
         """
         if not word or not word.strip():
             return []
 
         word = word.strip()
         if len(word) < 2:
-            return [{
-                "token": word,
-                "lemma": word,
-                "pos": "UNKN",
-                "case": None,
-                "gender": None,
-                "confidence": 0.1,
-                "source": "russian_short",
-            }]
+            return [MorphologicalAnalysis(
+                lemma=word,
+                part_of_speech="UNKN",
+                case=None,
+                gender=None,
+                confidence=0.1,
+                source="russian_short",
+            )]
 
         try:
             # Analysis through pymorphy3
             morph_analysis = self._analyze_with_pymorphy(word)
 
-            # Convert to dictionaries
-            results = []
-            for analysis in morph_analysis:
-                results.append({
-                    "token": word,
-                    "lemma": analysis.get("lemma", word),
-                    "pos": analysis.get("pos", "UNKN"),
-                    "case": analysis.get("case"),
-                    "gender": analysis.get("gender"),
-                    "confidence": analysis.get("confidence", 1.0),
-                    "source": "russian_pymorphy",
-                })
-
-            return results
+            # Return MorphologicalAnalysis objects directly
+            return morph_analysis
 
         except Exception as e:
             self.logger.warning(f"Error analyzing word '{word}': {e}")
             # Fallback analysis
-            return [self._fallback_analysis_dict(word)]
+            return [self._fallback_analysis(word)]
 
     def analyze_text(self, text: str) -> Dict[str, List[MorphologicalAnalysis]]:
         """
