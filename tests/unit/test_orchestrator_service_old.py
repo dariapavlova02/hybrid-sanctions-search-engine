@@ -15,6 +15,7 @@ class TestOrchestratorService:
     """Tests for OrchestratorService"""
     
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_process_basic_functionality(self, orchestrator_service):
         """Test basic process functionality"""
         # Arrange
@@ -470,17 +471,25 @@ class TestOrchestratorService:
         # Arrange
         test_text = "Test text for language service failure"
         
-        # Mock language_service.detect_language returns None
-        with patch.object(orchestrator_service.language_service, 'detect_language') as mock_language, \
-             patch.object(orchestrator_service.unicode_service, 'normalize_text') as mock_unicode, \
-             patch.object(orchestrator_service.normalization_service, 'normalize') as mock_normalize:
+        # Mock language_service.detect_language_config_driven returns None
+        with patch.object(orchestrator_service.language_service, 'detect_language_config_driven') as mock_language, \
+             patch.object(orchestrator_service.unicode_service, 'normalize_unicode') as mock_unicode, \
+             patch.object(orchestrator_service.normalization_service, 'normalize_async') as mock_normalize, \
+             patch.object(orchestrator_service.variants_service, 'generate_variants') as mock_variants:
             
             mock_unicode.return_value = {'normalized': test_text}
             mock_language.return_value = None  # Language service failure
-            mock_normalize.return_value = {'normalized': test_text}
+            mock_normalize.return_value = type('obj', (object,), {
+                'normalized': test_text,
+                'tokens': test_text.split(),
+                'trace': [],
+                'success': True,
+                'errors': []
+            })()
+            mock_variants.return_value = [test_text, test_text.upper(), test_text.lower()]
             
             # Act
-            result = await orchestrator_service.process(test_text)
+            result = await orchestrator_service.process(test_text, generate_variants=True)
             
             # Assert
             assert isinstance(result, UnifiedProcessingResult)

@@ -157,6 +157,28 @@ class UnifiedOrchestrator:
         import inspect
         return await x if inspect.isawaitable(x) else x
 
+    def _coerce_lang(self, res) -> Dict[str, Any]:
+        """Coerce language detection result to dict with language/confidence keys"""
+        if res is None:
+            return {"language": "en", "confidence": 0.0}  # Fallback to English
+        
+        if isinstance(res, dict):
+            return res
+        
+        if hasattr(res, 'language') and hasattr(res, 'confidence'):
+            return {"language": res.language, "confidence": res.confidence}
+        
+        # If it's a string, assume it's the language code
+        if isinstance(res, str):
+            return {"language": res, "confidence": 0.5}
+        
+        # If it's a tuple, assume (language, confidence)
+        if isinstance(res, tuple) and len(res) >= 2:
+            return {"language": res[0], "confidence": res[1]}
+        
+        # Default fallback
+        return {"language": "en", "confidence": 0.0}
+
     async def process(
         self,
         text: str,
@@ -205,6 +227,9 @@ class UnifiedOrchestrator:
                 text
             ))
             context.sanitized_text = validation_result.get("sanitized_text", text)
+            
+            # Debug trace for lengths
+            logger.debug(f"Validation: input_len={len(text)}, sanitized_len={len(context.sanitized_text)}")
 
             if self.metrics_service:
                 self.metrics_service.record_timer('processing.layer.validation', time.time() - layer_start)
@@ -252,15 +277,18 @@ class UnifiedOrchestrator:
             logger.debug("Stage 3: Unicode Normalization")
             layer_start = time.time()
 
-            # Language detection EXPECTS unicode-normalized input
-            unicode_result = await self._maybe_await(self.unicode_service.normalize_unicode(
-                context.sanitized_text
-            ))
+            # Fixed order: Unicode normalization first
+            text_in = context.sanitized_text
+            unicode_result = await self._maybe_await(self.unicode_service.normalize_unicode(text_in))
+            
             # Handle both legacy string return and new dict return
             if isinstance(unicode_result, str):
-                unicode_normalized = unicode_result
+                text_u = unicode_result
             else:
-                unicode_normalized = unicode_result.get("normalized", context.sanitized_text)
+                text_u = unicode_result.get("normalized", text_in)
+            
+            # Debug trace for lengths
+            logger.debug(f"Unicode: input_len={len(text_in)}, normalized_len={len(text_u)}")
 
             if self.metrics_service:
                 self.metrics_service.record_timer('processing.layer.unicode_normalization', time.time() - layer_start)
@@ -272,12 +300,22 @@ class UnifiedOrchestrator:
             layer_start = time.time()
 
             from ..config import LANGUAGE_CONFIG
-            lang_result = await self._maybe_await(self.language_service.detect_language_config_driven(
-                unicode_normalized,  # Use unicode-normalized text for language detection
+            lang_raw = await self._maybe_await(self.language_service.detect_language_config_driven(
+                text_u,  # Use unicode-normalized text for language detection
                 LANGUAGE_CONFIG
             ))
-            context.language = language_hint or lang_result.language
-            context.language_confidence = lang_result.confidence
+            
+            # Coerce language result to dict format
+            lang = self._coerce_lang(lang_raw)
+            context.language = language_hint or lang["language"]
+            context.language_confidence = lang["confidence"]
+            
+            # Debug trace for language detection
+            try:
+                confidence_val = float(context.language_confidence)
+                logger.debug(f"Language: detected='{context.language}', confidence={confidence_val:.3f}")
+            except (ValueError, TypeError):
+                logger.debug(f"Language: detected='{context.language}', confidence={context.language_confidence}")
 
             if self.metrics_service:
                 self.metrics_service.record_timer('processing.layer.language_detection', time.time() - layer_start)
@@ -290,8 +328,9 @@ class UnifiedOrchestrator:
             logger.debug("Stage 5: Name Normalization")
             layer_start = time.time()
 
+            # Use unicode-normalized text for normalization
             norm_result = await self._maybe_await(self.normalization_service.normalize_async(
-                unicode_normalized,
+                text_u,  # Use unicode-normalized text
                 language=context.language,
                 remove_stop_words=remove_stop_words,
                 preserve_names=preserve_names,
@@ -316,7 +355,7 @@ class UnifiedOrchestrator:
             layer_start = time.time()
 
             signals_result = await self._maybe_await(self.signals_service.extract_signals(
-                text=context.original_text, normalization_result=norm_result, language=context.language
+                text=text_u, normalization_result=norm_result, language=context.language  # Use unicode-normalized text
             ))
 
             if self.metrics_service:
@@ -624,7 +663,9 @@ class UnifiedOrchestrator:
         validation_result = await self._maybe_await(self.validation_service.validate_and_sanitize(text))
         sanitized = validation_result.get("sanitized_text", text)
 
+        # Fixed order: Unicode normalization first
         unicode_result = await self._maybe_await(self.unicode_service.normalize_unicode(sanitized))
+        
         # Handle both legacy string return and new dict return
         if isinstance(unicode_result, str):
             unicode_normalized = unicode_result
