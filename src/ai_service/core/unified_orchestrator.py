@@ -182,9 +182,9 @@ class UnifiedOrchestrator:
             logger.debug("Stage 1: Validation & Sanitization")
             layer_start = time.time()
 
-            validation_result = await self.validation_service.validate_and_sanitize(
+            validation_result = await self._maybe_await(self.validation_service.validate_and_sanitize(
                 text
-            )
+            ))
             context.sanitized_text = validation_result.get("sanitized_text", text)
 
             if self.metrics_service:
@@ -234,9 +234,9 @@ class UnifiedOrchestrator:
             layer_start = time.time()
 
             # Language detection EXPECTS unicode-normalized input
-            unicode_result = await self.unicode_service.normalize_unicode(
+            unicode_result = await self._maybe_await(self.unicode_service.normalize_unicode(
                 context.sanitized_text
-            )
+            ))
             unicode_normalized = unicode_result.get("normalized", context.sanitized_text)
 
             if self.metrics_service:
@@ -249,10 +249,10 @@ class UnifiedOrchestrator:
             layer_start = time.time()
 
             from ..config import LANGUAGE_CONFIG
-            lang_result = self.language_service.detect_language_config_driven(
+            lang_result = await self._maybe_await(self.language_service.detect_language_config_driven(
                 unicode_normalized,  # Use unicode-normalized text for language detection
                 LANGUAGE_CONFIG
-            )
+            ))
             context.language = language_hint or lang_result.language
             context.language_confidence = lang_result.confidence
 
@@ -267,13 +267,13 @@ class UnifiedOrchestrator:
             logger.debug("Stage 5: Name Normalization")
             layer_start = time.time()
 
-            norm_result = await self.normalization_service.normalize_async(
+            norm_result = await self._maybe_await(self.normalization_service.normalize_async(
                 unicode_normalized,
                 language=context.language,
                 remove_stop_words=remove_stop_words,
                 preserve_names=preserve_names,
                 enable_advanced_features=enable_advanced_features,
-            )
+            ))
 
             if self.metrics_service:
                 self.metrics_service.record_timer('processing.layer.normalization', time.time() - layer_start)
@@ -598,21 +598,21 @@ class UnifiedOrchestrator:
         }
 
         # Run minimal pipeline: validation -> unicode -> normalization
-        validation_result = await self.validation_service.validate_and_sanitize(text)
+        validation_result = await self._maybe_await(self.validation_service.validate_and_sanitize(text))
         sanitized = validation_result.get("sanitized_text", text)
 
-        unicode_result = await self.unicode_service.normalize_unicode(sanitized)
+        unicode_result = await self._maybe_await(self.unicode_service.normalize_unicode(sanitized))
         unicode_normalized = unicode_result.get("normalized", sanitized)
 
-        return await self.normalization_service.normalize_async(
+        return await self._maybe_await(self.normalization_service.normalize_async(
             unicode_normalized, **norm_flags
-        )
+        ))
 
     async def extract_signals(
         self, original_text: str, normalization_result: NormalizationResult
     ) -> SignalsResult:
         """Backward compatibility: direct signals extraction"""
         logger.warning("extract_signals is deprecated. Use process() instead.")
-        return await self.signals_service.extract_async(
+        return await self._maybe_await(self.signals_service.extract_async(
             text=original_text, normalization_result=normalization_result
-        )
+        ))
