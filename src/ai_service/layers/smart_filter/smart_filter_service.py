@@ -902,6 +902,12 @@ class SmartFilterService:
         )
 
 
-# Legacy alias for tests expecting SignalService in this module
-from ai_service.layers.signals.signals_service import SignalsService as _SignalsServiceLegacy
-SignalService = _SignalsServiceLegacy
+# Legacy compatibility for tests expecting SignalService in this module
+try:
+    from ..signals.signals_service import SignalsService as _SignalServiceAlias
+    SignalService = _SignalServiceAlias  # legacy re-export for tests
+except Exception:
+    class SignalService:  # minimal stub for patching in tests
+        """Minimal stub for SignalService when signals module is not available"""
+        def __init__(self, *args, **kwargs):
+            pass
