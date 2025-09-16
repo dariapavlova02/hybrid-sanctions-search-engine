@@ -13,6 +13,7 @@ from src.ai_service.layers.embeddings.indexing.elasticsearch_watchlist_adapter i
 )
 from src.ai_service.layers.embeddings.indexing.watchlist_index_service import WatchlistIndexService
 from src.ai_service.layers.embeddings.indexing.vector_index_service import VectorIndexConfig
+from src.ai_service.layers.embeddings.indexing.enhanced_vector_index_service import EnhancedVectorIndexConfig
 
 
 class TestElasticsearchWatchlistConfig:
@@ -205,12 +206,18 @@ class TestElasticsearchWatchlistAdapter:
     async def test_search_ac_success(self):
         """Test search with successful AC results."""
         adapter = ElasticsearchWatchlistAdapter()
-        
+
+        def mock_ac_search_side_effect(query, entity_type):
+            if entity_type == "person":
+                return [("person_001", 0.8)]
+            else:
+                return []  # No org results
+
         with patch.object(adapter, '_ensure_initialized', return_value=True), \
-             patch.object(adapter, '_ac_search', return_value=[("person_001", 0.8)]) as mock_ac:
-            
+             patch.object(adapter, '_ac_search', side_effect=mock_ac_search_side_effect) as mock_ac:
+
             results = await adapter.search("иван петров", top_k=10)
-            
+
             assert results == [("person_001", 0.8)]
             assert mock_ac.call_count == 2  # Called for both person and org
             assert adapter._metrics["ac_searches"] == 1
@@ -308,21 +315,25 @@ class TestElasticsearchWatchlistAdapter:
              patch.object(adapter, '_get_client') as mock_get_client:
             
             mock_client = AsyncMock()
-            mock_response = MagicMock()
+
+            # First response - repository list
+            mock_response = AsyncMock()
             mock_response.status_code = 200
             mock_response.json.return_value = {
                 "repo1": {"settings": {"location": "/tmp/snapshot"}},
                 "repo2": {"settings": {"location": "/other/path"}}
             }
-            mock_client.get.return_value = mock_response
-            
-            # Mock snapshot list response
-            mock_snapshot_response = MagicMock()
+
+            # Second response - snapshot list
+            mock_snapshot_response = AsyncMock()
             mock_snapshot_response.json.return_value = {
                 "snapshots": [{"snapshot": "snapshot_123"}]
             }
+
             mock_client.get.side_effect = [mock_response, mock_snapshot_response]
-            
+            mock_client.post.return_value = AsyncMock(status_code=200)
+            mock_get_client.return_value = mock_client
+
             result = await adapter.reload_snapshot("/tmp/snapshot")
             
             assert result["snapshot_restored"] is True
@@ -342,12 +353,13 @@ class TestElasticsearchWatchlistAdapter:
             assert result == {"reloaded": True}
             fallback_service.reload_snapshot.assert_called_once_with("/tmp/snapshot", False)
     
-    def test_status(self):
+    @pytest.mark.asyncio
+    async def test_status(self):
         """Test status method."""
         adapter = ElasticsearchWatchlistAdapter()
-        
-        status = adapter.status()
-        
+
+        status = await adapter.status()
+
         assert "elasticsearch_available" in status
         assert "last_health_check" in status
         assert "fallback_available" in status
@@ -359,15 +371,16 @@ class TestElasticsearchWatchlistAdapter:
     async def test_close(self):
         """Test close method."""
         adapter = ElasticsearchWatchlistAdapter()
-        
-        with patch.object(adapter, '_get_client') as mock_get_client:
-            mock_client = AsyncMock()
-            mock_get_client.return_value = mock_client
-            
-            await adapter.close()
-            
-            mock_client.aclose.assert_called_once()
-            assert adapter._initialized is False
+
+        # Set up a mock client that should be closed
+        mock_client = AsyncMock()
+        mock_client.is_closed = False
+        adapter._client = mock_client
+
+        await adapter.close()
+
+        mock_client.aclose.assert_called_once()
+        assert adapter._initialized is False
 
 
 class TestFactoryFunctions:
@@ -376,7 +389,7 @@ class TestFactoryFunctions:
     def test_create_elasticsearch_watchlist_adapter(self):
         """Test create_elasticsearch_watchlist_adapter."""
         config = ElasticsearchWatchlistConfig(es_url="https://es.example.com:9200")
-        fallback_config = VectorIndexConfig()
+        fallback_config = EnhancedVectorIndexConfig()
         
         adapter = create_elasticsearch_watchlist_adapter(config, fallback_config)
         
@@ -387,7 +400,7 @@ class TestFactoryFunctions:
     def test_create_elasticsearch_enhanced_adapter(self):
         """Test create_elasticsearch_enhanced_adapter."""
         config = ElasticsearchWatchlistConfig(es_url="https://es.example.com:9200")
-        fallback_config = VectorIndexConfig()
+        fallback_config = EnhancedVectorIndexConfig()
         
         adapter = create_elasticsearch_enhanced_adapter(config, fallback_config)
         
@@ -410,19 +423,19 @@ class TestElasticsearchWatchlistAdapterIntegration:
             ("org_001", "ооо приватбанк", "org", {"country": "UA"})
         ]
         
-        with patch.object(adapter, '_ensure_initialized', return_value=True), \
+        with patch.object(adapter, '_health_check', return_value=True), \
              patch.object(adapter, '_bulk_upsert_documents', return_value=True), \
              patch.object(adapter, '_ac_search', return_value=[("person_001", 0.8)]):
-            
+
             # Build corpus
             await adapter.build_from_corpus(corpus, "test_index")
-            
+
             # Search
             results = await adapter.search("иван петров", top_k=10)
-            
+
             # Check status
-            status = adapter.status()
-            
+            status = await adapter.status()
+
             assert len(results) > 0
             assert status["elasticsearch_available"] is True
             assert adapter._metrics["total_searches"] == 1

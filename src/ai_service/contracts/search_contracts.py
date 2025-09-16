@@ -236,6 +236,24 @@ class ElasticsearchVectorAdapterInterface:
 
 # Utility functions for integration
 
+def _get(obj, key, default=None):
+    """
+    Safely get attribute from object or dict
+
+    Args:
+        obj: Object or dict to get value from
+        key: Key/attribute name
+        default: Default value if key not found
+
+    Returns:
+        Value or default
+    """
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    else:
+        return getattr(obj, key, default)
+
+
 def extract_search_candidates(signals_result: Any) -> List[str]:
     """
     Extract candidate strings from Signals result
@@ -249,20 +267,26 @@ def extract_search_candidates(signals_result: Any) -> List[str]:
     candidates = []
     
     # Extract from persons
-    if hasattr(signals_result, 'persons') and signals_result.persons:
-        for person in signals_result.persons:
-            if hasattr(person, 'normalized_name') and person.normalized_name:
-                candidates.append(person.normalized_name)
-            if hasattr(person, 'aliases') and person.aliases:
-                candidates.extend(person.aliases)
-    
+    persons = _get(signals_result, 'persons')
+    if persons:
+        for person in persons:
+            normalized_name = _get(person, 'normalized_name')
+            if normalized_name:
+                candidates.append(normalized_name)
+            aliases = _get(person, 'aliases')
+            if aliases:
+                candidates.extend(aliases)
+
     # Extract from organizations
-    if hasattr(signals_result, 'organizations') and signals_result.organizations:
-        for org in signals_result.organizations:
-            if hasattr(org, 'normalized_name') and org.normalized_name:
-                candidates.append(org.normalized_name)
-            if hasattr(org, 'aliases') and org.aliases:
-                candidates.extend(org.aliases)
+    organizations = _get(signals_result, 'organizations')
+    if organizations:
+        for org in organizations:
+            normalized_name = _get(org, 'normalized_name')
+            if normalized_name:
+                candidates.append(normalized_name)
+            aliases = _get(org, 'aliases')
+            if aliases:
+                candidates.extend(aliases)
     
     # Remove duplicates and empty strings
     return list(set(filter(None, candidates)))

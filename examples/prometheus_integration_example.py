@@ -249,3 +249,5 @@ if __name__ == "__main__":
     print("Metrics available at http://localhost:8000/metrics")
     
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+

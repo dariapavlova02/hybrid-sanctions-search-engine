@@ -149,7 +149,7 @@ class SmartFilterService:
                     confidence=0.0,
                     detected_signals=[],
                     signal_details={},
-                    processing_recommendation="Text excluded from processing (service information only)",
+                    processing_recommendation="Текст исключен из обработки (служебная информация)",
                     estimated_complexity="very_low",
                 )
 
@@ -482,7 +482,24 @@ class SmartFilterService:
         self.logger.warning(
             "_clean_service_words is deprecated - use context-aware analysis instead"
         )
-        return text
+        
+        # For backward compatibility, perform basic service words removal
+        cleaned_text = text
+        
+        # Remove common service words from the beginning
+        service_prefixes = [
+            "оплата за", "платеж за", "платіж за", "перевод на", "счет за",
+            "payment for", "transfer to", "invoice for"
+        ]
+        
+        text_lower = text.lower().strip()
+        for prefix in service_prefixes:
+            if text_lower.startswith(prefix.lower()):
+                # Remove the prefix and clean up spaces
+                cleaned_text = text[len(prefix):].strip()
+                break
+        
+        return cleaned_text
 
     def _detect_language(self, text: str) -> str:
         """Detect text language"""

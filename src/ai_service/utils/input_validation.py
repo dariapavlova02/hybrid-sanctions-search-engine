@@ -93,6 +93,33 @@ class InputValidator:
             "1": "l",
             "3": "e",
             "5": "s",
+            # Extended homoglyph mappings
+            # Cyrillic to Latin (common confusables)
+            "а": "a",  # Cyrillic 'а' to Latin 'a'
+            "о": "o",  # Cyrillic 'о' to Latin 'o'  
+            "р": "p",  # Cyrillic 'р' to Latin 'p'
+            "е": "e",  # Cyrillic 'е' to Latin 'e'
+            "у": "y",  # Cyrillic 'у' to Latin 'y'
+            "х": "x",  # Cyrillic 'х' to Latin 'x'
+            "с": "c",  # Cyrillic 'с' to Latin 'c'
+            "к": "k",  # Cyrillic 'к' to Latin 'k'
+            "м": "m",  # Cyrillic 'м' to Latin 'm'
+            "н": "h",  # Cyrillic 'н' to Latin 'h'
+            "т": "t",  # Cyrillic 'т' to Latin 't'
+            "в": "b",  # Cyrillic 'в' to Latin 'b'
+            # Latin to Cyrillic (reverse mappings for mixed-script detection)
+            "A": "А",  # Latin 'A' to Cyrillic 'А'
+            "B": "В",  # Latin 'B' to Cyrillic 'В'
+            "C": "С",  # Latin 'C' to Cyrillic 'С'
+            "E": "Е",  # Latin 'E' to Cyrillic 'Е'
+            "H": "Н",  # Latin 'H' to Cyrillic 'Н'
+            "K": "К",  # Latin 'K' to Cyrillic 'К'
+            "M": "М",  # Latin 'M' to Cyrillic 'М'
+            "O": "О",  # Latin 'O' to Cyrillic 'О'
+            "P": "Р",  # Latin 'P' to Cyrillic 'Р'
+            "T": "Т",  # Latin 'T' to Cyrillic 'Т'
+            "X": "Х",  # Latin 'X' to Cyrillic 'Х'
+            "Y": "У",  # Latin 'Y' to Cyrillic 'У'
         }
 
     def validate_and_sanitize(
@@ -200,12 +227,27 @@ class InputValidator:
         for char in self.zero_width_chars:
             text = text.replace(char, "")
 
-        # 3. Replace homoglyphs if requested (Latin-only heuristic)
+        # 3. Replace homoglyphs if requested (smart script detection)
         if remove_homoglyphs:
             try:
+                # Detect mixed scripts or suspicious homoglyph usage
                 has_cyrillic = re.search(r"[А-Яа-яІіЇїЄєҐґ]", text) is not None
-                if not has_cyrillic:
-                    for homoglyph, replacement in self.homoglyph_map.items():
+                has_latin = re.search(r"[A-Za-z]", text) is not None
+                
+                # Apply homoglyph replacement - always normalize to Latin for consistency
+                if has_cyrillic or has_latin:
+                    # Replace Cyrillic homoglyphs with Latin equivalents
+                    cyrillic_to_latin = {
+                        "а": "a", "о": "o", "р": "p", "е": "e", "у": "y", 
+                        "х": "x", "с": "c", "к": "k", "м": "m", "н": "h", 
+                        "т": "t", "в": "b"
+                    }
+                    for homoglyph, replacement in cyrillic_to_latin.items():
+                        text = text.replace(homoglyph, replacement)
+                    
+                    # Also apply digit-to-letter mappings
+                    digit_mappings = {"0": "o", "1": "l", "3": "e", "5": "s"}
+                    for homoglyph, replacement in digit_mappings.items():
                         text = text.replace(homoglyph, replacement)
             except Exception:
                 # Best-effort; skip on regex issues

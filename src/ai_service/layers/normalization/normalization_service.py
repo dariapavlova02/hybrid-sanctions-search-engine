@@ -132,6 +132,20 @@ except ImportError:
     DICTIONARIES_AVAILABLE = False
     ENGLISH_NICKNAMES = {}
 
+# Legacy compatibility - check for spaCy availability
+try:
+    import spacy
+    SPACY_AVAILABLE = True
+except ImportError:
+    SPACY_AVAILABLE = False
+
+# Legacy compatibility - check for NLTK availability
+try:
+    import nltk
+    NLTK_AVAILABLE = True
+except ImportError:
+    NLTK_AVAILABLE = False
+
 # Configure logging
 logger = get_logger(__name__)
 
@@ -146,6 +160,19 @@ class NormalizationService:
         # Initialize services
         self.language_service = LanguageDetectionService()
         self.unicode_service = UnicodeService()
+        
+        # Legacy compatibility
+        self.language_configs = {
+            "en": {},
+            "ru": {},
+            "uk": {}
+        }
+        
+        # Legacy compatibility attributes
+        self.nlp_en = None
+        self.nlp_ru = None
+        self.nlp_uk = None
+        self._nltk_stopwords = None
 
         # Initialize morphological analyzers
         self.morph_analyzers = {}
@@ -623,6 +650,19 @@ class NormalizationService:
                         # are likely organization names that were misclassified
                         continue
                     filtered_person_tokens.append(token)
+                elif trace.role == "unknown" and preserve_names:
+                    # Per PR-3: unknown tokens should be preserved in trace and included in output
+                    # when preserve_names=True (not removed, but passed through)
+                    # Per CLAUDE.md: собираем только персональные токены (unknown/context — отбрасываются)
+                    # но с флагом preserve_names unknown токены сохраняются
+                    token = trace.output
+                    if token and token.strip():  # Only include non-empty tokens
+                        # Special handling: exclude obvious non-personal tokens even with preserve_names
+                        if (len(token) <= 2 and token.upper() == token and 
+                            token.endswith('.') and token[:-1].isalpha()):
+                            # Single letter initials should be excluded even with preserve_names
+                            continue
+                        filtered_person_tokens.append(token)
 
             final_normalized_text = " ".join(filtered_person_tokens)
 
@@ -1078,9 +1118,15 @@ class NormalizationService:
             # 4) Check if preliminary org should take precedence over personal names
             if prelim_org:
                 # For uppercase tokens that look like orgs, prioritize org classification
-                # but check for well-known English names first
+                # but check for well-known personal names first (per PR-3 requirements)
                 if base.isupper() and len(base) >= 3:
-                    # For English language, check if it's a well-known personal name
+                    # Check if it's a well-known personal name in any language
+                    personal_role = self._classify_personal_role(base, language)
+                    if personal_role in ["given", "surname", "patronymic"]:
+                        tagged.append((token, personal_role))
+                        continue
+                    
+                    # For English language, also check English-specific classification
                     if language == "en":
                         english_role = self._classify_personal_role(base, "en")
                         if english_role in ["given", "surname"]:
@@ -1091,7 +1137,37 @@ class NormalizationService:
                     tagged.append((token, "org"))
                     continue
 
-            # 5) Personal name classification (existing logic)
+            # 5) Personal name classification with fallback priority (per PR-3 requirements)
+            # Priority: surname patterns > patronymic patterns > diminutive dictionary > general personal role
+            
+            # 5.1) First check surname suffix patterns (highest priority for ru/uk)
+            # Per CLAUDE.md: surname (паттерны -енко, -ов/-ова, -ський/-ська, -ук/-юк/-чук, -ян, -дзе …)
+            if language in ["ru", "uk"]:
+                surname_role = self._classify_surname_by_suffix(base, language)
+                if surname_role != "unknown":
+                    tagged.append((token, surname_role))
+                    continue
+
+            # 5.2) Check patronymic patterns
+            # Per CLAUDE.md: patronymic (регексы c падежами)
+            if language in ["ru", "uk"]:
+                patronymic_role = self._classify_patronymic_role(base, language)
+                if patronymic_role != "unknown":
+                    tagged.append((token, patronymic_role))
+                    continue
+
+            # 5.3) Check diminutive dictionary
+            # Per CLAUDE.md: given (словари имен/уменьшительных)
+            if language in self.dim2full_maps:
+                full_name = self._normalize_diminutive_to_full(base, language)
+                if full_name:
+                    # Re-classify the full name
+                    full_role = self._classify_personal_role(full_name, language)
+                    if full_role != "unknown":
+                        tagged.append((token, full_role))
+                        continue
+
+            # 5.4) General personal name classification (existing logic)
             role = self._classify_personal_role(base, language)
 
             if role != "unknown":
@@ -1406,6 +1482,18 @@ class NormalizationService:
             and base[0].isupper()  # Must start with capital letter
         ):
             # ASCII names in English context should be treated as potential names
+            # Allow positional inference to work
+            return "given"  # Will be adjusted by positional heuristics later
+
+        # Check for Cyrillic names in ru/uk context (per PR-3 requirements)
+        if (
+            language in ["ru", "uk"]
+            and not base.isascii()
+            and base.isalpha()
+            and len(base) > 1
+            and base[0].isupper()  # Must start with capital letter
+        ):
+            # Cyrillic names in ru/uk context should be treated as potential names
             # Allow positional inference to work
             return "given"  # Will be adjusted by positional heuristics later
 
@@ -2240,8 +2328,16 @@ class NormalizationService:
             if not best_parse:
                 best_parse = target_parses[0] if target_parses else parses[0]
 
-            # Force nominative when advanced features are enabled
-            if enable_advanced_features and best_parse:
+            # Force nominative for ru/uk languages (per PR-3 requirements)
+            # Per CLAUDE.md: морфология (pymorphy3 ru/uk), выбор лучшего парса (Name/Surn + nomn, иначе lemma)
+            if best_parse and primary_lang in ["ru", "uk"]:
+                nom_inflection = best_parse.inflect({"nomn"})
+                if nom_inflection:
+                    result = self._normalize_characters(nom_inflection.word)
+                else:
+                    result = self._normalize_characters(best_parse.normal_form)
+            elif enable_advanced_features and best_parse:
+                # For other languages, use advanced features logic
                 nom_inflection = best_parse.inflect({"nomn"})
                 if nom_inflection:
                     result = self._normalize_characters(nom_inflection.word)
@@ -4317,3 +4413,77 @@ class NormalizationService:
         except Exception:
             # Last resort - just return cleaned input
             return text.strip() if isinstance(text, str) else ""
+
+    def _classify_patronymic_role(self, token: str, language: str) -> str:
+        """
+        Classify token as patronymic based on suffix patterns (fallback for _tag_roles)
+        """
+        if language not in ["ru", "uk"]:
+            return "unknown"
+            
+        token_lower = token.lower()
+        
+        # Russian patronymic patterns
+        if language == "ru":
+            patronymic_suffixes = [
+                "ович", "евич", "йович", "ич",  # Male patronymics
+                "овна", "евна", "ична", "инична"  # Female patronymics
+            ]
+            for suffix in patronymic_suffixes:
+                if token_lower.endswith(suffix):
+                    return "patronymic"
+        
+        # Ukrainian patronymic patterns  
+        elif language == "uk":
+            patronymic_suffixes = [
+                "ович", "евич", "йович", "ич",  # Male patronymics
+                "івна", "ївна", "овна", "евна", "ична"  # Female patronymics
+            ]
+            for suffix in patronymic_suffixes:
+                if token_lower.endswith(suffix):
+                    return "patronymic"
+        
+        return "unknown"
+
+    def _classify_surname_by_suffix(self, token: str, language: str) -> str:
+        """
+        Classify token as surname based on suffix patterns (fallback for _tag_roles)
+        """
+        if language not in ["ru", "uk"]:
+            return "unknown"
+            
+        token_lower = token.lower()
+        
+        # Russian surname patterns
+        if language == "ru":
+            surname_suffixes = [
+                "ов", "ова", "ев", "ева", "ин", "ина", "ын", "ына",
+                "ский", "ская", "цкий", "цкая", "ской", "ская",
+                "енко", "енкова", "ко", "кова", "ук", "юк", "чук",
+                "ян", "ян", "дзе", "швили", "ашвили"
+            ]
+            for suffix in surname_suffixes:
+                if token_lower.endswith(suffix):
+                    return "surname"
+        
+        # Ukrainian surname patterns
+        elif language == "uk":
+            surname_suffixes = [
+                "енко", "енкова", "енка", "енки", "енку", "енком", "енків", "енками", "енках",
+                "ко", "кова", "ка", "ки", "ку", "ком", "ків", "ками", "ках",
+                "ук", "юк", "чук", "чук", "ука", "юка", "чука", "уки", "юки", "чуки",
+                "ський", "ська", "ського", "ської", "ському", "ським", "ські", "ськими", "ських",
+                "цкий", "цкая", "цкого", "цкої", "цкому", "цким", "цкі", "цкими", "цких",
+                "ской", "ская", "ского", "скої", "скому", "ским", "скі", "скими", "ских",
+                "ов", "ова", "ова", "ової", "ову", "овим", "ові", "овими", "ових",
+                "ев", "ева", "ева", "евої", "еву", "евим", "еві", "евими", "евих",
+                "ин", "ина", "ина", "иної", "ину", "иним", "ини", "иними", "иних",
+                "ян", "ян", "яна", "яної", "яну", "яним", "яни", "яними", "яних",
+                "дзе", "дзе", "дзе", "дзе", "дзе", "дзе", "дзе", "дзе", "дзе",
+                "швили", "ашвили", "швили", "ашвили", "швили", "ашвили", "швили", "ашвили", "швили"
+            ]
+            for suffix in surname_suffixes:
+                if token_lower.endswith(suffix):
+                    return "surname"
+        
+        return "unknown"

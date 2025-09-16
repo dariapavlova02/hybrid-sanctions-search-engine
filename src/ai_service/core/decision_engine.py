@@ -107,29 +107,35 @@ class DecisionEngine:
         # Search contribution (NEW)
         if inp.search:
             search = inp.search
-            
+            search_components_added = False
+
             # Exact matches (highest priority)
             if search.has_exact_matches and search.exact_confidence >= self.config.thr_search_exact:
                 score += self.config.w_search_exact * search.exact_confidence
-            
+                search_components_added = True
+
             # Phrase matches
             if search.has_phrase_matches and search.phrase_confidence >= self.config.thr_search_phrase:
                 score += self.config.w_search_phrase * search.phrase_confidence
-            
+                search_components_added = True
+
             # N-gram matches
             if search.has_ngram_matches and search.ngram_confidence >= self.config.thr_search_ngram:
                 score += self.config.w_search_ngram * search.ngram_confidence
-            
+                search_components_added = True
+
             # Vector matches
             if search.has_vector_matches and search.vector_confidence >= self.config.thr_search_vector:
                 score += self.config.w_search_vector * search.vector_confidence
-            
-            # Search bonuses
-            if search.total_matches > 1:
-                score += self.config.bonus_multiple_matches
-            
-            if search.high_confidence_matches > 0:
-                score += self.config.bonus_high_confidence
+                search_components_added = True
+
+            # Search bonuses (only if at least one search component passed threshold)
+            if search_components_added:
+                if search.total_matches > 1:
+                    score += self.config.bonus_multiple_matches
+
+                if search.high_confidence_matches > 0:
+                    score += self.config.bonus_high_confidence
         
         # Bonus factors
         if inp.signals.date_match:
@@ -137,7 +143,7 @@ class DecisionEngine:
         if inp.signals.id_match:
             score += self.config.bonus_id_match
             
-        return min(score, 1.0)
+        return score
     
     def _determine_risk_level(self, score: float) -> RiskLevel:
         """Determine risk level based on score"""

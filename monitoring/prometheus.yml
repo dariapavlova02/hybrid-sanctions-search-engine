@@ -198,3 +198,5 @@ recording_rules:
         expr: search_cpu_usage_percent
         labels:
           service: search
+
+

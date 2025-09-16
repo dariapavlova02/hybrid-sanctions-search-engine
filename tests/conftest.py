@@ -72,14 +72,21 @@ def sample_names():
 @pytest.fixture(scope="function")
 def mock_services():
     """Provide mocked services for testing"""
-    from unittest.mock import Mock
+    from unittest.mock import Mock, AsyncMock
+    
+    # Import actual service classes for spec
+    from src.ai_service.layers.language.language_detection_service import LanguageDetectionService
+    from src.ai_service.layers.normalization.normalization_service import NormalizationService
+    from src.ai_service.layers.variants.variant_generation_service import VariantGenerationService
+    from src.ai_service.layers.embeddings.embedding_service import EmbeddingService
+    from src.ai_service.core.cache_service import CacheService
     
     return {
-        'language_service': Mock(),
-        'normalization_service': Mock(),
-        'variant_service': Mock(),
-        'embedding_service': Mock(),
-        'cache_service': Mock()
+        'language_service': Mock(spec=LanguageDetectionService),
+        'normalization_service': AsyncMock(spec=NormalizationService),
+        'variant_service': AsyncMock(spec=VariantGenerationService),
+        'embedding_service': AsyncMock(spec=EmbeddingService),
+        'cache_service': Mock(spec=CacheService)
     }
 
 
@@ -105,11 +112,18 @@ def orchestrator_service():
         # Create mock services for required dependencies
         from unittest.mock import AsyncMock, Mock
         
-        mock_validation_service = AsyncMock()
-        mock_language_service = Mock()
-        mock_unicode_service = Mock()
-        mock_normalization_service = AsyncMock()
-        mock_signals_service = AsyncMock()
+        # Import actual service classes for spec
+        from src.ai_service.layers.validation.validation_service import ValidationService
+        from src.ai_service.layers.language.language_detection_service import LanguageDetectionService
+        from src.ai_service.layers.unicode.unicode_service import UnicodeService
+        from src.ai_service.layers.normalization.normalization_service import NormalizationService
+        from src.ai_service.layers.signals.signals_service import SignalsService
+        
+        mock_validation_service = AsyncMock(spec=ValidationService)
+        mock_language_service = Mock(spec=LanguageDetectionService)
+        mock_unicode_service = Mock(spec=UnicodeService)
+        mock_normalization_service = AsyncMock(spec=NormalizationService)
+        mock_signals_service = AsyncMock(spec=SignalsService)
         
         # Configure mock responses
         async def mock_validation(text):
@@ -150,7 +164,8 @@ def orchestrator_service():
         mock_signals_service.extract_signals.side_effect = mock_signals
         
         # Create mock for variants service
-        mock_variants_service = AsyncMock()
+        from src.ai_service.layers.variants.variant_generation_service import VariantGenerationService
+        mock_variants_service = AsyncMock(spec=VariantGenerationService)
         mock_variants_service.generate_variants.return_value = [
             "Gnatuk Abdulaeva Zhorzha Rashida",
             "Gnatuk Abdulaev Zhorzha Rashid",

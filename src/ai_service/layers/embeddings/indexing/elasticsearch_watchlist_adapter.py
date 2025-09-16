@@ -8,6 +8,7 @@ compatible interfaces while delegating all operations to ES.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import time
 from dataclasses import dataclass
@@ -111,7 +112,12 @@ class ElasticsearchWatchlistAdapter:
                     timeout=self.config.es_timeout
                 )
             return self._client
-    
+
+    async def _maybe_await_json(self, response):
+        """Helper to handle both sync and async json() methods."""
+        json_result = response.json()
+        return await json_result if inspect.iscoroutine(json_result) else json_result
+
     async def _health_check(self) -> bool:
         """Check Elasticsearch health."""
         current_time = time.time()
@@ -171,7 +177,7 @@ class ElasticsearchWatchlistAdapter:
             )
             
             if response.status_code == 200:
-                result = response.json()
+                result = await self._maybe_await_json(response)
                 if result.get("errors"):
                     self.logger.warning(f"Some documents failed to index: {result}")
                 return True
@@ -245,8 +251,8 @@ class ElasticsearchWatchlistAdapter:
             
             if response.status_code != 200:
                 return []
-            
-            result = response.json()
+
+            result = await self._maybe_await_json(response)
             results = {}
             
             # Process results from each search type
@@ -305,8 +311,8 @@ class ElasticsearchWatchlistAdapter:
             
             if response.status_code != 200:
                 return []
-            
-            result = response.json()
+
+            result = await self._maybe_await_json(response)
             results = []
             
             for hit in result["hits"]["hits"]:
@@ -507,24 +513,24 @@ class ElasticsearchWatchlistAdapter:
         
         try:
             client = await self._get_client()
-            
+
             # Find snapshot repository
             response = await client.get("/_snapshot")
-            repositories = response.json()
-            
+            repositories = await self._maybe_await_json(response)
+
             # Look for repository with matching path
             repo_name = None
             for repo, config in repositories.items():
                 if config.get("settings", {}).get("location") == snapshot_dir:
                     repo_name = repo
                     break
-            
+
             if not repo_name:
                 return {"error": f"No snapshot repository found for path: {snapshot_dir}"}
-            
+
             # List snapshots in repository
             response = await client.get(f"/_snapshot/{repo_name}/_all")
-            snapshots = response.json()
+            snapshots = await self._maybe_await_json(response)
             
             if not snapshots.get("snapshots"):
                 return {"error": "No snapshots found in repository"}
@@ -550,8 +556,11 @@ class ElasticsearchWatchlistAdapter:
             self.logger.error(f"Reload snapshot error: {e}")
             return {"error": str(e)}
     
-    def status(self) -> Dict:
+    async def status(self) -> Dict:
         """Get service status."""
+        # Ensure initialization is checked
+        await self._ensure_initialized()
+
         return {
             "elasticsearch_available": self._initialized,
             "last_health_check": self._last_health_check,
@@ -572,13 +581,13 @@ class ElasticsearchWatchlistAdapter:
 
 def create_elasticsearch_watchlist_adapter(
     config: Optional[ElasticsearchWatchlistConfig] = None,
-    fallback_config: Optional[VectorIndexConfig] = None
+    fallback_config: Optional[EnhancedVectorIndexConfig] = None
 ) -> ElasticsearchWatchlistAdapter:
     """Create Elasticsearch Watchlist adapter with optional fallback."""
     fallback_service = None
     if fallback_config:
         fallback_service = WatchlistIndexService(fallback_config)
-    
+
     return ElasticsearchWatchlistAdapter(config, fallback_service)
 
 

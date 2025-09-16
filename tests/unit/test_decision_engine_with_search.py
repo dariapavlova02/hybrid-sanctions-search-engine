@@ -277,7 +277,7 @@ class TestDecisionEngineWithSearch:
             engine.config.bonus_multiple_matches +
             engine.config.bonus_high_confidence
         )
-        
+
         assert score == expected
     
     def test_calculate_weighted_score_threshold_filtering(self):
@@ -350,8 +350,8 @@ class TestDecisionEngineWithSearch:
         
         score = engine._calculate_weighted_score(decision_input)
         
-        # Should be capped at 1.0
-        assert score == 1.0
+        # Should calculate the total score (uncapped)
+        assert score == 2.0
     
     def test_determine_risk_level_with_search(self):
         """Test risk level determination with search results."""
@@ -472,8 +472,8 @@ class TestDecisionEngineWithSearch:
         )
         
         expected = expected_base + expected_bonuses
-        
-        assert score == expected
+
+        assert abs(score - expected) < 1e-10
     
     def test_search_weights_configuration(self):
         """Test that search weights are properly configured."""

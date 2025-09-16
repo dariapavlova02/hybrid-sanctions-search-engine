@@ -103,6 +103,16 @@ class NormalizationResult(BaseModel):
     token_variants: Optional[Dict[str, List[str]]] = None
     total_variants: Optional[int] = None
 
+    @property
+    def normalized_text(self) -> str:
+        """Legacy alias for normalized field"""
+        return self.normalized
+
+    @property
+    def error(self) -> Optional[str]:
+        """Legacy alias for error field - returns first error if any"""
+        return self.errors[0] if self.errors else None
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return self.model_dump()

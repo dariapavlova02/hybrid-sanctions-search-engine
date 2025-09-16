@@ -26,3 +26,5 @@ datasources:
       manageAlerts: true
       alertmanagerUid: alertmanager
     version: 1
+
+

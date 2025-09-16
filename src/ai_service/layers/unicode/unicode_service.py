@@ -330,7 +330,7 @@ class UnicodeService:
             char_replacements += ascii_changes
 
         # 5. Final cleanup
-        normalized_text = self._final_cleanup(normalized_text)
+        normalized_text = self._final_cleanup(normalized_text, aggressive)
 
         # Calculate confidence
         confidence = self._calculate_normalization_confidence(
@@ -448,8 +448,8 @@ class UnicodeService:
             self.logger.warning("unidecode not available, skipping ASCII folding")
             return text, 0
 
-    def _final_cleanup(self, text: str) -> str:
-        """Final text cleanup"""
+    def _final_cleanup(self, text: str, aggressive: bool = False) -> str:
+        """Final text cleanup with clear policy for emojis and invisible characters"""
         # Remove extra spaces
         text = re.sub(r"\s+", " ", text).strip()
 
@@ -473,10 +473,19 @@ class UnicodeService:
             "\u202d",  # Left-to-right override
             "\u202e",  # Right-to-left override
             "\u2060",  # Word joiner
+            "\u2061",  # Function application
+            "\u2062",  # Invisible times
+            "\u2063",  # Invisible separator
+            "\u2064",  # Invisible plus
         ]
         
         for char in invisible_chars:
             text = text.replace(char, "")
+
+        # Emoji policy: only remove in aggressive mode
+        if aggressive:
+            # Remove emojis and other symbols in aggressive mode
+            text = self._remove_emojis_and_symbols(text)
 
         return text
 
@@ -642,3 +651,24 @@ class UnicodeService:
             "changes": changes,
             "timestamp": datetime.now().isoformat(),
         }
+
+    def _remove_emojis_and_symbols(self, text: str) -> str:
+        """Remove emojis and decorative symbols (only in aggressive mode)"""
+        # Emoji ranges
+        emoji_patterns = [
+            r"[\U0001F600-\U0001F64F]",  # Emoticons
+            r"[\U0001F300-\U0001F5FF]",  # Misc Symbols and Pictographs
+            r"[\U0001F680-\U0001F6FF]",  # Transport and Map
+            r"[\U0001F1E0-\U0001F1FF]",  # Regional indicator symbols
+            r"[\U00002600-\U000026FF]",  # Misc symbols
+            r"[\U00002700-\U000027BF]",  # Dingbats
+            r"[\U0001F900-\U0001F9FF]",  # Supplemental Symbols and Pictographs
+            r"[\U0001FA70-\U0001FAFF]",  # Symbols and Pictographs Extended-A
+            r"[\U0001F018-\U0001F0FF]",  # Playing cards
+            r"[\U0001F200-\U0001F2FF]",  # Enclosed CJK Letters and Months
+        ]
+        
+        for pattern in emoji_patterns:
+            text = re.sub(pattern, "", text)
+        
+        return text

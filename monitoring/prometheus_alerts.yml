@@ -299,3 +299,5 @@ groups:
           summary: "Search service CPU usage is critically high"
           description: "Search service CPU usage is {{ $value }}%, which is above the critical threshold of 95% for 2 minutes"
           runbook_url: "https://docs.example.com/runbooks/search-cpu-usage-critical"
+
+

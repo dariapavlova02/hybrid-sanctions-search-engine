@@ -1,0 +1,836 @@
+[
+  {
+    "header": "TestNightmareScenario.test_performance_nightmare",
+    "block": "tests/e2e/test_nightmare_scenario.py:225: in test_performance_nightmare\n    assert (\nE   AssertionError: Should generate many variants for complex text, got 12\nE   assert 12 >= 50\nE    +  where 12 = len(['Gnatuk Abdulaeva Zhorzha Rashida', 'Gnatuk Abdulaev Zhorzha Rashid', 'Gnatuk Abdulaev Zhorzha Rashidovich', 'Gnatuk ...hidovich Freedom', 'Jean-Baptiste Müller Олександр Петренко-Сміт', 'Jean-Baptiste Muller Олександр Петренко-Сміт', ...])\nE    +    where ['Gnatuk Abdulaeva Zhorzha Rashida', 'Gnatuk Abdulaev Zhorzha Rashid', 'Gnatuk Abdulaev Zhorzha Rashidovich', 'Gnatuk ...hidovich Freedom', 'Jean-Baptiste Müller Олександр Петренко-Сміт', 'Jean-Baptiste Muller Олександр Петренко-Сміт', ...] = UnifiedProcessingResult(original_text='\\n        В конференции участвовали: Jean-Baptiste Müller (Zürich), Олександр П...мит Zürcher Strasse'], embeddings=None, decision=None, processing_time=0.00022101402282714844, success=True, errors=[]).variants",
+    "message": "AssertionError: Should generate many variants for complex text, got 12",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNightmareScenario.test_edge_cases_nightmare",
+    "block": "tests/e2e/test_nightmare_scenario.py:296: in test_edge_cases_nightmare\n    assert result.normalized_text == \"\" or len(result.normalized_text) <= 2\nE   AssertionError: assert ('   \\t\\n\\r   ' == ''\nE     \nE     Strings contain only whitespace, escaping them using repr()\nE     - ''\nE     + '   \\t\\n\\r   ' or 9 <= 2)\nE    +  where 9 = len('   \\t\\n\\r   ')\nE    +    where '   \\t\\n\\r   ' = UnifiedProcessingResult(original_text='   \\t\\n\\r   ', language='uk', language_confidence=0.9, normalized_text='   \\t\\n...-Смит Zürcher Strasse'], embeddings=None, decision=None, processing_time=8.20159912109375e-05, success=True, errors=[]).normalized_text",
+    "message": "AssertionError: assert ('   \\t\\n\\r   ' == ''",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNightmareScenario.test_cache_effectiveness_nightmare",
+    "block": "tests/e2e/test_nightmare_scenario.py:343: in test_cache_effectiveness_nightmare\n    assert stats[\"cache_hits\"] > 0, \"Should have cache hits\"\nE   AssertionError: Should have cache hits\nE   assert 0 > 0",
+    "message": "AssertionError: Should have cache hits",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "test_ukrainian_full_normalization[\\u041f\\u0435\\u0440\\u0435\\u043a\\u0430\\u0437 \\u0432\\u0456\\u0434 \\u0412\\u043e\\u0432\\u0447\\u0438\\u043a\\u0430 \\u0417\\u0435\\u043b\\u0435\\u043d\\u0441\\u044c\\u043a\\u043e\\u0433\\u043e \\u0412. \\u041e.-\\u0412\\u043e\\u043b\\u043e\\u0434\\u0438\\u043c\\u0438\\u0440 \\u0417\\u0435\\u043b\\u0435\\u043d\\u0441\\u044c\\u043a\\u043e\\u0433\\u043e]",
+    "block": "tests/integration/test_full_normalization_suite.py:70: in test_ukrainian_full_normalization\n    assert_normalized_name(result, expected_name)\ntests/integration/test_full_normalization_suite.py:38: in assert_normalized_name\n    assert expected_parts == actual_tokens, \\\nE   AssertionError: Ожидалось: {'володимир', 'зеленського'}, получено: {'володимир', 'в.', 'зеленського'}\nE   assert {'володимир', 'зеленського'} == {'в.', 'волод...'зеленського'}\nE     \nE     Extra items in the right set:\nE     'в.'\nE     Use -v to get more diff",
+    "message": "AssertionError: Ожидалось: {'володимир', 'зеленського'}, получено: {'володимир', 'в.', 'зеленського'}",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "test_ukrainian_full_normalization[\\u041f\\u0435\\u0440\\u0435\\u043a\\u0430\\u0437 \\u041e\\u041b\\u0415\\u0413\\u0423 \\u0421\\u041a\\u0420\\u0418\\u041f\\u0426\\u0406-\\u041e\\u043b\\u0435\\u0433 \\u0421\\u043a\\u0440\\u0438\\u043f\\u043a\\u0430]",
+    "block": "tests/integration/test_full_normalization_suite.py:70: in test_ukrainian_full_normalization\n    assert_normalized_name(result, expected_name)\ntests/integration/test_full_normalization_suite.py:38: in assert_normalized_name\n    assert expected_parts == actual_tokens, \\\nE   AssertionError: Ожидалось: {'скрипка', 'олег'}, получено: {'олегу', 'скрипці'}\nE   assert {'олег', 'скрипка'} == {'олегу', 'скрипці'}\nE     \nE     Extra items in the left set:\nE     'скрипка'\nE     'олег'\nE     Extra items in the right set:\nE     'олегу'\nE     'скрипці'\nE     Use -v to get more diff",
+    "message": "AssertionError: Ожидалось: {'скрипка', 'олег'}, получено: {'олегу', 'скрипці'}",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "test_russian_full_normalization[\\u0414\\u043b\\u044f \\u0410\\u043b\\u043b\\u044b \\u0411\\u043e\\u0440\\u0438\\u0441\\u043e\\u0432\\u043d\\u044b \\u041f\\u0443\\u0433\\u0430\\u0447\\u0435\\u0432\\u043e\\u0439-\\u0410\\u043b\\u043b\\u0430 \\u0411\\u043e\\u0440\\u0438\\u0441\\u043e\\u0432\\u043d \\u041f\\u0443\\u0433\\u0430\\u0447\\u0435\\u0432\\u0430]",
+    "block": "tests/integration/test_full_normalization_suite.py:97: in test_russian_full_normalization\n    assert_normalized_name(result, expected_name)\ntests/integration/test_full_normalization_suite.py:38: in assert_normalized_name\n    assert expected_parts == actual_tokens, \\\nE   AssertionError: Ожидалось: {'пугачева', 'алла', 'борисовн'}, получено: {'пугачева', 'борисовна', 'алла'}\nE   assert {'алла', 'бор...', 'пугачева'} == {'алла', 'бор...', 'пугачева'}\nE     \nE     Extra items in the left set:\nE     'борисовн'\nE     Extra items in the right set:\nE     'борисовна'\nE     Use -v to get more diff",
+    "message": "AssertionError: Ожидалось: {'пугачева', 'алла', 'борисовн'}, получено: {'пугачева', 'борисовна', 'алла'}",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestUnicodeFirstLanguageDetectionOrder.test_orchestrator_call_order_verification",
+    "block": "tests/integration/test_lang_order_unicode_first.py:301: in test_orchestrator_call_order_verification\n    assert call_order.index(\"unicode\") < call_order.index(\"language\")\nE   AssertionError: assert 1 < 0\nE    +  where 1 = <built-in method index of list object at 0x13748db00>('unicode')\nE    +    where <built-in method index of list object at 0x13748db00> = ['language', 'unicode'].index\nE    +  and   0 = <built-in method index of list object at 0x13748db00>('language')\nE    +    where <built-in method index of list object at 0x13748db00> = ['language', 'unicode'].index\n------------------------------ Captured log call -------------------------------\nERROR    ai_service.core.unified_orchestrator:unified_orchestrator.py:526 Processing failed: object of type 'Mock' has no len()\nTraceback (most recent call last):\n  File \"/Users/dariapavlova/Desktop/ai-service/src/ai_service/core/unified_orchestrator.py\", line 381, in process\n    self.metrics_service.record_histogram('signals.persons_count', len(signals_result.persons))\n                                                                   ~~~^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: object of type 'Mock' has no len()",
+    "message": "AssertionError: assert 1 < 0",
+    "frames": [
+      "/Users/dariapavlova/Desktop/ai-service/src/ai_service/core/unified_orchestrator.py:381 in process"
+    ],
+    "top_frames": [
+      "/Users/dariapavlova/Desktop/ai-service/src/ai_service/core/unified_orchestrator.py:381 in process"
+    ]
+  },
+  {
+    "header": "TestMixedScriptNames.test_ascii_names_no_morphology",
+    "block": "tests/integration/test_mixed_script_names.py:106: in test_ascii_names_no_morphology\n    assert \"morph\" not in smith_trace.rule.lower()\nE   AssertionError: assert 'morph' not in 'morph'\nE     \nE     'morph' is contained here:\nE       morph",
+    "message": "AssertionError: assert 'morph' not in 'morph'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationPipeline.test_compound_name_pipeline",
+    "block": "tests/integration/test_normalization_pipeline.py:161: in test_compound_name_pipeline\n    assert len(normalization_result['token_variants']) > 0\nE   assert 0 > 0\nE    +  where 0 = len({})",
+    "message": "assert 0 > 0",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationPipeline.test_morphology_integration",
+    "block": "tests/integration/test_normalization_pipeline.py:312: in test_morphology_integration\n    assert len(all_variants) > 1, \"Should generate multiple variants with morphology enabled\"\nE   AssertionError: Should generate multiple variants with morphology enabled\nE   assert 0 > 1\nE    +  where 0 = len([])",
+    "message": "AssertionError: Should generate multiple variants with morphology enabled",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestPipelineEnd2End.test_pipeline_integration[ukrainian_company_with_legal_form]",
+    "block": "tests/integration/test_pipeline_end2end.py:383: in test_pipeline_integration\n    assert actual_org.core == expected_org[\"core\"], \\\nE   AssertionError: Org 0 core mismatch: expected ПриватБанк, got 'ПРИВАТБАНК'\nE   assert \"'ПРИВАТБАНК'\" == 'ПриватБанк'\nE     \nE     - ПриватБанк\nE     + 'ПРИВАТБАНК'",
+    "message": "AssertionError: Org 0 core mismatch: expected ПриватБанк, got 'ПРИВАТБАНК'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestPipelineEnd2End.test_pipeline_integration[mixed_person_and_company]",
+    "block": "tests/integration/test_pipeline_end2end.py:351: in test_pipeline_integration\n    assert result.normalized_text == test_case.expected_normalized, \\\nE   AssertionError: Expected normalized 'П. І. Коваленко', got 'П. І. Коваленко Агросвіт'\nE   assert 'П. І. Коваленко Агросвіт' == 'П. І. Коваленко'\nE     \nE     - П. І. Коваленко\nE     + П. І. Коваленко Агросвіт\nE     ?                +++++++++",
+    "message": "AssertionError: Expected normalized 'П. І. Коваленко', got 'П. І. Коваленко Агросвіт'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestPipelineEnd2End.test_pipeline_integration[person_with_inn]",
+    "block": "tests/integration/test_pipeline_end2end.py:351: in test_pipeline_integration\n    assert result.normalized_text == test_case.expected_normalized, \\\nE   AssertionError: Expected normalized 'П. С. Іванов', got 'Иванов П. С.'\nE   assert 'Иванов П. С.' == 'П. С. Іванов'\nE     \nE     - П. С. Іванов\nE     + Иванов П. С.",
+    "message": "AssertionError: Expected normalized 'П. С. Іванов', got 'Иванов П. С.'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestPipelineEnd2End.test_pipeline_integration[mixed_script_names]",
+    "block": "tests/integration/test_pipeline_end2end.py:351: in test_pipeline_integration\n    assert result.normalized_text == test_case.expected_normalized, \\\nE   AssertionError: Expected normalized 'John Smith Олена Петренко', got 'John Smith'\nE   assert 'John Smith' == 'John Smith Олена Петренко'\nE     \nE     - John Smith Олена Петренко\nE     + John Smith",
+    "message": "AssertionError: Expected normalized 'John Smith Олена Петренко', got 'John Smith'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestPipelineEnd2End.test_pipeline_integration[quoted_company_with_person]",
+    "block": "tests/integration/test_pipeline_end2end.py:339: in test_pipeline_integration\n    assert result.language_confidence >= test_case.expected_language_confidence_min, \\\nE   AssertionError: Language confidence 0.75 below minimum 0.8\nE   assert 0.75 >= 0.8\nE    +  where 0.75 = UnifiedProcessingResult(original_text=\"ООО 'Тест Системс' перевод средств Ивану Петрову\", language='ru', language_conf...3d216e40>, variants=None, embeddings=None, decision=None, processing_time=0.00449681282043457, success=True, errors=[]).language_confidence\nE    +  and   0.8 = IntegrationTestCase(name='quoted_company_with_person', input_text=\"ООО 'Тест Системс' перевод средств Ивану Петрову\", ...ected_should_process=True, expected_trace_roles=['given', 'surname'], notes='Quoted company name with person transfer').expected_language_confidence_min",
+    "message": "AssertionError: Language confidence 0.75 below minimum 0.8",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestPipelineEnd2End.test_pipeline_integration[overfit_canary]",
+    "block": "tests/integration/test_pipeline_end2end.py:336: in test_pipeline_integration\n    assert result.language == test_case.expected_language, \\\nE   AssertionError: Expected language uk, got ru\nE   assert 'ru' == 'uk'\nE     \nE     - uk\nE     + ru",
+    "message": "AssertionError: Expected language uk, got ru",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestPipelineEnd2End.test_pipeline_integration[full_pipeline_stress_test]",
+    "block": "tests/integration/test_pipeline_end2end.py:351: in test_pipeline_integration\n    assert result.normalized_text == test_case.expected_normalized, \\\nE   AssertionError: Expected normalized 'Іваненко Іван Іванович', got 'Агросвіт Іваненко Іван Іванович'\nE   assert 'Агросвіт Іва...Іван Іванович' == 'Іваненко Іван Іванович'\nE     \nE     - Іваненко Іван Іванович\nE     + Агросвіт Іваненко Іван Іванович\nE     ? +++++++++",
+    "message": "AssertionError: Expected normalized 'Іваненко Іван Іванович', got 'Агросвіт Іваненко Іван Іванович'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestPipelineEnd2End.test_normalization_flags_behavior",
+    "block": "tests/integration/test_pipeline_end2end.py:415: in test_normalization_flags_behavior\n    assert len(unique_results) > 1, \\\nE   AssertionError: Flags should produce different results but all were identical: ['Іван Петрович Сидоренко', 'Іван Петрович Сидоренко', 'Іван Петрович Сидоренко', 'Іван Петрович Сидоренко']\nE   assert 1 > 1\nE    +  where 1 = len({'Іван Петрович Сидоренко'})\n------------------------------ Captured log call -------------------------------\nWARNING  ai_service.core.unified_orchestrator:unified_orchestrator.py:499 Slow processing: 1.423s for text: Іван Петрович Сидоренко и ООО компания...",
+    "message": "AssertionError: Flags should produce different results but all were identical: ['Іван Петрович Сидоренко', 'Іван Петрович Сидоренко', 'Іван Петрович Сидоренко', 'Іван Петрович Сидоренко']",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestPipelineEnd2End.test_performance_requirements",
+    "block": "tests/integration/test_pipeline_end2end.py:435: in test_performance_requirements\n    assert result.processing_time <= 0.01, \\\nE   AssertionError: Short text 'Іван Петров' processing too slow: 0.017s (should be ≤ 0.01s)\nE   assert 0.01674485206604004 <= 0.01\nE    +  where 0.01674485206604004 = UnifiedProcessingResult(original_text='Іван Петров', language='uk', language_confidence=1.0, normalized_text='Іван Пет...47825705260038376, -0.020767247304320335], decision=None, processing_time=0.01674485206604004, success=True, errors=[]).processing_time",
+    "message": "AssertionError: Short text 'Іван Петров' processing too slow: 0.017s (should be ≤ 0.01s)",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "test_role_based_slavic_normalization[\\u041f\\u0435\\u0442\\u0440\\u0443 \\u0427\\u0430\\u0439\\u043a\\u043e\\u0432\\u0441\\u043a\\u043e\\u043c\\u0443-\\u041f\\u0435\\u0442\\u0440 \\u0427\\u0430\\u0439\\u043a\\u043e\\u0432\\u0441\\u043a\\u0438\\u0439-ru]",
+    "block": "tests/integration/test_role_based_normalization.py:43: in test_role_based_slavic_normalization\n    assert_normalized_name(result, expected_name)\ntests/integration/test_full_normalization_suite.py:38: in assert_normalized_name\n    assert expected_parts == actual_tokens, \\\nE   AssertionError: Ожидалось: {'чайковский', 'петр'}, получено: {'петр', 'чайковском'}\nE   assert {'петр', 'чайковский'} == {'петр', 'чайковском'}\nE     \nE     Extra items in the left set:\nE     'чайковский'\nE     Extra items in the right set:\nE     'чайковском'\nE     Use -v to get more diff",
+    "message": "AssertionError: Ожидалось: {'чайковский', 'петр'}, получено: {'петр', 'чайковском'}",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "test_role_based_slavic_normalization[\\u043e\\u0442 \\u0410\\u043b\\u0435\\u043a\\u0441\\u0430\\u043d\\u0434\\u0440\\u0430 \\u0410\\u043b\\u0435\\u043a\\u0441\\u0430\\u043d\\u0434\\u0440\\u043e\\u0432\\u0438\\u0447\\u0430-\\u0410\\u043b\\u0435\\u043a\\u0441\\u0430\\u043d\\u0434\\u0440 \\u0410\\u043b\\u0435\\u043a\\u0441\\u0430\\u043d\\u0434\\u0440\\u043e\\u0432\\u0438\\u0447-ru]",
+    "block": "tests/integration/test_role_based_normalization.py:43: in test_role_based_slavic_normalization\n    assert_normalized_name(result, expected_name)\ntests/integration/test_full_normalization_suite.py:38: in assert_normalized_name\n    assert expected_parts == actual_tokens, \\\nE   AssertionError: Ожидалось: {'александрович', 'александр'}, получено: {'александрович', 'александра'}\nE   assert {'александр', 'александрович'} == {'александра'...лександрович'}\nE     \nE     Extra items in the left set:\nE     'александр'\nE     Extra items in the right set:\nE     'александра'\nE     Use -v to get more diff",
+    "message": "AssertionError: Ожидалось: {'александрович', 'александр'}, получено: {'александрович', 'александра'}",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "test_role_based_slavic_normalization[\\u0414\\u043b\\u044f \\u0406\\u0432\\u0430\\u043d\\u043e\\u0432\\u0430-\\u041f\\u0435\\u0442\\u0440\\u0435\\u043d\\u043a\\u0430 \\u0421.\\u0412.-\\u0406\\u0432\\u0430\\u043d\\u043e\\u0432-\\u041f\\u0435\\u0442\\u0440\\u0435\\u043d\\u043a\\u043e \\u0421. \\u0412.-uk]",
+    "block": "tests/integration/test_role_based_normalization.py:43: in test_role_based_slavic_normalization\n    assert_normalized_name(result, expected_name)\ntests/integration/test_full_normalization_suite.py:38: in assert_normalized_name\n    assert expected_parts == actual_tokens, \\\nE   AssertionError: Ожидалось: {'с.', 'іванов-петренко', 'в.'}, получено: {'с.', 'іванова-петренко', 'в.'}\nE   assert {'в.', 'с.', ...нов-петренко'} == {'в.', 'с.', ...ова-петренко'}\nE     \nE     Extra items in the left set:\nE     'іванов-петренко'\nE     Extra items in the right set:\nE     'іванова-петренко'\nE     Use -v to get more diff",
+    "message": "AssertionError: Ожидалось: {'с.', 'іванов-петренко', 'в.'}, получено: {'с.', 'іванова-петренко', 'в.'}",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "test_role_based_slavic_normalization[\\u043f\\u0443\\u0448\\u043a\\u0438\\u043d \\u0430 \\u0441-\\u041f\\u0443\\u0448\\u043a\\u0438\\u043d \\u0410. \\u0421.-ru]",
+    "block": "tests/integration/test_role_based_normalization.py:43: in test_role_based_slavic_normalization\n    assert_normalized_name(result, expected_name)\ntests/integration/test_full_normalization_suite.py:38: in assert_normalized_name\n    assert expected_parts == actual_tokens, \\\nE   AssertionError: Ожидалось: {'с.', 'а.', 'пушкин'}, получено: {'а.', 'пушкин'}\nE   assert {'а.', 'пушкин', 'с.'} == {'а.', 'пушкин'}\nE     \nE     Extra items in the left set:\nE     'с.'\nE     Use -v to get more diff",
+    "message": "AssertionError: Ожидалось: {'с.', 'а.', 'пушкин'}, получено: {'а.', 'пушкин'}",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestRussianUkrainianSentences.test_multiple_persons_same_surname",
+    "block": "tests/integration/test_ru_uk_sentences.py:97: in test_multiple_persons_same_surname\n    assert \"Владимир Петров\" in result.normalized\nE   AssertionError: assert 'Владимир Петров' in 'Владимир Анна Петрова'\nE    +  where 'Владимир Анна Петрова' = NormalizationResult(normalized='Владимир Анна Петрова', tokens=['Владимир', 'Анна', 'Петрова'], trace=[TokenTrace(toke...nal_text='Владимир и Анна Петровы работают вместе', token_variants={}, total_variants=0, organizations=[], org_core='').normalized",
+    "message": "AssertionError: assert 'Владимир Петров' in 'Владимир Анна Петрова'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestSignalsServiceIntegration.test_complex_payment_scenario",
+    "block": "tests/unit/signals/test_signals_service_comprehensive.py:432: in test_complex_payment_scenario\n    assert len(result.organizations) == 1\nE   assert 2 == 1\nE    +  where 2 = len([<ai_service.layers.signals.signals_service.OrgObj object at 0x154ec7e00>, <ai_service.layers.signals.signals_service.OrgObj object at 0x15b7aa510>])\nE    +    where [<ai_service.layers.signals.signals_service.OrgObj object at 0x154ec7e00>, <ai_service.layers.signals.signals_service.OrgObj object at 0x15b7aa510>] = <ai_service.layers.signals.signals_service.SignalsService.extract_signals.<locals>.ResultWrapper object at 0x13237ee40>.organizations",
+    "message": "assert 2 == 1",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestDecisionEngineWithSearch.test_calculate_weighted_score_with_multiple_matches",
+    "block": "tests/unit/test_decision_engine_with_search.py:281: in test_calculate_weighted_score_with_multiple_matches\n    assert score == expected\nE   assert 1.0 == 1.495",
+    "message": "assert 1.0 == 1.495",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestDecisionEngineWithSearch.test_calculate_weighted_score_threshold_filtering",
+    "block": "tests/unit/test_decision_engine_with_search.py:321: in test_calculate_weighted_score_threshold_filtering\n    assert score == expected\nE   assert 0.745 == 0.645",
+    "message": "assert 0.745 == 0.645",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestDecisionEngineWithSearch.test_search_bonuses_and_penalties",
+    "block": "tests/unit/test_decision_engine_with_search.py:476: in test_search_bonuses_and_penalties\n    assert score == expected\nE   assert 1.0 == 1.065",
+    "message": "assert 1.0 == 1.065",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestElasticsearchWatchlistAdapter.test_search_ac_success",
+    "block": "tests/unit/test_elasticsearch_watchlist_adapter.py:214: in test_search_ac_success\n    assert results == [(\"person_001\", 0.8)]\nE   AssertionError: assert [('person_001...on_001', 0.8)] == [('person_001', 0.8)]\nE     \nE     Left contains one more item: ('person_001', 0.8)\nE     Use -v to get more diff",
+    "message": "AssertionError: assert [('person_001...on_001', 0.8)] == [('person_001', 0.8)]",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestElasticsearchWatchlistAdapter.test_reload_snapshot_success",
+    "block": "tests/unit/test_elasticsearch_watchlist_adapter.py:328: in test_reload_snapshot_success\n    assert result[\"snapshot_restored\"] is True\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   KeyError: 'snapshot_restored'\n------------------------------ Captured log call -------------------------------\nERROR    src.ai_service.layers.embeddings.indexing.elasticsearch_watchlist_adapter:elasticsearch_watchlist_adapter.py:550 Reload snapshot error: 'coroutine' object has no attribute 'items'",
+    "message": "KeyError: 'snapshot_restored'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestElasticsearchWatchlistAdapter.test_close",
+    "block": "tests/unit/test_elasticsearch_watchlist_adapter.py:369: in test_close\n    mock_client.aclose.assert_called_once()\n/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:958: in assert_called_once\n    raise AssertionError(msg)\nE   AssertionError: Expected 'aclose' to have been called once. Called 0 times.",
+    "message": "AssertionError: Expected 'aclose' to have been called once. Called 0 times.",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestFactoryFunctions.test_create_elasticsearch_enhanced_adapter",
+    "block": "tests/unit/test_elasticsearch_watchlist_adapter.py:392: in test_create_elasticsearch_enhanced_adapter\n    adapter = create_elasticsearch_enhanced_adapter(config, fallback_config)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nsrc/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py:592: in create_elasticsearch_enhanced_adapter\n    fallback_service = EnhancedVectorIndex(fallback_config)\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nsrc/ai_service/layers/embeddings/indexing/enhanced_vector_index_service.py:70: in __init__\n    if self.cfg.use_semantic_embeddings:\n       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   AttributeError: 'VectorIndexConfig' object has no attribute 'use_semantic_embeddings'",
+    "message": "AttributeError: 'VectorIndexConfig' object has no attribute 'use_semantic_embeddings'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestElasticsearchWatchlistAdapterIntegration.test_full_workflow",
+    "block": "tests/unit/test_elasticsearch_watchlist_adapter.py:427: in test_full_workflow\n    assert status[\"elasticsearch_available\"] is True\nE   assert False is True",
+    "message": "assert False is True",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestEmbeddingContract.test_pure_vector_generation_contract",
+    "block": "tests/unit/test_embedding_contract.py:145: in test_pure_vector_generation_contract\n    assert not extra_methods, f\"Unexpected methods found: {extra_methods}\"\nE   AssertionError: Unexpected methods found: {'log_performance', 'health_check', 'log_entry', 'reset_stats', 'log_exit', 'get_stats', 'generate_embeddings', 'log_error', 'is_initialized'}\nE   assert not {'generate_embeddings', 'get_stats', 'health_check', 'is_initialized', 'log_entry', 'log_error', ...}",
+    "message": "AssertionError: Unexpected methods found: {'log_performance', 'health_check', 'log_entry', 'reset_stats', 'log_exit', 'get_stats', 'generate_embeddings', 'log_error', 'is_initialized'}",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationServiceProperties.test_russian_feminine_surname_preservation",
+    "block": "E   hypothesis.errors.FailedHealthCheck: 'tests/unit/test_normalization_property_based.py::TestNormalizationServiceProperties::test_russian_feminine_surname_preservation' uses a function-scoped fixture 'normalization_service'.\n    \n    Function-scoped fixtures are not reset between inputs generated by `@given(...)`, which is often surprising and can cause subtle test bugs.\n    \n    If you were expecting the fixture to run separately for each generated input, then unfortunately you will need to find a different way to achieve your goal (for example, replacing the fixture with a similar cotext manager inside of the test).\n    \n    If you are confident that your test will work correctly even though the fixture is not reset between generated inputs, you can suppress this health check with @settings(suppress_health_check=[HealthCheck.function_scoped_fixture]). See https://hypothesis.readthedocs.io/en/latest/reference/api.html#hypothesis.HealthCheck for details.\nAll traceback entries are hidden. Pass `--full-trace` to see hidden and internal frames.",
+    "message": "hypothesis.errors.FailedHealthCheck: 'tests/unit/test_normalization_property_based.py::TestNormalizationServiceProperties::test_russian_feminine_surname_preservation' uses a function-scoped fixture 'normalization_service'.",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationServiceProperties.test_ukrainian_case_preservation",
+    "block": "E   hypothesis.errors.FailedHealthCheck: 'tests/unit/test_normalization_property_based.py::TestNormalizationServiceProperties::test_ukrainian_case_preservation' uses a function-scoped fixture 'normalization_service'.\n    \n    Function-scoped fixtures are not reset between inputs generated by `@given(...)`, which is often surprising and can cause subtle test bugs.\n    \n    If you were expecting the fixture to run separately for each generated input, then unfortunately you will need to find a different way to achieve your goal (for example, replacing the fixture with a similar cotext manager inside of the test).\n    \n    If you are confident that your test will work correctly even though the fixture is not reset between generated inputs, you can suppress this health check with @settings(suppress_health_check=[HealthCheck.function_scoped_fixture]). See https://hypothesis.readthedocs.io/en/latest/reference/api.html#hypothesis.HealthCheck for details.\nAll traceback entries are hidden. Pass `--full-trace` to see hidden and internal frames.",
+    "message": "hypothesis.errors.FailedHealthCheck: 'tests/unit/test_normalization_property_based.py::TestNormalizationServiceProperties::test_ukrainian_case_preservation' uses a function-scoped fixture 'normalization_service'.",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationServiceProperties.test_token_trace_completeness",
+    "block": "E   hypothesis.errors.FailedHealthCheck: 'tests/unit/test_normalization_property_based.py::TestNormalizationServiceProperties::test_token_trace_completeness' uses a function-scoped fixture 'normalization_service'.\n    \n    Function-scoped fixtures are not reset between inputs generated by `@given(...)`, which is often surprising and can cause subtle test bugs.\n    \n    If you were expecting the fixture to run separately for each generated input, then unfortunately you will need to find a different way to achieve your goal (for example, replacing the fixture with a similar cotext manager inside of the test).\n    \n    If you are confident that your test will work correctly even though the fixture is not reset between generated inputs, you can suppress this health check with @settings(suppress_health_check=[HealthCheck.function_scoped_fixture]). See https://hypothesis.readthedocs.io/en/latest/reference/api.html#hypothesis.HealthCheck for details.\nAll traceback entries are hidden. Pass `--full-trace` to see hidden and internal frames.",
+    "message": "hypothesis.errors.FailedHealthCheck: 'tests/unit/test_normalization_property_based.py::TestNormalizationServiceProperties::test_token_trace_completeness' uses a function-scoped fixture 'normalization_service'.",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationServiceProperties.test_org_acronym_filtering",
+    "block": "E   hypothesis.errors.FailedHealthCheck: 'tests/unit/test_normalization_property_based.py::TestNormalizationServiceProperties::test_org_acronym_filtering' uses a function-scoped fixture 'normalization_service'.\n    \n    Function-scoped fixtures are not reset between inputs generated by `@given(...)`, which is often surprising and can cause subtle test bugs.\n    \n    If you were expecting the fixture to run separately for each generated input, then unfortunately you will need to find a different way to achieve your goal (for example, replacing the fixture with a similar cotext manager inside of the test).\n    \n    If you are confident that your test will work correctly even though the fixture is not reset between generated inputs, you can suppress this health check with @settings(suppress_health_check=[HealthCheck.function_scoped_fixture]). See https://hypothesis.readthedocs.io/en/latest/reference/api.html#hypothesis.HealthCheck for details.\nAll traceback entries are hidden. Pass `--full-trace` to see hidden and internal frames.",
+    "message": "hypothesis.errors.FailedHealthCheck: 'tests/unit/test_normalization_property_based.py::TestNormalizationServiceProperties::test_org_acronym_filtering' uses a function-scoped fixture 'normalization_service'.",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationServiceProperties.test_case_normalization_consistency",
+    "block": "E   hypothesis.errors.FailedHealthCheck: 'tests/unit/test_normalization_property_based.py::TestNormalizationServiceProperties::test_case_normalization_consistency' uses a function-scoped fixture 'normalization_service'.\n    \n    Function-scoped fixtures are not reset between inputs generated by `@given(...)`, which is often surprising and can cause subtle test bugs.\n    \n    If you were expecting the fixture to run separately for each generated input, then unfortunately you will need to find a different way to achieve your goal (for example, replacing the fixture with a similar cotext manager inside of the test).\n    \n    If you are confident that your test will work correctly even though the fixture is not reset between generated inputs, you can suppress this health check with @settings(suppress_health_check=[HealthCheck.function_scoped_fixture]). See https://hypothesis.readthedocs.io/en/latest/reference/api.html#hypothesis.HealthCheck for details.\nAll traceback entries are hidden. Pass `--full-trace` to see hidden and internal frames.",
+    "message": "hypothesis.errors.FailedHealthCheck: 'tests/unit/test_normalization_property_based.py::TestNormalizationServiceProperties::test_case_normalization_consistency' uses a function-scoped fixture 'normalization_service'.",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationServiceProperties.test_yo_normalization_consistency",
+    "block": "E   hypothesis.errors.FailedHealthCheck: 'tests/unit/test_normalization_property_based.py::TestNormalizationServiceProperties::test_yo_normalization_consistency' uses a function-scoped fixture 'normalization_service'.\n    \n    Function-scoped fixtures are not reset between inputs generated by `@given(...)`, which is often surprising and can cause subtle test bugs.\n    \n    If you were expecting the fixture to run separately for each generated input, then unfortunately you will need to find a different way to achieve your goal (for example, replacing the fixture with a similar cotext manager inside of the test).\n    \n    If you are confident that your test will work correctly even though the fixture is not reset between generated inputs, you can suppress this health check with @settings(suppress_health_check=[HealthCheck.function_scoped_fixture]). See https://hypothesis.readthedocs.io/en/latest/reference/api.html#hypothesis.HealthCheck for details.\nAll traceback entries are hidden. Pass `--full-trace` to see hidden and internal frames.",
+    "message": "hypothesis.errors.FailedHealthCheck: 'tests/unit/test_normalization_property_based.py::TestNormalizationServiceProperties::test_yo_normalization_consistency' uses a function-scoped fixture 'normalization_service'.",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationServiceProperties.test_deterministic_behavior",
+    "block": "E   hypothesis.errors.FailedHealthCheck: 'tests/unit/test_normalization_property_based.py::TestNormalizationServiceProperties::test_deterministic_behavior' uses a function-scoped fixture 'normalization_service'.\n    \n    Function-scoped fixtures are not reset between inputs generated by `@given(...)`, which is often surprising and can cause subtle test bugs.\n    \n    If you were expecting the fixture to run separately for each generated input, then unfortunately you will need to find a different way to achieve your goal (for example, replacing the fixture with a similar cotext manager inside of the test).\n    \n    If you are confident that your test will work correctly even though the fixture is not reset between generated inputs, you can suppress this health check with @settings(suppress_health_check=[HealthCheck.function_scoped_fixture]). See https://hypothesis.readthedocs.io/en/latest/reference/api.html#hypothesis.HealthCheck for details.\nAll traceback entries are hidden. Pass `--full-trace` to see hidden and internal frames.",
+    "message": "hypothesis.errors.FailedHealthCheck: 'tests/unit/test_normalization_property_based.py::TestNormalizationServiceProperties::test_deterministic_behavior' uses a function-scoped fixture 'normalization_service'.",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationServiceProperties.test_language_specific_processing",
+    "block": "E   hypothesis.errors.FailedHealthCheck: 'tests/unit/test_normalization_property_based.py::TestNormalizationServiceProperties::test_language_specific_processing' uses a function-scoped fixture 'normalization_service'.\n    \n    Function-scoped fixtures are not reset between inputs generated by `@given(...)`, which is often surprising and can cause subtle test bugs.\n    \n    If you were expecting the fixture to run separately for each generated input, then unfortunately you will need to find a different way to achieve your goal (for example, replacing the fixture with a similar cotext manager inside of the test).\n    \n    If you are confident that your test will work correctly even though the fixture is not reset between generated inputs, you can suppress this health check with @settings(suppress_health_check=[HealthCheck.function_scoped_fixture]). See https://hypothesis.readthedocs.io/en/latest/reference/api.html#hypothesis.HealthCheck for details.\nAll traceback entries are hidden. Pass `--full-trace` to see hidden and internal frames.",
+    "message": "hypothesis.errors.FailedHealthCheck: 'tests/unit/test_normalization_property_based.py::TestNormalizationServiceProperties::test_language_specific_processing' uses a function-scoped fixture 'normalization_service'.",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestUnifiedOrchestrator.test_process_basic_functionality",
+    "block": "tests/unit/test_orchestrator_service.py:121: in test_process_basic_functionality\n    assert result.success is True\nE   assert False is True\nE    +  where False = UnifiedProcessingResult(original_text='Test text', language='en', language_confidence=0.9, normalized_text='', tokens=...ne, decision=None, processing_time=0.0006299018859863281, success=False, errors=[\"object of type 'Mock' has no len()\"]).success\n------------------------------ Captured log call -------------------------------\nERROR    src.ai_service.core.unified_orchestrator:unified_orchestrator.py:526 Processing failed: object of type 'Mock' has no len()\nTraceback (most recent call last):\n  File \"/Users/dariapavlova/Desktop/ai-service/src/ai_service/core/unified_orchestrator.py\", line 332, in process\n    logger.debug(f\"Unicode: input_len={len(text_in)}, normalized_len={len(text_u)}\")\n                                                                      ~~~^^^^^^^^\nTypeError: object of type 'Mock' has no len()",
+    "message": "assert False is True",
+    "frames": [
+      "/Users/dariapavlova/Desktop/ai-service/src/ai_service/core/unified_orchestrator.py:332 in process"
+    ],
+    "top_frames": [
+      "/Users/dariapavlova/Desktop/ai-service/src/ai_service/core/unified_orchestrator.py:332 in process"
+    ]
+  },
+  {
+    "header": "TestOrchestratorService.test_process_basic_functionality",
+    "block": "tests/unit/test_orchestrator_service_old.py:42: in test_process_basic_functionality\n    assert result.normalized_text == 'test text'\nE   AssertionError: assert 'Test text' == 'test text'\nE     \nE     - test text\nE     ? ^\nE     + Test text\nE     ? ^",
+    "message": "AssertionError: assert 'Test text' == 'test text'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestOrchestratorService.test_process_with_cache_hit",
+    "block": "tests/unit/test_orchestrator_service_old.py:70: in test_process_with_cache_hit\n    assert result == cached_result\nE   AssertionError: assert UnifiedProces...ue, errors=[]) == UnifiedProces...ue, errors=[])\nE     \nE     Omitting 7 identical items, use -vv to show\nE     Differing attributes:\nE     ['language',\nE      'normalized_text',\nE      'tokens',\nE      'signals',...\nE     \nE     ...Full output truncated (28 lines hidden), use '-vv' to show",
+    "message": "AssertionError: assert UnifiedProces...ue, errors=[]) == UnifiedProces...ue, errors=[])",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestOrchestratorService.test_process_with_cache_miss",
+    "block": "tests/unit/test_orchestrator_service_old.py:97: in test_process_with_cache_miss\n    mock_set.assert_called_once()  # Result should be cached\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:958: in assert_called_once\n    raise AssertionError(msg)\nE   AssertionError: Expected 'set' to have been called once. Called 0 times.",
+    "message": "AssertionError: Expected 'set' to have been called once. Called 0 times.",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestOrchestratorService.test_process_with_embeddings",
+    "block": "tests/unit/test_orchestrator_service_old.py:125: in test_process_with_embeddings\n    mock_embeddings.assert_called_once()\n/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:958: in assert_called_once\n    raise AssertionError(msg)\nE   AssertionError: Expected 'get_embeddings' to have been called once. Called 0 times.",
+    "message": "AssertionError: Expected 'get_embeddings' to have been called once. Called 0 times.",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestOrchestratorService.test_process_error_handling",
+    "block": "tests/unit/test_orchestrator_service_old.py:140: in test_process_error_handling\n    assert result.success is False\nE   AssertionError: assert True is False\nE    +  where True = UnifiedProcessingResult(original_text='Error test', language='uk', language_confidence=0.9, normalized_text='Error tes...5e8ae40>, variants=None, embeddings=None, decision=None, processing_time=0.000141143798828125, success=True, errors=[]).success",
+    "message": "AssertionError: assert True is False",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestOrchestratorService.test_search_similar_names_with_embeddings",
+    "block": "tests/unit/test_orchestrator_service_old.py:229: in test_search_similar_names_with_embeddings\n    assert len(result['results']) == 2\nE   assert 0 == 2\nE    +  where 0 = len([])\n------------------------------ Captured log call -------------------------------\nWARNING  src.ai_service.core.unified_orchestrator:unified_orchestrator.py:796 search_similar_names is deprecated. Use embeddings_service directly.",
+    "message": "assert 0 == 2",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestOrchestratorService.test_search_similar_names_fallback",
+    "block": "tests/unit/test_orchestrator_service_old.py:255: in test_search_similar_names_fallback\n    assert result['method'] == 'variants'\nE   AssertionError: assert 'embeddings' == 'variants'\nE     \nE     - variants\nE     + embeddings\n------------------------------ Captured log call -------------------------------\nWARNING  src.ai_service.core.unified_orchestrator:unified_orchestrator.py:796 search_similar_names is deprecated. Use embeddings_service directly.",
+    "message": "AssertionError: assert 'embeddings' == 'variants'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestOrchestratorService.test_analyze_text_complexity",
+    "block": "tests/unit/test_orchestrator_service_old.py:291: in test_analyze_text_complexity\n    assert 'unicode' in result\nE   AssertionError: assert 'unicode' in {'character_count': 25, 'complexity_score': 0.3333333333333333, 'recommendations': ['Text complexity is moderate', 'Good balance', 'Consider reviewing structure'], 'word_count': 4}",
+    "message": "AssertionError: assert 'unicode' in {'character_count': 25, 'complexity_score': 0.3333333333333333, 'recommendations': ['Text complexity is moderate', 'Good balance', 'Consider reviewing structure'], 'word_count': 4}",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestOrchestratorService.test_get_processing_stats",
+    "block": "tests/unit/test_orchestrator_service_old.py:320: in test_get_processing_stats\n    assert 'services' in stats\nE   AssertionError: assert 'services' in {'cache': 0, 'cache_hits': 0, 'cache_misses': 0, 'errors': 0, ...}",
+    "message": "AssertionError: assert 'services' in {'cache': 0, 'cache_hits': 0, 'cache_misses': 0, 'errors': 0, ...}",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestOrchestratorService.test_update_stats",
+    "block": "tests/unit/test_orchestrator_service_old.py:369: in test_update_stats\n    assert stats['successful'] >= 1\nE   assert 0 >= 1",
+    "message": "assert 0 >= 1",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestOrchestratorService.test_force_reprocess_ignores_cache",
+    "block": "tests/unit/test_orchestrator_service_old.py:441: in test_force_reprocess_ignores_cache\n    assert result.normalized_text == 'new result'  # New result, not from cache\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   AssertionError: assert 'Force reprocess test' == 'new result'\nE     \nE     - new result\nE     + Force reprocess test",
+    "message": "AssertionError: assert 'Force reprocess test' == 'new result'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestOrchestratorService.test_process_normalization_service_exception",
+    "block": "tests/unit/test_orchestrator_service_old.py:527: in test_process_normalization_service_exception\n    assert result.success is False\nE   AssertionError: assert True is False\nE    +  where True = UnifiedProcessingResult(original_text='Test text for normalization service exception', language='uk', language_confide...ed940>, variants=None, embeddings=None, decision=None, processing_time=0.00014591217041015625, success=True, errors=[]).success",
+    "message": "AssertionError: assert True is False",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestPatternService.test_case_sensitivity_handling",
+    "block": "tests/unit/test_pattern_service.py:192: in test_case_sensitivity_handling\n    assert len(patterns) > 0\nE   assert 0 > 0\nE    +  where 0 = len([])",
+    "message": "assert 0 > 0",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestExtractSearchCandidates.test_extract_from_persons",
+    "block": "tests/unit/test_search_contracts.py:223: in test_extract_from_persons\n    assert set(candidates) == set(expected)\nE   AssertionError: assert set() == {'ivan petrov...рия сидорова'}\nE     \nE     Extra items in the right set:\nE     'и. петров'\nE     'ivan petrov'\nE     'м. сидорова'\nE     'мария сидорова'\nE     'иван петров'\nE     Use -v to get more diff",
+    "message": "AssertionError: assert set() == {'ivan petrov...рия сидорова'}",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestExtractSearchCandidates.test_extract_from_organizations",
+    "block": "tests/unit/test_search_contracts.py:244: in test_extract_from_organizations\n    assert set(candidates) == set(expected)\nE   AssertionError: assert set() == {'apple', 'ap... 'приватбанк'}\nE     \nE     Extra items in the right set:\nE     'apple inc'\nE     'apple'\nE     'privatbank'\nE     'приватбанк'\nE     'ооо приватбанк'\nE     Use -v to get more diff",
+    "message": "AssertionError: assert set() == {'apple', 'ap... 'приватбанк'}",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestExtractSearchCandidates.test_extract_mixed_entities",
+    "block": "tests/unit/test_search_contracts.py:266: in test_extract_mixed_entities\n    assert set(candidates) == set(expected)\nE   AssertionError: assert set() == {'и. петров',... 'приватбанк'}\nE     \nE     Extra items in the right set:\nE     'и. петров'\nE     'приватбанк'\nE     'ооо приватбанк'\nE     'иван петров'\nE     Use -v to get more diff",
+    "message": "AssertionError: assert set() == {'и. петров',... 'приватбанк'}",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestExtractSearchCandidates.test_extract_filters_empty_strings",
+    "block": "tests/unit/test_search_contracts.py:293: in test_extract_filters_empty_strings\n    assert set(candidates) == set(expected)\nE   AssertionError: assert set() == {'и. петров', 'иван петров'}\nE     \nE     Extra items in the right set:\nE     'и. петров'\nE     'иван петров'\nE     Use -v to get more diff",
+    "message": "AssertionError: assert set() == {'и. петров', 'иван петров'}",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestSearchIntegration.test_extract_and_search_with_service",
+    "block": "tests/unit/test_search_integration.py:50: in test_extract_and_search_with_service\n    assert result is not None\nE   assert None is not None",
+    "message": "assert None is not None",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestSearchIntegration.test_should_enable_search_with_persons",
+    "block": "tests/unit/test_search_integration.py:174: in test_should_enable_search_with_persons\n    assert result is True\nE   assert False is True",
+    "message": "assert False is True",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestSearchIntegration.test_should_enable_search_with_organizations",
+    "block": "tests/unit/test_search_integration.py:186: in test_should_enable_search_with_organizations\n    assert result is True\nE   assert False is True",
+    "message": "assert False is True",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestSearchIntegrationThresholds.test_threshold_normalization",
+    "block": "tests/unit/test_search_integration.py:282: in test_threshold_normalization\n    assert result is not None\nE   assert None is not None",
+    "message": "assert None is not None",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestSearchIntegrationThresholds.test_search_mode_handling",
+    "block": "tests/unit/test_search_integration.py:307: in test_search_mode_handling\n    assert result is not None\nE   assert None is not None",
+    "message": "assert None is not None",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestSmartFilterService.test_service_words_cleaning",
+    "block": "tests/unit/test_smart_filter_service.py:195: in test_service_words_cleaning\n    self.assertNotEqual(cleaned, text_with_service_words)\nE   AssertionError: 'оплата за консультацію Петров Іван' == 'оплата за консультацію Петров Іван'\n------------------------------ Captured log call -------------------------------\nWARNING  ai_service.layers.smart_filter.smart_filter_service:smart_filter_service.py:482 _clean_service_words is deprecated - use context-aware analysis instead",
+    "message": "AssertionError: 'оплата за консультацію Петров Іван' == 'оплата за консультацію Петров Іван'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestSmartFilterService.test_should_process_text_excluded",
+    "block": "tests/unit/test_smart_filter_service.py:59: in test_should_process_text_excluded\n    self.assertIn(\"исключен\", result.processing_recommendation)\nE   AssertionError: 'исключен' not found in 'Text excluded from processing (service information only)'",
+    "message": "AssertionError: 'исключен' not found in 'Text excluded from processing (service information only)'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestUnicodeServiceProperties.test_normalization_stability",
+    "block": "tests/unit/test_unicode_property_based.py:77: in test_normalization_stability\n    def test_normalization_stability(self, text):\n               ^^^^^^^\ntests/unit/test_unicode_property_based.py:84: in test_normalization_stability\n    assert result2[\"normalized\"] == result1[\"normalized\"]\nE   assert \"'€u\" == \"'\\x80u\"\nE     \nE     - 'u\nE     + '€u\nE   Falsifying example: test_normalization_stability(\nE       self=<tests.unit.test_unicode_property_based.TestUnicodeServiceProperties object at 0x1320acc30>,\nE       text='`\\x80ù',\nE   )",
+    "message": "assert \"'€u\" == \"'\\x80u\"",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestFlagsBehavior.test_initial_cleanup_still_works_with_flags",
+    "block": "tests/unit/text_processing/test_flags_behavior.py:172: in test_initial_cleanup_still_works_with_flags\n    assert any(\"П\" in token for token in tokens), f\"Expected 'П' in tokens: {tokens}\"\nE   AssertionError: Expected 'П' in tokens: ['Коваленко']\nE   assert False\nE    +  where False = any(<generator object TestFlagsBehavior.test_initial_cleanup_still_works_with_flags.<locals>.<genexpr> at 0x1669d6330>)",
+    "message": "AssertionError: Expected 'П' in tokens: ['Коваленко']",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "test_ukrainian_full_normalization[\\u0414\\u043b\\u044f \\u041f\\u0435\\u0442\\u0440\\u0443\\u0441\\u044f \\u0406\\u0432\\u0430\\u043d\\u043e\\u0432\\u0430, \\u0437\\u0430 \\u0440\\u0435\\u043c\\u043e\\u043d\\u0442-\\u041f\\u0435\\u0442\\u0440\\u043e \\u0406\\u0432\\u0430\\u043d\\u043e\\u0432]",
+    "block": "tests/unit/text_processing/test_normalization_logic.py:48: in test_ukrainian_full_normalization\n    assert_normalized_name(result, expected_name)\ntests/unit/text_processing/test_normalization_logic.py:18: in assert_normalized_name\n    assert result.normalized == expected_name, f\"Expected '{expected_name}', but got '{result.normalized}'\"\nE   AssertionError: Expected 'Петро Іванов', but got 'Петро Іванова'\nE   assert 'Петро Іванова' == 'Петро Іванов'\nE     \nE     - Петро Іванов\nE     + Петро Іванова\nE     ?             +",
+    "message": "AssertionError: Expected 'Петро Іванов', but got 'Петро Іванова'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "test_ukrainian_full_normalization[\\u041f\\u0435\\u0440\\u0435\\u043a\\u0430\\u0437 \\u0432\\u0456\\u0434 \\u0412\\u043e\\u0432\\u0447\\u0438\\u043a\\u0430 \\u0417\\u0435\\u043b\\u0435\\u043d\\u0441\\u044c\\u043a\\u043e\\u0433\\u043e \\u0412. \\u041e.-\\u0412\\u043e\\u043b\\u043e\\u0434\\u0438\\u043c\\u0438\\u0440 \\u0417\\u0435\\u043b\\u0435\\u043d\\u0441\\u044c\\u043a\\u0438\\u0439 \\u0412. \\u041e.]",
+    "block": "tests/unit/text_processing/test_normalization_logic.py:48: in test_ukrainian_full_normalization\n    assert_normalized_name(result, expected_name)\ntests/unit/text_processing/test_normalization_logic.py:18: in assert_normalized_name\n    assert result.normalized == expected_name, f\"Expected '{expected_name}', but got '{result.normalized}'\"\nE   AssertionError: Expected 'Володимир Зеленський В. О.', but got 'Володимир Зеленського'\nE   assert 'Володимир Зеленського' == 'Володимир Зеленський В. О.'\nE     \nE     - Володимир Зеленський В. О.\nE     ?                   ^^^^^^^^\nE     + Володимир Зеленського\nE     ?                   ^^^",
+    "message": "AssertionError: Expected 'Володимир Зеленський В. О.', but got 'Володимир Зеленського'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "test_ukrainian_full_normalization[\\u0412\\u0456\\u0434 \\u0421\\u0430\\u0448\\u043a\\u0430 \\u041f\\u043e\\u043b\\u043e\\u0436\\u0438\\u043d\\u0441\\u044c\\u043a\\u043e\\u0433\\u043e \\u0437\\u0430 \\u043a\\u0432\\u0438\\u0442\\u043a\\u0438-\\u041e\\u043b\\u0435\\u043a\\u0441\\u0430\\u043d\\u0434\\u0440 \\u041f\\u043e\\u043b\\u043e\\u0436\\u0438\\u043d\\u0441\\u044c\\u043a\\u0438\\u0439]",
+    "block": "tests/unit/text_processing/test_normalization_logic.py:48: in test_ukrainian_full_normalization\n    assert_normalized_name(result, expected_name)\ntests/unit/text_processing/test_normalization_logic.py:18: in assert_normalized_name\n    assert result.normalized == expected_name, f\"Expected '{expected_name}', but got '{result.normalized}'\"\nE   AssertionError: Expected 'Олександр Положинський', but got 'Олександр Положинського'\nE   assert 'Олександр Положинського' == 'Олександр Положинський'\nE     \nE     - Олександр Положинський\nE     ?                     ^^\nE     + Олександр Положинського\nE     ?                     ^^^",
+    "message": "AssertionError: Expected 'Олександр Положинський', but got 'Олександр Положинського'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "test_ukrainian_full_normalization[\\u0414\\u043b\\u044f \\u0416\\u0435\\u043d\\u0456 \\u0413\\u0430\\u043b\\u0438\\u0447\\u0430 \\u0437 \\u0433\\u0440\\u0443\\u043f\\u0438 O.Torvald-\\u0404\\u0432\\u0433\\u0435\\u043d \\u0413\\u0430\\u043b\\u0438\\u0447]",
+    "block": "tests/unit/text_processing/test_normalization_logic.py:48: in test_ukrainian_full_normalization\n    assert_normalized_name(result, expected_name)\ntests/unit/text_processing/test_normalization_logic.py:18: in assert_normalized_name\n    assert result.normalized == expected_name, f\"Expected '{expected_name}', but got '{result.normalized}'\"\nE   AssertionError: Expected 'Євген Галич', but got 'Євген Галича'\nE   assert 'Євген Галича' == 'Євген Галич'\nE     \nE     - Євген Галич\nE     + Євген Галича\nE     ?            +",
+    "message": "AssertionError: Expected 'Євген Галич', but got 'Євген Галича'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "test_ukrainian_full_normalization[\\u0420\\u043e\\u0437\\u043c\\u043e\\u0432\\u043b\\u044f\\u0432 \\u0437 \\u0412\\u0430\\u043b\\u0435\\u0440\\u0456\\u0454\\u043c \\u0417\\u0430\\u043b\\u0443\\u0436\\u043d\\u0438\\u043c-\\u0412\\u0430\\u043b\\u0435\\u0440\\u0456\\u0439 \\u0417\\u0430\\u043b\\u0443\\u0436\\u043d\\u0438\\u0439]",
+    "block": "tests/unit/text_processing/test_normalization_logic.py:48: in test_ukrainian_full_normalization\n    assert_normalized_name(result, expected_name)\ntests/unit/text_processing/test_normalization_logic.py:18: in assert_normalized_name\n    assert result.normalized == expected_name, f\"Expected '{expected_name}', but got '{result.normalized}'\"\nE   AssertionError: Expected 'Валерій Залужний', but got 'Валерій Залужним'\nE   assert 'Валерій Залужним' == 'Валерій Залужний'\nE     \nE     - Валерій Залужний\nE     ?                ^\nE     + Валерій Залужним\nE     ?                ^",
+    "message": "AssertionError: Expected 'Валерій Залужний', but got 'Валерій Залужним'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "test_ukrainian_full_normalization[\\u041f\\u0435\\u0440\\u0435\\u043a\\u0430\\u0437 \\u041e\\u041b\\u0415\\u0413\\u0423 \\u0421\\u041a\\u0420\\u0418\\u041f\\u0426\\u0406-\\u041e\\u043b\\u0435\\u0433 \\u0421\\u043a\\u0440\\u0438\\u043f\\u043a\\u0430]",
+    "block": "tests/unit/text_processing/test_normalization_logic.py:48: in test_ukrainian_full_normalization\n    assert_normalized_name(result, expected_name)\ntests/unit/text_processing/test_normalization_logic.py:18: in assert_normalized_name\n    assert result.normalized == expected_name, f\"Expected '{expected_name}', but got '{result.normalized}'\"\nE   AssertionError: Expected 'Олег Скрипка', but got ''\nE   assert '' == 'Олег Скрипка'\nE     \nE     - Олег Скрипка",
+    "message": "AssertionError: Expected 'Олег Скрипка', but got ''",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "test_ukrainian_full_normalization[\\u0414\\u043b\\u044f \\u0406\\u0432\\u0430\\u043d\\u043e\\u0432\\u0430-\\u041f\\u0435\\u0442\\u0440\\u0435\\u043d\\u043a\\u0430 \\u0421.\\u0412.-\\u0406\\u0432\\u0430\\u043d\\u043e\\u0432-\\u041f\\u0435\\u0442\\u0440\\u0435\\u043d\\u043a\\u043e \\u0421.\\u0412.]",
+    "block": "tests/unit/text_processing/test_normalization_logic.py:48: in test_ukrainian_full_normalization\n    assert_normalized_name(result, expected_name)\ntests/unit/text_processing/test_normalization_logic.py:18: in assert_normalized_name\n    assert result.normalized == expected_name, f\"Expected '{expected_name}', but got '{result.normalized}'\"\nE   AssertionError: Expected 'Іванов-Петренко С.В.', but got 'Іванова-Петренко С. В.'\nE   assert 'Іванова-Петренко С. В.' == 'Іванов-Петренко С.В.'\nE     \nE     - Іванов-Петренко С.В.\nE     + Іванова-Петренко С. В.\nE     ?       +            +",
+    "message": "AssertionError: Expected 'Іванов-Петренко С.В.', but got 'Іванова-Петренко С. В.'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "test_russian_full_normalization[\\u041f\\u0435\\u0440\\u0435\\u0432\\u043e\\u0434 \\u043e\\u0442 \\u0421\\u0430\\u0448\\u0438 \\u041f\\u0443\\u0448\\u043a\\u0438\\u043d\\u0430 \\u0410\\u043b\\u0435\\u043a\\u0441\\u0430\\u043d\\u0434\\u0440\\u043e\\u0432\\u0438\\u0447\\u0430-\\u0410\\u043b\\u0435\\u043a\\u0441\\u0430\\u043d\\u0434\\u0440 \\u041f\\u0443\\u0448\\u043a\\u0438\\u043d \\u0410\\u043b\\u0435\\u043a\\u0441\\u0430\\u043d\\u0434\\u0440\\u043e\\u0432\\u0438\\u0447]",
+    "block": "tests/unit/text_processing/test_normalization_logic.py:111: in test_russian_full_normalization\n    assert_normalized_name(result, expected_name)\ntests/unit/text_processing/test_normalization_logic.py:18: in assert_normalized_name\n    assert result.normalized == expected_name, f\"Expected '{expected_name}', but got '{result.normalized}'\"\nE   AssertionError: Expected 'Александр Пушкин Александрович', but got 'Александр Пушкинин Александрович'\nE   assert 'Александр Пу...Александрович' == 'Александр Пу...Александрович'\nE     \nE     - Александр Пушкин Александрович\nE     + Александр Пушкинин Александрович\nE     ?                 ++",
+    "message": "AssertionError: Expected 'Александр Пушкин Александрович', but got 'Александр Пушкинин Александрович'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "test_russian_full_normalization[\\u041e\\u043f\\u043b\\u0430\\u0442\\u0430 \\u0434\\u043b\\u044f \\u0412\\u043e\\u043b\\u043e\\u0434\\u0438 \\u0412\\u044b\\u0441\\u043e\\u0446\\u043a\\u043e\\u0433\\u043e-\\u0412\\u043b\\u0430\\u0434\\u0438\\u043c\\u0438\\u0440 \\u0412\\u044b\\u0441\\u043e\\u0446\\u043a\\u0438\\u0439]",
+    "block": "tests/unit/text_processing/test_normalization_logic.py:111: in test_russian_full_normalization\n    assert_normalized_name(result, expected_name)\ntests/unit/text_processing/test_normalization_logic.py:18: in assert_normalized_name\n    assert result.normalized == expected_name, f\"Expected '{expected_name}', but got '{result.normalized}'\"\nE   AssertionError: Expected 'Владимир Высоцкий', but got 'Владимир Высоцкого'\nE   assert 'Владимир Высоцкого' == 'Владимир Высоцкий'\nE     \nE     - Владимир Высоцкий\nE     ?                ^^\nE     + Владимир Высоцкого\nE     ?                ^^^\n----------------------------- Captured stdout call -----------------------------\n\nDEBUG - Input: 'Оплата для Володи Высоцкого'\nDEBUG - Expected: 'Владимир Высоцкий'\nDEBUG - Actual: 'Владимир Высоцкого'\nDEBUG - Fresh service result: 'Владимир Высоцкого'\nDEBUG - Fresh _morph_nominal('Высоцкого', 'ru') = 'Высоцкий'\nDEBUG - Fresh ru_morph available: True\nDEBUG - Fresh ru_morph type: <class 'pymorphy3.analyzer.MorphAnalyzer'>",
+    "message": "AssertionError: Expected 'Владимир Высоцкий', but got 'Владимир Высоцкого'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "test_russian_full_normalization[\\u0411\\u043b\\u0430\\u0433\\u043e\\u0434\\u0430\\u0440\\u043d\\u043e\\u0441\\u0442\\u044c \\u041f\\u0435\\u0442\\u0440\\u0443 \\u0427\\u0430\\u0439\\u043a\\u043e\\u0432\\u0441\\u043a\\u043e\\u043c\\u0443-\\u041f\\u0435\\u0442\\u0440 \\u0427\\u0430\\u0439\\u043a\\u043e\\u0432\\u0441\\u043a\\u0438\\u0439]",
+    "block": "tests/unit/text_processing/test_normalization_logic.py:111: in test_russian_full_normalization\n    assert_normalized_name(result, expected_name)\ntests/unit/text_processing/test_normalization_logic.py:18: in assert_normalized_name\n    assert result.normalized == expected_name, f\"Expected '{expected_name}', but got '{result.normalized}'\"\nE   AssertionError: Expected 'Петр Чайковский', but got 'Петр Чайковском'\nE   assert 'Петр Чайковском' == 'Петр Чайковский'\nE     \nE     - Петр Чайковский\nE     ?              ^^\nE     + Петр Чайковском\nE     ?              ^^",
+    "message": "AssertionError: Expected 'Петр Чайковский', but got 'Петр Чайковском'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "test_russian_full_normalization[\\u041e\\u0442\\u043f\\u0440\\u0430\\u0432\\u043b\\u0435\\u043d\\u043e \\u0434\\u043b\\u044f \\u0415\\u0441\\u0435\\u043d\\u0438\\u043d\\u0430 \\u0421. \\u0410.-\\u0415\\u0441\\u0435\\u043d\\u0438\\u043d \\u0421. \\u0410.]",
+    "block": "tests/unit/text_processing/test_normalization_logic.py:111: in test_russian_full_normalization\n    assert_normalized_name(result, expected_name)\ntests/unit/text_processing/test_normalization_logic.py:18: in assert_normalized_name\n    assert result.normalized == expected_name, f\"Expected '{expected_name}', but got '{result.normalized}'\"\nE   AssertionError: Expected 'Есенин С. А.', but got 'Есенина С. А.'\nE   assert 'Есенина С. А.' == 'Есенин С. А.'\nE     \nE     - Есенин С. А.\nE     + Есенина С. А.\nE     ?       +",
+    "message": "AssertionError: Expected 'Есенин С. А.', but got 'Есенина С. А.'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "test_russian_full_normalization[\\u0417\\u0430\\u0447\\u0438\\u0441\\u043b\\u0435\\u043d\\u0438\\u0435 \\u043e\\u0442 \\u041b\\u0435\\u0440\\u043c\\u043e\\u043d\\u0442\\u043e\\u0432\\u0430 \\u041c.\\u042e.-\\u041b\\u0435\\u0440\\u043c\\u043e\\u043d\\u0442\\u043e\\u0432 \\u041c.\\u042e.]",
+    "block": "tests/unit/text_processing/test_normalization_logic.py:111: in test_russian_full_normalization\n    assert_normalized_name(result, expected_name)\ntests/unit/text_processing/test_normalization_logic.py:18: in assert_normalized_name\n    assert result.normalized == expected_name, f\"Expected '{expected_name}', but got '{result.normalized}'\"\nE   AssertionError: Expected 'Лермонтов М.Ю.', but got 'Лермонтова М. Ю.'\nE   assert 'Лермонтова М. Ю.' == 'Лермонтов М.Ю.'\nE     \nE     - Лермонтов М.Ю.\nE     + Лермонтова М. Ю.\nE     ?          +   +",
+    "message": "AssertionError: Expected 'Лермонтов М.Ю.', but got 'Лермонтова М. Ю.'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_normalize_english_text",
+    "block": "tests/unit/text_processing/test_normalization_service_fixed.py:48: in test_normalize_english_text\n    assert \"Hello world\" in result.normalized\nE   AssertionError: assert 'Hello world' in 'Hello World'\nE    +  where 'Hello World' = NormalizationResult(normalized='Hello World', tokens=['Hello', 'World'], trace=[TokenTrace(token='Hello', role='given'...ender_confidence=None, original_text='Hello world', token_variants={}, total_variants=0, organizations=[], org_core='').normalized",
+    "message": "AssertionError: assert 'Hello world' in 'Hello World'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_normalize_russian_text",
+    "block": "tests/unit/text_processing/test_normalization_service_fixed.py:56: in test_normalize_russian_text\n    assert \"Привет\" in result.normalized\nE   AssertionError: assert 'Привет' in ''\nE    +  where '' = NormalizationResult(normalized='', tokens=[], trace=[], errors=[], language='ru', confidence=1.0, original_length=10, ...gender_confidence=None, original_text='Привет мир', token_variants={}, total_variants=0, organizations=[], org_core='').normalized",
+    "message": "AssertionError: assert 'Привет' in ''",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_normalize_with_fallback",
+    "block": "tests/unit/text_processing/test_normalization_service_fixed.py:72: in test_normalize_with_fallback\n    assert \"Hello world\" in result.normalized\nE   AssertionError: assert 'Hello world' in 'Hello World'\nE    +  where 'Hello World' = NormalizationResult(normalized='Hello World', tokens=['Hello', 'World'], trace=[TokenTrace(token='Hello', role='given'...ender_confidence=None, original_text='Hello world', token_variants={}, total_variants=0, organizations=[], org_core='').normalized",
+    "message": "AssertionError: assert 'Hello world' in 'Hello World'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_normalize_with_auto_language_detection",
+    "block": "tests/unit/text_processing/test_normalization_service_fixed.py:76: in test_normalize_with_auto_language_detection\n    result = service.normalize(\"Hello world\", language=\"auto\")\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nsrc/ai_service/utils/performance.py:21: in wrapper\n    result = func(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^\nsrc/ai_service/utils/performance.py:54: in wrapper\n    return func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\nsrc/ai_service/layers/normalization/normalization_service.py:473: in normalize\n    return self._normalize_sync(\nsrc/ai_service/layers/normalization/normalization_service.py:673: in _normalize_sync\n    return NormalizationResult(\nE   pydantic_core._pydantic_core.ValidationError: 1 validation error for NormalizationResult\nE   language\nE     Input should be a valid string [type=string_type, input_value=<Mock name='LanguageDetec...guage' id='17174128896'>, input_type=Mock]\nE       For further information visit https://errors.pydantic.dev/2.11/v/string_type\n------------------------------ Captured log call -------------------------------\nERROR    ai_service.layers.normalization.normalization_service:normalization_service.py:666 Normalization failed: 2 validation errors for NormalizationResult\nlanguage\n  Input should be a valid string [type=string_type, input_value=<Mock name='LanguageDetec...guage' id='17174128896'>, input_type=Mock]\n    For further information visit https://errors.pydantic.dev/2.11/v/string_type\nconfidence\n  Input should be a valid number [type=float_type, input_value=<Mock name='LanguageDetec...dence' id='17174129232'>, input_type=Mock]\n    For further information visit https://errors.pydantic.dev/2.11/v/float_type\nERROR    ai_service.utils.performance:performance.py:34 Error in normalize after 0.010s: 1 validation error for NormalizationResult\nlanguage\n  Input should be a valid string [type=string_type, input_value=<Mock name='LanguageDetec...guage' id='17174128896'>, input_type=Mock]\n    For further information visit https://errors.pydantic.dev/2.11/v/string_type",
+    "message": "pydantic_core._pydantic_core.ValidationError: 1 validation error for NormalizationResult",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_normalize_with_special_characters",
+    "block": "tests/unit/text_processing/test_normalization_service_fixed.py:132: in test_normalize_with_special_characters\n    assert \"O'Connor\" in result.normalized\nE   assert \"O'Connor\" in \"O'connor\"\nE    +  where \"O'connor\" = NormalizationResult(normalized=\"O'connor\", tokens=[\"O'connor\"], trace=[TokenTrace(token=\"O'Connor\", role='given', rule..., gender_confidence=None, original_text=\"O'Connor\", token_variants={}, total_variants=0, organizations=[], org_core='').normalized",
+    "message": "assert \"O'Connor\" in \"O'connor\"",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_normalize_sync_method",
+    "block": "tests/unit/text_processing/test_normalization_service_fixed.py:147: in test_normalize_sync_method\n    assert \"Hello world\" in result.normalized\nE   AssertionError: assert 'Hello world' in 'Hello World'\nE    +  where 'Hello World' = NormalizationResult(normalized='Hello World', tokens=['Hello', 'World'], trace=[TokenTrace(token='Hello', role='given'...ender_confidence=None, original_text='Hello world', token_variants={}, total_variants=0, organizations=[], org_core='').normalized",
+    "message": "AssertionError: assert 'Hello world' in 'Hello World'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_normalize_async_method",
+    "block": "tests/unit/text_processing/test_normalization_service_fixed.py:158: in test_normalize_async_method\n    asyncio.run(run_test())\n/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py:195: in run\n    return runner.run(main)\n           ^^^^^^^^^^^^^^^^\n/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py:118: in run\n    return self._loop.run_until_complete(task)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py:725: in run_until_complete\n    return future.result()\n           ^^^^^^^^^^^^^^^\ntests/unit/text_processing/test_normalization_service_fixed.py:156: in run_test\n    assert \"Hello world\" in result.normalized\nE   AssertionError: assert 'Hello world' in 'Hello World'\nE    +  where 'Hello World' = NormalizationResult(normalized='Hello World', tokens=['Hello', 'World'], trace=[TokenTrace(token='Hello', role='given'...ender_confidence=None, original_text='Hello world', token_variants={}, total_variants=0, organizations=[], org_core='').normalized",
+    "message": "AssertionError: assert 'Hello world' in 'Hello World'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_normalize_with_flags",
+    "block": "tests/unit/text_processing/test_normalization_service_fixed.py:171: in test_normalize_with_flags\n    assert \"Hello world\" in result.normalized\nE   AssertionError: assert 'Hello world' in 'Hello World'\nE    +  where 'Hello World' = NormalizationResult(normalized='Hello World', tokens=['Hello', 'World'], trace=[TokenTrace(token='Hello', role='given'...ender_confidence=None, original_text='Hello world', token_variants={}, total_variants=0, organizations=[], org_core='').normalized",
+    "message": "AssertionError: assert 'Hello world' in 'Hello World'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationServiceConfiguration.test_diminutive_maps_initialization",
+    "block": "tests/unit/text_processing/test_normalization_service_fixed.py:292: in test_diminutive_maps_initialization\n    assert 'en' in service.diminutive_maps\nE   AssertionError: assert 'en' in {'ru': {'алекс': 'Александр', 'алекса': 'Александра', 'алина': 'Алина', 'алис': 'Алиса', ...}, 'uk': {'алекс': 'Олександр', 'алекса': 'Олександра', 'алина': 'Алина', 'алка': 'Алла', ...}}\nE    +  where {'ru': {'алекс': 'Александр', 'алекса': 'Александра', 'алина': 'Алина', 'алис': 'Алиса', ...}, 'uk': {'алекс': 'Олександр', 'алекса': 'Олександра', 'алина': 'Алина', 'алка': 'Алла', ...}} = <ai_service.layers.normalization.normalization_service.NormalizationService object at 0x17fc55150>.diminutive_maps",
+    "message": "AssertionError: assert 'en' in {'ru': {'алекс': 'Александр', 'алекса': 'Александра', 'алина': 'Алина', 'алис': 'Алиса', ...}, 'uk': {'алекс': 'Олександр', 'алекса': 'Олександра', 'алина': 'Алина', 'алка': 'Алла', ...}}",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationResult.test_normalization_result_creation",
+    "block": "tests/unit/text_processing/test_normalization_service_fixed.py:304: in test_normalization_result_creation\n    result = NormalizationResult(\nE   pydantic_core._pydantic_core.ValidationError: 1 validation error for NormalizationResult\nE   normalized\nE     Field required [type=missing, input_value={'original_text': 'test',...ss': True, 'errors': []}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.11/v/missing",
+    "message": "pydantic_core._pydantic_core.ValidationError: 1 validation error for NormalizationResult",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationResult.test_normalization_result_error_case",
+    "block": "tests/unit/text_processing/test_normalization_service_fixed.py:328: in test_normalization_result_error_case\n    result = NormalizationResult(\nE   pydantic_core._pydantic_core.ValidationError: 1 validation error for NormalizationResult\nE   normalized\nE     Field required [type=missing, input_value={'original_text': 'test',...errors': ['Test error']}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.11/v/missing",
+    "message": "pydantic_core._pydantic_core.ValidationError: 1 validation error for NormalizationResult",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_normalize_english_text",
+    "block": "tests/unit/text_processing/test_normalization_service_old.py:53: in test_normalize_english_text\n    assert \"Hello world\" in result.normalized\nE   AssertionError: assert 'Hello world' in 'Hello World'\nE    +  where 'Hello World' = NormalizationResult(normalized='Hello World', tokens=['Hello', 'World'], trace=[TokenTrace(token='Hello', role='given'...ender_confidence=None, original_text='Hello world', token_variants={}, total_variants=0, organizations=[], org_core='').normalized",
+    "message": "AssertionError: assert 'Hello world' in 'Hello World'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_normalize_russian_text",
+    "block": "tests/unit/text_processing/test_normalization_service_old.py:61: in test_normalize_russian_text\n    assert \"Привет\" in result.normalized\nE   AssertionError: assert 'Привет' in ''\nE    +  where '' = NormalizationResult(normalized='', tokens=[], trace=[], errors=[], language='ru', confidence=1.0, original_length=10, ...gender_confidence=None, original_text='Привет мир', token_variants={}, total_variants=0, organizations=[], org_core='').normalized",
+    "message": "AssertionError: assert 'Привет' in ''",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_tokenize_text_fallback_to_nltk",
+    "block": "tests/unit/text_processing/test_normalization_service_old.py:75: in test_tokenize_text_fallback_to_nltk\n    service.language_configs[\"en\"][\"spacy_model\"] = None\n    ^^^^^^^^^^^^^^^^^^^^^^^^\nE   AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "message": "AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_tokenize_text_basic_fallback",
+    "block": "tests/unit/text_processing/test_normalization_service_old.py:90: in test_tokenize_text_basic_fallback\n    service.language_configs[\"en\"][\"spacy_model\"] = None\n    ^^^^^^^^^^^^^^^^^^^^^^^^\nE   AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "message": "AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_remove_stop_words_english",
+    "block": "tests/unit/text_processing/test_normalization_service_old.py:104: in test_remove_stop_words_english\n    service.language_configs[\"en\"][\"stop_words\"] = {\"the\", \"is\", \"a\", \"an\"}\n    ^^^^^^^^^^^^^^^^^^^^^^^^\nE   AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "message": "AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_remove_stop_words_russian",
+    "block": "tests/unit/text_processing/test_normalization_service_old.py:114: in test_remove_stop_words_russian\n    service.language_configs[\"ru\"][\"stop_words\"] = {\"и\", \"в\", \"на\", \"с\"}\n    ^^^^^^^^^^^^^^^^^^^^^^^^\nE   AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "message": "AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_remove_stop_words_fallback",
+    "block": "tests/unit/text_processing/test_normalization_service_old.py:123: in test_remove_stop_words_fallback\n    with patch(\n/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:1497: in __enter__\n    original, local = self.get_original()\n                      ^^^^^^^^^^^^^^^^^^^\n/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:1467: in get_original\n    raise AttributeError(\nE   AttributeError: <module 'src.ai_service.layers.normalization.normalization_service' from '/Users/dariapavlova/Desktop/ai-service/src/ai_service/layers/normalization/normalization_service.py'> does not have the attribute '_nltk_stopwords'",
+    "message": "AttributeError: <module 'src.ai_service.layers.normalization.normalization_service' from '/Users/dariapavlova/Desktop/ai-service/src/ai_service/layers/normalization/normalization_service.py'> does not have the attribute '_nltk_stopwords'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_apply_stemming_english",
+    "block": "tests/unit/text_processing/test_normalization_service_old.py:139: in test_apply_stemming_english\n    service.language_configs[\"en\"][\"stemmer\"] = mock_stemmer\n    ^^^^^^^^^^^^^^^^^^^^^^^^\nE   AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "message": "AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_apply_stemming_russian",
+    "block": "tests/unit/text_processing/test_normalization_service_old.py:152: in test_apply_stemming_russian\n    service.language_configs[\"ru\"][\"stemmer\"] = mock_stemmer\n    ^^^^^^^^^^^^^^^^^^^^^^^^\nE   AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "message": "AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_apply_stemming_ukrainian",
+    "block": "tests/unit/text_processing/test_normalization_service_old.py:165: in test_apply_stemming_ukrainian\n    service.language_configs[\"uk\"][\"stemmer\"] = mock_stemmer\n    ^^^^^^^^^^^^^^^^^^^^^^^^\nE   AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "message": "AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_apply_stemming_fallback",
+    "block": "tests/unit/text_processing/test_normalization_service_old.py:176: in test_apply_stemming_fallback\n    service.language_configs[\"en\"][\"stemmer\"] = None\n    ^^^^^^^^^^^^^^^^^^^^^^^^\nE   AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "message": "AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_apply_lemmatization_english",
+    "block": "tests/unit/text_processing/test_normalization_service_old.py:199: in test_apply_lemmatization_english\n    service.language_configs[\"en\"][\"spacy_model\"] = mock_nlp\n    ^^^^^^^^^^^^^^^^^^^^^^^^\nE   AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "message": "AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_apply_lemmatization_russian",
+    "block": "tests/unit/text_processing/test_normalization_service_old.py:219: in test_apply_lemmatization_russian\n    service.language_configs[\"ru\"][\"spacy_model\"] = mock_nlp\n    ^^^^^^^^^^^^^^^^^^^^^^^^\nE   AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "message": "AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationService.test_apply_lemmatization_fallback",
+    "block": "tests/unit/text_processing/test_normalization_service_old.py:230: in test_apply_lemmatization_fallback\n    service.language_configs[\"en\"][\"spacy_model\"] = None\n    ^^^^^^^^^^^^^^^^^^^^^^^^\nE   AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "message": "AttributeError: 'NormalizationService' object has no attribute 'language_configs'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationServiceConfiguration.test_initialization_without_spacy",
+    "block": "tests/unit/text_processing/test_normalization_service_old.py:581: in test_initialization_without_spacy\n    with patch(\n/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:1497: in __enter__\n    original, local = self.get_original()\n                      ^^^^^^^^^^^^^^^^^^^\n/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:1467: in get_original\n    raise AttributeError(\nE   AttributeError: <module 'src.ai_service.layers.normalization.normalization_service' from '/Users/dariapavlova/Desktop/ai-service/src/ai_service/layers/normalization/normalization_service.py'> does not have the attribute 'SPACY_AVAILABLE'",
+    "message": "AttributeError: <module 'src.ai_service.layers.normalization.normalization_service' from '/Users/dariapavlova/Desktop/ai-service/src/ai_service/layers/normalization/normalization_service.py'> does not have the attribute 'SPACY_AVAILABLE'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationServiceConfiguration.test_initialization_without_nltk",
+    "block": "tests/unit/text_processing/test_normalization_service_old.py:598: in test_initialization_without_nltk\n    with patch(\n/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:1497: in __enter__\n    original, local = self.get_original()\n                      ^^^^^^^^^^^^^^^^^^^\n/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:1467: in get_original\n    raise AttributeError(\nE   AttributeError: <module 'src.ai_service.layers.normalization.normalization_service' from '/Users/dariapavlova/Desktop/ai-service/src/ai_service/layers/normalization/normalization_service.py'> does not have the attribute 'NLTK_AVAILABLE'",
+    "message": "AttributeError: <module 'src.ai_service.layers.normalization.normalization_service' from '/Users/dariapavlova/Desktop/ai-service/src/ai_service/layers/normalization/normalization_service.py'> does not have the attribute 'NLTK_AVAILABLE'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationServiceConfiguration.test_initialization_minimal_dependencies",
+    "block": "tests/unit/text_processing/test_normalization_service_old.py:615: in test_initialization_minimal_dependencies\n    with patch(\n/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:1497: in __enter__\n    original, local = self.get_original()\n                      ^^^^^^^^^^^^^^^^^^^\n/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:1467: in get_original\n    raise AttributeError(\nE   AttributeError: <module 'src.ai_service.layers.normalization.normalization_service' from '/Users/dariapavlova/Desktop/ai-service/src/ai_service/layers/normalization/normalization_service.py'> does not have the attribute 'SPACY_AVAILABLE'",
+    "message": "AttributeError: <module 'src.ai_service.layers.normalization.normalization_service' from '/Users/dariapavlova/Desktop/ai-service/src/ai_service/layers/normalization/normalization_service.py'> does not have the attribute 'SPACY_AVAILABLE'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationServiceConfiguration.test_cache_functionality",
+    "block": "tests/unit/text_processing/test_normalization_service_old.py:647: in test_cache_functionality\n    with patch(\n/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:1497: in __enter__\n    original, local = self.get_original()\n                      ^^^^^^^^^^^^^^^^^^^\n/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:1467: in get_original\n    raise AttributeError(\nE   AttributeError: <module 'src.ai_service.layers.normalization.normalization_service' from '/Users/dariapavlova/Desktop/ai-service/src/ai_service/layers/normalization/normalization_service.py'> does not have the attribute 'nlp_en'",
+    "message": "AttributeError: <module 'src.ai_service.layers.normalization.normalization_service' from '/Users/dariapavlova/Desktop/ai-service/src/ai_service/layers/normalization/normalization_service.py'> does not have the attribute 'nlp_en'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestNormalizationResult.test_normalization_result_error_case",
+    "block": "tests/unit/text_processing/test_normalization_service_old.py:720: in test_normalization_result_error_case\n    assert result.error == \"Processing failed\"\n           ^^^^^^^^^^^^\nvenv/lib/python3.13/site-packages/pydantic/main.py:991: in __getattr__\n    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')\nE   AttributeError: 'NormalizationResult' object has no attribute 'error'. Did you mean: 'errors'?",
+    "message": "AttributeError: 'NormalizationResult' object has no attribute 'error'. Did you mean: 'errors'?",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestCanaryOverfit.test_context_words_never_become_names",
+    "block": "tests/unit/utilities/test_canary_overfit.py:34: in test_context_words_never_become_names\n    assert name in normalized, f\"Expected name '{name}' not found in normalized output: {result.normalized}\"\nE   AssertionError: Expected name 'п.і.' not found in normalized output: П. І. Коваленко Петросян\nE   assert 'п.і.' in 'п. і. коваленко петросян'",
+    "message": "AssertionError: Expected name 'п.і.' not found in normalized output: П. І. Коваленко Петросян",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestCanaryOverfit.test_ukrainian_context_words",
+    "block": "tests/unit/utilities/test_canary_overfit.py:55: in test_ukrainian_context_words\n    assert context_word not in result.normalized.lower(), f\"Context word '{context_word}' should not appear in normalized output: {result.normalized}\"\nE   AssertionError: Context word 'і' should not appear in normalized output: Іван Петро Коваленко\nE   assert 'і' not in 'іван петро коваленко'\nE     \nE     'і' is contained here:\nE       іван петро коваленко\nE     ? +",
+    "message": "AssertionError: Context word 'і' should not appear in normalized output: Іван Петро Коваленко",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestCanaryOverfit.test_russian_context_words",
+    "block": "tests/unit/utilities/test_canary_overfit.py:78: in test_russian_context_words\n    assert context_word not in result.normalized.lower(), f\"Context word '{context_word}' should not appear in normalized output: {result.normalized}\"\nE   AssertionError: Context word 'и' should not appear in normalized output: Иван Петр Коваленко\nE   assert 'и' not in 'иван петр коваленко'\nE     \nE     'и' is contained here:\nE       иван петр коваленко\nE     ? +",
+    "message": "AssertionError: Context word 'и' should not appear in normalized output: Иван Петр Коваленко",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestCanaryOverfit.test_mixed_language_context_words",
+    "block": "tests/unit/utilities/test_canary_overfit.py:119: in test_mixed_language_context_words\n    assert context_word not in normalized, f\"Context word '{context_word}' should not appear in normalized output: {result.normalized}\"\nE   AssertionError: Context word 'and' should not appear in normalized output: П. І. Коваленко and Петросян work together\nE   assert 'and' not in 'п. і. ковал...ork together'\nE     \nE     'and' is contained here:\nE       п. і. коваленко and петросян work together\nE     ?                 +++",
+    "message": "AssertionError: Context word 'and' should not appear in normalized output: П. І. Коваленко and Петросян work together",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestInputValidator.test_homoglyph_replacement",
+    "block": "tests/unit/utilities/test_input_validation.py:48: in test_homoglyph_replacement\n    assert result.sanitized_text == \"Pavlov\"  # Should be normalized\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   AssertionError: assert 'Pаvlоv' == 'Pavlov'\nE     \nE     - Pavlov\nE     + Pаvlоv",
+    "message": "AssertionError: assert 'Pаvlоv' == 'Pavlov'",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestInputValidator.test_suspicion_analysis_high_homoglyph_ratio",
+    "block": "tests/unit/utilities/test_input_validation.py:207: in test_suspicion_analysis_high_homoglyph_ratio\n    assert analysis['is_suspicious'] is True\nE   assert False is True\n=================================== XPASSES ====================================",
+    "message": "assert False is True",
+    "frames": [],
+    "top_frames": []
+  },
+  {
+    "header": "TestE2ESanctionsScreening.test_russian_person_with_documents",
+    "block": "------------------------------ Captured log setup ------------------------------\nWARNING  ai_service.core.orchestrator_factory:orchestrator_factory.py:151 Failed to initialize variants service: object NoneType can't be used in 'await' expression\n------------------------------ Captured log call -------------------------------\nWARNING  ai_service.core.unified_orchestrator:unified_orchestrator.py:499 Slow processing: 5.419s for text: Иванов Сергей Петрович, дата рождения: 15.03.1985,...\n",
+    "message": "",
+    "frames": [],
+    "top_frames": []
+  }
+]

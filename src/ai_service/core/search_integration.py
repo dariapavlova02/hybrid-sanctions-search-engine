@@ -10,8 +10,8 @@ from typing import Any, Dict, List, Optional
 
 from ..contracts.base_contracts import NormalizationResult, SignalsResult
 from ..contracts.search_contracts import (
-    SearchOpts, SearchMode, SearchResult, SearchInfo, 
-    extract_search_candidates, create_search_info
+    SearchOpts, SearchMode, SearchResult, SearchInfo,
+    extract_search_candidates, create_search_info, _get
 )
 from ..contracts.decision_contracts import DecisionInput
 from ..exceptions import SearchServiceError, ElasticsearchConnectionError, SearchTimeoutError
@@ -152,17 +152,20 @@ class SearchIntegration:
     def should_enable_search(self, signals_result: SignalsResult) -> bool:
         """
         Determine if search should be enabled based on Signals result
-        
+
         Args:
             signals_result: Result from Signals layer
-            
+
         Returns:
             True if search should be enabled
         """
         # Enable search if we have persons or organizations
-        has_persons = hasattr(signals_result, 'persons') and signals_result.persons
-        has_organizations = hasattr(signals_result, 'organizations') and signals_result.organizations
-        
+        persons = _get(signals_result, 'persons')
+        organizations = _get(signals_result, 'organizations')
+
+        has_persons = bool(persons)
+        has_organizations = bool(organizations)
+
         return has_persons or has_organizations
     
     def get_search_metrics(self) -> Dict[str, Any]:
