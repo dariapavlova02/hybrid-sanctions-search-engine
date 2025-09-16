@@ -47,9 +47,9 @@ class TestPersonsGroupingIntegration:
         
         # Second person
         person2 = result.persons[1]
-        assert person2["tokens"] == ["Анна", "Сергеев"]
+        assert person2["tokens"] == ["Анна", "Сергеева"]
         assert person2["roles"] == ["given", "surname"]
-        assert person2["gender"] is None  # Low confidence due to gap=1
+        assert person2["gender"] == "femn"  # Correctly inferred from given name "Анна"
 
     def test_persons_with_patronymics(self):
         """Test normalization of persons with patronymics."""
@@ -66,7 +66,7 @@ class TestPersonsGroupingIntegration:
         
         # Second person
         person2 = result.persons[1]
-        assert person2["tokens"] == ["Анна", "Сергеевна", "Сергеев"]
+        assert person2["tokens"] == ["Анна", "Сергеевна", "Сергеева"]
         assert person2["roles"] == ["given", "patronymic", "surname"]
         assert person2["gender"] == "femn"
 
@@ -84,7 +84,7 @@ class TestPersonsGroupingIntegration:
         
         # Second person
         person2 = result.persons[1]
-        assert person2["tokens"] == ["А.", "Сергеев"]
+        assert person2["tokens"] == ["А.", "Сергеева"]
         assert person2["roles"] == ["initial", "surname"]
 
     def test_persons_with_comma_separator(self):
@@ -101,7 +101,7 @@ class TestPersonsGroupingIntegration:
         
         # Second person
         person2 = result.persons[1]
-        assert person2["tokens"] == ["Анна", "Сергеев"]
+        assert person2["tokens"] == ["Анна", "Сергеева"]
         assert person2["roles"] == ["given", "surname"]
 
     def test_persons_with_mixed_separators(self):
@@ -118,7 +118,7 @@ class TestPersonsGroupingIntegration:
         
         # Second person
         person2 = result.persons[1]
-        assert person2["tokens"] == ["Анна", "Сергеев"]
+        assert person2["tokens"] == ["Анна", "Сергеева"]
         assert person2["roles"] == ["given", "surname"]
         
         # Third person
@@ -140,7 +140,7 @@ class TestPersonsGroupingIntegration:
         
         # Second person
         person2 = result.persons[1]
-        assert person2["tokens"] == ["Анна", "Сергеев"]
+        assert person2["tokens"] == ["Анна", "Сергеева"]
         assert person2["roles"] == ["given", "surname"]
 
     def test_persons_data_structure(self):

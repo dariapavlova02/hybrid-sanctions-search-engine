@@ -191,6 +191,11 @@ class UnifiedOrchestrator:
         language_hint: Optional[str] = None,
         generate_variants: Optional[bool] = None,
         generate_embeddings: Optional[bool] = None,
+        # Legacy compatibility kwargs (ignored but accepted)
+        cache_result: Optional[bool] = None,
+        embeddings: Optional[bool] = None,
+        variants: Optional[bool] = None,
+        **legacy_kwargs,
     ) -> UnifiedProcessingResult:
         """
         Process text through the unified 9-layer pipeline.
@@ -210,6 +215,13 @@ class UnifiedOrchestrator:
         start_time = time.time()
         context = ProcessingContext(original_text=text)
         errors = []
+
+        # Handle legacy kwargs mapping
+        if embeddings is not None:
+            generate_embeddings = embeddings
+        if variants is not None:
+            generate_variants = variants
+        # Ignore cache_result and other legacy kwargs
 
         # Initialize metrics collection
         if self.metrics_service:
@@ -272,36 +284,14 @@ class UnifiedOrchestrator:
                     )
 
             # ================================================================
-            # Layer 3: Unicode Normalization (MUST come before language detection)
+            # Layer 3: Language Detection (on original text to preserve language markers)
             # ================================================================
-            logger.debug("Stage 3: Unicode Normalization")
-            layer_start = time.time()
-
-            # Fixed order: Unicode normalization first
-            text_in = context.sanitized_text
-            unicode_result = await self._maybe_await(self.unicode_service.normalize_unicode(text_in))
-            
-            # Handle both legacy string return and new dict return
-            if isinstance(unicode_result, str):
-                text_u = unicode_result
-            else:
-                text_u = unicode_result.get("normalized", text_in)
-            
-            # Debug trace for lengths
-            logger.debug(f"Unicode: input_len={len(text_in)}, normalized_len={len(text_u)}")
-
-            if self.metrics_service:
-                self.metrics_service.record_timer('processing.layer.unicode_normalization', time.time() - layer_start)
-
-            # ================================================================
-            # Layer 4: Language Detection (on unicode-normalized text)
-            # ================================================================
-            logger.debug("Stage 4: Language Detection")
+            logger.debug("Stage 3: Language Detection")
             layer_start = time.time()
 
             from ..config import LANGUAGE_CONFIG
             lang_raw = await self._maybe_await(self.language_service.detect_language_config_driven(
-                text_u,  # Use unicode-normalized text for language detection
+                context.sanitized_text,  # Use original text to preserve Ukrainian/Russian markers
                 LANGUAGE_CONFIG
             ))
             
@@ -309,7 +299,7 @@ class UnifiedOrchestrator:
             lang = self._coerce_lang(lang_raw)
             context.language = language_hint or lang["language"]
             context.language_confidence = lang["confidence"]
-            
+
             # Debug trace for language detection
             try:
                 confidence_val = float(context.language_confidence)
@@ -321,6 +311,28 @@ class UnifiedOrchestrator:
                 self.metrics_service.record_timer('processing.layer.language_detection', time.time() - layer_start)
                 self.metrics_service.record_histogram('language_detection.confidence', context.language_confidence)
                 self.metrics_service.increment_counter(f'language_detection.detected.{context.language}')
+
+            # ================================================================
+            # Layer 4: Unicode Normalization (after language detection)
+            # ================================================================
+            logger.debug("Stage 4: Unicode Normalization")
+            layer_start = time.time()
+
+            # Unicode normalization after language detection
+            text_in = context.sanitized_text
+            unicode_result = await self._maybe_await(self.unicode_service.normalize_unicode(text_in))
+
+            # Handle both legacy string return and new dict return
+            if isinstance(unicode_result, str):
+                text_u = unicode_result
+            else:
+                text_u = unicode_result.get("normalized", text_in)
+
+            # Debug trace for lengths
+            logger.debug(f"Unicode: input_len={len(text_in)}, normalized_len={len(text_u)}")
+
+            if self.metrics_service:
+                self.metrics_service.record_timer('processing.layer.unicode_normalization', time.time() - layer_start)
 
             # ================================================================
             # Layer 5: Name Normalization (morph) - THE CORE
@@ -484,6 +496,9 @@ class UnifiedOrchestrator:
                 )
                 if self.metrics_service:
                     self.metrics_service.increment_counter('processing.slow_requests')
+
+            # Update legacy stats
+            self.update_stats(processing_time, cache_hit=False, error=len(errors) > 0)
 
             return UnifiedProcessingResult(
                 original_text=context.original_text,
@@ -750,12 +765,45 @@ class UnifiedOrchestrator:
         """Legacy method alias for updating statistics"""
         self.update_stats(processing_time, cache_hit, error)
 
-    async def search_similar_names(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+    async def process_batch(self, texts: List[str], **kwargs) -> List[UnifiedProcessingResult]:
+        """Legacy method for batch processing"""
+        logger.warning("process_batch is deprecated. Use individual process() calls with asyncio.gather.")
+        results = []
+        for text in texts:
+            try:
+                result = await self.process(text, **kwargs)
+                results.append(result)
+            except Exception as e:
+                # Create error result
+                error_result = UnifiedProcessingResult(
+                    original_text=text,
+                    language="en",
+                    language_confidence=0.0,
+                    normalized_text=text,
+                    success=False,
+                    errors=[str(e)]
+                )
+                results.append(error_result)
+        return results
+
+    async def search_similar_names(self, query: str, limit: int = 10, candidates: Optional[List[str]] = None, use_embeddings: bool = True, **kwargs) -> Dict[str, Any]:
         """Legacy method for searching similar names"""
         logger.warning("search_similar_names is deprecated. Use embeddings_service directly.")
-        if self.embedding_service and hasattr(self.embedding_service, 'find_similar_texts'):
-            return await self._maybe_await(self.embedding_service.find_similar_texts(query, limit))
-        return []
+
+        results = []
+        method = "embeddings" if use_embeddings else "fallback"
+
+        if use_embeddings and self.embeddings_service and hasattr(self.embeddings_service, 'find_similar_texts'):
+            raw_results = await self._maybe_await(self.embeddings_service.find_similar_texts(query, limit))
+            # Convert to expected format if needed
+            if isinstance(raw_results, list):
+                results = raw_results
+
+        return {
+            "method": method,
+            "query": query,
+            "results": results[:limit] if results else []
+        }
 
     async def analyze_text_complexity(self, text: str) -> Dict[str, Any]:
         """Legacy method for analyzing text complexity"""

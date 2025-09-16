@@ -110,7 +110,7 @@ class DecisionLogic:
         }
 
         # Import exclusion patterns from centralized dictionary
-        from ai_service.data.dicts.smart_filter_patterns import EXCLUSION_PATTERNS
+        from ...data.dicts.smart_filter_patterns import EXCLUSION_PATTERNS
         
         # Exclusion patterns (do not require verification)
         self.exclusion_patterns = EXCLUSION_PATTERNS

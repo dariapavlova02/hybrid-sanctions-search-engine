@@ -301,14 +301,15 @@ class DeploymentConfig:
 
 class EmbeddingConfig(BaseModel):
     """Embedding configuration settings"""
-    
+
     model_config = {"validate_assignment": True}
-    
+
     model_name: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     device: str = "cpu"
     batch_size: int = 64
     enable_index: bool = False  # индексацию оставляем как опцию
     extra_models: List[str] = []  # опционально разрешённые альтернативы
+    warmup_on_init: bool = False  # Pre-load model and run dummy encoding on initialization
     
     def model_dump(self) -> Dict[str, Any]:
         """Return model as dictionary"""
@@ -317,7 +318,8 @@ class EmbeddingConfig(BaseModel):
             "device": self.device,
             "batch_size": self.batch_size,
             "enable_index": self.enable_index,
-            "extra_models": self.extra_models
+            "extra_models": self.extra_models,
+            "warmup_on_init": self.warmup_on_init
         }
 
 

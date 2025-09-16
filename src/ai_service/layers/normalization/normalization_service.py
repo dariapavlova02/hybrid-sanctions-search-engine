@@ -645,11 +645,14 @@ class NormalizationService:
             if len(token) >= 1:
                 if preserve_names:
                     # When preserve_names=True, split on separators to create separate tokens
-                    # Split on commas and other separators
-                    sub_tokens = re.split(r"([,])", token)
+                    # First split compound initials like "А.С.Пушкин" into ["А.", "С.", "Пушкин"]
+                    sub_tokens = self._split_compound_initials(token)
                     for sub_token in sub_tokens:
-                        if sub_token.strip():  # Only add non-empty tokens
-                            tokens.append(sub_token.strip())
+                        # Then split on commas and other separators
+                        comma_split = re.split(r"([,])", sub_token)
+                        for final_token in comma_split:
+                            if final_token.strip():  # Only add non-empty tokens
+                                tokens.append(final_token.strip())
                 else:
                     # When preserve_names=False, split on separators within tokens
                     # Split on apostrophes and hyphens
@@ -861,13 +864,24 @@ class NormalizationService:
         if not re.match(pattern, token):
             return False
         
-        # Exclude prepositions/conjunctions that look like initials
-        base_letter = token[0].lower()
-        prepositions = {"и", "й", "йо", "і", "в", "у", "з", "с", "со", "та", "до", "по", "на"}
-        
-        # Check if it's a single letter (not multi-initial) and is a preposition
-        if len(token) == 2 and token[1] == '.' and base_letter in prepositions:
-            return False
+        # Special handling for single letter tokens
+        if len(token) == 2 and token[1] == '.':
+            base_letter = token[0].lower()
+
+            # Common name initials that should always be treated as initials
+            common_name_initials = {"а", "о", "е", "п", "с", "м", "н", "д", "к", "л", "т", "р", "ф", "г", "ж", "ч", "ш", "щ", "ц", "х", "ъ", "ь", "ы", "э", "ю", "я"}
+            if base_letter in common_name_initials:
+                return True
+
+            # И. and І. are tricky - they can be prepositions or initials
+            # In name contexts, treat them as initials
+            if base_letter in {"и", "і"}:
+                return True
+
+            # Pure prepositions that should never be initials
+            pure_prepositions = {"й", "йо", "в", "у", "з", "со", "та", "до", "по", "на"}
+            if base_letter in pure_prepositions:
+                return False
             
         return True
 
@@ -883,6 +897,29 @@ class NormalizationService:
             if part.strip():  # Skip empty parts
                 initials.append(part.strip() + ".")
         return initials
+
+    def _split_compound_initials(self, token: str) -> List[str]:
+        """Split compound tokens like 'А.С.Пушкин' into ['А.', 'С.', 'Пушкин']"""
+        # Pattern to detect initials (letter + dot) at the start of the token
+        # followed by a remainder that doesn't start with a dot
+        pattern = r"^((?:[A-Za-zА-Яа-яІЇЄҐіїєґ]\.){2,})([A-Za-zА-Яа-яІЇЄҐіїєґ].*)$"
+        match = re.match(pattern, token)
+
+        if not match:
+            return [token]
+
+        initials_part = match.group(1)  # e.g., "А.С."
+        remainder = match.group(2)      # e.g., "Пушкин"
+
+        # Split the initials part into individual initials
+        individual_initials = re.findall(r"[A-Za-zА-Яа-яІЇЄҐіїєґ]\.", initials_part)
+
+        # Combine initials with the remainder
+        result = individual_initials
+        if remainder:
+            result.append(remainder)
+
+        return result
 
     def _cleanup_initial(self, token: str) -> str:
         """Normalize initial format (uppercase + dot)"""
@@ -2489,6 +2526,38 @@ class NormalizationService:
         # For unknown gender, return base form
         return base_form
 
+    def _to_nominative_if_invariable(self, token: str, language: str) -> str:
+        """
+        Грубая, но безопасная номинативизация для инвариантных фамилий на -енко/-ко.
+
+        Args:
+            token: Original surname token
+            language: Language code
+
+        Returns:
+            Nominative form for invariable surnames, original token otherwise
+        """
+        token_lower = token.lower()
+
+        # Распознаём типичные косвенные хвосты для -енко:
+        if token_lower.endswith("енка") or token_lower.endswith("енку") or token_lower.endswith("енком") or token_lower.endswith("енці") or token_lower.endswith("енке"):
+            # '…енка' → '…енко'
+            base = token[:-4] + "енко"
+            return base
+
+        # универсальный fallback: '…ка' → '…ко' (Петренка → Петренко)
+        if token_lower.endswith("ка") and len(token) > 4:
+            potential_base = token[:-2] + "ко"
+            if potential_base.lower().endswith("ко"):
+                return potential_base
+
+        # Аналогично для -ко в падежах
+        if token_lower.endswith("ком") or token_lower.endswith("ку"):
+            base = token[:-2] + "ко"
+            return base
+
+        return token
+
     def _postfix_feminine_surname(
         self, 
         normalized: str, 
@@ -2939,7 +3008,8 @@ class NormalizationService:
                     normalized = base.capitalize()
                     rule = "fallback_capitalize"
 
-                # Gender adjustment for surnames and given names (including compound surnames)
+                # Legacy gender adjustment (but don't create traces if no change)
+                # This is kept for compatibility, main logic is in post-processing
                 if role in ["surname", "given"] and enable_advanced_features:
                     if "-" in normalized:
                         # Handle compound surnames
@@ -2958,13 +3028,15 @@ class NormalizationService:
                             normalized, token, person_gender
                         )
 
-                    if adjusted != normalized:
+                    # Only set rule if there was an actual change
+                    if adjusted != normalized and adjusted != token:
                         normalized = adjusted
                         rule = "morph_gender_adjusted"
                     
                     # НОМИНАТИВ для инвариантных фамилий (до пост-обработки)
+                    # Only apply to surnames, not given names
                     from .morphology.gender_rules import is_invariable_surname
-                    if is_invariable_surname(token):
+                    if role == "surname" and is_invariable_surname(token):
                         nominative = self._to_nominative_if_invariable(token, language)
                         if nominative != normalized:
                             normalized = nominative
@@ -2979,8 +3051,45 @@ class NormalizationService:
                     gender_evidence = infer_gender_evidence(given_names, patronymic, language)
                     
                     if role == "surname":
-                        # Apply surname-specific post-processing
-                        if gender_evidence == "fem":
+                        # Safe surname normalization with proper order:
+                        # 1. Invariable surnames (like -енко/-ко)
+                        # 2. Masculine case normalization
+                        # 3. Feminine rules (only with strong evidence)
+
+                        # Step 1: Handle invariable surnames
+                        if is_invariable_surname(token):
+                            normalized = self._to_nominative_if_invariable(token, language)
+                        else:
+                            # Step 2: Convert masculine surnames to nominative
+                            from .morphology.gender_rules import convert_surname_to_nominative
+                            normalized = convert_surname_to_nominative(token, language)
+                            if normalized != token:
+                                rule = "morph_case_adjusted_surname"
+
+                        # Also try given name normalization (for misclassified names like "Дарʼї")
+                        from .morphology.gender_rules import convert_given_name_to_nominative
+                        given_normalized = convert_given_name_to_nominative(token, language)
+                        if given_normalized != normalized and given_normalized != token:
+                            normalized = given_normalized
+                            rule = "morph_case_adjusted_given_as_surname"
+
+                        # Step 3: Apply feminine rules with safeguards
+                        from .morphology.gender_rules import looks_like_feminine_ru, looks_like_feminine_uk, maybe_to_feminine_nom
+                        if language == "ru":
+                            is_declined_feminine, _ = looks_like_feminine_ru(token)
+                        elif language == "uk":
+                            is_declined_feminine, _ = looks_like_feminine_uk(token)
+                        else:
+                            is_declined_feminine = False
+
+                        # Apply feminine rules only with strong evidence
+                        final_normalized = maybe_to_feminine_nom(token, language, gender_evidence, is_declined_feminine)
+                        if final_normalized != normalized and final_normalized != token:
+                            normalized = final_normalized
+                            rule = "morph_gender_adjusted_feminine"
+
+                        # Legacy compound surname handling (if needed)
+                        if gender_evidence == "fem" and "-" in normalized:
                             # Apply feminine post-processing (handle compound surnames)
                             if "-" in normalized:
                                 # Handle compound surnames
@@ -3022,13 +3131,22 @@ class NormalizationService:
                                 rule = "morph_gender_adjusted_masculine"
                     elif role == "given":
                         # Apply given name-specific post-processing
-                        if gender_evidence == "fem":
-                            # Convert declined given names to feminine nominative
+                        # Convert declined given names to nominative (independent of gender)
+                        # Only apply if we don't have a diminutive result (preserve diminutive transformations)
+                        if rule != "diminutive_dict":
                             from .morphology.gender_rules import convert_given_name_to_nominative
                             post_processed = convert_given_name_to_nominative(token, language)
                             if post_processed != normalized:
                                 normalized = post_processed
-                                rule = "morph_gender_adjusted_feminine"
+                                rule = "morph_case_adjusted_given"
+                    elif role == "patronymic":
+                        # Apply patronymic-specific post-processing
+                        # Convert declined patronymics to nominative (independent of gender)
+                        from .morphology.gender_rules import convert_patronymic_to_nominative
+                        post_processed = convert_patronymic_to_nominative(token, language)
+                        if post_processed != normalized:
+                            normalized = post_processed
+                            rule = "morph_case_adjusted_patronymic"
 
                 normalized_tokens.append(normalized)
 

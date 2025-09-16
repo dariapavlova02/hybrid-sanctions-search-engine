@@ -113,12 +113,14 @@ class TestLanguageDetectionPerformance:
         print(f"  Average time per text: {avg_time_per_text:.3f}ms")
         print(f"  Texts per second: {texts_per_second:.0f}")
         
-        # Sanity check - should be reasonably fast
-        # Not strict assertion, just for monitoring
-        if processing_time > 0.1:  # 100ms threshold
-            print(f"  WARNING: Processing took {processing_time:.3f}s (target: <0.1s)")
-        else:
-            print(f"  ✓ Performance target met: {processing_time:.3f}s < 0.1s")
+        # Performance requirements per CLAUDE.md - p95 ≤ 10ms for short strings
+        # For 10k texts, allow 1s total (0.1ms per text)
+        assert processing_time < 1.0, f"Performance degraded: {processing_time:.3f}s > 1.0s for {total_texts} texts"
+        assert avg_time_per_text < 1.0, f"Average time per text too high: {avg_time_per_text:.3f}ms > 1.0ms"
+
+        print(f"  ✓ Performance targets met:")
+        print(f"    Total: {processing_time:.3f}s < 1.0s")
+        print(f"    Per text: {avg_time_per_text:.3f}ms < 1.0ms")
         
         # Verify all texts were processed
         assert len(results) == total_texts

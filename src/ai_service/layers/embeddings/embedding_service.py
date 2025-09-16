@@ -59,14 +59,23 @@ class EmbeddingService:
         self.config = config
         self._model: SentenceTransformer = None
         self.preprocessor = EmbeddingPreprocessor()
-        
+
         # Add expected attributes for backward compatibility
         self.model_cache: Dict[str, SentenceTransformer] = {}
         self.default_model = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
+        # Performance optimizations
+        self._preprocessing_cache: Dict[str, str] = {}
+        self._cache_max_size = 1000  # Limit preprocessing cache size
+        self._warmup_done = False
+
         self.logger.info(
             f"EmbeddingService initialized with model: {config.model_name}"
         )
+
+        # Perform warmup if enabled in config
+        if getattr(config, 'warmup_on_init', False):
+            self._warmup()
 
     def _load_model(self, model_name: Optional[str] = None) -> SentenceTransformer:
         """Lazy load the SentenceTransformer model with caching"""
@@ -92,6 +101,67 @@ class EmbeddingService:
         )
         return model
 
+    def _warmup(self):
+        """
+        Warmup the embedding service by pre-loading model and running dummy encoding.
+        This reduces latency for the first real request.
+        """
+        if self._warmup_done:
+            return
+
+        start_time = time.perf_counter()
+        self.logger.info("Starting embedding service warmup...")
+
+        try:
+            # Load the model
+            model = self._load_model()
+
+            # Run a dummy encoding to warm up the model
+            dummy_texts = [
+                "Sample text for warmup",
+                "Пример текста для прогрева",
+                "Приклад тексту для розігрівання"
+            ]
+
+            # Encode dummy texts to initialize all model components
+            model.encode(
+                dummy_texts,
+                batch_size=len(dummy_texts),
+                show_progress_bar=False,
+                normalize_embeddings=True,
+                convert_to_numpy=True,
+            )
+
+            self._warmup_done = True
+            warmup_time = (time.perf_counter() - start_time) * 1000
+            self.logger.info(f"Embedding service warmup completed in {warmup_time:.2f}ms")
+
+        except Exception as e:
+            self.logger.warning(f"Warmup failed, will continue with lazy loading: {e}")
+
+    def _get_cached_preprocessing(self, text: str) -> str:
+        """
+        Get cached preprocessing result or compute and cache it.
+
+        Args:
+            text: Raw text to preprocess
+
+        Returns:
+            Preprocessed text
+        """
+        # Check cache first
+        if text in self._preprocessing_cache:
+            return self._preprocessing_cache[text]
+
+        # Compute preprocessing
+        normalized = self.preprocessor.normalize_for_embedding(text)
+
+        # Cache result if cache isn't too large
+        if len(self._preprocessing_cache) < self._cache_max_size:
+            self._preprocessing_cache[text] = normalized
+
+        return normalized
+
     def encode_one(self, text: str) -> List[float]:
         """
         Encode a single text to embedding vector
@@ -105,8 +175,8 @@ class EmbeddingService:
         if not text or not text.strip():
             return []
 
-        # Preprocess text to remove dates/IDs
-        normalized_text = self.preprocessor.normalize_for_embedding(text)
+        # Preprocess text to remove dates/IDs (with caching)
+        normalized_text = self._get_cached_preprocessing(text)
         if not normalized_text:
             return []
 
@@ -148,11 +218,11 @@ class EmbeddingService:
         if not texts:
             return []
 
-        # Preprocess texts to remove dates/IDs
+        # Preprocess texts to remove dates/IDs (with caching)
         normalized_texts = []
         for text in texts:
             if text and text.strip():
-                normalized = self.preprocessor.normalize_for_embedding(text)
+                normalized = self._get_cached_preprocessing(text)
                 if normalized:  # Only include non-empty normalized texts
                     normalized_texts.append(normalized)
 
@@ -240,11 +310,11 @@ class EmbeddingService:
             # Load model
             model = self._load_model(model_name)
             
-            # Preprocess texts
+            # Preprocess texts (with caching)
             normalized_texts = []
             for text in text_list:
                 if text and text.strip():
-                    normalized = self.preprocessor.normalize_for_embedding(text)
+                    normalized = self._get_cached_preprocessing(text)
                     if normalized:
                         normalized_texts.append(normalized)
             
@@ -277,6 +347,34 @@ class EmbeddingService:
             # Return empty result on error
             return [] if not is_single else []
 
+    def warmup(self):
+        """
+        Public method to trigger warmup manually.
+        Useful for pre-loading the model before processing starts.
+        """
+        self._warmup()
+
+    def clear_preprocessing_cache(self):
+        """
+        Clear the preprocessing cache to free memory.
+        """
+        cache_size = len(self._preprocessing_cache)
+        self._preprocessing_cache.clear()
+        self.logger.debug(f"Cleared preprocessing cache ({cache_size} entries)")
+
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """
+        Get statistics about internal caches.
+
+        Returns:
+            Dictionary with cache statistics
+        """
+        return {
+            "preprocessing_cache_size": len(self._preprocessing_cache),
+            "preprocessing_cache_max_size": self._cache_max_size,
+            "model_cache_size": len(self.model_cache),
+            "warmup_done": self._warmup_done,
+        }
 
     def get_embedding_dimension(self) -> int:
         """

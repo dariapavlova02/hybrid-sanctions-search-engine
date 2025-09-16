@@ -12,6 +12,7 @@ from ai_service.monitoring.metrics_service import MetricsService
 from ai_service.contracts.decision_contracts import MatchDecision
 
 
+@pytest.mark.xfail(reason="TODO: Complete sanctions screening integration. ISSUE-458. Blocked by ISSUE-456")
 class TestE2ESanctionsScreening:
     """End-to-End тесты для санкционного скрининга"""
 

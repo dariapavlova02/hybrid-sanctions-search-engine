@@ -356,14 +356,17 @@ class SmartFilterService:
             for tier, tier_patterns in ac_patterns.items():
                 for pattern in tier_patterns[:max_matches] if max_matches else tier_patterns:
                     # Simple substring search (in real AC implementation, this would be more sophisticated)
-                    if pattern.lower() in text.lower():
-                        match_start = text.lower().find(pattern.lower())
+                    # Case-insensitive search using regex for proper matching
+                    pattern_escaped = re.escape(pattern)
+                    match = re.search(pattern_escaped, text, re.IGNORECASE)
+                    if match:
+                        match_start = match.start()
                         matches.append({
                             "pattern": pattern,
                             "tier": tier,
                             "start": match_start,
-                            "end": match_start + len(pattern),
-                            "matched_text": text[match_start:match_start + len(pattern)],
+                            "end": match.end(),
+                            "matched_text": match.group(),
                             "confidence": self._get_pattern_confidence(pattern, tier),
                             "pattern_type": self._infer_pattern_type(pattern, patterns)
                         })

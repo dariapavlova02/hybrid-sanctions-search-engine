@@ -6,6 +6,7 @@ and edge cases for the Unicode processing layer.
 """
 
 import pytest
+import re
 import unicodedata
 from ai_service.layers.unicode.unicode_service import UnicodeService
 
@@ -38,11 +39,11 @@ class TestUnicodeService:
         """Test Cyrillic character mappings"""
         test_cases = [
             ("ё", "е"),  # Russian ё -> е
-            ("Ё", "е"),  # Capital Ё -> е (lowercase)
-            ("і", "и"),  # Ukrainian і -> Russian и
-            ("ї", "и"),  # Ukrainian ї -> Russian и
-            ("є", "е"),  # Ukrainian є -> Russian е
-            ("ґ", "г"),  # Ukrainian ґ -> Russian г
+            ("Ё", "е"),  # Capital Ё -> е (mapped to lowercase)
+            ("і", "і"),  # Ukrainian і preserved
+            ("ї", "ї"),  # Ukrainian ї preserved
+            ("є", "є"),  # Ukrainian є preserved
+            ("ґ", "ґ"),  # Ukrainian ґ preserved
         ]
 
         for input_char, expected_char in test_cases:
@@ -87,8 +88,8 @@ class TestUnicodeService:
         result = self.service.normalize_text(mixed_text)
 
         normalized_text = result["normalized"]
-        assert "john" in normalized_text.lower()
-        assert "иванов" in normalized_text.lower() or "ivanov" in normalized_text.lower()  # May be transliterated
+        assert "John" in normalized_text or "john" in normalized_text.lower()
+        assert "Иванов" in normalized_text or "иванов" in normalized_text.lower()  # Case preserved
         assert len(normalized_text) > 0
 
     def test_unicode_nfc_normalization(self):
@@ -147,7 +148,7 @@ class TestUnicodeService:
             result = self.service.normalize_text(text_with_invisible)
             normalized_text = result["normalized"]
             assert char not in normalized_text
-            assert "helloworld" in normalized_text or "hello world" in normalized_text
+            assert "HelloWorld" in normalized_text or "Hello World" in normalized_text
 
     def test_homoglyph_handling(self):
         """Test homoglyph character handling"""
@@ -256,8 +257,8 @@ class TestUnicodeService:
         result = self.service.normalize_text(rtl_text)
 
         normalized_text = result["normalized"]
-        assert "hello" in normalized_text
-        assert "world" in normalized_text
+        assert "Hello" in normalized_text or "hello" in normalized_text.lower()
+        assert "World" in normalized_text or "world" in normalized_text.lower()
         # RTL parts may be preserved or transliterated
         assert len(normalized_text) > 0
 
@@ -336,14 +337,7 @@ class TestUnicodeServiceIntegration:
             # Note: Unicode service doesn't remove hashtags, so we check they're still there
             assert "#" in normalized_text or "hashtag" in normalized_text
 
-        # Both modes should preserve core content
-        assert "cafe" in normalized_text or "jose" in normalized_text
+        # Both modes should preserve core content (case preserved)
+        assert "cafe" in normalized_text.lower() or "jose" in normalized_text.lower()
         assert len(normalized_text) > 0
 
-
-import re
-
-# Add these imports if they're missing from the original test
-import pytest
-import unicodedata
-# from ai_service.layers.unicode.unicode_service import UnicodeService

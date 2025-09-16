@@ -41,7 +41,7 @@ class TestUnicodeService:
         # Assert
         # ё should be replaced with е (from complex_mappings)
         assert 'ё' not in result['normalized']  # ё replaced
-        assert result['normalized'] == 'привет, мир!'  # Cyrillic preserved, ё replaced with е
+        assert result['normalized'] == 'Привет, мир!'  # Case preserved, ё replaced with е
         assert result['original'] == input_text
         
         # Check that there are changes in char_replacement (ё -> е)
@@ -80,17 +80,17 @@ class TestUnicodeService:
         
         # Assert
         normalized = result['normalized']
-        # Check that complex characters were replaced
-        assert 'é' not in normalized or 'è' not in normalized  # Should be replaced
-        
+        # Check that diacritics were handled according to Unicode normalization rules
+        # NOTE: As per CLAUDE.md P0.3 - Unicode preserves case, normalizes diacritics
+        assert 'é' not in normalized, "Letter é should be normalized to e"
+        assert 'è' not in normalized, "Letter è should be normalized to e"
+
         # Changes can be either in char_replacement or ascii_folding
         char_changes = [c for c in result['changes'] if c['type'] == 'char_replacement']
         ascii_changes = [c for c in result['changes'] if c['type'] == 'ascii_folding']
-        
-        # If there are no changes, it means unidecode didn't change the text
-        if len(char_changes) == 0 and len(ascii_changes) == 0:
-            # Check if text actually changed
-            assert normalized != input_text.lower(), "Text should be normalized"
+
+        # Text with diacritics must show normalization changes
+        assert len(char_changes) > 0 or len(ascii_changes) > 0, "Diacritic normalization should produce changes"
     
     def test_confidence_calculation(self, unicode_service):
         """Test confidence calculation"""
@@ -178,8 +178,8 @@ class TestUnicodeService:
         
         # Assert
         normalized = result['normalized']
-        # UnicodeService doesn't perform space cleanup or case conversion - that's done by other services
-        assert normalized == "  Multiple   spaces  \t\n  "  # Should be unchanged by UnicodeService
+        # UnicodeService performs space cleanup but preserves case
+        assert normalized == "Multiple spaces"  # Spaces cleaned, case preserved
         assert 'normalized' in result
         assert 'original' in result
     
@@ -282,10 +282,9 @@ class TestUnicodeService:
         char_changes = [c for c in changes if c['type'] == 'char_replacement']
         ascii_changes = [c for c in changes if c['type'] == 'ascii_folding']
         
-        # If there are no changes, it means unidecode didn't change the text
-        if len(char_changes) == 0 and len(ascii_changes) == 0:
-            # Check if text actually changed
-            assert normalized != german_text.lower(), "Text should be normalized"
-        
-        # Check specific replacements
-        assert 'ü' not in normalized or 'ö' not in normalized
+        # German umlauts must be normalized according to Unicode rules
+        assert 'ü' not in normalized, "Letter ü should be normalized to u"
+        assert 'ö' not in normalized, "Letter ö should be normalized to o"
+
+        # German text with umlauts must show normalization changes
+        assert len(char_changes) > 0 or len(ascii_changes) > 0, "Umlaut normalization should produce changes"

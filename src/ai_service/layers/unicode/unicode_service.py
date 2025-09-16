@@ -41,19 +41,10 @@ class UnicodeService:
             "—": "-",    # U+2014 Em dash → U+002D ASCII hyphen-minus
             "−": "-",    # U+2212 Minus sign → U+002D ASCII hyphen-minus
 
-            # Cyrillic characters that may have different Unicode representations
+            # Cyrillic characters normalization - preserve Ukrainian chars for language detection
             "ё": "е",
             "Ё": "е",
-            "й": "и",
-            "Й": "И",
-            "і": "и",
-            "І": "И",  # Ukrainian i -> Russian и
-            "ї": "и",
-            "Ї": "И",  # Ukrainian ї -> Russian и
-            "є": "е",
-            "Є": "Е",  # Ukrainian є -> Russian е
-            "ґ": "г",
-            "Ґ": "Г",  # Ukrainian ґ -> Russian г
+            # Note: Ukrainian specific chars (і/ї/є/ґ) preserved to maintain language detection accuracy
             # Latin characters with diacritics
             "á": "a",
             "à": "a",
@@ -380,8 +371,10 @@ class UnicodeService:
             return text
 
     def _normalize_case(self, text: str) -> str:
-        """Case normalization"""
-        return text.lower()
+        """Case normalization - preserve original case for name processing"""
+        # DO NOT lowercase - case is critical for name normalization
+        # Case normalization should be handled by the normalization service
+        return text
 
     def _needs_case_normalization_for_cleanup(self, text: str) -> bool:
         """Check if case normalization is needed for cleanup operations"""

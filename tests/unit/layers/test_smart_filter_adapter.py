@@ -290,6 +290,9 @@ class TestSmartFilterAdapterIntegration:
     @pytest.mark.asyncio
     async def test_should_process_basic_functionality(self):
         """Test basic should_process functionality"""
+        adapter = SmartFilterAdapter()
+        await adapter.initialize()
+
         # Should be able to process
         result = await adapter.should_process("ТОВ Тестова Компанія")
 

@@ -710,7 +710,16 @@ class UnifiedPatternService:
             "tier_3_low_confidence": [],  # Others - requires additional verification
         }
 
+        # Filter out case variants since AC matching will be case-insensitive
+        seen_patterns = set()
+
         for pattern in patterns:
+            # Skip case variants (lower/title case) since AC will handle case insensitivity
+            pattern_key = pattern.pattern.lower()
+            if pattern_key in seen_patterns:
+                continue
+            seen_patterns.add(pattern_key)
+
             if pattern.pattern_type.startswith("document_"):
                 result["tier_0_exact"].append(pattern.pattern)
             elif pattern.boost_score >= 1.8:

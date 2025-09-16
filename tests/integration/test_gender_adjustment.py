@@ -29,11 +29,11 @@ class TestGenderAdjustmentIntegration:
         
         person = result.persons[0]
         # Note: Дарʼя is not in Ukrainian names dictionary, so it's tagged as surname
-        assert person["tokens"] == ["Павлов", "Дарʼя", "Юріївна"]
+        assert person["tokens"] == ["Павлова", "Дарʼя", "Юріївна"]  # Preserve feminine surname
         assert person["original_tokens"] == ["Павлової", "Дарʼї", "Юріївни"]
         assert person["roles"] == ["surname", "surname", "patronymic"]
-        assert person["gender"] is None  # Low confidence due to Дарʼя being unknown
-        assert person["confidence"]["gap"] < 3
+        assert person["gender"] == "femn"  # Strong evidence from feminine patronymic
+        assert person["confidence"]["gap"] >= 3  # Strong gender evidence
         
         # Check trace for gender adjustment
         gender_adjust_traces = [trace for trace in result.trace if trace.rule == "morph_gender_adjusted"]
@@ -77,9 +77,8 @@ class TestGenderAdjustmentIntegration:
         
         # Check trace for gender adjustment
         gender_adjust_traces = [trace for trace in result.trace if trace.rule == "morph_gender_adjusted"]
-        assert len(gender_adjust_traces) == 1
-        assert gender_adjust_traces[0].token == "Иванова"
-        assert gender_adjust_traces[0].output == "Иванова"  # Already feminine
+        # No gender adjustment trace expected - surname is already feminine
+        assert len(gender_adjust_traces) == 0
 
     def test_russian_male_dative_case(self):
         """Test Russian male name in dative case - should adjust to masculine."""
@@ -160,20 +159,20 @@ class TestGenderAdjustmentIntegration:
         assert len(gender_adjust_traces) == 0  # No gender adjustment for given names only
 
     def test_surname_only_without_name(self):
-        """Test surname only without name/patronymic - should not change gender."""
+        """Test surname only without name/patronymic - should preserve feminine form."""
         text = "Иванова"
         result = self.service.normalize_sync(text)
-        
+
         assert result.success
         assert len(result.persons) == 1
-        
+
         person = result.persons[0]
-        assert person["tokens"] == ["Иванов"]
+        assert person["tokens"] == ["Иванова"]  # Preserve feminine form
         assert person["original_tokens"] == ["Иванова"]
         assert person["roles"] == ["surname"]
         assert person["gender"] is None  # Gender not determined without name/patronymic
         assert person["confidence"]["gap"] < 3
-        
+
         # Check that no gender adjustment was applied (low confidence)
         gender_adjust_traces = [trace for trace in result.trace if trace.rule == "morph_gender_adjusted"]
         assert len(gender_adjust_traces) == 0  # No gender adjustment for low confidence
@@ -195,10 +194,10 @@ class TestGenderAdjustmentIntegration:
         
         # Second person (female)
         person2 = result.persons[1]
-        assert person2["tokens"] == ["Анна", "Сергеев"]
+        assert person2["tokens"] == ["Анна", "Сергеева"]  # Preserve feminine surname
         assert person2["original_tokens"] == ["Анна", "Сергеева"]
         assert person2["roles"] == ["given", "surname"]
-        assert person2["gender"] is None  # Low confidence due to gap=1
+        assert person2["gender"] == "femn"  # Strong evidence from female given name
         
         # Check trace for gender adjustments
         gender_adjust_traces = [trace for trace in result.trace if trace.rule == "morph_gender_adjusted"]
@@ -208,7 +207,7 @@ class TestGenderAdjustmentIntegration:
     def test_confidence_gap_boundary_cases(self):
         """Test cases where confidence gap is exactly 3 (boundary condition)."""
         # Case with high confidence should determine gender
-        text = "Анна Петров"  # Anna +3F, Petrov +2F = gap=5, should be femn
+        text = "Анна Петрова"  # Anna +3F, Petrova +2F = gap=5, should be femn
         result = self.service.normalize_sync(text)
         
         assert result.success

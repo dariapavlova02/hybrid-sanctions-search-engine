@@ -25,10 +25,10 @@ def get_female_given_names(lang: str) -> set:
     """
     try:
         if lang == "ru":
-            from ai_service.data.dicts.russian_names import RUSSIAN_NAMES
+            from ....data.dicts.russian_names import RUSSIAN_NAMES
             name_dict = RUSSIAN_NAMES
         elif lang == "uk":
-            from ai_service.data.dicts.ukrainian_names import UKRAINIAN_NAMES
+            from ....data.dicts.ukrainian_names import UKRAINIAN_NAMES
             name_dict = UKRAINIAN_NAMES
         else:
             return set()
@@ -114,29 +114,30 @@ def looks_like_feminine_uk(token: str) -> Tuple[bool, Optional[str]]:
     
     # Check for feminine genitive endings and convert to nominative
     if token_lower.endswith("ової"):
-        return True, token[:-2] + "а"  # Павлової -> Павлова
+        return True, token[:-4] + "ова"  # Павлової -> Павлова
     elif token_lower.endswith("евої"):
-        return True, token[:-2] + "а"  # Павлової -> Павлова
+        return True, token[:-4] + "ева"  # Іваненької -> Іваненка
     elif token_lower.endswith("іної"):
         return True, token[:-3] + "іна"
     elif token_lower.endswith("їної"):
         return True, token[:-3] + "їна"
-    elif token_lower.endswith("ської"):
-        return True, token[:-4] + "ська"
-    elif token_lower.endswith("цької"):
-        return True, token[:-4] + "цька"
-    elif token_lower.endswith("ську"):
-        return True, token[:-3] + "ська"
-    elif token_lower.endswith("цьку"):
-        return True, token[:-3] + "цька"
-    elif token_lower.endswith("ською"):
-        return True, token[:-4] + "ська"
+    # Longer patterns first to avoid partial matches
     elif token_lower.endswith("цькою"):
         return True, token[:-4] + "цька"
-    elif token_lower.endswith("ській"):
-        return True, token[:-5] + "ська"  # Кравцівській -> Кравцівська
+    elif token_lower.endswith("ською"):
+        return True, token[:-4] + "ська"
     elif token_lower.endswith("цькій"):
         return True, token[:-5] + "цька"  # Кравцівцькій -> Кравцівцька
+    elif token_lower.endswith("ській"):
+        return True, token[:-4] + "ська"  # Кравцівській -> Кравцівська
+    elif token_lower.endswith("ської"):
+        return True, token[:-5] + "ська"
+    elif token_lower.endswith("цької"):
+        return True, token[:-4] + "цька"
+    elif token_lower.endswith("цьку"):
+        return True, token[:-3] + "цька"
+    elif token_lower.endswith("ську"):
+        return True, token[:-3] + "ська"
     
     # instrumental / dative → nominative
     elif token_lower.endswith("овою"):
@@ -151,6 +152,10 @@ def looks_like_feminine_uk(token: str) -> Tuple[bool, Optional[str]]:
         return True, token[:-3] + "іна"
     elif token_lower.endswith("їною"):
         return True, token[:-3] + "їна"
+    elif token_lower.endswith("іні"):
+        return True, token[:-2] + "іна"  # дательный падеж
+    elif token_lower.endswith("їні"):
+        return True, token[:-2] + "їна"  # дательный падеж
     
     # Check for feminine nominative endings
     elif token_lower.endswith("ова"):
@@ -204,27 +209,27 @@ def to_feminine_nominative_uk(token: str) -> str:
 def is_invariable_surname(token: str) -> bool:
     """
     Check if a surname has an invariable suffix that should not be gender-adjusted.
-    
+
     Args:
         token: The token to check
-        
+
     Returns:
         True if the surname is invariable
     """
     token_lower = token.lower()
-    
+
     # Check direct endings
     if any(token_lower.endswith(suffix) for suffix in INVARIABLE_SURNAME_SUFFIXES):
         return True
-    
+
     # Check if it's a declined form of -енко/-ко surnames
     # Порошенка -> Порошенко, Петренка -> Петренко
     if token_lower.endswith("ка") and len(token) > 4:
-        # Check if removing "ка" and adding "ко" would make it end with "ко"
-        base = token[:-2] + "ко"
-        if base.lower().endswith("ко"):
+        candidate = token[:-2] + "ко"
+        base = candidate[:-2]  # убрать "ко"
+        if candidate.lower().endswith(("енко", "ко")) and len(base) >= 3:
             return True
-    
+
     return False
 
 
@@ -243,15 +248,15 @@ def infer_gender_evidence(given: List[str], patronymic: Optional[str], lang: str
     # Import name dictionaries
     try:
         if lang == "ru":
-            from ai_service.data.dicts.russian_names import RUSSIAN_NAMES
+            from ....data.dicts.russian_names import RUSSIAN_NAMES
             name_dict = RUSSIAN_NAMES
         elif lang == "uk":
-            from ai_service.data.dicts.ukrainian_names import UKRAINIAN_NAMES
+            from ....data.dicts.ukrainian_names import UKRAINIAN_NAMES
             name_dict = UKRAINIAN_NAMES
         else:
-            return None
+            name_dict = {}
     except ImportError:
-        return None
+        name_dict = {}
     
     # Check given names for gender indicators using dictionaries
     # Collect all gender evidence to handle mixed scenarios
@@ -305,15 +310,41 @@ def infer_gender_evidence(given: List[str], patronymic: Optional[str], lang: str
         if lang == "ru":
             if any(patronymic_lower.endswith(suffix) for suffix in FEMALE_PATRONYMIC_SUFFIXES_RU):
                 return "fem"
+            # Check declined forms of female patronymics
+            elif patronymic_lower.endswith("овны") or patronymic_lower.endswith("евны") or patronymic_lower.endswith("ичны"):
+                return "fem"
             elif any(patronymic_lower.endswith(suffix) for suffix in ["ович", "евич", "ич"]):
                 return "masc"
         elif lang == "uk":
             if any(patronymic_lower.endswith(suffix) for suffix in FEMALE_PATRONYMIC_SUFFIXES_UK):
                 return "fem"
+            # Check declined forms of female patronymics: Юріївни (gen.), Юріївну (acc.), etc.
+            elif patronymic_lower.endswith("івни") or patronymic_lower.endswith("ївни"):
+                return "fem"
+            elif patronymic_lower.endswith("івну") or patronymic_lower.endswith("ївну"):
+                return "fem"
             elif any(patronymic_lower.endswith(suffix) for suffix in ["ович", "евич", "ич"]):
                 return "masc"
     
     return None
+
+
+def maybe_to_feminine_nom(token: str, language: str, gender_hint: Optional[str], is_declined_feminine: bool) -> str:
+    """
+    Safely convert a token to feminine nominative form only if there's strong evidence.
+
+    Args:
+        token: The token to convert
+        language: Language code ('ru' or 'uk')
+        gender_hint: Gender evidence from context ('fem', 'masc', or None)
+        is_declined_feminine: Whether the token looks like a declined feminine form
+
+    Returns:
+        Feminine nominative form if appropriate, original token otherwise
+    """
+    if gender_hint == "fem" or is_declined_feminine:
+        return feminine_nominative_from(token, language)
+    return token
 
 
 def feminine_nominative_from(token: str, language: str) -> str:
@@ -356,52 +387,249 @@ def convert_given_name_to_nominative(token: str, language: str) -> str:
 
 def convert_given_name_to_nominative_ru(token: str) -> str:
     """
-    Convert a Russian given name from genitive case to nominative case.
-    
+    Convert a Russian given name from oblique case to nominative case.
+
     Args:
-        token: The token to convert (e.g., "Анны" -> "Анна")
-        
+        token: The token to convert (e.g., "Анны" -> "Анна", "Ивану" -> "Иван")
+
     Returns:
         Nominative form of the given name
     """
     token_lower = token.lower()
-    
-    # Common genitive endings for Russian given names
-    if token_lower.endswith("ы"):
-        # Анны -> Анна, Марии -> Мария
+
+    # Accusative case endings (use name dictionary for validation)
+    if token_lower.endswith("а") and len(token) > 2:
+        # Check if it's accusative masculine using name dictionaries
+        potential_nom = token[:-1]
+        try:
+            from ....data.dicts.russian_names import RUSSIAN_NAMES
+            # Check if potential nominative is a known male name
+            # Try both capitalized and as-is versions
+            for name_key in [potential_nom.capitalize(), potential_nom]:
+                if name_key in RUSSIAN_NAMES:
+                    name_data = RUSSIAN_NAMES[name_key]
+                    if name_data.get("gender") == "masc":
+                        return potential_nom
+        except ImportError:
+            pass
+    # Dative case endings
+    elif token_lower.endswith("у"):
+        # Ивану -> Иван
+        return token[:-1]
+    elif token_lower.endswith("е"):
+        # Марие -> Мария
+        return token[:-1] + "я"
+    # Instrumental case endings (masculine)
+    elif token_lower.endswith("ом"):
+        # Иваном -> Иван
+        return token[:-2]
+    elif token_lower.endswith("ем"):
+        # Сергеем -> Сергей
+        return token[:-2] + "й"
+    # Genitive case endings
+    elif token_lower.endswith("ы"):
+        # Анны -> Анна
         return token[:-1] + "а"
     elif token_lower.endswith("и"):
-        # Марии -> Мария (already ends in "и")
+        # Марии -> Мария
         if len(token) > 2:
             return token[:-1] + "я"
-    elif token_lower.endswith("а"):
-        # Already in nominative or genitive with "а" ending
+
+    return token
+
+
+def convert_patronymic_to_nominative(token: str, language: str) -> str:
+    """
+    Convert a patronymic from oblique case to nominative case.
+
+    Args:
+        token: The token to convert (e.g., "Юріївни" -> "Юріївна")
+        language: Language code ('ru' or 'uk')
+
+    Returns:
+        Nominative form of the patronymic
+    """
+    if language == "ru":
+        return convert_patronymic_to_nominative_ru(token)
+    elif language == "uk":
+        return convert_patronymic_to_nominative_uk(token)
+    else:
         return token
-    
+
+
+def convert_patronymic_to_nominative_ru(token: str) -> str:
+    """
+    Convert a Russian patronymic from oblique case to nominative case.
+
+    Args:
+        token: The token to convert
+
+    Returns:
+        Nominative form of the patronymic
+    """
+    token_lower = token.lower()
+
+    # Female patronymics oblique case endings
+    if token_lower.endswith(("овны", "евны", "ичны")):
+        # Genitive: Ивановны -> Ивановна
+        return token[:-1] + "а"
+    elif token_lower.endswith(("овне", "евне", "ичне")):
+        # Dative: Андреевне -> Андреевна
+        return token[:-1] + "а"
+    elif token_lower.endswith(("овну", "евну", "ичну")):
+        # Accusative: Андреевну -> Андреевна
+        return token[:-1] + "а"
+
+    # Male patronymics oblique case endings
+    elif token_lower.endswith(("овичу", "евичу")):
+        # Dative: Ивановичу -> Иванович
+        return token[:-1]
+    elif token_lower.endswith(("овичем", "евичем")):
+        # Instrumental: Ивановичем -> Иванович
+        return token[:-2]
+    elif token_lower.endswith(("овиче", "евиче")):
+        # Prepositional: Ивановиче -> Иванович
+        return token[:-1]
+
+    return token
+
+
+def convert_patronymic_to_nominative_uk(token: str) -> str:
+    """
+    Convert a Ukrainian patronymic from oblique case to nominative case.
+
+    Args:
+        token: The token to convert (e.g., "Юріївни" -> "Юріївна")
+
+    Returns:
+        Nominative form of the patronymic
+    """
+    token_lower = token.lower()
+
+    # Female patronymics genitive endings
+    if token_lower.endswith("івни"):
+        return token[:-1] + "а"  # Юріївни -> Юріївна
+    elif token_lower.endswith("ївни"):
+        return token[:-1] + "а"  # Олексіївни -> Олексіївна
+    # Female patronymics accusative endings
+    elif token_lower.endswith("івну"):
+        return token[:-1] + "а"  # Юріївну -> Юріївна
+    elif token_lower.endswith("ївну"):
+        return token[:-1] + "а"  # Олексіївну -> Олексіївна
+
+    return token
+
+
+def convert_surname_to_nominative(token: str, language: str) -> str:
+    """
+    Convert a surname from oblique case to nominative case.
+    This handles masculine surnames that may be in dative/instrumental cases.
+
+    Args:
+        token: The token to convert (e.g., "Иванову" -> "Иванов")
+        language: Language code ('ru' or 'uk')
+
+    Returns:
+        Nominative form of the surname
+    """
+    if language == "ru":
+        return convert_surname_to_nominative_ru(token)
+    elif language == "uk":
+        return convert_surname_to_nominative_uk(token)
+    else:
+        return token
+
+
+def convert_surname_to_nominative_ru(token: str) -> str:
+    """
+    Convert a Russian surname from oblique case to nominative case.
+
+    Args:
+        token: The token to convert
+
+    Returns:
+        Nominative form of the surname
+    """
+    token_lower = token.lower()
+
+    # Masculine surnames in oblique cases
+    if token_lower.endswith("ову"):
+        # Dative: Иванову -> Иванов
+        return token[:-1]
+    elif token_lower.endswith("овым"):
+        # Instrumental: Ивановым -> Иванов
+        return token[:-2]
+    elif token_lower.endswith("ове"):
+        # Prepositional: Иванове -> Иванов
+        return token[:-2]
+
+    return token
+
+
+def convert_surname_to_nominative_uk(token: str) -> str:
+    """
+    Convert a Ukrainian surname from oblique case to nominative case.
+
+    Args:
+        token: The token to convert
+
+    Returns:
+        Nominative form of the surname
+    """
+    token_lower = token.lower()
+
+    # Masculine surnames in oblique cases
+    if token_lower.endswith("ову"):
+        # Dative: Іванову -> Іванов
+        return token[:-1]
+    elif token_lower.endswith("овим"):
+        # Instrumental: Івановим -> Іванов
+        return token[:-2]
+    elif token_lower.endswith("ові"):
+        # Prepositional: Іванові -> Іванов
+        return token[:-2]
+
     return token
 
 
 def convert_given_name_to_nominative_uk(token: str) -> str:
     """
-    Convert a Ukrainian given name from genitive case to nominative case.
-    
+    Convert a Ukrainian given name from oblique case to nominative case.
+
     Args:
-        token: The token to convert (e.g., "Анни" -> "Анна")
-        
+        token: The token to convert (e.g., "Анни" -> "Анна", "Дарʼї" -> "Дарʼя")
+
     Returns:
         Nominative form of the given name
     """
     token_lower = token.lower()
-    
-    # Common genitive endings for Ukrainian given names
-    if token_lower.endswith("и"):
-        # Анни -> Анна, Марії -> Марія
-        return token[:-1] + "а"
-    elif token_lower.endswith("ї"):
-        # Марії -> Марія
+
+    # Genitive case endings
+    if token_lower.endswith("ї"):
+        # Дарʼї -> Дарʼя, Марії -> Марія
         return token[:-1] + "я"
+    elif token_lower.endswith("и"):
+        # Анни -> Анна
+        return token[:-1] + "а"
+    # Dative case endings
+    elif token_lower.endswith("у"):
+        # Івану -> Іван
+        return token[:-1]
+    elif token_lower.endswith("е"):
+        # Марії -> Марія (dative -і -> -я in Ukrainian)
+        return token[:-1] + "я"
+    # Instrumental case endings (masculine)
+    elif token_lower.endswith("ом"):
+        # Іваном -> Іван
+        return token[:-2]
+    elif token_lower.endswith("ієм"):
+        # Сергієм -> Сергій (Ukrainian specific -ій names)
+        return token[:-3] + "ій"
+    elif token_lower.endswith("ем"):
+        # Other -ем endings
+        return token[:-2]
     elif token_lower.endswith("а"):
         # Already in nominative or genitive with "а" ending
         return token
-    
+
     return token

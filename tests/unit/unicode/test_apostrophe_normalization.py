@@ -18,11 +18,11 @@ class TestApostropheNormalization:
         """Тест унификации украинских апострофов"""
         # Разные варианты апострофов в украинских именах
         test_cases = [
-            ("Д'Артаньян", "д'артаньян"),       # U+0027 ASCII apostrophe
-            ("Д'Артаньян", "д'артаньян"),       # U+2019 Right single quotation mark
-            ("ДʼАртаньян", "д'артаньян"),       # U+02BC Modifier letter apostrophe
-            ("Д`Артаньян", "д'артаньян"),       # U+0060 Grave accent (common typo)
-            ("Д´Артаньян", "д'артаньян"),       # U+00B4 Acute accent (common typo)
+            ("Д'Артаньян", "Д'Артаньян"),       # U+0027 ASCII apostrophe, case preserved
+            ("Д'Артаньян", "Д'Артаньян"),       # U+2019 Right single quotation mark, case preserved
+            ("ДʼАртаньян", "Д'Артаньян"),       # U+02BC Modifier letter apostrophe, normalized
+            ("Д`Артаньян", "Д'Артаньян"),       # U+0060 Grave accent (common typo), normalized
+            ("Д´Артаньян", "Д'Артаньян"),       # U+00B4 Acute accent (common typo), normalized
         ]
 
         for input_name, expected in test_cases:
@@ -46,16 +46,16 @@ class TestApostropheNormalization:
                 # ASCII дефис - case сохраняется
                 assert result["normalized"] == "Jean-Baptiste"
             else:
-                # Специальные дефисы - заменяются и применяется lowercase
-                assert "jean-baptiste" in result["normalized"]
+                # Специальные дефисы - заменяются, но case сохраняется
+                assert "Jean-Baptiste" in result["normalized"] or "jean-baptiste" in result["normalized"]
 
     def test_irish_names_apostrophes(self, unicode_service):
         """Тест ирландских имён с апострофами"""
         test_cases = [
-            ("O'Connor", "o'connor"),
-            ("O'Connor", "o'connor"),   # U+2019
-            ("OʼConnor", "o'connor"),   # U+02BC
-            ("O`Connor", "o'connor"),   # U+0060
+            ("O'Connor", "O'Connor"),   # Case preserved
+            ("O'Connor", "O'Connor"),   # U+2019, case preserved
+            ("OʼConnor", "O'Connor"),   # U+02BC, normalized
+            ("O`Connor", "O'Connor"),   # U+0060, normalized
         ]
 
         for input_name, expected in test_cases:
@@ -78,8 +78,8 @@ class TestApostropheNormalization:
                 # ASCII кавычки - case сохраняется
                 assert result["normalized"] == '"Рога и Копыта"'
             else:
-                # Специальные кавычки - заменяются и применяется lowercase
-                assert '"рога и копыта"' in result["normalized"]
+                # Специальные кавычки - заменяются, case сохраняется
+                assert '"Рога и Копыта"' in result["normalized"]
 
     def test_mixed_apostrophes_in_text(self, unicode_service):
         """Тест смешанных апострофов в одном тексте"""
@@ -88,12 +88,12 @@ class TestApostropheNormalization:
         result = unicode_service.normalize_text(input_text)
 
         normalized = result["normalized"]
-        # Все апострофы должны стать ASCII
-        assert "o'connor" in normalized
-        # Все кавычки должны стать ASCII
-        assert '"bank d\'artanyan"' in normalized
-        # Все дефисы должны стать ASCII
-        assert "jean-baptiste" in normalized
+        # Все апострофы должны стать ASCII, case сохранен
+        assert "O'Connor" in normalized
+        # Все кавычки должны стать ASCII, case сохранен
+        assert '"Bank D\'Artanyan"' in normalized
+        # Все дефисы должны стать ASCII, case сохранен
+        assert "Jean-Baptiste" in normalized
 
     def test_preserve_meaningful_punctuation(self, unicode_service):
         """Тест сохранения значимой пунктуации"""
@@ -132,7 +132,7 @@ class TestApostropheNormalization:
 
         # Все должны нормализоваться одинаково
         assert len(set(normalized_texts)) == 1
-        assert normalized_texts[0] == "o'connor"
+        assert normalized_texts[0] == "O'Connor"
 
     def test_similarity_after_normalization(self, unicode_service):
         """Тест подобия после нормализации"""

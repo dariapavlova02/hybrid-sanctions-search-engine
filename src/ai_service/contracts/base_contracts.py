@@ -196,11 +196,11 @@ class UnifiedProcessingResult:
 
     # Normalization
     normalized_text: str
-    tokens: List[str]
-    trace: List["TokenTrace"]
+    tokens: List[str] = field(default_factory=list)
+    trace: List["TokenTrace"] = field(default_factory=list)
 
-    # Signals
-    signals: SignalsResult
+    # Signals (backward compatibility - make optional)
+    signals: Optional[SignalsResult] = None
 
     # Optional stages
     variants: Optional[List[str]] = None
@@ -236,7 +236,7 @@ class UnifiedProcessingResult:
                         "confidence": p.confidence,
                         "evidence": p.evidence,
                     }
-                    for p in self.signals.persons
+                    for p in (self.signals.persons if self.signals else [])
                 ],
                 "organizations": [
                     {
@@ -247,11 +247,11 @@ class UnifiedProcessingResult:
                         "confidence": o.confidence,
                         "evidence": o.evidence,
                     }
-                    for o in self.signals.organizations
+                    for o in (self.signals.organizations if self.signals else [])
                 ],
                 "numbers": {},  # Legacy compatibility
-                "dates": self.signals.extras.dates,
-                "confidence": self.signals.confidence,
+                "dates": self.signals.extras.dates if self.signals and self.signals.extras else {},
+                "confidence": self.signals.confidence if self.signals else 0.0,
             },
             "variants": self.variants,
             "embeddings": self.embeddings,

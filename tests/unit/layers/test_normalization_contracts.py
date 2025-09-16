@@ -150,15 +150,15 @@ class TestNormalizationContracts:
     @pytest.mark.asyncio
     async def test_flag_behavior_real_impact(self, service):
         """Test that flags have real behavioral impact per CLAUDE.md requirement"""
-        text = "Іван і компанія"
+        text = "А.С.Пушкін"  # Text that shows clear preserve_names differences
 
-        # Test different flag combinations
+        # Test different flag combinations that produce different results
         results = []
         flag_combinations = [
-            {"remove_stop_words": True, "preserve_names": True, "enable_advanced_features": True},
-            {"remove_stop_words": False, "preserve_names": True, "enable_advanced_features": True},
-            {"remove_stop_words": True, "preserve_names": False, "enable_advanced_features": True},
-            {"remove_stop_words": True, "preserve_names": True, "enable_advanced_features": False},
+            {"preserve_names": True, "enable_advanced_features": True},
+            {"preserve_names": False, "enable_advanced_features": True},
+            {"preserve_names": True, "enable_advanced_features": False},
+            {"preserve_names": False, "enable_advanced_features": False},
         ]
 
         for flags in flag_combinations:
