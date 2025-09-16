@@ -7,6 +7,33 @@ from contextlib import contextmanager
 from typing import Generator
 
 
+class PerfTimer:
+    """Performance timer class for measuring execution time."""
+
+    def __init__(self):
+        self.start_time = None
+        self.end_time = None
+
+    def __enter__(self):
+        self.start_time = time.perf_counter()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.end_time = time.perf_counter()
+
+    @property
+    def elapsed(self) -> float:
+        """Get elapsed time in seconds."""
+        if self.end_time is None or self.start_time is None:
+            return 0.0
+        return self.end_time - self.start_time
+
+    @property
+    def elapsed_ms(self) -> float:
+        """Get elapsed time in milliseconds."""
+        return self.elapsed * 1000
+
+
 @contextmanager
 def perf_timer(operation_name: str = "operation") -> Generator[None, None, None]:
     """
