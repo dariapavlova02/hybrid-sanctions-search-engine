@@ -214,6 +214,44 @@ class UnifiedOrchestrator:
 
         return None  # Continue processing
 
+    async def _handle_smart_filter_layer(
+        self, context: ProcessingContext, start_time: float
+    ) -> Optional[UnifiedProcessingResult]:
+        """
+        Handle Layer 2: Smart Filter (optional skip)
+
+        Returns:
+            UnifiedProcessingResult if early termination needed, None otherwise
+        """
+        if self.enable_smart_filter:
+            logger.debug("Stage 2: Smart Filter")
+            layer_start = time.time()
+
+            filter_result = await self._maybe_await(self.smart_filter_service.should_process(
+                context.sanitized_text
+            ))
+            context.should_process = filter_result.should_process
+            context.metadata["smart_filter"] = {
+                "should_process": filter_result.should_process,
+                "confidence": filter_result.confidence,
+                "classification": filter_result.classification,
+                "detected_signals": filter_result.detected_signals,
+                "details": filter_result.details,
+            }
+
+            if self.metrics_service:
+                self.metrics_service.record_timer('processing.layer.smart_filter', time.time() - layer_start)
+                self.metrics_service.record_histogram('smart_filter.confidence', filter_result.confidence)
+
+            if not context.should_process and self.allow_smart_filter_skip:
+                if self.metrics_service:
+                    self.metrics_service.increment_counter('processing.smart_filter.skipped')
+                return self._create_filtered_response(
+                    context, filter_result, start_time
+                )
+
+        return None  # Continue processing
+
     async def process(
         self,
         text: str,
@@ -290,32 +328,9 @@ class UnifiedOrchestrator:
             # ================================================================
             # Layer 2: Smart Filter (optional skip)
             # ================================================================
-            if self.enable_smart_filter:
-                logger.debug("Stage 2: Smart Filter")
-                layer_start = time.time()
-
-                filter_result = await self._maybe_await(self.smart_filter_service.should_process(
-                    context.sanitized_text
-                ))
-                context.should_process = filter_result.should_process
-                context.metadata["smart_filter"] = {
-                    "should_process": filter_result.should_process,
-                    "confidence": filter_result.confidence,
-                    "classification": filter_result.classification,
-                    "detected_signals": filter_result.detected_signals,
-                    "details": filter_result.details,
-                }
-
-                if self.metrics_service:
-                    self.metrics_service.record_timer('processing.layer.smart_filter', time.time() - layer_start)
-                    self.metrics_service.record_histogram('smart_filter.confidence', filter_result.confidence)
-
-                if not context.should_process and self.allow_smart_filter_skip:
-                    if self.metrics_service:
-                        self.metrics_service.increment_counter('processing.smart_filter.skipped')
-                    return self._create_filtered_response(
-                        context, filter_result, start_time
-                    )
+            smart_filter_result = await self._handle_smart_filter_layer(context, start_time)
+            if smart_filter_result is not None:  # Early return if filtered
+                return smart_filter_result
 
             # ================================================================
             # Layer 3: Language Detection (on original text to preserve language markers)
