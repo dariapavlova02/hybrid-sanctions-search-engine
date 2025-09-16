@@ -398,6 +398,155 @@ class UnifiedOrchestrator:
 
         return signals_result
 
+    async def _handle_variants_layer(
+        self, norm_result: Any, context: ProcessingContext, generate_variants: Optional[bool], errors: list
+    ) -> Optional[list]:
+        """
+        Handle Layer 7: Variants (optional)
+
+        Args:
+            norm_result: Result from name normalization
+            context: Processing context
+            generate_variants: Override for variants generation
+            errors: List to append errors to
+
+        Returns:
+            Generated variants or None if disabled/failed
+        """
+        variants = None
+        if (generate_variants is True) or (
+            generate_variants is None and self.enable_variants
+        ):
+            logger.debug("Stage 7: Variant Generation")
+            layer_start = time.time()
+            try:
+                if self.variants_service is not None:
+                    variants = await self._maybe_await(self.variants_service.generate_variants(
+                        norm_result.normalized, context.language
+                    ))
+                else:
+                    logger.debug("Variants service not available - skipping variant generation")
+                if self.metrics_service:
+                    self.metrics_service.record_timer('processing.layer.variants', time.time() - layer_start)
+                    if variants:
+                        self.metrics_service.record_histogram('variants.count', self._safe_len(variants))
+            except Exception as e:
+                logger.warning(f"Variant generation failed: {e}")
+                if self.metrics_service:
+                    self.metrics_service.increment_counter('processing.variants.failed')
+                errors.append(f"Variants: {str(e)}")
+
+        return variants
+
+    async def _handle_embeddings_layer(
+        self, norm_result: Any, generate_embeddings: Optional[bool], errors: list
+    ) -> Optional[list]:
+        """
+        Handle Layer 8: Embeddings (optional)
+
+        Args:
+            norm_result: Result from name normalization
+            generate_embeddings: Override for embeddings generation
+            errors: List to append errors to
+
+        Returns:
+            Generated embeddings or None if disabled/failed
+        """
+        embeddings = None
+        if (generate_embeddings is True) or (
+            generate_embeddings is None and self.enable_embeddings
+        ):
+            logger.debug("Stage 8: Embedding Generation")
+            layer_start = time.time()
+            try:
+                if self.embeddings_service is not None:
+                    embeddings = await self._maybe_await(self.embeddings_service.generate_embeddings(
+                        norm_result.normalized
+                    ))
+                else:
+                    logger.debug("Embeddings service not available - skipping embedding generation")
+                if self.metrics_service:
+                    self.metrics_service.record_timer('processing.layer.embeddings', time.time() - layer_start)
+                    if embeddings is not None:
+                        self.metrics_service.record_histogram('embeddings.dimension', self._safe_len(embeddings))
+            except Exception as e:
+                logger.warning(f"Embedding generation failed: {e}")
+                if self.metrics_service:
+                    self.metrics_service.increment_counter('processing.embeddings.failed')
+                errors.append(f"Embeddings: {str(e)}")
+
+        return embeddings
+
+    async def _handle_decision_layer(
+        self,
+        context: ProcessingContext,
+        norm_result: Any,
+        signals_result: Any,
+        variants: Optional[list],
+        embeddings: Optional[list],
+        errors: list
+    ) -> Optional[Any]:
+        """
+        Handle Layer 9: Decision & Response
+
+        Args:
+            context: Processing context
+            norm_result: Result from name normalization
+            signals_result: Result from signals extraction
+            variants: Generated variants (optional)
+            embeddings: Generated embeddings (optional)
+            errors: List of errors
+
+        Returns:
+            Decision result or None if disabled/failed
+        """
+        decision_result = None
+
+        # Create processing result for decision engine
+        temp_processing_result = UnifiedProcessingResult(
+            original_text=context.original_text,
+            language=context.language,
+            language_confidence=context.language_confidence,
+            normalized_text=norm_result.normalized,
+            tokens=norm_result.tokens,
+            trace=norm_result.trace,
+            signals=signals_result,
+            variants=variants,
+            embeddings=embeddings,
+            processing_time=0.0,  # Will be set below
+            success=self._safe_len(errors) == 0,
+            errors=errors,
+        )
+
+        # Run decision engine if enabled
+        if self.enable_decision_engine:
+            logger.debug("Stage 9: Decision Engine")
+            layer_start = time.time()
+            try:
+                # Create DecisionInput from processing results
+                decision_input = self._create_decision_input(
+                    context, temp_processing_result, signals_result
+                )
+
+                # Make decision using our new DecisionEngine
+                decision_result = self.decision_engine.decide(decision_input)
+
+                logger.debug(
+                    f"Decision made: {decision_result.risk.value} "
+                    f"(score: {decision_result.score:.2f})"
+                )
+                if self.metrics_service:
+                    self.metrics_service.record_timer('processing.layer.decision', time.time() - layer_start)
+                    self.metrics_service.record_histogram('decision.score', decision_result.score)
+                    self.metrics_service.increment_counter(f'decision.result.{decision_result.risk.value.lower()}')
+            except Exception as e:
+                logger.warning(f"Decision engine failed: {e}")
+                if self.metrics_service:
+                    self.metrics_service.increment_counter('processing.decision.failed')
+                errors.append(f"Decision engine: {str(e)}")
+
+        return decision_result
+
     async def process(
         self,
         text: str,
@@ -503,103 +652,19 @@ class UnifiedOrchestrator:
             # ================================================================
             # Layer 7: Variants (optional)
             # ================================================================
-            variants = None
-            if (generate_variants is True) or (
-                generate_variants is None and self.enable_variants
-            ):
-                logger.debug("Stage 7: Variant Generation")
-                layer_start = time.time()
-                try:
-                    if self.variants_service is not None:
-                        variants = await self._maybe_await(self.variants_service.generate_variants(
-                            norm_result.normalized, context.language
-                        ))
-                    else:
-                        logger.debug("Variants service not available - skipping variant generation")
-                    if self.metrics_service:
-                        self.metrics_service.record_timer('processing.layer.variants', time.time() - layer_start)
-                        if variants:
-                            self.metrics_service.record_histogram('variants.count', self._safe_len(variants))
-                except Exception as e:
-                    logger.warning(f"Variant generation failed: {e}")
-                    if self.metrics_service:
-                        self.metrics_service.increment_counter('processing.variants.failed')
-                    errors.append(f"Variants: {str(e)}")
+            variants = await self._handle_variants_layer(norm_result, context, generate_variants, errors)
 
             # ================================================================
             # Layer 8: Embeddings (optional)
             # ================================================================
-            embeddings = None
-            if (generate_embeddings is True) or (
-                generate_embeddings is None and self.enable_embeddings
-            ):
-                logger.debug("Stage 8: Embedding Generation")
-                layer_start = time.time()
-                try:
-                    if self.embeddings_service is not None:
-                        embeddings = await self._maybe_await(self.embeddings_service.generate_embeddings(
-                            norm_result.normalized
-                        ))
-                    else:
-                        logger.debug("Embeddings service not available - skipping embedding generation")
-                    if self.metrics_service:
-                        self.metrics_service.record_timer('processing.layer.embeddings', time.time() - layer_start)
-                        if embeddings is not None:
-                            self.metrics_service.record_histogram('embeddings.dimension', self._safe_len(embeddings))
-                except Exception as e:
-                    logger.warning(f"Embedding generation failed: {e}")
-                    if self.metrics_service:
-                        self.metrics_service.increment_counter('processing.embeddings.failed')
-                    errors.append(f"Embeddings: {str(e)}")
+            embeddings = await self._handle_embeddings_layer(norm_result, generate_embeddings, errors)
 
             # ================================================================
             # Layer 9: Decision & Response
             # ================================================================
-            decision_result = None
-
-            # Create processing result for decision engine
-            temp_processing_result = UnifiedProcessingResult(
-                original_text=context.original_text,
-                language=context.language,
-                language_confidence=context.language_confidence,
-                normalized_text=norm_result.normalized,
-                tokens=norm_result.tokens,
-                trace=norm_result.trace,
-                signals=signals_result,
-                variants=variants,
-                embeddings=embeddings,
-                processing_time=0.0,  # Will be set below
-                success=self._safe_len(errors) == 0,
-                errors=errors,
+            decision_result = await self._handle_decision_layer(
+                context, norm_result, signals_result, variants, embeddings, errors
             )
-
-            # Run decision engine if enabled
-            decision_result = None
-            if self.enable_decision_engine:
-                logger.debug("Stage 9: Decision Engine")
-                layer_start = time.time()
-                try:
-                    # Create DecisionInput from processing results
-                    decision_input = self._create_decision_input(
-                        context, temp_processing_result, signals_result
-                    )
-                    
-                    # Make decision using our new DecisionEngine
-                    decision_result = self.decision_engine.decide(decision_input)
-                    
-                    logger.debug(
-                        f"Decision made: {decision_result.risk.value} "
-                        f"(score: {decision_result.score:.2f})"
-                    )
-                    if self.metrics_service:
-                        self.metrics_service.record_timer('processing.layer.decision', time.time() - layer_start)
-                        self.metrics_service.record_histogram('decision.score', decision_result.score)
-                        self.metrics_service.increment_counter(f'decision.result.{decision_result.risk.value.lower()}')
-                except Exception as e:
-                    logger.warning(f"Decision engine failed: {e}")
-                    if self.metrics_service:
-                        self.metrics_service.increment_counter('processing.decision.failed')
-                    errors.append(f"Decision engine: {str(e)}")
 
             processing_time = time.time() - start_time
 
