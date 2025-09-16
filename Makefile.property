@@ -1,0 +1,65 @@
+# Makefile for Property-Based Tests
+
+.PHONY: test-property test-property-quick test-property-slow test-property-verbose test-property-coverage clean-property
+
+# Default property test target
+test-property:
+	@echo "Running property-based tests..."
+	poetry run pytest tests/property/ -v --tb=short -m property
+
+# Quick property tests (fewer examples)
+test-property-quick:
+	@echo "Running quick property-based tests..."
+	poetry run pytest tests/property/ -v --tb=short -m property --max-examples=10
+
+# Slow property tests (more examples)
+test-property-slow:
+	@echo "Running slow property-based tests..."
+	poetry run pytest tests/property/ -v --tb=short -m property --max-examples=100
+
+# Verbose property tests
+test-property-verbose:
+	@echo "Running verbose property-based tests..."
+	poetry run pytest tests/property/ -v --tb=long -m property
+
+# Property tests with coverage
+test-property-coverage:
+	@echo "Running property-based tests with coverage..."
+	poetry run pytest tests/property/ -v --tb=short -m property --cov=src/ai_service --cov-report=html
+
+# Clean property test artifacts
+clean-property:
+	@echo "Cleaning property test artifacts..."
+	rm -rf .hypothesis/
+	rm -rf htmlcov/
+	rm -rf .coverage
+	rm -rf .pytest_cache/
+
+# Run specific property test
+test-anti-cheat:
+	@echo "Running anti-cheat regression tests..."
+	poetry run pytest tests/property/test_anti_cheat_regression.py -v --tb=short
+
+# Run property tests with specific markers
+test-invariant:
+	@echo "Running invariant tests..."
+	poetry run pytest tests/property/ -v --tb=short -m invariant
+
+# Run property tests with timeout
+test-property-timeout:
+	@echo "Running property-based tests with timeout..."
+	poetry run pytest tests/property/ -v --tb=short -m property --timeout=300
+
+# Help
+help-property:
+	@echo "Property-Based Test Targets:"
+	@echo "  test-property          - Run all property-based tests"
+	@echo "  test-property-quick    - Run quick property tests (10 examples)"
+	@echo "  test-property-slow     - Run slow property tests (100 examples)"
+	@echo "  test-property-verbose  - Run verbose property tests"
+	@echo "  test-property-coverage - Run property tests with coverage"
+	@echo "  test-anti-cheat        - Run anti-cheat regression tests"
+	@echo "  test-invariant         - Run invariant tests"
+	@echo "  test-property-timeout  - Run property tests with timeout"
+	@echo "  clean-property         - Clean property test artifacts"
+	@echo "  help-property          - Show this help"

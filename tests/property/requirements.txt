@@ -1,0 +1,24 @@
+# Requirements for Property-Based Tests
+
+# Core testing framework
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-timeout>=2.1.0
+
+# Property-based testing
+hypothesis>=6.0.0
+
+# HTTP client for Elasticsearch
+httpx>=0.24.0
+
+# Data validation
+pydantic>=2.0.0
+
+# Optional: Coverage reporting
+pytest-cov>=4.0.0
+
+# Optional: Performance profiling
+pytest-benchmark>=4.0.0
+
+# Optional: Memory profiling
+pytest-memray>=1.0.0
