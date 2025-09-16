@@ -121,6 +121,7 @@ from ..language.language_detection_service import LanguageDetectionService
 from ..unicode.unicode_service import UnicodeService
 from .morphology.russian_morphology import RussianMorphologyAnalyzer
 from .morphology.ukrainian_morphology import UkrainianMorphologyAnalyzer
+from .processors.normalization_factory import NormalizationFactory, NormalizationConfig
 
 # Import name dictionaries
 try:
@@ -191,6 +192,9 @@ class NormalizationService:
 
         # Load comprehensive diminutive dictionaries
         self.dim2full_maps = self._load_dim2full_maps()
+
+        # Initialize the new processor factory
+        self.normalization_factory = NormalizationFactory(self.name_dictionaries)
 
         self.logger.info("NormalizationService initialized")
 
@@ -437,16 +441,99 @@ class NormalizationService:
         """
         Async normalization entrypoint compatible with the orchestrator interface.
 
-        Mirrors the sync signature and forwards flags to the core implementation.
+        Uses the new processor factory for improved performance and maintainability.
         """
         lang = language or "auto"
-        return self._normalize_sync(
+
+        # Use new factory-based implementation for better maintainability
+        return await self._normalize_with_factory(
             text,
             lang,
             remove_stop_words,
             preserve_names,
             enable_advanced_features,
         )
+
+    async def _normalize_with_factory(
+        self,
+        text: str,
+        language: str,
+        remove_stop_words: bool,
+        preserve_names: bool,
+        enable_advanced_features: bool,
+    ) -> NormalizationResult:
+        """
+        New normalization implementation using the processor factory.
+
+        This method provides better separation of concerns and maintainability
+        while maintaining backward compatibility with the existing interface.
+        """
+        start_time = time.time()
+        errors = []
+
+        # Input validation
+        if not isinstance(text, str):
+            errors.append("Input must be a string")
+            return self._create_error_result(text, errors, start_time)
+
+        if len(text) > 10000:  # Max length from config
+            errors.append(f"Input too long: {len(text)} characters (max 10,000)")
+            return self._create_error_result(text, errors, start_time)
+
+        # Validate Unicode normalization
+        try:
+            unicodedata.normalize("NFC", text)
+        except Exception as e:
+            errors.append(f"Invalid Unicode input: {e}")
+            return self._create_error_result(text, errors, start_time)
+
+        try:
+            # Language detection
+            if language == "auto":
+                from ...config import LANGUAGE_CONFIG
+                lang_result = self.language_service.detect_language_config_driven(text, LANGUAGE_CONFIG)
+                language = lang_result.language
+                confidence = lang_result.confidence
+            else:
+                confidence = 1.0
+
+            # Create configuration for the factory
+            config = NormalizationConfig(
+                remove_stop_words=remove_stop_words,
+                preserve_names=preserve_names,
+                enable_advanced_features=enable_advanced_features,
+                language=language
+            )
+
+            # Use the factory to normalize
+            normalized_text, tokens, trace, metadata = await self.normalization_factory.normalize_text(
+                text, config
+            )
+
+            processing_time = time.time() - start_time
+
+            # Build the result in the expected format
+            result = NormalizationResult(
+                normalized=normalized_text,
+                tokens=tokens,
+                trace=trace,
+                errors=errors,
+                language=language,
+                confidence=confidence,
+                original_length=len(text),
+                normalized_length=len(normalized_text),
+                token_count=len(tokens),
+                processing_time=processing_time,
+                success=True,
+                **metadata  # Include any additional metadata from factory
+            )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Factory-based normalization failed: {e}")
+            errors.append(f"Normalization failed: {e}")
+            return self._create_error_result(text, errors, start_time)
 
     def normalize_sync(
         self,
