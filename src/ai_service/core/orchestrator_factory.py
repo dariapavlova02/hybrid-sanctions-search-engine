@@ -154,7 +154,10 @@ class OrchestratorFactory:
             # Embeddings service - optional
             if enable_embeddings and embeddings_service is None:
                 try:
-                    embeddings_service = EmbeddingService()
+                    from ...config import EmbeddingConfig
+                    from ...layers.embeddings.embedding_service import EmbeddingService
+                    embedding_config = EmbeddingConfig()
+                    embeddings_service = EmbeddingService(embedding_config)
                     await embeddings_service.initialize()
                     logger.info("Embeddings service initialized")
                 except Exception as e:

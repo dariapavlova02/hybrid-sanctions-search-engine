@@ -77,6 +77,10 @@ class EmbeddingService:
         if getattr(config, 'warmup_on_init', False):
             self._warmup()
 
+    async def initialize(self) -> None:
+        """Initialize the embedding service asynchronously"""
+        self.logger.info("EmbeddingService initialization completed")
+
     def _load_model(self, model_name: Optional[str] = None) -> SentenceTransformer:
         """Lazy load the SentenceTransformer model with caching"""
         model_name = model_name or self.config.model_name

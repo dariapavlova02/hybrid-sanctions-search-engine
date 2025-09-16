@@ -5,7 +5,7 @@ services:
     build: .
     container_name: ai-service
     ports:
-      - "8000:8000"
+      - "8002:8000"
     environment:
       - APP_ENV=production
       - WORKERS=4

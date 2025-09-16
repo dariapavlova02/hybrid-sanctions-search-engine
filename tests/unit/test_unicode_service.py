@@ -225,7 +225,7 @@ class TestUnicodeService:
         # Check that service continues working even with ASCII folding error
         assert 'normalized' in result
     
-    @patch('src.ai_service.services.unicode_service.unicodedata.normalize')
+    @patch('src.ai_service.layers.unicode.unicode_service.unicodedata.normalize')
     def test_unicode_normalization_failure_handling(self, mock_normalize, unicode_service):
         """Test Unicode normalization error handling"""
         # Arrange

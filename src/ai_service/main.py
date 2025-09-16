@@ -296,7 +296,7 @@ async def health_check():
                     if stats["total_processed"] > 0
                     else 0
                 ),
-                "cache_hit_rate": stats["cache"]["hit_rate"] if "cache" in stats else 0,
+                "cache_hit_rate": stats.get("cache", {}).get("hit_rate", 0) if isinstance(stats.get("cache"), dict) else 0,
                 "services": stats.get("services", {}),
             },
         }

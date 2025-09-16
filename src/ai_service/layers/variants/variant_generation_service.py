@@ -12,6 +12,7 @@ from functools import lru_cache
 from typing import Any, Dict, List, Optional, Set, Union
 
 from ...utils.logging_config import get_logger
+from ...core.base_service import BaseService
 from ..language.language_detection_service import LanguageDetectionService
 
 # Import configuration
@@ -42,10 +43,11 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class VariantGenerationService:
+class VariantGenerationService(BaseService):
     """Service for generating name writing variants"""
 
     def __init__(self):
+        super().__init__("VariantGenerationService")
         """
         Initialize the variant generation service with comprehensive transliteration support.
 
@@ -60,8 +62,10 @@ class VariantGenerationService:
         - Visual similarity detection for homoglyph substitution
         - Extended Ukrainian character support (і, ї, є, ґ)
         """
-        self.logger = get_logger(__name__)
         self.language_service = LanguageDetectionService()
+        
+        # Initialize logger properly
+        self._logger = get_logger(__name__)
 
         # Extended transliteration system with support for different standards
         self.transliteration_standards = {
@@ -337,9 +341,14 @@ class VariantGenerationService:
         # Import dictionaries from files
         self._import_dictionaries()
 
-        self.logger.info(
+        self._logger.info(
             "VariantGenerationService initialized with automatic analyzers"
         )
+
+    def _do_initialize(self) -> None:
+        """Service-specific initialization logic"""
+        # Additional initialization if needed
+        self._logger.info("VariantGenerationService initialization completed")
 
     def _import_dictionaries(self):
         """Import dictionaries from files"""
@@ -365,7 +374,7 @@ class VariantGenerationService:
             "sc": set(ALL_SCANDINAVIAN_NAMES),
         }
 
-        self.logger.info("Name dictionaries imported successfully from files")
+        self._logger.info("Name dictionaries imported successfully from files")
 
     def _init_morphological_analyzers(self):
         """Initialize automatic morphological analyzers"""
@@ -377,19 +386,19 @@ class VariantGenerationService:
             import pymorphy3
 
             self.ru_morph = pymorphy3.MorphAnalyzer(lang="ru")
-            self.logger.info("Russian pymorphy3 analyzer initialized")
+            self._logger.info("Russian pymorphy3 analyzer initialized")
         except (ImportError, AttributeError) as e:
-            self.logger.warning(f"pymorphy3 not available: {e}")
+            self._logger.warning(f"pymorphy3 not available: {e}")
             self.ru_morph = None
 
         try:
             # Use our own Ukrainian analyzer
-            from .ukrainian_morphology import UkrainianMorphologyAnalyzer
+            from ..normalization.morphology.ukrainian_morphology import UkrainianMorphologyAnalyzer
 
             self.uk_morph = UkrainianMorphologyAnalyzer()
-            self.logger.info("Custom Ukrainian morphological analyzer initialized")
+            self._logger.info("Custom Ukrainian morphological analyzer initialized")
         except ImportError as e:
-            self.logger.warning(f"Ukrainian morphology analyzer not available: {e}")
+            self._logger.warning(f"Ukrainian morphology analyzer not available: {e}")
 
     def _init_transliterators(self):
         """Initialize automatic transliterators"""
@@ -397,10 +406,10 @@ class VariantGenerationService:
             from transliterate import translit
 
             self.transliterator = translit
-            self.logger.info("Transliterator initialized")
+            self._logger.info("Transliterator initialized")
         except ImportError:
             self.transliterator = None
-            self.logger.warning(
+            self._logger.warning(
                 "transliterate not installed. Install with: pip install transliterate"
             )
 
@@ -466,7 +475,7 @@ class VariantGenerationService:
 
         # Defensive coding: check comprehensive generation result
         if comprehensive_result is None:
-            self.logger.warning(
+            self._logger.warning(
                 f"Comprehensive generation returned None for text: {text}"
             )
             comprehensive_result = {
@@ -1019,7 +1028,7 @@ class VariantGenerationService:
             if len(comma_parts) == 2:
                 variants.add(f"{comma_parts[0]}, {comma_parts[1]}")
 
-        self.logger.debug(f"Generated {len(variants)} word order variants for '{text}'")
+        self._logger.debug(f"Generated {len(variants)} word order variants for '{text}'")
         return variants
 
     def _is_likely_name_word(self, word: str) -> bool:
@@ -1118,10 +1127,10 @@ class VariantGenerationService:
                     diminutives.update(diminutives_list)
                     break
 
-            self.logger.debug(f"Generated {len(diminutives)} diminutives for '{name}'")
+            self._logger.debug(f"Generated {len(diminutives)} diminutives for '{name}'")
 
         except ImportError:
-            self.logger.warning("EXTRA_DIMINUTIVES not available for diminutive generation")
+            self._logger.warning("EXTRA_DIMINUTIVES not available for diminutive generation")
 
         return diminutives
 
@@ -1434,7 +1443,7 @@ class VariantGenerationService:
             return analysis
 
         except Exception as e:
-            self.logger.warning(f"Failed to analyze name '{name}': {e}")
+            self._logger.warning(f"Failed to analyze name '{name}': {e}")
             return None
 
     def _basic_transliterate(self, text: str) -> str:
@@ -1613,7 +1622,7 @@ class VariantGenerationService:
                         variants.add(form.word)
 
         except Exception as e:
-            self.logger.debug(
+            self._logger.debug(
                 f"Error generating Russian morphological variants for '{word}': {e}"
             )
 
@@ -1630,7 +1639,7 @@ class VariantGenerationService:
                 variants.update(all_forms)
 
         except Exception as e:
-            self.logger.debug(
+            self._logger.debug(
                 f"Error generating Ukrainian morphological variants for '{word}': {e}"
             )
 

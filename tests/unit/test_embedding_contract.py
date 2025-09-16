@@ -130,13 +130,15 @@ class TestEmbeddingContract:
         expected_methods = {
             'encode_one', 'encode_batch', 'encode',  # Vector generation
             'get_embedding_dimension', 'get_model_info',  # Info methods
-            '_load_model'  # Internal method
+            'warmup', 'clear_preprocessing_cache', 'get_cache_stats',  # Utility methods
+            'initialize',  # Initialization method
+            '_load_model', '_warmup', '_get_cached_preprocessing'  # Internal methods
         }
         
         # Get only callable methods (not attributes)
         actual_methods = {method for method in dir(service) 
                          if callable(getattr(service, method)) and 
-                         (not method.startswith('_') or method == '_load_model')}
+                         (not method.startswith('_') or method in {'_load_model', '_warmup', '_get_cached_preprocessing'})}
         
         # Should not have more methods than expected
         extra_methods = actual_methods - expected_methods

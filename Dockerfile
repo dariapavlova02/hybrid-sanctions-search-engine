@@ -13,10 +13,11 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+        curl \
         gcc \
         g++ \
-        curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Install Poetry
 RUN pip install poetry
@@ -36,10 +37,10 @@ RUN poetry config virtualenvs.create false
 # Install dependencies
 RUN poetry install --only=main --no-interaction --no-ansi
 
-# Download SpaCy models
-RUN python -m spacy download en_core_web_sm
-RUN python -m spacy download ru_core_news_sm
-RUN python -m spacy download uk_core_news_sm
+# Install SpaCy models directly
+RUN pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
+RUN pip install https://github.com/explosion/spacy-models/releases/download/ru_core_news_sm-3.8.0/ru_core_news_sm-3.8.0-py3-none-any.whl
+RUN pip install https://github.com/explosion/spacy-models/releases/download/uk_core_news_sm-3.8.0/uk_core_news_sm-3.8.0-py3-none-any.whl
 
 # Download NLTK data
 RUN python -c "import nltk; nltk.download('stopwords'); nltk.download('punkt'); nltk.download('averaged_perceptron_tagger')"
