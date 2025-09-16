@@ -437,22 +437,35 @@ class NormalizationService:
         remove_stop_words: bool = True,
         preserve_names: bool = True,
         enable_advanced_features: bool = True,
+        use_factory: bool = True,  # Feature flag for new implementation
     ) -> NormalizationResult:
         """
         Async normalization entrypoint compatible with the orchestrator interface.
 
-        Uses the new processor factory for improved performance and maintainability.
+        Args:
+            use_factory: If True, use new factory-based implementation (default).
+                        If False, use legacy implementation for compatibility.
         """
         lang = language or "auto"
 
-        # Use new factory-based implementation for better maintainability
-        return await self._normalize_with_factory(
-            text,
-            lang,
-            remove_stop_words,
-            preserve_names,
-            enable_advanced_features,
-        )
+        if use_factory:
+            # Use new factory-based implementation for better maintainability
+            return await self._normalize_with_factory(
+                text,
+                lang,
+                remove_stop_words,
+                preserve_names,
+                enable_advanced_features,
+            )
+        else:
+            # Fallback to legacy implementation
+            return self._normalize_sync(
+                text,
+                lang,
+                remove_stop_words,
+                preserve_names,
+                enable_advanced_features,
+            )
 
     async def _normalize_with_factory(
         self,
