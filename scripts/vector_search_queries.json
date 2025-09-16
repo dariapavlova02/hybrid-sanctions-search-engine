@@ -1,0 +1,387 @@
+{
+  "knn_query_template": {
+    "knn": {
+      "field": "name_vector",
+      "query_vector": "{{query_vector}}",
+      "k": "{{k}}",
+      "num_candidates": "{{num_candidates}}",
+      "similarity": "cosine",
+      "filter": {
+        "bool": {
+          "must": [
+            {
+              "term": {
+                "entity_type": "{{entity_type}}"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "size": "{{k}}",
+    "_source": [
+      "entity_id",
+      "entity_type", 
+      "normalized_name",
+      "aliases",
+      "country",
+      "dob",
+      "meta"
+    ]
+  },
+  
+  "filtered_knn_query_template": {
+    "knn": {
+      "field": "name_vector",
+      "query_vector": "{{query_vector}}",
+      "k": "{{k}}",
+      "num_candidates": "{{num_candidates}}",
+      "similarity": "cosine"
+    },
+    "post_filter": {
+      "bool": {
+        "must": [
+          {
+            "term": {
+              "entity_type": "{{entity_type}}"
+            }
+          }
+        ]
+      }
+    },
+    "size": "{{k}}",
+    "_source": [
+      "entity_id",
+      "entity_type",
+      "normalized_name", 
+      "aliases",
+      "country",
+      "dob",
+      "meta"
+    ]
+  },
+  
+  "country_filtered_knn_template": {
+    "knn": {
+      "field": "name_vector",
+      "query_vector": "{{query_vector}}",
+      "k": "{{k}}",
+      "num_candidates": "{{num_candidates}}",
+      "similarity": "cosine",
+      "filter": {
+        "bool": {
+          "must": [
+            {
+              "term": {
+                "entity_type": "{{entity_type}}"
+              }
+            },
+            {
+              "term": {
+                "country": "{{country}}"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "size": "{{k}}",
+    "_source": [
+      "entity_id",
+      "entity_type",
+      "normalized_name",
+      "aliases", 
+      "country",
+      "dob",
+      "meta"
+    ]
+  },
+  
+  "meta_filtered_knn_template": {
+    "knn": {
+      "field": "name_vector",
+      "query_vector": "{{query_vector}}",
+      "k": "{{k}}",
+      "num_candidates": "{{num_candidates}}",
+      "similarity": "cosine"
+    },
+    "post_filter": {
+      "bool": {
+        "must": [
+          {
+            "term": {
+              "entity_type": "{{entity_type}}"
+            }
+          },
+          {
+            "terms": {
+              "meta.source": "{{meta_sources}}"
+            }
+          }
+        ]
+      }
+    },
+    "size": "{{k}}",
+    "_source": [
+      "entity_id",
+      "entity_type",
+      "normalized_name",
+      "aliases",
+      "country", 
+      "dob",
+      "meta"
+    ]
+  },
+  
+  "hybrid_search_template": [
+    {
+      "index": "watchlist_{{entity_type}}s_current",
+      "search_type": "query_then_fetch"
+    },
+    {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "term": {
+                "entity_type": "{{entity_type}}"
+              }
+            },
+            {
+              "bool": {
+                "should": [
+                  {
+                    "terms": {
+                      "normalized_name": "{{search_terms}}",
+                      "boost": 2.0
+                    }
+                  },
+                  {
+                    "terms": {
+                      "aliases": "{{search_terms}}",
+                      "boost": 1.5
+                    }
+                  }
+                ],
+                "minimum_should_match": 1
+              }
+            }
+          ]
+        }
+      },
+      "size": 50,
+      "_source": [
+        "entity_id",
+        "entity_type",
+        "normalized_name",
+        "aliases",
+        "country",
+        "dob",
+        "meta"
+      ]
+    },
+    {
+      "index": "watchlist_{{entity_type}}s_current",
+      "search_type": "query_then_fetch"
+    },
+    {
+      "knn": {
+        "field": "name_vector",
+        "query_vector": "{{query_vector}}",
+        "k": "{{k}}",
+        "num_candidates": "{{num_candidates}}",
+        "similarity": "cosine",
+        "filter": {
+          "bool": {
+            "must": [
+              {
+                "term": {
+                  "entity_type": "{{entity_type}}"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "size": "{{k}}",
+      "_source": [
+        "entity_id",
+        "entity_type",
+        "normalized_name",
+        "aliases",
+        "country",
+        "dob",
+        "meta"
+      ]
+    }
+  ],
+  
+  "fusion_formula": {
+    "description": "final = 0.55*ac_score + 0.45*vec_sim + bonus(DOB_match +0.05) - penalty(need_context -0.1)",
+    "weights": {
+      "ac_weight": 0.55,
+      "vector_weight": 0.45,
+      "dob_bonus": 0.05,
+      "context_penalty": 0.1
+    },
+    "features": {
+      "DOB_match": "Boolean - true if query DOB matches entity DOB",
+      "need_context": "Boolean - true if both AC and vector found same entity",
+      "has_aliases": "Boolean - true if entity has aliases",
+      "has_meta": "Boolean - true if entity has metadata"
+    }
+  },
+  
+  "ranking_algorithm": {
+    "description": "Rank candidates by final fusion score in descending order",
+    "steps": [
+      "1. Calculate fusion score for each candidate",
+      "2. Sort candidates by final_score (descending)",
+      "3. Select top N candidates",
+      "4. Return ranked list"
+    ],
+    "pseudocode": [
+      "function rank_and_select_top_n(candidates, top_n):",
+      "    sorted_candidates = sort(candidates, key=lambda c: c.final_score, reverse=True)",
+      "    return sorted_candidates[:top_n]"
+    ]
+  },
+  
+  "sample_queries": {
+    "basic_knn": {
+      "query_vector": "[0.1, 0.2, 0.3, ...] (384 dimensions)",
+      "entity_type": "person",
+      "k": 50,
+      "num_candidates": 100
+    },
+    "filtered_knn": {
+      "query_vector": "[0.1, 0.2, 0.3, ...] (384 dimensions)",
+      "entity_type": "person",
+      "country": "RU",
+      "k": 50,
+      "num_candidates": 150
+    },
+    "meta_filtered_knn": {
+      "query_vector": "[0.1, 0.2, 0.3, ...] (384 dimensions)",
+      "entity_type": "person",
+      "meta_sources": ["sanctions", "watchlist"],
+      "k": 50,
+      "num_candidates": 200
+    }
+  },
+  
+  "sample_responses": {
+    "knn_response": {
+      "hits": {
+        "total": {
+          "value": 25,
+          "relation": "eq"
+        },
+        "max_score": 0.95,
+        "hits": [
+          {
+            "_index": "watchlist_persons_v1_001",
+            "_id": "person_001",
+            "_score": 0.95,
+            "_source": {
+              "entity_id": "person_001",
+              "entity_type": "person",
+              "normalized_name": "иван петров",
+              "aliases": ["и. петров", "ivan petrov"],
+              "country": "RU",
+              "dob": "1980-05-15",
+              "meta": {
+                "source": "sanctions",
+                "list": "eu_sanctions"
+              }
+            }
+          },
+          {
+            "_index": "watchlist_persons_v1_001", 
+            "_id": "person_002",
+            "_score": 0.87,
+            "_source": {
+              "entity_id": "person_002",
+              "entity_type": "person",
+              "normalized_name": "иван петрович",
+              "aliases": ["и. петрович"],
+              "country": "RU",
+              "dob": "1975-12-03",
+              "meta": {
+                "source": "sanctions",
+                "list": "us_sanctions"
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  
+  "fusion_examples": {
+    "example_1": {
+      "description": "Perfect match with DOB bonus",
+      "ac_score": 2.0,
+      "vector_score": 0.9,
+      "features": {
+        "DOB_match": true,
+        "need_context": false,
+        "has_aliases": true,
+        "has_meta": true
+      },
+      "calculation": "0.55*2.0 + 0.45*0.9 + 0.05 = 1.1 + 0.405 + 0.05 = 1.555",
+      "final_score": 1.555
+    },
+    "example_2": {
+      "description": "Good match with context penalty",
+      "ac_score": 1.5,
+      "vector_score": 0.8,
+      "features": {
+        "DOB_match": false,
+        "need_context": true,
+        "has_aliases": false,
+        "has_meta": true
+      },
+      "calculation": "0.55*1.5 + 0.45*0.8 - 0.1 = 0.825 + 0.36 - 0.1 = 1.085",
+      "final_score": 1.085
+    },
+    "example_3": {
+      "description": "Vector-only match",
+      "ac_score": 0.0,
+      "vector_score": 0.7,
+      "features": {
+        "DOB_match": false,
+        "need_context": false,
+        "has_aliases": true,
+        "has_meta": false
+      },
+      "calculation": "0.55*0.0 + 0.45*0.7 = 0.0 + 0.315 = 0.315",
+      "final_score": 0.315
+    }
+  },
+  
+  "candidate_format": {
+    "description": "Final Candidate object structure",
+    "fields": {
+      "entity_id": "string - unique entity identifier",
+      "entity_type": "string - person or org",
+      "normalized_name": "string - normalized entity name",
+      "aliases": "array - list of aliases",
+      "country": "string - country code",
+      "dob": "string - date of birth (optional)",
+      "meta": "object - metadata",
+      "final_score": "float - fusion score",
+      "ac_score": "float - AC search score",
+      "vector_score": "float - vector similarity score",
+      "features": "object - extracted features",
+      "search_type": "string - ac, vector, or fusion"
+    }
+  },
+  
+  "thresholds": {
+    "min_semantic_similarity": 0.7,
+    "k": 50,
+    "num_candidates_multiplier": 2,
+    "top_n_default": 10
+  }
+}
