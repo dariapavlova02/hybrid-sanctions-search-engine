@@ -1090,8 +1090,8 @@ class SignalsService:
 
     def _extract_organizations(self, text: str, normalization_result: Optional[Dict] = None) -> List[Dict]:
         """Backward compatibility method for tests"""
-        _, organizations_core = self._get_entity_cores(text, normalization_result, "auto")
-        org_signals = self._create_organization_signals(text, organizations_core)
+        persons_core, organizations_core = self._get_entity_cores(text, normalization_result, "auto")
+        org_signals = self._create_organization_signals(text, organizations_core, persons_core)
         return [
             {
                 "core": signal.core,
@@ -1151,6 +1151,13 @@ class SignalsService:
                             setattr(org_obj, key, value)  # Keep original too
                         else:
                             setattr(org_obj, key, value)
+
+                    # Ensure 'full' attribute always exists for backward compatibility
+                    if not hasattr(org_obj, 'full'):
+                        setattr(org_obj, 'full', None)
+                    if not hasattr(org_obj, 'full_name'):
+                        setattr(org_obj, 'full_name', None)
+
                     self.organizations.append(org_obj)
 
                 # Copy other attributes directly

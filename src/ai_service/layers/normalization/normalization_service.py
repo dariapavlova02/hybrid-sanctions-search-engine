@@ -341,6 +341,63 @@ class NormalizationService:
 
         return maps
 
+    def _normalize_diminutive_to_full(self, token: str, language: str) -> Optional[str]:
+        """
+        Convert diminutive form to full name form.
+
+        Handles cases like:
+        - "даши" (genitive of "даша") -> "Дарья"
+        - "даша" (nominative) -> "Дарья"
+        """
+        if language not in self.dim2full_maps:
+            return None
+
+        dim_map = self.dim2full_maps[language]
+        token_lower = token.lower()
+
+        # Direct match first
+        if token_lower in dim_map:
+            return dim_map[token_lower].capitalize()
+
+        # Try to match base forms of declined diminutives
+        for dim_base, full_name in dim_map.items():
+            if len(dim_base) > 2 and token_lower.startswith(dim_base[:-1]):
+                # Check if suffix matches diminutive case endings
+                diminutive_endings = ['и', 'у', 'е', 'ой', 'ей', 'ю', 'ою']
+                token_suffix = token_lower[len(dim_base[:-1]):]
+                if token_suffix in diminutive_endings:
+                    return full_name.capitalize()
+
+        return None
+
+    def _normalize_patronymic_ending(self, token: str) -> str:
+        """
+        Normalize patronymic endings to nominative case.
+
+        Handles cases like:
+        - "Юрьевны" (genitive) -> "Юрьевна" (nominative)
+        - "Андреевне" (dative) -> "Андреевна" (nominative)
+        """
+        token_lower = token.lower()
+
+        # Common patronymic patterns with case endings
+        patronymic_mappings = [
+            # Female patronymics: remove case endings, add -на
+            (r'(.+)(евн|овн|ївн)(ы|и|е|у|ой|ею|ою)$', r'\1\2а'),
+            (r'(.+)(евн|овн|ївн)$', r'\1\2а'),  # Already nominative case
+            # Male patronymics: ensure proper endings
+            (r'(.+)(евич|ович|ійович|інович|йович)(а|у|ем|е|ом|им|ами|ах)$', r'\1\2'),
+            (r'(.+)(евич|ович|ійович|інович|йович)$', r'\1\2'),  # Already nominative
+        ]
+
+        for pattern, replacement in patronymic_mappings:
+            if re.match(pattern, token_lower):
+                result = re.sub(pattern, replacement, token_lower)
+                return result.capitalize()
+
+        # If no patterns match, just capitalize
+        return token.capitalize()
+
     async def normalize_async(
         self,
         text: str,
@@ -551,18 +608,27 @@ class NormalizationService:
 
             processing_time = time.time() - start_time
 
-            # Combine person text and organization text
-            combined_text_parts = []
-            if person_text:
-                combined_text_parts.append(person_text)
-            if organizations:
-                combined_text_parts.append(" ".join(organizations))
-            
-            final_normalized_text = " ".join(combined_text_parts) if combined_text_parts else person_text
+            # Per CLAUDE.md: normalized contains ONLY personal tokens
+            # But filter out obviously non-personal tokens that may have been misclassified
+            filtered_person_tokens = []
+            for trace in traces:
+                if trace.role in ["given", "surname", "patronymic", "initial"]:
+                    token = trace.output
+                    # Additional filter for obviously non-personal tokens
+                    if (trace.role in ["given", "surname"] and
+                        len(token) <= 2 and
+                        token.upper() == token and
+                        trace.rule not in ["morph", "diminutive"]):
+                        # Very short uppercase tokens that aren't from morphology/diminutives
+                        # are likely organization names that were misclassified
+                        continue
+                    filtered_person_tokens.append(token)
+
+            final_normalized_text = " ".join(filtered_person_tokens)
 
             result = NormalizationResult(
                 normalized=final_normalized_text,
-                tokens=person_tokens + organizations,  # Include both person and org tokens
+                tokens=filtered_person_tokens + organizations,  # Use filtered person tokens
                 trace=traces,
                 errors=errors,
                 language=language,
@@ -830,8 +896,20 @@ class NormalizationService:
             return False
 
         # First check if it's a personal name (any language)
+        is_personal_name = False
         for lang in ["ru", "uk", "en"]:
             if self._classify_personal_role(base, lang) != "unknown":
+                is_personal_name = True
+                break
+
+        # If it's a personal name, still allow it as org if it's uppercase and looks like organization
+        if is_personal_name:
+            # Allow uppercase words that match org pattern (could be organization cores)
+            # but exclude patronymics and other clear personal name components
+            if (base.isupper() and len(base) >= 3 and ORG_TOKEN_RE.match(base) and
+                not any(self._classify_personal_role(base, lang) == "patronymic" for lang in ["ru", "uk", "en"])):
+                pass  # Continue to org checks
+            else:
                 return False
 
         # Exclude common words that are not company names
@@ -997,14 +1075,30 @@ class NormalizationService:
                     tagged.append((initial, "initial"))
                 continue
 
-            # 4) Personal name classification (existing logic)
+            # 4) Check if preliminary org should take precedence over personal names
+            if prelim_org:
+                # For uppercase tokens that look like orgs, prioritize org classification
+                # but check for well-known English names first
+                if base.isupper() and len(base) >= 3:
+                    # For English language, check if it's a well-known personal name
+                    if language == "en":
+                        english_role = self._classify_personal_role(base, "en")
+                        if english_role in ["given", "surname"]:
+                            tagged.append((token, english_role))
+                            continue
+
+                    # Default: mark as org
+                    tagged.append((token, "org"))
+                    continue
+
+            # 5) Personal name classification (existing logic)
             role = self._classify_personal_role(base, language)
 
             if role != "unknown":
                 tagged.append((token, role))
                 continue
 
-            # 5) If preliminary org - confirm as org
+            # 6) If preliminary org - confirm as org (fallback)
             if prelim_org:
                 tagged.append((token, "org"))
                 continue
@@ -1721,30 +1815,22 @@ class NormalizationService:
         if language in self.dim2full_maps:
             if token_lower in self.dim2full_maps[language]:
                 return "given"
+            # Check for declined diminutive forms
+            # Try to match base forms like "даш" -> "даша" for "даши"
+            for dim_base, full_name in self.dim2full_maps[language].items():
+                # Check if token matches a declined form of diminutive
+                if len(dim_base) > 2 and token_lower.startswith(dim_base[:-1]):
+                    # Common endings for diminutives in cases: и, у, е, ой, ей, ю, ой, ою
+                    diminutive_endings = ['и', 'у', 'е', 'ой', 'ей', 'ю', 'ою', 'ой']
+                    token_suffix = token_lower[len(dim_base[:-1]):]
+                    if token_suffix in diminutive_endings:
+                        return "given"
         if language in self.diminutive_maps:
             if token_lower in self.diminutive_maps[language]:
                 return "given"
 
-        # Check for patronymic patterns (Ukrainian/Russian) - higher priority
-        if language in ["ru", "uk", "mixed"]:
-            patronymic_patterns = [
-                r".*(?:ович|евич|йович|ійович|інович|инович)(?:а|у|ем|і|и|е|ом|им|ім|ою|ію|ої|ії|ою|ію|ої|ії)?$",  # Male patronymics with cases
-                r".*(?:ич|ыч)$",  # Short patronymics
-                r".*(?:івна|ївна|инична|овна|евна|іївна)$",  # Female patronymics nominative
-                r".*(?:івни|ївни|овни|евни|іївни)$",  # Female patronymics genitive case
-                r".*(?:івну|ївну|овну|евну|іївну)$",  # Female patronymics accusative case
-                r".*(?:івною|ївною|овною|евною|іївною)$",  # Female patronymics instrumental case
-                r".*(?:івні|ївні|овні|евні|іївні)$",  # Female patronymics prepositional/dative case
-                r".*(?:борисовн|алексеевн|михайловн|владимировн|сергеевн|николаевн|петровн|ивановн).*$",  # Common patronymic roots
-            ]
-
-            if any(
-                re.match(pattern, base, re.IGNORECASE)
-                for pattern in patronymic_patterns
-            ):
-                return "patronymic"
-
-        # Check against name dictionaries (including morphological forms)
+        # Check against name dictionaries BEFORE patronymic/surname patterns
+        # This is critical - names in cases must be identified before general patterns
         token_lower = base.lower()
         lang_names = self.name_dictionaries.get(language, set())
 
@@ -1758,6 +1844,27 @@ class NormalizationService:
                 name.lower() for name in lang_names
             }:
                 return "given"
+
+        # Check for patronymic patterns (Ukrainian/Russian) - after names check
+        if language in ["ru", "uk", "mixed"]:
+            patronymic_patterns = [
+                r".*(?:ович|евич|йович|ійович|інович|инович)(?:а|у|ем|і|и|е|ом|им|ім|ою|ію|ої|ії|ою|ію|ої|ії)?$",  # Male patronymics with cases
+                r".*(?:ич|ыч)$",  # Short patronymics
+                r".*(?:івна|ївна|инична|овна|евна|іївна)$",  # Female patronymics nominative
+                r".*(?:івни|ївни|овни|евни|іївни)$",  # Female patronymics genitive case
+                r".*(?:івну|ївну|овну|евну|іївну)$",  # Female patronymics accusative case
+                r".*(?:івною|ївною|овною|евною|іївною)$",  # Female patronymics instrumental case
+                r".*(?:івні|ївні|овні|евні|іївні)$",  # Female patronymics prepositional/dative case
+                r".*(?:борисовн|алексеевн|михайловн|владимировн|сергеевн|николаевн|петровн|ивановн).*$",  # Common patronymic roots
+                # Additional specific patterns for common patronymics in all cases
+                r".*(?:евн|овн|ївн|инич)(?:а|у|ом|е|ы|ой|ей|ами|ах|и|ою|ю|ої|ії)?$",  # Female patronymics all cases
+            ]
+
+            if any(
+                re.match(pattern, base, re.IGNORECASE)
+                for pattern in patronymic_patterns
+            ):
+                return "patronymic"
 
         # Check for English names with apostrophes (O'Brien, D'Angelo, etc.)
         if "'" in base and len(base) > 2:
@@ -2552,6 +2659,17 @@ class NormalizationService:
         # For unknown gender, return base form
         return base_form
 
+    def _capitalize_compound(self, text: str) -> str:
+        """Properly capitalize compound words with hyphens and apostrophes."""
+        if "-" in text:
+            parts = text.split("-")
+            return "-".join(part.capitalize() for part in parts)
+        elif "'" in text:
+            parts = text.split("'")
+            return "'".join(part.capitalize() for part in parts)
+        else:
+            return text.capitalize()
+
     def _to_nominative_if_invariable(self, token: str, language: str) -> str:
         """
         Грубая, но безопасная номинативизация для инвариантных фамилий на -енко/-ко.
@@ -2567,22 +2685,23 @@ class NormalizationService:
 
         # Распознаём типичные косвенные хвосты для -енко:
         if token_lower.endswith("енка") or token_lower.endswith("енку") or token_lower.endswith("енком") or token_lower.endswith("енці") or token_lower.endswith("енке"):
-            # '…енка' → '…енко'
+            # '…енка' → '…енко' (preserve capitalization from original)
             base = token[:-4] + "енко"
-            return base
+            return self._capitalize_compound(base)
 
         # универсальный fallback: '…ка' → '…ко' (Петренка → Петренко)
         if token_lower.endswith("ка") and len(token) > 4:
             potential_base = token[:-2] + "ко"
             if potential_base.lower().endswith("ко"):
-                return potential_base
+                return self._capitalize_compound(potential_base)
 
         # Аналогично для -ко в падежах
         if token_lower.endswith("ком") or token_lower.endswith("ку"):
             base = token[:-2] + "ко"
-            return base
+            return self._capitalize_compound(base)
 
-        return token
+        # If no transformation, ensure proper capitalization
+        return self._capitalize_compound(token)
 
     def _postfix_feminine_surname(
         self, 
@@ -2703,20 +2822,10 @@ class NormalizationService:
         
         return feminine_form
 
-    def _to_nominative_if_invariable(self, token: str, lang: str) -> str:
+    def _to_nominative_if_invariable_v2(self, token: str, lang: str) -> str:
         """Грубая, но безопасная номинативизация для инвариантных фамилий на -енко/-ко."""
-        s = token
-        low = s.lower()
-        # Только если основа действительно на -енко/-ко в номинативе:
-        # Распознаём типичные косвенные хвосты для -енко:
-        if low.endswith("енка") or low.endswith("енку") or low.endswith("енком") or low.endswith("енке") or low.endswith("енці") or low.endswith("енком"):
-            base = s[:-4] + "енко"  # '…енка' → '…енко'
-            return base
-        if low.endswith("ка") and (s[:-2] + "ко").lower().endswith("ко"):
-            # универсальный fallback: '…ка' → '…ко' (Петренка → Петренко)
-            return s[:-2] + "ко"
-        # Аналогично можно расширить для -ко в падежах, если встречаете.
-        return s
+        # This is a duplicate method - delegate to the main implementation
+        return self._to_nominative_if_invariable(token, lang)
 
     def _get_person_gender(
         self, tagged_tokens: List[Tuple[str, str]], language: str
@@ -2925,23 +3034,33 @@ class NormalizationService:
                 rule = "unknown"  # Initialize rule variable
                 normalized = None  # Initialize normalized variable
                 if enable_advanced_features:
-                    # Morphological normalization
-                    morphed = self._morph_nominal(base, language, enable_advanced_features)
+                    # Use the unified normalization logic that handles diminutives properly
+                    morphed = self._normalize_slavic_token(token, role, language, person_gender, enable_advanced_features)
                 else:
                     # When advanced features are disabled, just use the original token
                     morphed = base
 
                 # Apply diminutive mapping if it's a given name
                 if role == "given" and enable_advanced_features:
+                    # PRIORITY: Check for English nicknames in all contexts (not just UK)
+                    if base.isascii() and base.isalpha():
+                        try:
+                            from ...data.dicts.english_nicknames import ENGLISH_NICKNAMES
+                            if base.lower() in ENGLISH_NICKNAMES:
+                                normalized = ENGLISH_NICKNAMES[base.lower()].capitalize()
+                                rule = "english_nickname"
+                        except ImportError:
+                            pass
+
                     # Special handling for English names with apostrophes (like O'Brien) - for any language
-                    if "'" in base and re.match(r"^[A-Za-z]+\'[A-Za-z]+$", base):
+                    if normalized is None and "'" in base and re.match(r"^[A-Za-z]+\'[A-Za-z]+$", base):
                         # Properly capitalize English names with apostrophes: O'brien -> O'Brien
                         parts = base.split("'")
                         normalized = "'".join(part.capitalize() for part in parts)
                         rule = "english_name_apostrophe"
 
-                    # Check for English nicknames in Ukrainian context
-                    elif language == "uk":
+                    # Check for English nicknames in Ukrainian context (legacy)
+                    elif normalized is None and language == "uk":
                         from ...data.dicts.english_nicknames import ENGLISH_NICKNAMES
 
                         if base.lower() in ENGLISH_NICKNAMES:
@@ -3021,17 +3140,31 @@ class NormalizationService:
                         normalized = "'".join(part.capitalize() for part in parts)
                         rule = "english_name_apostrophe"
                     elif enable_advanced_features and morphed:
-                        # Always capitalize the first letter for proper nouns
-                        normalized = morphed.capitalize()
+                        # Handle compound surnames with hyphens
+                        if "-" in morphed:
+                            parts = morphed.split("-")
+                            normalized = "-".join(part.capitalize() for part in parts)
+                        else:
+                            normalized = morphed.capitalize()
                         rule = "morph"
                     else:
                         # When advanced features are disabled, just capitalize
-                        normalized = base.capitalize()
+                        # Handle compound surnames with hyphens
+                        if "-" in base:
+                            parts = base.split("-")
+                            normalized = "-".join(part.capitalize() for part in parts)
+                        else:
+                            normalized = base.capitalize()
                         rule = "basic_capitalize"
 
                 # Ensure normalized is set
                 if normalized is None:
-                    normalized = base.capitalize()
+                    # Handle compound surnames with hyphens in fallback
+                    if "-" in base:
+                        parts = base.split("-")
+                        normalized = "-".join(part.capitalize() for part in parts)
+                    else:
+                        normalized = base.capitalize()
                     rule = "fallback_capitalize"
 
                 # Legacy gender adjustment (but don't create traces if no change)
@@ -3158,8 +3291,8 @@ class NormalizationService:
                     elif role == "given":
                         # Apply given name-specific post-processing
                         # Convert declined given names to nominative (independent of gender)
-                        # Only apply if we don't have a diminutive result (preserve diminutive transformations)
-                        if rule != "diminutive_dict":
+                        # Only apply if we don't have a diminutive result or english nickname (preserve these transformations)
+                        if rule not in ["diminutive_dict", "english_nickname"]:
                             from .morphology.gender_rules import convert_given_name_to_nominative
                             post_processed = convert_given_name_to_nominative(token, language)
                             if post_processed != normalized:
@@ -3481,6 +3614,13 @@ class NormalizationService:
             # Format initials
             return base.upper() + "."
         elif role in ["given", "surname"]:
+            # Special handling for English given names - check diminutives first
+            if role == "given" and enable_advanced_features:
+                # Check if this is an English diminutive that should be expanded
+                normalized_dim = self._normalize_diminutive_to_full(base, "en")
+                if normalized_dim:
+                    return normalized_dim
+
             # Basic capitalization for English names
             return base.capitalize()
         elif role == "conjunction":
@@ -3513,10 +3653,36 @@ class NormalizationService:
             return base.upper() + "."
         elif role in ["given", "surname", "patronymic"]:
             if enable_advanced_features:
-                # Use morphology for Slavic tokens
-                morphed = self._morph_nominal(base, token_lang, enable_advanced_features)
-                if morphed:
-                    return morphed
+                # Special handling for given names - check diminutives first
+                if role == "given":
+                    # Check if this is a diminutive that should be expanded to full form
+                    # Try the token language first, then fallback to English if ASCII
+                    normalized_dim = self._normalize_diminutive_to_full(base, token_lang)
+                    if normalized_dim:
+                        return normalized_dim
+                    # If token is ASCII and Slavic didn't work, try English diminutives
+                    if base.isascii() and token_lang in ["ru", "uk"]:
+                        normalized_dim = self._normalize_diminutive_to_full(base, "en")
+                        if normalized_dim:
+                            return normalized_dim
+
+                # Special handling for patronymics - ensure proper ending
+                if role == "patronymic":
+                    # Try morphological normalization first
+                    morphed = self._morph_nominal(base, token_lang, enable_advanced_features)
+                    if morphed:
+                        # Fix common patronymic ending issues
+                        if morphed.endswith(('евн', 'овн', 'ївн')):
+                            return morphed + 'а'
+                        return morphed
+                    # If morphology fails, apply basic patronymic rules
+                    return self._normalize_patronymic_ending(base)
+
+                # Use morphology for other Slavic tokens (skip for ASCII in Slavic context)
+                if not base.isascii() or token_lang not in ["ru", "uk"]:
+                    morphed = self._morph_nominal(base, token_lang, enable_advanced_features)
+                    if morphed:
+                        return morphed
             # Fallback to basic capitalization
             return base.capitalize()
         elif role == "conjunction":
@@ -3562,10 +3728,10 @@ class NormalizationService:
         if not tokens:
             return ""
 
-        # Detect multiple persons pattern: [given1, "и", given2, surname]
-        # Only apply if we have exactly 4 tokens and the second is a conjunction
-        if len(tokens) == 4 and tokens[1].lower() in ["и", "and", "i"]:
-            # Check if we have two given names followed by a surname
+        # Detect multiple persons pattern: [given1, given2, surname] (conjunction already filtered out)
+        # Or: [given1, "и", given2, surname] (if conjunction preserved)
+        if len(tokens) >= 3:
+            # Check if we have two or more given names followed by a surname
             given_names = []
             surname = None
 
@@ -3576,17 +3742,25 @@ class NormalizationService:
                     if (
                         t.token.lower() == token.lower()
                         or t.output.lower() == token.lower()
+                        or (hasattr(t, 'original') and t.original and t.original.lower() == token.lower())
                     ):
                         trace = t
                         break
+
+                # If not found by exact match, try by role and proximity
+                if not trace and i < len(traces):
+                    trace = traces[i] if i < len(traces) else None
 
                 if trace and trace.role == "given":
                     given_names.append(token)
                 elif trace and trace.role == "surname":
                     surname = token
                     break
+                # Skip conjunctions
+                elif trace and trace.role in ["conjunction", "unknown"] and token.lower() in ["и", "and", "i"]:
+                    continue
 
-            # If we found two given names and a surname, create proper combinations
+            # If we found two or more given names and a surname, create proper combinations
             if len(given_names) >= 2 and surname:
                 # Determine gender for each given name
                 person_combinations = []

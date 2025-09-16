@@ -362,6 +362,22 @@ class DecisionConfig(BaseModel):
     bonus_date_match: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__BONUS_DATE_MATCH", "0.07")))
     bonus_id_match: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__BONUS_ID_MATCH", "0.15")))
     
+    # Search weights (NEW)
+    w_search_exact: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SEARCH_EXACT", "0.3")))
+    w_search_phrase: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SEARCH_PHRASE", "0.25")))
+    w_search_ngram: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SEARCH_NGRAM", "0.2")))
+    w_search_vector: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SEARCH_VECTOR", "0.15")))
+    
+    # Search thresholds (NEW)
+    thr_search_exact: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_EXACT", "0.8")))
+    thr_search_phrase: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_PHRASE", "0.7")))
+    thr_search_ngram: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_NGRAM", "0.6")))
+    thr_search_vector: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_VECTOR", "0.5")))
+    
+    # Search bonuses (NEW)
+    bonus_multiple_matches: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__BONUS_MULTIPLE_MATCHES", "0.1")))
+    bonus_high_confidence: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__BONUS_HIGH_CONFIDENCE", "0.05")))
+    
     # Thresholds for risk levels (with ENV overrides)
     thr_high: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_HIGH", "0.85")))
     thr_medium: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_MEDIUM", "0.65")))
@@ -375,6 +391,16 @@ class DecisionConfig(BaseModel):
             "w_similarity": self.w_similarity,
             "bonus_date_match": self.bonus_date_match,
             "bonus_id_match": self.bonus_id_match,
+            "w_search_exact": self.w_search_exact,
+            "w_search_phrase": self.w_search_phrase,
+            "w_search_ngram": self.w_search_ngram,
+            "w_search_vector": self.w_search_vector,
+            "thr_search_exact": self.thr_search_exact,
+            "thr_search_phrase": self.thr_search_phrase,
+            "thr_search_ngram": self.thr_search_ngram,
+            "thr_search_vector": self.thr_search_vector,
+            "bonus_multiple_matches": self.bonus_multiple_matches,
+            "bonus_high_confidence": self.bonus_high_confidence,
             "thr_high": self.thr_high,
             "thr_medium": self.thr_medium
         }

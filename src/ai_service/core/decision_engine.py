@@ -104,6 +104,33 @@ class DecisionEngine:
         similarity_value = inp.similarity.cos_top if inp.similarity.cos_top is not None else 0.0
         score += self.config.w_similarity * similarity_value
         
+        # Search contribution (NEW)
+        if inp.search:
+            search = inp.search
+            
+            # Exact matches (highest priority)
+            if search.has_exact_matches and search.exact_confidence >= self.config.thr_search_exact:
+                score += self.config.w_search_exact * search.exact_confidence
+            
+            # Phrase matches
+            if search.has_phrase_matches and search.phrase_confidence >= self.config.thr_search_phrase:
+                score += self.config.w_search_phrase * search.phrase_confidence
+            
+            # N-gram matches
+            if search.has_ngram_matches and search.ngram_confidence >= self.config.thr_search_ngram:
+                score += self.config.w_search_ngram * search.ngram_confidence
+            
+            # Vector matches
+            if search.has_vector_matches and search.vector_confidence >= self.config.thr_search_vector:
+                score += self.config.w_search_vector * search.vector_confidence
+            
+            # Search bonuses
+            if search.total_matches > 1:
+                score += self.config.bonus_multiple_matches
+            
+            if search.high_confidence_matches > 0:
+                score += self.config.bonus_high_confidence
+        
         # Bonus factors
         if inp.signals.date_match:
             score += self.config.bonus_date_match

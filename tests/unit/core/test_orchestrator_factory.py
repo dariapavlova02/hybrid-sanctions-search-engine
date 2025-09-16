@@ -81,9 +81,9 @@ class TestOrchestratorFactory:
             UnicodeService=Mock(return_value=Mock()),
             NormalizationService=Mock(return_value=Mock()),
             SignalsService=Mock(return_value=Mock()),
-            VariantGenerationService=Mock(return_value=mock_variants_service),
-            EmbeddingService=Mock(return_value=mock_embeddings_service)
-        ):
+        ), \
+        patch('ai_service.layers.variants.variant_generation_service.VariantGenerationService', return_value=mock_variants_service), \
+        patch('ai_service.layers.embeddings.embedding_service.EmbeddingService', return_value=mock_embeddings_service):
             orchestrator = await OrchestratorFactory.create_testing_orchestrator(minimal=False)
 
             assert isinstance(orchestrator, UnifiedOrchestrator)
@@ -114,9 +114,9 @@ class TestOrchestratorFactory:
             UnicodeService=Mock(return_value=Mock()),
             NormalizationService=Mock(return_value=Mock()),
             SignalsService=Mock(return_value=Mock()),
-            VariantGenerationService=Mock(return_value=mock_variants_service),
-            EmbeddingService=Mock(return_value=mock_embeddings_service)
-        ):
+        ), \
+        patch('ai_service.layers.variants.variant_generation_service.VariantGenerationService', return_value=mock_variants_service), \
+        patch('ai_service.layers.embeddings.embedding_service.EmbeddingService', return_value=mock_embeddings_service):
             orchestrator = await OrchestratorFactory.create_production_orchestrator()
 
             assert isinstance(orchestrator, UnifiedOrchestrator)
@@ -145,8 +145,6 @@ class TestOrchestratorFactory:
             UnicodeService=Mock(return_value=Mock()),
             NormalizationService=Mock(return_value=Mock()),
             SignalsService=Mock(return_value=Mock()),
-            VariantGenerationService=Mock(return_value=Mock()),
-            EmbeddingService=Mock(return_value=mock_embeddings_service)
         ):
             orchestrator = await OrchestratorFactory.create_orchestrator(
                 enable_smart_filter=True,
@@ -222,8 +220,6 @@ class TestOrchestratorFactory:
             UnicodeService=Mock(),
             NormalizationService=Mock(),
             SignalsService=Mock(),
-            VariantGenerationService=Mock(return_value=mock_variants),
-            EmbeddingService=Mock(return_value=mock_embeddings)
         ) as mocks:
 
             # Test with variants disabled
@@ -250,8 +246,7 @@ class TestOrchestratorFactory:
         mock_services = {}
         service_classes = [
             'ValidationService', 'SmartFilterAdapter', 'LanguageDetectionService',
-            'UnicodeService', 'NormalizationService', 'SignalsService',
-            'VariantGenerationService', 'EmbeddingService'
+            'UnicodeService', 'NormalizationService', 'SignalsService'
         ]
 
         for service in service_classes:
@@ -259,7 +254,15 @@ class TestOrchestratorFactory:
             mock_service.initialize = AsyncMock()
             mock_services[service] = Mock(return_value=mock_service)
 
-        with patch.multiple('ai_service.core.orchestrator_factory', **mock_services):
+        # Mock locally imported services
+        mock_variants_service = Mock()
+        mock_variants_service.initialize = AsyncMock()
+        mock_embeddings_service = Mock()
+        mock_embeddings_service.initialize = AsyncMock()
+
+        with patch.multiple('ai_service.core.orchestrator_factory', **mock_services), \
+        patch('ai_service.layers.variants.variant_generation_service.VariantGenerationService', return_value=mock_variants_service), \
+        patch('ai_service.layers.embeddings.embedding_service.EmbeddingService', return_value=mock_embeddings_service):
             orchestrator = await OrchestratorFactory.create_production_orchestrator()
 
             # All services should be initialized for production orchestrator

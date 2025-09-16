@@ -119,6 +119,36 @@ class SignalDetectionError(AIServiceException):
     pass
 
 
+class SearchServiceError(AIServiceException):
+    """Base exception for search services"""
+
+    pass
+
+
+class ElasticsearchConnectionError(SearchServiceError):
+    """Elasticsearch connection errors"""
+
+    pass
+
+
+class SearchTimeoutError(SearchServiceError):
+    """Search timeout errors"""
+
+    pass
+
+
+class SearchConfigurationError(SearchServiceError):
+    """Search configuration errors"""
+
+    pass
+
+
+class SearchDataError(SearchServiceError):
+    """Search data errors"""
+
+    pass
+
+
 class APIError(AIServiceException):
     """API related errors"""
 

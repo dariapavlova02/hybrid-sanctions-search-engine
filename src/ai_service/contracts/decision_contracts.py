@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
+from .search_contracts import SearchInfo
+
 
 class RiskLevel(Enum):
     """Risk levels for decision making"""
@@ -77,6 +79,7 @@ class DecisionInput:
     smartfilter: SmartFilterInfo = field(default_factory=lambda: SmartFilterInfo(should_process=True, confidence=1.0))
     signals: SignalsInfo = field(default_factory=lambda: SignalsInfo(person_confidence=0.0, org_confidence=0.0))
     similarity: SimilarityInfo = field(default_factory=SimilarityInfo)
+    search: Optional[SearchInfo] = None
 
 
 @dataclass
