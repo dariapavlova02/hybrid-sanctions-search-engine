@@ -15,8 +15,9 @@ def main():
         "Платіж від Івана Петренко для ТОВ Товари і послуги",
         "Платіж Івану Петрову від ТОВ Товари і послуги",
     ]
+    persons_core = [["Іван", "Петров"], ["Івана", "Петренко"]]
     for t in texts:
-        res = svc._extract_legal_forms(t, organizations_core=[])
+        res = svc._extract_legal_forms(t, organizations_core=[], persons_core=persons_core)
         print("TEXT:", t)
         print("ORGs:", res)
         print("-" * 60)

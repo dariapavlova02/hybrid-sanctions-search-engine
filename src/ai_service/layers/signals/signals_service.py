@@ -154,8 +154,8 @@ class SignalsService:
             # 2. Создаем персоны из токенов
             persons = self._create_person_signals(persons_core)
 
-            # 3. Создаем организации из токенов
-            organizations = self._create_organization_signals(text, organizations_core)
+            # 3. Создаем организации из токенов (используем persons_core, чтобы не захватывать ФИО)
+            organizations = self._create_organization_signals(text, organizations_core, persons_core)
 
             # 4. Обогащаем сущности идентификаторами
             self._enrich_with_identifiers(text, persons, organizations)
@@ -224,11 +224,11 @@ class SignalsService:
         return persons
 
     def _create_organization_signals(
-        self, text: str, organizations_core: List[str]
+        self, text: str, organizations_core: List[str], persons_core: List[List[str]]
     ) -> List[OrganizationSignal]:
         """Создает OrganizationSignal объекты из токенов и юридических форм."""
         # Извлекаем юридические формы и создаем организации
-        legal_forms_found = self._extract_legal_forms(text, organizations_core)
+        legal_forms_found = self._extract_legal_forms(text, organizations_core, persons_core)
 
         # Объединяем организации из нормализации с найденными юридическими формами
         org_dict = {}
@@ -361,7 +361,7 @@ class SignalsService:
         }
 
     def _extract_legal_forms(
-        self, text: str, organizations_core: List[str]
+        self, text: str, organizations_core: List[str], persons_core: List[List[str]]
     ) -> List[Dict]:
         """
         Детектор юридических форм и реконструкция полных названий.
@@ -381,6 +381,15 @@ class SignalsService:
         )
 
         organizations = []
+        # Prepare flattened set of person tokens to avoid mixing persons into organization names
+        person_tokens_upper = set()
+        try:
+            for person in persons_core or []:
+                for tok in person or []:
+                    if isinstance(tok, str) and tok.strip():
+                        person_tokens_upper.add(tok.strip().upper())
+        except Exception:
+            person_tokens_upper = set()
 
         # Ищем юридические формы в тексте
         for legal_match in LEGAL_FORM_REGEX.finditer(text):
@@ -462,6 +471,11 @@ class SignalsService:
                                 and any(c.isalpha() for c in candidate)
                                 and len(candidate) <= 50
                             ):
+                                # Skip candidate if it heavily overlaps with person tokens (>=2 tokens)
+                                cand_words = [w for w in candidate.replace('"', ' ').split() if w]
+                                overlap = sum(1 for w in cand_words if w.upper() in person_tokens_upper)
+                                if overlap >= 2:
+                                    continue
                                 if candidate.upper() in [org.upper() for org in organizations_core]:
                                     core = candidate.upper()
                                     normalized_core = next(
@@ -493,6 +507,11 @@ class SignalsService:
                                     and any(c.isalpha() for c in candidate)
                                     and len(candidate) <= 50
                                 ):
+                                    # Skip candidate if it heavily overlaps with person tokens (>=2 tokens)
+                                    cand_words = [w for w in candidate.replace('"', ' ').split() if w]
+                                    overlap = sum(1 for w in cand_words if w.upper() in person_tokens_upper)
+                                    if overlap >= 2:
+                                        continue
                                     if candidate.upper() in [org.upper() for org in organizations_core]:
                                         core = candidate.upper()
                                         normalized_core = next(
