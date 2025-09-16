@@ -25,6 +25,7 @@ class NormalizationConfig:
     enable_morphology: bool = True
     enable_gender_adjustment: bool = True
     language: str = 'ru'
+    use_factory: bool = True  # Flag to use factory vs legacy implementation
 
 
 class NormalizationFactory(ErrorReportingMixin):
