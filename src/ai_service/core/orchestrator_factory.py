@@ -243,5 +243,5 @@ class OrchestratorFactory:
             enable_variants=True,
             enable_embeddings=True,
             enable_decision_engine=True,    # Enable automated decision making
-            allow_smart_filter_skip=True,  # Allow skipping obviously irrelevant texts
+            allow_smart_filter_skip=False,  # Don't skip processing - always normalize
         )

@@ -444,6 +444,10 @@ async def normalize_text(request: TextNormalizationRequest):
         raise HTTPException(status_code=503, detail="Orchestrator not initialized")
 
     try:
+        # Debug logging
+        logger.info(f"Processing text: '{request.text}'")
+        logger.info(f"Orchestrator initialized: {orchestrator is not None}")
+        
         # Use unified orchestrator for normalization only
         result = await orchestrator.process(
             text=request.text,
@@ -454,14 +458,22 @@ async def normalize_text(request: TextNormalizationRequest):
             preserve_names=request.preserve_names,
             enable_advanced_features=request.apply_lemmatization,
         )
+        
+        # Debug logging
+        logger.info(f"Result: success={result.success}, tokens={result.tokens}, language={result.language}")
+        logger.info(f"Result type: {type(result)}")
+        logger.info(f"Result attributes: {dir(result)}")
+        logger.info(f"Result normalized_text: {result.normalized_text}")
+        logger.info(f"Result tokens: {result.tokens}")
+        logger.info(f"Result language: {result.language}")
 
         return NormalizationResponse(
             normalized_text=result.normalized_text,
-            tokens=result.tokens or [],
-            trace=result.trace or [],
+            tokens=result.tokens,
+            trace=result.trace,
             language=result.language,
             success=result.success,
-            errors=result.errors or [],
+            errors=result.errors,
             processing_time=result.processing_time,
         )
     except Exception as e:

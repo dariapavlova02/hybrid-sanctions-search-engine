@@ -342,10 +342,27 @@ class NormalizationService:
         return maps
 
     async def normalize_async(
-        self, text: str, language: str = "auto"
+        self,
+        text: str,
+        *,
+        language: Optional[str] = None,
+        remove_stop_words: bool = True,
+        preserve_names: bool = True,
+        enable_advanced_features: bool = True,
     ) -> NormalizationResult:
-        """Async wrapper for normalize"""
-        return self._normalize_sync(text, language)
+        """
+        Async normalization entrypoint compatible with the orchestrator interface.
+
+        Mirrors the sync signature and forwards flags to the core implementation.
+        """
+        lang = language or "auto"
+        return self._normalize_sync(
+            text,
+            lang,
+            remove_stop_words,
+            preserve_names,
+            enable_advanced_features,
+        )
 
     def normalize_sync(
         self,
