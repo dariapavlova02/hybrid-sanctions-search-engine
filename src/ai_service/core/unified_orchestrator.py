@@ -370,6 +370,11 @@ class UnifiedOrchestrator:
                 text=text_u, normalization_result=norm_result, language=context.language  # Use unicode-normalized text
             ))
 
+            # Debug logging
+            logger.info(f"Signals result: {signals_result}")
+            logger.info(f"Signals organizations: {signals_result.organizations}")
+            logger.info(f"Signals persons: {signals_result.persons}")
+
             if self.metrics_service:
                 self.metrics_service.record_timer('processing.layer.signals', time.time() - layer_start)
                 self.metrics_service.record_histogram('signals.confidence', signals_result.confidence)

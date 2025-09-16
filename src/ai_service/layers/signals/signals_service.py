@@ -475,6 +475,13 @@ class SignalsService:
                                     full = f"{legal_form_normalized} {normalized_core}"
                                     evidence.extend(["adjacent_name", "norm_match"])
                                     break
+                                else:
+                                    # Фолбэк: если нормализация не выделила организацию,
+                                    # но рядом с юр. формой есть валидный кандидат — принимаем его.
+                                    core = candidate.upper()
+                                    full = f"{legal_form_normalized} {candidate}"
+                                    evidence.append("adjacent_name")
+                                    break
 
                 # Если не нашли слева, ищем справа от формы
                 if not core:
@@ -508,6 +515,12 @@ class SignalsService:
                                             f"{legal_form_normalized} {normalized_core}"
                                         )
                                         evidence.extend(["adjacent_name", "norm_match"])
+                                        break
+                                    else:
+                                        # Фолбэк: принять валидный кандидат даже без нормализации
+                                        core = candidate.upper()
+                                        full = f"{legal_form_normalized} {candidate}"
+                                        evidence.append("adjacent_name")
                                         break
 
             # Если нашли core, добавляем организацию

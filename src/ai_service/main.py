@@ -89,7 +89,7 @@ def _extract_signals_dict(result: UnifiedProcessingResult) -> Dict[str, Any]:
             {
                 "core": org.core,
                 "legal_form": org.legal_form,
-                "full_name": org.full_name,
+                "full_name": org.full,
                 "ids": org.ids,
                 "confidence": org.confidence,
                 "evidence": org.evidence,
