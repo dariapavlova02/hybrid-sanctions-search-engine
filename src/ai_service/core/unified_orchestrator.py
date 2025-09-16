@@ -252,6 +252,40 @@ class UnifiedOrchestrator:
 
         return None  # Continue processing
 
+    async def _handle_language_detection_layer(
+        self, context: ProcessingContext, language_hint: Optional[str]
+    ) -> None:
+        """
+        Handle Layer 3: Language Detection
+
+        Updates the context with detected language and confidence.
+        """
+        logger.debug("Stage 3: Language Detection")
+        layer_start = time.time()
+
+        from ..config import LANGUAGE_CONFIG
+        lang_raw = await self._maybe_await(self.language_service.detect_language_config_driven(
+            context.sanitized_text,  # Use original text to preserve Ukrainian/Russian markers
+            LANGUAGE_CONFIG
+        ))
+
+        # Coerce language result to dict format
+        lang = self._coerce_lang(lang_raw)
+        context.language = language_hint or lang["language"]
+        context.language_confidence = lang["confidence"]
+
+        # Debug trace for language detection
+        try:
+            confidence_val = float(context.language_confidence)
+            logger.debug(f"Language: detected='{context.language}', confidence={confidence_val:.3f}")
+        except (ValueError, TypeError):
+            logger.debug(f"Language: detected='{context.language}', confidence={context.language_confidence}")
+
+        if self.metrics_service:
+            self.metrics_service.record_timer('processing.layer.language_detection', time.time() - layer_start)
+            self.metrics_service.record_histogram('language_detection.confidence', context.language_confidence)
+            self.metrics_service.increment_counter(f'language_detection.detected.{context.language}')
+
     async def process(
         self,
         text: str,
@@ -335,31 +369,7 @@ class UnifiedOrchestrator:
             # ================================================================
             # Layer 3: Language Detection (on original text to preserve language markers)
             # ================================================================
-            logger.debug("Stage 3: Language Detection")
-            layer_start = time.time()
-
-            from ..config import LANGUAGE_CONFIG
-            lang_raw = await self._maybe_await(self.language_service.detect_language_config_driven(
-                context.sanitized_text,  # Use original text to preserve Ukrainian/Russian markers
-                LANGUAGE_CONFIG
-            ))
-            
-            # Coerce language result to dict format
-            lang = self._coerce_lang(lang_raw)
-            context.language = language_hint or lang["language"]
-            context.language_confidence = lang["confidence"]
-
-            # Debug trace for language detection
-            try:
-                confidence_val = float(context.language_confidence)
-                logger.debug(f"Language: detected='{context.language}', confidence={confidence_val:.3f}")
-            except (ValueError, TypeError):
-                logger.debug(f"Language: detected='{context.language}', confidence={context.language_confidence}")
-
-            if self.metrics_service:
-                self.metrics_service.record_timer('processing.layer.language_detection', time.time() - layer_start)
-                self.metrics_service.record_histogram('language_detection.confidence', context.language_confidence)
-                self.metrics_service.increment_counter(f'language_detection.detected.{context.language}')
+            await self._handle_language_detection_layer(context, language_hint)
 
             # ================================================================
             # Layer 4: Unicode Normalization (after language detection)
