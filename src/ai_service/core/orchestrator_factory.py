@@ -9,7 +9,7 @@ from typing import Optional
 
 from ..config import SERVICE_CONFIG
 from ..exceptions import ServiceInitializationError
-from ..layers.embeddings.embedding_service import EmbeddingService
+# EmbeddingService imported locally to avoid circular imports
 from ..layers.language.language_detection_service import LanguageDetectionService
 from ..layers.normalization.normalization_service import NormalizationService
 from ..layers.signals.signals_service import SignalsService
@@ -18,7 +18,7 @@ from ..layers.unicode.unicode_service import UnicodeService
 
 # Import existing service implementations
 from ..layers.validation.validation_service import ValidationService
-from ..layers.variants.variant_generation_service import VariantGenerationService
+# VariantGenerationService imported locally to avoid circular imports
 from ..utils import get_logger
 from .decision_engine import DecisionEngine
 from ..config.settings import DecisionConfig, DECISION_CONFIG
@@ -143,6 +143,7 @@ class OrchestratorFactory:
             # Variants service - optional
             if enable_variants and variants_service is None:
                 try:
+                    from ..layers.variants.variant_generation_service import VariantGenerationService
                     variants_service = VariantGenerationService()
                     await variants_service.initialize()
                     logger.info("Variants service initialized")
@@ -154,8 +155,8 @@ class OrchestratorFactory:
             # Embeddings service - optional
             if enable_embeddings and embeddings_service is None:
                 try:
-                    from ...config import EmbeddingConfig
-                    from ...layers.embeddings.embedding_service import EmbeddingService
+                    from ..config import EmbeddingConfig
+                    from ..layers.embeddings.embedding_service import EmbeddingService
                     embedding_config = EmbeddingConfig()
                     embeddings_service = EmbeddingService(embedding_config)
                     await embeddings_service.initialize()

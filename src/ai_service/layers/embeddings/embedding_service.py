@@ -41,11 +41,12 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 
 from ...config import EmbeddingConfig
+from ...core.base_service import BaseService
 from ...services.embedding_preprocessor import EmbeddingPreprocessor
 from ...utils.logging_config import get_logger
 
 
-class EmbeddingService:
+class EmbeddingService(BaseService):
     """Simplified embedding service with lazy initialization"""
 
     def __init__(self, config: EmbeddingConfig):
@@ -55,7 +56,7 @@ class EmbeddingService:
         Args:
             config: Embedding configuration
         """
-        self.logger = get_logger(__name__)
+        super().__init__("EmbeddingService")
         self.config = config
         self._model: SentenceTransformer = None
         self.preprocessor = EmbeddingPreprocessor()
@@ -72,6 +73,11 @@ class EmbeddingService:
         self.logger.info(
             f"EmbeddingService initialized with model: {config.model_name}"
         )
+
+    def _do_initialize(self) -> None:
+        """Service-specific initialization logic"""
+        # Additional initialization if needed
+        self.logger.info("EmbeddingService initialization completed")
 
         # Perform warmup if enabled in config
         if getattr(config, 'warmup_on_init', False):

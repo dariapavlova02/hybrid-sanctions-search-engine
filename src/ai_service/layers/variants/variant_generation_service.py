@@ -65,7 +65,7 @@ class VariantGenerationService(BaseService):
         self.language_service = LanguageDetectionService()
         
         # Initialize logger properly
-        self._logger = get_logger(__name__)
+        # Use inherited logger from BaseService
 
         # Extended transliteration system with support for different standards
         self.transliteration_standards = {
@@ -341,14 +341,14 @@ class VariantGenerationService(BaseService):
         # Import dictionaries from files
         self._import_dictionaries()
 
-        self._logger.info(
+        self.logger.info(
             "VariantGenerationService initialized with automatic analyzers"
         )
 
     def _do_initialize(self) -> None:
         """Service-specific initialization logic"""
         # Additional initialization if needed
-        self._logger.info("VariantGenerationService initialization completed")
+        self.logger.info("VariantGenerationService initialization completed")
 
     def _import_dictionaries(self):
         """Import dictionaries from files"""
@@ -374,7 +374,7 @@ class VariantGenerationService(BaseService):
             "sc": set(ALL_SCANDINAVIAN_NAMES),
         }
 
-        self._logger.info("Name dictionaries imported successfully from files")
+        self.logger.info("Name dictionaries imported successfully from files")
 
     def _init_morphological_analyzers(self):
         """Initialize automatic morphological analyzers"""
@@ -386,9 +386,9 @@ class VariantGenerationService(BaseService):
             import pymorphy3
 
             self.ru_morph = pymorphy3.MorphAnalyzer(lang="ru")
-            self._logger.info("Russian pymorphy3 analyzer initialized")
+            self.logger.info("Russian pymorphy3 analyzer initialized")
         except (ImportError, AttributeError) as e:
-            self._logger.warning(f"pymorphy3 not available: {e}")
+            self.logger.warning(f"pymorphy3 not available: {e}")
             self.ru_morph = None
 
         try:
@@ -396,9 +396,9 @@ class VariantGenerationService(BaseService):
             from ..normalization.morphology.ukrainian_morphology import UkrainianMorphologyAnalyzer
 
             self.uk_morph = UkrainianMorphologyAnalyzer()
-            self._logger.info("Custom Ukrainian morphological analyzer initialized")
+            self.logger.info("Custom Ukrainian morphological analyzer initialized")
         except ImportError as e:
-            self._logger.warning(f"Ukrainian morphology analyzer not available: {e}")
+            self.logger.warning(f"Ukrainian morphology analyzer not available: {e}")
 
     def _init_transliterators(self):
         """Initialize automatic transliterators"""
@@ -406,10 +406,10 @@ class VariantGenerationService(BaseService):
             from transliterate import translit
 
             self.transliterator = translit
-            self._logger.info("Transliterator initialized")
+            self.logger.info("Transliterator initialized")
         except ImportError:
             self.transliterator = None
-            self._logger.warning(
+            self.logger.warning(
                 "transliterate not installed. Install with: pip install transliterate"
             )
 
@@ -475,7 +475,7 @@ class VariantGenerationService(BaseService):
 
         # Defensive coding: check comprehensive generation result
         if comprehensive_result is None:
-            self._logger.warning(
+            self.logger.warning(
                 f"Comprehensive generation returned None for text: {text}"
             )
             comprehensive_result = {
@@ -1028,7 +1028,7 @@ class VariantGenerationService(BaseService):
             if len(comma_parts) == 2:
                 variants.add(f"{comma_parts[0]}, {comma_parts[1]}")
 
-        self._logger.debug(f"Generated {len(variants)} word order variants for '{text}'")
+        self.logger.debug(f"Generated {len(variants)} word order variants for '{text}'")
         return variants
 
     def _is_likely_name_word(self, word: str) -> bool:
@@ -1127,10 +1127,10 @@ class VariantGenerationService(BaseService):
                     diminutives.update(diminutives_list)
                     break
 
-            self._logger.debug(f"Generated {len(diminutives)} diminutives for '{name}'")
+            self.logger.debug(f"Generated {len(diminutives)} diminutives for '{name}'")
 
         except ImportError:
-            self._logger.warning("EXTRA_DIMINUTIVES not available for diminutive generation")
+            self.logger.warning("EXTRA_DIMINUTIVES not available for diminutive generation")
 
         return diminutives
 
@@ -1443,7 +1443,7 @@ class VariantGenerationService(BaseService):
             return analysis
 
         except Exception as e:
-            self._logger.warning(f"Failed to analyze name '{name}': {e}")
+            self.logger.warning(f"Failed to analyze name '{name}': {e}")
             return None
 
     def _basic_transliterate(self, text: str) -> str:
@@ -1622,7 +1622,7 @@ class VariantGenerationService(BaseService):
                         variants.add(form.word)
 
         except Exception as e:
-            self._logger.debug(
+            self.logger.debug(
                 f"Error generating Russian morphological variants for '{word}': {e}"
             )
 
@@ -1639,7 +1639,7 @@ class VariantGenerationService(BaseService):
                 variants.update(all_forms)
 
         except Exception as e:
-            self._logger.debug(
+            self.logger.debug(
                 f"Error generating Ukrainian morphological variants for '{word}': {e}"
             )
 
