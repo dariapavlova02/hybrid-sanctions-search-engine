@@ -6,6 +6,11 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV APP_ENV=production
 ENV NLTK_DATA=/app/nltk_data
+# Ensure HuggingFace/Sentence-Transformers caches persist in image and are readable by non-root
+ENV HF_HOME=/app/.cache/huggingface
+ENV TRANSFORMERS_CACHE=/app/.cache/huggingface
+ENV SENTENCE_TRANSFORMERS_HOME=/app/.cache/sentence_transformers
+ENV EMBEDDING_MODEL="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
 # Set work directory
 WORKDIR /app
@@ -37,6 +42,9 @@ RUN poetry config virtualenvs.create false
 # Install dependencies
 RUN poetry install --only=main --no-interaction --no-ansi
 
+# Ensure torch CPU is present for sentence-transformers (some slim images miss it)
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch
+
 # Install SpaCy models directly
 RUN pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
 RUN pip install https://github.com/explosion/spacy-models/releases/download/ru_core_news_sm-3.8.0/ru_core_news_sm-3.8.0-py3-none-any.whl
@@ -49,8 +57,23 @@ RUN python -c "import nltk; nltk.download('stopwords'); nltk.download('punkt'); 
 RUN useradd --create-home --shell /bin/bash app
 
 # Create logs directory and set permissions
-RUN mkdir -p /app/logs && chown -R app:app /app
+RUN mkdir -p /app/logs "$HF_HOME" "$SENTENCE_TRANSFORMERS_HOME" && \
+    chown -R app:app /app
 USER app
+
+# Pre-fetch embedding model into cache to work offline at runtime
+RUN python - <<'PY'
+try:
+    from sentence_transformers import SentenceTransformer
+    import os
+    model_name = os.getenv('EMBEDDING_MODEL','sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
+    print(f"Preloading embedding model: {model_name}")
+    SentenceTransformer(model_name)
+    print("Model cached successfully.")
+except Exception as e:
+    # Do not fail the build if model download is unavailable; runtime will lazy-load
+    print(f"Warning: failed to preload embedding model: {e}")
+PY
 
 # Expose port
 EXPOSE 8000

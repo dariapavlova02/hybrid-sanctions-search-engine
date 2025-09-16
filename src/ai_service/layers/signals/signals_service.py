@@ -446,78 +446,62 @@ class SignalsService:
 
             # Если не нашли в кавычках, ищем рядом с формой
             if not core:
-                # Ищем название слева от формы (более точно)
-                left_region = text[max(0, form_start - 30) : form_start].strip()
-                if left_region:
-                    # Берем только последнее слово или два слова перед формой
-                    words = left_region.split()
+                # 1) Пытаемся найти название СПРАВА от юр. формы (паттерн: `ТОВ <название>`)
+                right_region = text[form_end : min(len(text), form_end + 50)].strip()
+                if right_region:
+                    words = right_region.split()
+                    # Пропускаем предлоги/служебные слова в начале
+                    skip_heads = {"від", "от", "для", "за", "на", "of", "for", "by", "to"}
+                    while words and words[0].lower() in skip_heads:
+                        words.pop(0)
                     if words:
-                        # Ищем только название, которое совпадает с нормализацией
-                        for i in range(min(3, len(words)), 0, -1):
-                            candidate = " ".join(words[-i:]).strip()
+                        for i in range(min(5, len(words)), 0, -1):
+                            candidate = " ".join(words[:i]).strip()
                             if (
                                 len(candidate) >= 3
                                 and any(c.isalpha() for c in candidate)
-                                and len(candidate) <= 30
-                            ):  # Разумная длина названия
-
-                                # Приоритет - соответствие с нормализацией
-                                if candidate.upper() in [
-                                    org.upper() for org in organizations_core
-                                ]:
+                                and len(candidate) <= 50
+                            ):
+                                if candidate.upper() in [org.upper() for org in organizations_core]:
                                     core = candidate.upper()
-                                    # Используем нормализованное название
                                     normalized_core = next(
-                                        org
-                                        for org in organizations_core
-                                        if org.upper() == candidate.upper()
+                                        org for org in organizations_core if org.upper() == candidate.upper()
                                     )
                                     full = f"{legal_form_normalized} {normalized_core}"
                                     evidence.extend(["adjacent_name", "norm_match"])
                                     break
                                 else:
-                                    # Фолбэк: если нормализация не выделила организацию,
-                                    # но рядом с юр. формой есть валидный кандидат — принимаем его.
                                     core = candidate.upper()
                                     full = f"{legal_form_normalized} {candidate}"
                                     evidence.append("adjacent_name")
                                     break
 
-                # Если не нашли слева, ищем справа от формы
+                # 2) Если справа не нашли — пробуем слева (последние 1–3 слова)
                 if not core:
-                    right_region = text[
-                        form_end : min(len(text), form_end + 30)
-                    ].strip()
-                    if right_region:
-                        # Берем первые 1-3 слова после формы
-                        words = right_region.split()
+                    left_region = text[max(0, form_start - 50) : form_start].strip()
+                    if left_region:
+                        words = left_region.split()
+                        # Пропускаем предлоги/служебные слова в конце левой области
+                        skip_tails = {"від", "от", "для", "за", "на", "of", "for", "by", "to"}
+                        while words and words[-1].lower() in skip_tails:
+                            words.pop()
                         if words:
-                            for i in range(1, min(4, len(words) + 1)):
-                                candidate = " ".join(words[:i]).strip()
+                            for i in range(min(3, len(words)), 0, -1):
+                                candidate = " ".join(words[-i:]).strip()
                                 if (
                                     len(candidate) >= 3
                                     and any(c.isalpha() for c in candidate)
-                                    and len(candidate) <= 30
+                                    and len(candidate) <= 50
                                 ):
-
-                                    # Приоритет - соответствие с нормализацией
-                                    if candidate.upper() in [
-                                        org.upper() for org in organizations_core
-                                    ]:
+                                    if candidate.upper() in [org.upper() for org in organizations_core]:
                                         core = candidate.upper()
-                                        # Используем нормализованное название
                                         normalized_core = next(
-                                            org
-                                            for org in organizations_core
-                                            if org.upper() == candidate.upper()
+                                            org for org in organizations_core if org.upper() == candidate.upper()
                                         )
-                                        full = (
-                                            f"{legal_form_normalized} {normalized_core}"
-                                        )
+                                        full = f"{legal_form_normalized} {normalized_core}"
                                         evidence.extend(["adjacent_name", "norm_match"])
                                         break
                                     else:
-                                        # Фолбэк: принять валидный кандидат даже без нормализации
                                         core = candidate.upper()
                                         full = f"{legal_form_normalized} {candidate}"
                                         evidence.append("adjacent_name")

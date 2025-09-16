@@ -22,7 +22,7 @@ class BaseService(ABC, LoggingMixin):
             service_name: Name of the service for logging
         """
         self.service_name = service_name
-        self.logger = get_logger(f"{self.__module__}.{service_name}")
+        # Don't set self.logger - it's provided by LoggingMixin as a property
         self._initialized = False
         self._initialization_time = None
         self._stats = {

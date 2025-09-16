@@ -537,7 +537,7 @@ class NormalizationService:
                     person_tokens.append(token)
 
             # Step 5: Reconstruct personal text with multiple persons detection
-            normalized_text = self._reconstruct_text_with_multiple_persons(
+            person_text = self._reconstruct_text_with_multiple_persons(
                 person_tokens, traces, language
             )
 
@@ -551,16 +551,25 @@ class NormalizationService:
 
             processing_time = time.time() - start_time
 
+            # Combine person text and organization text
+            combined_text_parts = []
+            if person_text:
+                combined_text_parts.append(person_text)
+            if organizations:
+                combined_text_parts.append(" ".join(organizations))
+            
+            final_normalized_text = " ".join(combined_text_parts) if combined_text_parts else person_text
+
             result = NormalizationResult(
-                normalized=normalized_text,
-                tokens=person_tokens,
+                normalized=final_normalized_text,
+                tokens=person_tokens + organizations,  # Include both person and org tokens
                 trace=traces,
                 errors=errors,
                 language=language,
                 confidence=confidence,
                 original_length=len(text),
-                normalized_length=len(normalized_text),
-                token_count=len(person_tokens),
+                normalized_length=len(final_normalized_text),
+                token_count=len(person_tokens) + len(organizations),
                 processing_time=processing_time,
                 success=len(errors) == 0,
                 # Integration test compatibility fields
