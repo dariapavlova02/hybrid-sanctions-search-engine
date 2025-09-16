@@ -186,6 +186,34 @@ class UnifiedOrchestrator:
         # Default fallback
         return {"language": "en", "confidence": 0.0}
 
+    async def _handle_validation_layer(
+        self, text: str, context: ProcessingContext, start_time: float
+    ) -> Optional[UnifiedProcessingResult]:
+        """
+        Handle Layer 1: Validation & Sanitization
+
+        Returns:
+            UnifiedProcessingResult if early termination needed, None otherwise
+        """
+        logger.debug("Stage 1: Validation & Sanitization")
+        layer_start = time.time()
+
+        validation_result = await self._maybe_await(self.validation_service.validate_and_sanitize(text))
+        context.sanitized_text = validation_result.get("sanitized_text", text)
+
+        # Debug trace for lengths
+        logger.debug(f"Validation: input_len={self._safe_len(text)}, sanitized_len={self._safe_len(context.sanitized_text)}")
+
+        if self.metrics_service:
+            self.metrics_service.record_timer('processing.layer.validation', time.time() - layer_start)
+
+        if not validation_result.get("should_process", True):
+            if self.metrics_service:
+                self.metrics_service.increment_counter('processing.validation.failed')
+            return self._create_early_response(context, "Input validation failed", start_time)
+
+        return None  # Continue processing
+
     async def process(
         self,
         text: str,
@@ -255,26 +283,9 @@ class UnifiedOrchestrator:
             # ================================================================
             # Layer 1: Validation & Sanitization
             # ================================================================
-            logger.debug("Stage 1: Validation & Sanitization")
-            layer_start = time.time()
-
-            validation_result = await self._maybe_await(self.validation_service.validate_and_sanitize(
-                text
-            ))
-            context.sanitized_text = validation_result.get("sanitized_text", text)
-            
-            # Debug trace for lengths
-            logger.debug(f"Validation: input_len={self._safe_len(text)}, sanitized_len={self._safe_len(context.sanitized_text)}")
-
-            if self.metrics_service:
-                self.metrics_service.record_timer('processing.layer.validation', time.time() - layer_start)
-
-            if not validation_result.get("should_process", True):
-                if self.metrics_service:
-                    self.metrics_service.increment_counter('processing.validation.failed')
-                return self._create_early_response(
-                    context, "Input validation failed", start_time
-                )
+            validation_result = await self._handle_validation_layer(text, context, start_time)
+            if validation_result is not None:  # Early return if validation failed
+                return validation_result
 
             # ================================================================
             # Layer 2: Smart Filter (optional skip)
