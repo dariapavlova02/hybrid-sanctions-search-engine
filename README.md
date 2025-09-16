@@ -297,6 +297,64 @@ curl http://localhost:8000/health
 curl http://localhost:8000/stats
 ```
 
+## 🔍 **Hybrid Search System**
+
+The AI Service now includes a comprehensive hybrid search system combining Aho-Corasick (AC) lexical search with kNN vector search for optimal performance and accuracy.
+
+### **Key Features**
+- **AC Search**: Exact, phrase, and ngram matching for precise lexical search
+- **Vector Search**: Semantic similarity using dense vectors (384-dimensional)
+- **Hybrid Fusion**: Intelligent combination of AC and vector results
+- **Elasticsearch Integration**: Scalable search backend with monitoring
+- **Performance Monitoring**: Comprehensive metrics and alerting
+
+### **Quick Start with Search**
+
+1. **Start the monitoring stack**:
+   ```bash
+   docker-compose -f monitoring/docker-compose.monitoring.yml up -d
+   ```
+
+2. **Load sample data**:
+   ```bash
+   python scripts/bulk_loader.py --input sample_entities.jsonl --entity-type person --upsert
+   ```
+
+3. **Test search functionality**:
+   ```bash
+   python scripts/quick_test_search.py --test all
+   ```
+
+4. **Check system health**:
+   ```bash
+   ./scripts/health_check.sh
+   ```
+
+### **Search API Endpoints**
+- `POST /search` - Hybrid search with AC and vector fusion
+- `POST /search/ac` - AC-only search (exact, phrase, ngram)
+- `POST /search/vector` - Vector-only search (kNN)
+- `GET /search/health` - Search system health check
+
+### **Monitoring Dashboards**
+- **Grafana**: http://localhost:3000 (admin/admin)
+- **Prometheus**: http://localhost:9090
+- **Alertmanager**: http://localhost:9093
+
+### **Emergency Procedures**
+```bash
+# Check system health
+./scripts/emergency_procedures.sh health
+
+# Emergency restart
+./scripts/emergency_procedures.sh restart
+
+# Enable fallback mode
+./scripts/emergency_procedures.sh fallback
+```
+
+📖 **Complete Documentation**: See [docs/hybrid-search-runbook.md](docs/hybrid-search-runbook.md) for comprehensive SRE and developer procedures
+
 ## Contributing
 
 1. Fork the repository
