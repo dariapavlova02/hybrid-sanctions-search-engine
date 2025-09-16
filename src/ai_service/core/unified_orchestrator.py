@@ -316,6 +316,54 @@ class UnifiedOrchestrator:
 
         return text_u
 
+    async def _handle_name_normalization_layer(
+        self,
+        text_u: str,
+        context: ProcessingContext,
+        remove_stop_words: bool,
+        preserve_names: bool,
+        enable_advanced_features: bool,
+        errors: list
+    ) -> Any:
+        """
+        Handle Layer 5: Name Normalization (morph) - THE CORE
+
+        Args:
+            text_u: Unicode normalized text
+            context: Processing context
+            remove_stop_words: Clean STOP_ALL tokens in normalization
+            preserve_names: Keep `. - '` for initials/compound names
+            enable_advanced_features: Use morphology + diminutives + gender
+            errors: List to append errors to
+
+        Returns:
+            Normalization result from the service
+        """
+        logger.debug("Stage 5: Name Normalization")
+        layer_start = time.time()
+
+        # Use unicode-normalized text for normalization
+        norm_result = await self._maybe_await(self.normalization_service.normalize_async(
+            text_u,  # Use unicode-normalized text
+            language=context.language,
+            remove_stop_words=remove_stop_words,
+            preserve_names=preserve_names,
+            enable_advanced_features=enable_advanced_features,
+        ))
+
+        if self.metrics_service:
+            self.metrics_service.record_timer('processing.layer.normalization', time.time() - layer_start)
+            if hasattr(norm_result, 'confidence') and norm_result.confidence is not None:
+                self.metrics_service.record_histogram('normalization.confidence', norm_result.confidence)
+            self.metrics_service.record_histogram('normalization.token_count', self._safe_len(norm_result.tokens))
+
+        if not norm_result.success:
+            if self.metrics_service:
+                self.metrics_service.increment_counter('processing.normalization.failed')
+            errors.extend(norm_result.errors)
+
+        return norm_result
+
     async def process(
         self,
         text: str,
@@ -409,28 +457,9 @@ class UnifiedOrchestrator:
             # ================================================================
             # Layer 5: Name Normalization (morph) - THE CORE
             # ================================================================
-            logger.debug("Stage 5: Name Normalization")
-            layer_start = time.time()
-
-            # Use unicode-normalized text for normalization
-            norm_result = await self._maybe_await(self.normalization_service.normalize_async(
-                text_u,  # Use unicode-normalized text
-                language=context.language,
-                remove_stop_words=remove_stop_words,
-                preserve_names=preserve_names,
-                enable_advanced_features=enable_advanced_features,
-            ))
-
-            if self.metrics_service:
-                self.metrics_service.record_timer('processing.layer.normalization', time.time() - layer_start)
-                if hasattr(norm_result, 'confidence') and norm_result.confidence is not None:
-                    self.metrics_service.record_histogram('normalization.confidence', norm_result.confidence)
-                self.metrics_service.record_histogram('normalization.token_count', self._safe_len(norm_result.tokens))
-
-            if not norm_result.success:
-                if self.metrics_service:
-                    self.metrics_service.increment_counter('processing.normalization.failed')
-                errors.extend(norm_result.errors)
+            norm_result = await self._handle_name_normalization_layer(
+                text_u, context, remove_stop_words, preserve_names, enable_advanced_features, errors
+            )
 
             # ================================================================
             # Layer 6: Signals (enrichment)
