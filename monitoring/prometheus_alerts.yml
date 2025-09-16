@@ -1,0 +1,301 @@
+groups:
+  - name: search_integration_alerts
+    rules:
+      # High latency alerts
+      - alert: SearchLatencyHigh
+        expr: histogram_quantile(0.95, rate(hybrid_search_latency_ms_bucket[5m])) > 120
+        for: 5m
+        labels:
+          severity: warning
+          service: search
+        annotations:
+          summary: "Search latency P95 is high"
+          description: "Search latency P95 is {{ $value }}ms, which is above the threshold of 120ms for 5 minutes"
+          runbook_url: "https://docs.example.com/runbooks/search-latency-high"
+
+      - alert: SearchLatencyCritical
+        expr: histogram_quantile(0.95, rate(hybrid_search_latency_ms_bucket[5m])) > 200
+        for: 2m
+        labels:
+          severity: critical
+          service: search
+        annotations:
+          summary: "Search latency P95 is critically high"
+          description: "Search latency P95 is {{ $value }}ms, which is above the critical threshold of 200ms for 2 minutes"
+          runbook_url: "https://docs.example.com/runbooks/search-latency-critical"
+
+      # Error rate alerts
+      - alert: SearchErrorRateHigh
+        expr: rate(es_errors_total[5m]) / rate(hybrid_search_requests_total[5m]) * 100 > 2
+        for: 3m
+        labels:
+          severity: warning
+          service: search
+        annotations:
+          summary: "Search error rate is high"
+          description: "Search error rate is {{ $value }}%, which is above the threshold of 2% for 3 minutes"
+          runbook_url: "https://docs.example.com/runbooks/search-error-rate-high"
+
+      - alert: SearchErrorRateCritical
+        expr: rate(es_errors_total[5m]) / rate(hybrid_search_requests_total[5m]) * 100 > 5
+        for: 1m
+        labels:
+          severity: critical
+          service: search
+        annotations:
+          summary: "Search error rate is critically high"
+          description: "Search error rate is {{ $value }}%, which is above the critical threshold of 5% for 1 minute"
+          runbook_url: "https://docs.example.com/runbooks/search-error-rate-critical"
+
+      # Success rate alerts
+      - alert: SearchSuccessRateLow
+        expr: search_success_rate < 0.95
+        for: 5m
+        labels:
+          severity: warning
+          service: search
+        annotations:
+          summary: "Search success rate is low"
+          description: "Search success rate is {{ $value | humanizePercentage }}, which is below the threshold of 95% for 5 minutes"
+          runbook_url: "https://docs.example.com/runbooks/search-success-rate-low"
+
+      - alert: SearchSuccessRateCritical
+        expr: search_success_rate < 0.90
+        for: 2m
+        labels:
+          severity: critical
+          service: search
+        annotations:
+          summary: "Search success rate is critically low"
+          description: "Search success rate is {{ $value | humanizePercentage }}, which is below the critical threshold of 90% for 2 minutes"
+          runbook_url: "https://docs.example.com/runbooks/search-success-rate-critical"
+
+      # Elasticsearch connection alerts
+      - alert: ElasticsearchConnectionErrors
+        expr: rate(es_errors_total{type="conn"}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          service: search
+          component: elasticsearch
+        annotations:
+          summary: "Elasticsearch connection errors detected"
+          description: "Elasticsearch connection error rate is {{ $value }} errors/sec for 2 minutes"
+          runbook_url: "https://docs.example.com/runbooks/elasticsearch-connection-errors"
+
+      - alert: ElasticsearchTimeoutErrors
+        expr: rate(es_errors_total{type="timeout"}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          service: search
+          component: elasticsearch
+        annotations:
+          summary: "Elasticsearch timeout errors detected"
+          description: "Elasticsearch timeout error rate is {{ $value }} errors/sec for 2 minutes"
+          runbook_url: "https://docs.example.com/runbooks/elasticsearch-timeout-errors"
+
+      # Search throughput alerts
+      - alert: SearchThroughputLow
+        expr: rate(hybrid_search_requests_total[5m]) < 0.1
+        for: 10m
+        labels:
+          severity: warning
+          service: search
+        annotations:
+          summary: "Search throughput is low"
+          description: "Search throughput is {{ $value }} requests/sec, which is below the threshold of 0.1 req/sec for 10 minutes"
+          runbook_url: "https://docs.example.com/runbooks/search-throughput-low"
+
+      - alert: SearchThroughputZero
+        expr: rate(hybrid_search_requests_total[5m]) == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: search
+        annotations:
+          summary: "No search requests detected"
+          description: "No search requests have been processed for 5 minutes"
+          runbook_url: "https://docs.example.com/runbooks/search-throughput-zero"
+
+      # Cache performance alerts
+      - alert: SearchCacheHitRateLow
+        expr: search_cache_hit_rate < 0.7
+        for: 10m
+        labels:
+          severity: warning
+          service: search
+          component: cache
+        annotations:
+          summary: "Search cache hit rate is low"
+          description: "Search cache hit rate is {{ $value | humanizePercentage }}, which is below the threshold of 70% for 10 minutes"
+          runbook_url: "https://docs.example.com/runbooks/search-cache-hit-rate-low"
+
+      # AC search performance alerts
+      - alert: ACHitRateLow
+        expr: rate(ac_hits_total[5m]) < 0.01
+        for: 15m
+        labels:
+          severity: warning
+          service: search
+          component: ac_search
+        annotations:
+          summary: "AC search hit rate is low"
+          description: "AC search hit rate is {{ $value }} hits/sec, which is below the threshold of 0.01 hits/sec for 15 minutes"
+          runbook_url: "https://docs.example.com/runbooks/ac-hit-rate-low"
+
+      - alert: ACWeakHitsHigh
+        expr: rate(ac_weak_hits_total[5m]) / rate(ac_hits_total[5m]) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          service: search
+          component: ac_search
+        annotations:
+          summary: "AC weak hits ratio is high"
+          description: "AC weak hits ratio is {{ $value | humanizePercentage }}, which is above the threshold of 50% for 10 minutes"
+          runbook_url: "https://docs.example.com/runbooks/ac-weak-hits-high"
+
+      # KNN search performance alerts
+      - alert: KNNHitRateLow
+        expr: rate(knn_hits_total[5m]) < 0.01
+        for: 15m
+        labels:
+          severity: warning
+          service: search
+          component: knn_search
+        annotations:
+          summary: "KNN search hit rate is low"
+          description: "KNN search hit rate is {{ $value }} hits/sec, which is below the threshold of 0.01 hits/sec for 15 minutes"
+          runbook_url: "https://docs.example.com/runbooks/knn-hit-rate-low"
+
+      # Fusion consensus alerts
+      - alert: FusionConsensusLow
+        expr: rate(fusion_consensus_total[5m]) < 0.001
+        for: 20m
+        labels:
+          severity: warning
+          service: search
+          component: fusion
+        annotations:
+          summary: "Fusion consensus rate is low"
+          description: "Fusion consensus rate is {{ $value }} consensus/sec, which is below the threshold of 0.001 consensus/sec for 20 minutes"
+          runbook_url: "https://docs.example.com/runbooks/fusion-consensus-low"
+
+      # Active connections alerts
+      - alert: ActiveConnectionsHigh
+        expr: active_search_connections > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: search
+        annotations:
+          summary: "Active search connections are high"
+          description: "Active search connections are {{ $value }}, which is above the threshold of 100 for 5 minutes"
+          runbook_url: "https://docs.example.com/runbooks/active-connections-high"
+
+      - alert: ActiveConnectionsCritical
+        expr: active_search_connections > 200
+        for: 2m
+        labels:
+          severity: critical
+          service: search
+        annotations:
+          summary: "Active search connections are critically high"
+          description: "Active search connections are {{ $value }}, which is above the critical threshold of 200 for 2 minutes"
+          runbook_url: "https://docs.example.com/runbooks/active-connections-critical"
+
+      # Elasticsearch cluster health alerts
+      - alert: ElasticsearchClusterYellow
+        expr: elasticsearch_cluster_health_status == 1
+        for: 5m
+        labels:
+          severity: warning
+          service: search
+          component: elasticsearch
+        annotations:
+          summary: "Elasticsearch cluster is yellow"
+          description: "Elasticsearch cluster health status is yellow for 5 minutes"
+          runbook_url: "https://docs.example.com/runbooks/elasticsearch-cluster-yellow"
+
+      - alert: ElasticsearchClusterRed
+        expr: elasticsearch_cluster_health_status == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: search
+          component: elasticsearch
+        annotations:
+          summary: "Elasticsearch cluster is red"
+          description: "Elasticsearch cluster health status is red for 1 minute"
+          runbook_url: "https://docs.example.com/runbooks/elasticsearch-cluster-red"
+
+      # Search service availability alerts
+      - alert: SearchServiceDown
+        expr: up{job="search-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: search
+        annotations:
+          summary: "Search service is down"
+          description: "Search service has been down for 1 minute"
+          runbook_url: "https://docs.example.com/runbooks/search-service-down"
+
+      # Search service restart alerts
+      - alert: SearchServiceRestarted
+        expr: increase(process_start_time_seconds[5m]) > 0
+        for: 0m
+        labels:
+          severity: info
+          service: search
+        annotations:
+          summary: "Search service restarted"
+          description: "Search service has been restarted"
+          runbook_url: "https://docs.example.com/runbooks/search-service-restarted"
+
+      # Memory usage alerts
+      - alert: SearchMemoryUsageHigh
+        expr: search_memory_usage_bytes / 1024 / 1024 / 1024 > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: search
+        annotations:
+          summary: "Search service memory usage is high"
+          description: "Search service memory usage is {{ $value }}GB, which is above the threshold of 1GB for 5 minutes"
+          runbook_url: "https://docs.example.com/runbooks/search-memory-usage-high"
+
+      - alert: SearchMemoryUsageCritical
+        expr: search_memory_usage_bytes / 1024 / 1024 / 1024 > 2
+        for: 2m
+        labels:
+          severity: critical
+          service: search
+        annotations:
+          summary: "Search service memory usage is critically high"
+          description: "Search service memory usage is {{ $value }}GB, which is above the critical threshold of 2GB for 2 minutes"
+          runbook_url: "https://docs.example.com/runbooks/search-memory-usage-critical"
+
+      # CPU usage alerts
+      - alert: SearchCPUUsageHigh
+        expr: search_cpu_usage_percent > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: search
+        annotations:
+          summary: "Search service CPU usage is high"
+          description: "Search service CPU usage is {{ $value }}%, which is above the threshold of 80% for 5 minutes"
+          runbook_url: "https://docs.example.com/runbooks/search-cpu-usage-high"
+
+      - alert: SearchCPUUsageCritical
+        expr: search_cpu_usage_percent > 95
+        for: 2m
+        labels:
+          severity: critical
+          service: search
+        annotations:
+          summary: "Search service CPU usage is critically high"
+          description: "Search service CPU usage is {{ $value }}%, which is above the critical threshold of 95% for 2 minutes"
+          runbook_url: "https://docs.example.com/runbooks/search-cpu-usage-critical"

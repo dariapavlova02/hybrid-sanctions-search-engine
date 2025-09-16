@@ -1,0 +1,175 @@
+version: '3.8'
+
+services:
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: search-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus_alerts.yml:/etc/prometheus/prometheus_alerts.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: search-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana_dashboard.json:/etc/grafana/provisioning/dashboards/search-dashboard.json:ro
+      - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/prometheus.yml:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # Alertmanager
+  alertmanager:
+    image: prom/alertmanager:v0.25.0
+    container_name: search-alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # Node Exporter
+  node-exporter:
+    image: prom/node-exporter:v1.6.0
+    container_name: search-node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # cAdvisor
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    container_name: search-cadvisor
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # Elasticsearch Exporter (optional)
+  elasticsearch-exporter:
+    image: prometheuscommunity/elasticsearch-exporter:v1.5.0
+    container_name: search-elasticsearch-exporter
+    ports:
+      - "9114:9114"
+    environment:
+      - ES_URI=http://elasticsearch:9200
+      - ES_INDEX_INDICES=watchlist_*
+      - ES_INDEX_SETTINGS=true
+      - ES_INDEX_MAPPINGS=true
+      - ES_INDEX_ALIASES=true
+      - ES_SNAPSHOTS=true
+      - ES_CLUSTER_SETTINGS=true
+      - ES_SHARDS=true
+      - ES_INDICES=true
+      - ES_INDICES_SETTINGS=true
+      - ES_INDICES_MAPPINGS=true
+      - ES_INDICES_ALIASES=true
+      - ES_INDICES_STATS=true
+      - ES_INDICES_STATS_INDICES=watchlist_*
+      - ES_INDICES_STATS_LEVEL=indices
+      - ES_INDICES_STATS_PRIMARY_ONLY=false
+      - ES_INDICES_STATS_TIME_SERIES=true
+      - ES_INDICES_STATS_TIME_SERIES_INTERVAL=5m
+      - ES_INDICES_STATS_TIME_SERIES_RETENTION=30d
+    restart: unless-stopped
+    networks:
+      - monitoring
+    depends_on:
+      - elasticsearch
+
+  # Search Service (for testing)
+  search-service:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: search-service
+    ports:
+      - "8080:8080"
+    environment:
+      - PROMETHEUS_ENABLED=true
+      - PROMETHEUS_PORT=8080
+      - ES_URL=http://elasticsearch:9200
+      - ES_AUTH=
+      - ES_VERIFY_SSL=false
+    restart: unless-stopped
+    networks:
+      - monitoring
+    depends_on:
+      - elasticsearch
+
+  # Elasticsearch (for testing)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: search-elasticsearch
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:
+  elasticsearch_data:
+
+networks:
+  monitoring:
+    driver: bridge

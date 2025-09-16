@@ -1,0 +1,5 @@
+# Requirements for monitoring components
+prometheus-client>=0.17.0
+fastapi>=0.100.0
+uvicorn>=0.23.0
+httpx>=0.24.0

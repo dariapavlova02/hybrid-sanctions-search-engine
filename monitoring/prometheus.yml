@@ -1,0 +1,200 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'search-integration'
+    environment: 'production'
+
+rule_files:
+  - "prometheus_alerts.yml"
+
+scrape_configs:
+  # Search service metrics
+  - job_name: 'search-service'
+    static_configs:
+      - targets: ['search-service:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    honor_labels: true
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: '([^:]+):(\d+)'
+        replacement: '${1}:${2}'
+      - target_label: service
+        replacement: 'search'
+      - target_label: component
+        replacement: 'search-service'
+
+  # Elasticsearch metrics (if using elasticsearch_exporter)
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch-exporter:9114']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    honor_labels: true
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: '([^:]+):(\d+)'
+        replacement: '${1}:${2}'
+      - target_label: service
+        replacement: 'elasticsearch'
+      - target_label: component
+        replacement: 'elasticsearch'
+
+  # Node exporter metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    honor_labels: true
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: '([^:]+):(\d+)'
+        replacement: '${1}:${2}'
+      - target_label: service
+        replacement: 'node'
+      - target_label: component
+        replacement: 'node-exporter'
+
+  # cAdvisor metrics (if using Docker)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    honor_labels: true
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: '([^:]+):(\d+)'
+        replacement: '${1}:${2}'
+      - target_label: service
+        replacement: 'container'
+      - target_label: component
+        replacement: 'cadvisor'
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    honor_labels: true
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: '([^:]+):(\d+)'
+        replacement: '${1}:${2}'
+      - target_label: service
+        replacement: 'prometheus'
+      - target_label: component
+        replacement: 'prometheus'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+      timeout: 10s
+      api_version: v2
+
+# Recording rules for common queries
+recording_rules:
+  - name: search_integration_rules
+    rules:
+      # Search success rate over time
+      - record: search_success_rate_5m
+        expr: rate(hybrid_search_requests_total[5m]) / (rate(hybrid_search_requests_total[5m]) + rate(es_errors_total[5m]))
+        labels:
+          service: search
+
+      # Search error rate over time
+      - record: search_error_rate_5m
+        expr: rate(es_errors_total[5m]) / rate(hybrid_search_requests_total[5m])
+        labels:
+          service: search
+
+      # AC hit rate over time
+      - record: ac_hit_rate_5m
+        expr: rate(ac_hits_total[5m])
+        labels:
+          service: search
+          component: ac_search
+
+      # KNN hit rate over time
+      - record: knn_hit_rate_5m
+        expr: rate(knn_hits_total[5m])
+        labels:
+          service: search
+          component: knn_search
+
+      # Fusion consensus rate over time
+      - record: fusion_consensus_rate_5m
+        expr: rate(fusion_consensus_total[5m])
+        labels:
+          service: search
+          component: fusion
+
+      # Search latency percentiles
+      - record: search_latency_p50_5m
+        expr: histogram_quantile(0.50, rate(hybrid_search_latency_ms_bucket[5m]))
+        labels:
+          service: search
+
+      - record: search_latency_p95_5m
+        expr: histogram_quantile(0.95, rate(hybrid_search_latency_ms_bucket[5m]))
+        labels:
+          service: search
+
+      - record: search_latency_p99_5m
+        expr: histogram_quantile(0.99, rate(hybrid_search_latency_ms_bucket[5m]))
+        labels:
+          service: search
+
+      # Search throughput
+      - record: search_throughput_5m
+        expr: rate(hybrid_search_requests_total[5m])
+        labels:
+          service: search
+
+      # Elasticsearch error rate by type
+      - record: es_error_rate_by_type_5m
+        expr: rate(es_errors_total[5m])
+        labels:
+          service: search
+          component: elasticsearch
+
+      # Search cache hit rate
+      - record: search_cache_hit_rate_5m
+        expr: search_cache_hit_rate
+        labels:
+          service: search
+          component: cache
+
+      # Active search connections
+      - record: active_search_connections_5m
+        expr: active_search_connections
+        labels:
+          service: search
+
+      # Search memory usage in GB
+      - record: search_memory_usage_gb
+        expr: search_memory_usage_bytes / 1024 / 1024 / 1024
+        labels:
+          service: search
+
+      # Search CPU usage percentage
+      - record: search_cpu_usage_percent
+        expr: search_cpu_usage_percent
+        labels:
+          service: search
