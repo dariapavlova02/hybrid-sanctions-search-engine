@@ -1,225 +1,265 @@
-# AI Service Tests
+# Search Integration Tests
 
-Clean and consolidated test suite for the unified AI service architecture.
+Комплексный набор тестов для поисковой интеграции с использованием pytest, Docker Compose и изоляцией тестов.
 
-## 🏗️ Test Structure
+## Структура тестов
 
 ```
 tests/
-├── integration/                    # End-to-end tests
-│   ├── test_pipeline_end2end.py   # ✅ Main integration tests (12 scenarios)
-│   ├── test_ru_uk_sentences.py    # Language-specific testing
-│   ├── test_mixed_script_names.py # Mixed script handling
-│   └── test_complex_scenarios.py  # Edge cases
-├── unit/
-│   ├── core/                      # Core unified architecture
-│   │   ├── test_unified_orchestrator.py  # Main orchestrator tests
-│   │   └── test_unified_contracts.py     # Contract validation tests
-│   ├── layers/                    # Layer-specific tests
-│   │   ├── test_smart_filter_adapter.py      # Layer 2: Smart Filter
-│   │   └── test_normalization_contracts.py   # Layer 5: Normalization
-│   ├── morphology/               # Morphology services
-│   │   ├── test_russian_morphology.py
-│   │   ├── test_ukrainian_morphology.py
-│   │   └── test_morph_and_diminutives.py
-│   ├── screening/                # Smart Filter components
-│   │   ├── test_company_detector.py
-│   │   ├── test_document_detector.py
-│   │   ├── test_terrorism_detector.py
-│   │   └── test_decision_logic.py
-│   ├── text_processing/          # Text processing layers
-│   │   ├── test_flags_behavior.py         # ✅ Critical for CLAUDE.md
-│   │   ├── test_role_tagging_extended.py  # ✅ Core functionality
-│   │   └── test_org_acronyms_filter.py    # ✅ CLAUDE.md requirement
-│   └── utilities/                # Support utilities
-│       ├── test_input_validation.py
-│       ├── test_cache_service.py
-│       └── test_canary_overfit.py         # ✅ Anti-overfit protection
-└── performance/
-    └── test_ab_perf.py           # Performance benchmarks
+├── conftest.py                    # Pytest конфигурация и фикстуры
+├── requirements_test.txt          # Зависимости для тестов
+├── unit/                          # Unit тесты
+│   ├── test_search_contracts.py   # Тесты контрактов поиска
+│   ├── test_search_integration.py # Тесты интеграции поиска
+│   └── test_decision_engine_with_search.py # Тесты Decision Engine с поиском
+├── integration/                   # Integration тесты
+│   └── test_elasticsearch_search.py # Тесты Elasticsearch поиска
+├── performance/                   # Performance тесты
+│   └── test_search_performance.py # Тесты производительности поиска
+└── README.md                      # Этот файл
 ```
 
-## 🚀 Running Tests
+## Типы тестов
 
-### Quick Test Suite
-```bash
-# Run main integration tests (comprehensive)
-python -m pytest tests/integration/test_pipeline_end2end.py -v
+### Unit тесты (`@pytest.mark.unit`)
+- **Маппинг трансформаций**: ES hit → Candidate, нормализация порогов, слияние скорингов
+- **Контракты данных**: SearchOpts, SearchMode, ACScore, VectorHit, Candidate, SearchInfo
+- **Интеграционные функции**: extract_search_candidates, create_search_info
+- **Decision Engine**: расчет весов с поиском, пороги, бонусы
 
-# Run unified architecture tests
-python -m pytest tests/unit/core/ -v
+### Integration тесты (`@pytest.mark.integration`)
+- **Docker-ES**: создание временного индекса, индексация 5-10 сущностей (ru/uk/en)
+- **AC поиск**: exact → находит только при точном normalized_name
+- **Phrase поиск**: ловит «Иван Иванов»
+- **N-gram поиск**: дает слабый сигнал
+- **kNN поиск**: возвращает релевант при отсутствии AC
+- **Fusion**: консенсус поднимает в топ
 
-# Run contract validation
-python -m pytest tests/unit/test_unified_contracts.py -v
-```
+### Performance тесты (`@pytest.mark.performance`)
+- **1k запросов**: p95 < 80мс end-to-end
+- **Разные режимы**: AC, Vector, Hybrid
+- **Concurrent запросы**: 1, 5, 10, 20 параллельных
+- **Memory usage**: контроль потребления памяти
+- **Error handling**: обработка ошибок
 
-### Full Test Suite
-```bash
-# All tests
-python -m pytest tests/ -v
+## Запуск тестов
 
-# Integration tests only
-python -m pytest tests/integration/ -v
-
-# Unit tests only
-python -m pytest tests/unit/ -v
-
-# Specific layer tests
-python -m pytest tests/unit/layers/ -v
-```
-
-### Performance Tests
-```bash
-# Performance benchmarks
-python -m pytest tests/performance/ -v
-```
-
-## 🎯 Key Test Files
-
-### ✅ **Critical Tests (Must Pass)**
-
-#### `test_pipeline_end2end.py`
-- **12 real payment scenarios** from CLAUDE.md specification
-- Tests complete 9-layer pipeline integration
-- Validates all contracts work together
-- Performance requirements validation
-- Flag behavior verification
-
-#### `test_unified_contracts.py`
-- New contract system validation
-- TokenTrace, NormalizationResult, SignalsResult testing
-- Serialization/deserialization tests
-- Backward compatibility verification
-
-#### `test_unified_orchestrator.py`
-- Core orchestrator functionality
-- Service integration testing
-- Error handling and fallback behavior
-- Layer execution order validation
-
-#### `test_flags_behavior.py`
-- **CRITICAL**: Ensures normalization flags have real behavioral impact
-- Required by CLAUDE.md: `remove_stop_words`, `preserve_names`, `enable_advanced_features`
-- Prevents flag settings from being ignored
-
-#### `test_org_acronyms_filter.py`
-- **CLAUDE.md requirement**: ORG_ACRONYMS always tagged as `unknown`
-- Ensures legal forms don't participate in positional defaults
-- Tests ООО/ТОВ/LLC/Ltd/Inc filtering
-
-### 🔍 **Layer-Specific Tests**
-
-#### `test_smart_filter_adapter.py`
-- Layer 2: Smart Filter testing with new contracts
-- Signal detection per CLAUDE.md spec
-- Classification mapping (must_process|recommend|maybe|skip)
-- Name/Company/Payment context detection
-
-#### `test_normalization_contracts.py`
-- Layer 5: THE CORE normalization testing
-- New contract compliance
-- Token trace completeness
-- Core separation (persons vs organizations)
-
-### 📊 **Quality Assurance Tests**
-
-#### `test_canary_overfit.py`
-- **Anti-overfit protection**
-- Ensures random words don't become names
-- Prevents model from hallucinating patterns
-
-#### `test_mixed_script_names.py`
-- **CLAUDE.md requirement**: ASCII names in Cyrillic context
-- Ensures no morphological changes to ASCII tokens
-- Mixed-language handling validation
-
-## 🧹 Test Cleanup Summary
-
-### ❌ **Removed Obsolete Tests** (~3,500+ lines)
-- `test_changelog_automation.py` - Not core functionality
-- `test_orchestrator_with_fixes.py` - Used deprecated orchestrators
-- `test_name_extraction_pipeline.py` - Duplicate functionality
-- `test_*_debug.py` - Temporary debug tests
-- `test_build_templates_script.py` - Script tests
-- `test_vector_processing.py` - Not used in unified arch
-- `test_multi_tier_screening.py` - Not in unified arch
-
-### ✅ **Kept Essential Tests** (~7,500+ lines)
-- All unified architecture tests
-- Core functionality tests (updated for new contracts)
-- Morphology and language processing tests
-- Smart Filter component tests
-- Quality assurance and anti-overfit tests
-
-## 🎯 Test Categories
-
-### **Integration Tests**
-- End-to-end pipeline validation
-- Real payment scenario testing
-- Multi-language support verification
-- Performance requirements validation
-
-### **Unit Tests**
-- Individual component testing
-- Contract validation
-- Error handling verification
-- Edge case coverage
-
-### **Performance Tests**
-- Speed benchmarks
-- Memory usage validation
-- Scalability testing
-
-## 📝 Test Requirements
-
-### **CLAUDE.md Compliance**
-All tests verify compliance with CLAUDE.md specification:
-
-1. **9-Layer Pipeline**: Validation → SmartFilter → Language → Unicode → **Normalization** → Signals → Variants → Embeddings → Response
-2. **Flag Behavior**: Real impact from `remove_stop_words`, `preserve_names`, `enable_advanced_features`
-3. **ORG_ACRONYMS**: Always `unknown`, never in positional defaults
-4. **ASCII Handling**: No morphology in ru/uk context
-5. **Women's Surnames**: Preserve feminine forms
-6. **Performance**: ≤10ms for short strings, warn if >100ms
-
-### **Contract Validation**
-- `TokenTrace` completeness for every token
-- `NormalizationResult` with all required metadata
-- `SignalsResult` with structured persons/organizations
-- Serialization/deserialization capability
-
-### **Quality Assurance**
-- Anti-overfit protection (canary tests)
-- Error handling and graceful degradation
-- Performance within acceptable bounds
-- Comprehensive edge case coverage
-
-## 🚀 Running Specific Test Categories
+### Установка зависимостей
 
 ```bash
-# CLAUDE.md compliance tests
-python -m pytest -k "claude" -v
+# Установить зависимости для тестов
+pip install -r tests/requirements_test.txt
 
-# Contract validation tests
-python -m pytest -k "contract" -v
-
-# Flag behavior tests (critical)
-python -m pytest -k "flag" -v
-
-# Performance tests
-python -m pytest -k "performance" -v
-
-# Anti-overfit tests
-python -m pytest -k "canary" -v
+# Или использовать make
+make install-test-deps
 ```
 
-## 📊 Test Coverage
+### Unit тесты (без внешних зависимостей)
 
-The consolidated test suite provides:
-- **100% coverage** of unified architecture components
-- **Real scenario testing** with 12+ payment text examples
-- **Performance validation** per CLAUDE.md requirements
-- **Contract compliance** verification
-- **Quality assurance** with anti-overfit protection
+```bash
+# Все unit тесты
+pytest tests/unit/ -m "unit" -v
 
-**Total reduction: ~30% of test code while maintaining comprehensive coverage of actual functionality.**
+# Или через make
+make test-unit
+```
+
+### Integration тесты (требует Docker)
+
+```bash
+# Запустить Elasticsearch
+docker-compose -f docker-compose.test.yml up -d
+
+# Дождаться готовности
+curl -f http://localhost:9200/_cluster/health
+
+# Запустить integration тесты
+pytest tests/integration/ -m "integration" -v
+
+# Или через make
+make test-integration
+```
+
+### Performance тесты
+
+```bash
+# Запустить performance тесты
+pytest tests/performance/ -m "performance" -v
+
+# Или через make
+make test-performance
+```
+
+### Все тесты
+
+```bash
+# Все тесты
+pytest tests/ -v
+
+# Или через make
+make test-all
+```
+
+### Автоматический запуск с Docker
+
+```bash
+# Установить, запустить тесты и очистить
+make test-with-docker
+```
+
+## Конфигурация
+
+### Переменные окружения
+
+Тесты автоматически устанавливают следующие переменные:
+
+```bash
+# Поиск
+ENABLE_HYBRID_SEARCH=true
+ES_URL=http://localhost:9200
+ES_AUTH=
+ES_VERIFY_SSL=false
+
+# Веса поиска для Decision Engine
+AI_DECISION__W_SEARCH_EXACT=0.3
+AI_DECISION__W_SEARCH_PHRASE=0.25
+AI_DECISION__W_SEARCH_NGRAM=0.2
+AI_DECISION__W_SEARCH_VECTOR=0.15
+
+# Пороги поиска
+AI_DECISION__THR_SEARCH_EXACT=0.8
+AI_DECISION__THR_SEARCH_PHRASE=0.7
+AI_DECISION__THR_SEARCH_NGRAM=0.6
+AI_DECISION__THR_SEARCH_VECTOR=0.5
+
+# Бонусы поиска
+AI_DECISION__BONUS_MULTIPLE_MATCHES=0.1
+AI_DECISION__BONUS_HIGH_CONFIDENCE=0.05
+```
+
+### Pytest маркеры
+
+- `@pytest.mark.unit` - Unit тесты
+- `@pytest.mark.integration` - Integration тесты (требуют Elasticsearch)
+- `@pytest.mark.performance` - Performance тесты
+- `@pytest.mark.slow` - Медленные тесты
+- `@pytest.mark.docker` - Тесты, требующие Docker
+
+## Фикстуры
+
+### Основные фикстуры
+
+- `elasticsearch_container` - Docker контейнер Elasticsearch
+- `elasticsearch_client` - HTTP клиент для Elasticsearch
+- `test_indices` - Тестовые индексы с данными
+- `mock_hybrid_search_service` - Мок HybridSearchService
+- `mock_signals_result` - Мок SignalsResult
+- `mock_normalization_result` - Мок NormalizationResult
+- `sample_query_vector` - Образец вектора запроса
+
+### Тестовые данные
+
+Тесты используют следующие тестовые данные:
+
+**Персоны:**
+- `иван петров` (RU) - точное совпадение
+- `мария сидорова` (UA) - фраза
+- `john smith` (US) - n-gram
+
+**Организации:**
+- `ооо приватбанк` (UA) - точное совпадение
+- `apple inc` (US) - фраза
+
+## Критерии успеха
+
+### Unit тесты
+- ✅ Все контракты данных работают корректно
+- ✅ Трансформации ES hit → Candidate
+- ✅ Нормализация порогов
+- ✅ Слияние скорингов
+- ✅ Decision Engine с поиском
+
+### Integration тесты
+- ✅ Exact поиск находит только точные совпадения
+- ✅ Phrase поиск ловит фразы
+- ✅ N-gram поиск дает слабые сигналы
+- ✅ kNN поиск возвращает релевантные результаты
+- ✅ Fusion поднимает консенсус в топ
+
+### Performance тесты
+- ✅ 1k запросов, p95 < 80мс end-to-end
+- ✅ Успешность > 95%
+- ✅ Память < 200MB увеличение
+- ✅ Concurrent запросы работают стабильно
+
+## Отладка
+
+### Проблемы с Docker
+
+```bash
+# Проверить статус контейнеров
+docker ps
+
+# Посмотреть логи Elasticsearch
+docker logs ai-service-test-es
+
+# Очистить все контейнеры
+make clean-test-env
+```
+
+### Проблемы с тестами
+
+```bash
+# Запустить с подробным выводом
+pytest tests/unit/test_search_contracts.py -v -s
+
+# Запустить конкретный тест
+pytest tests/unit/test_search_contracts.py::TestSearchOpts::test_default_values -v
+
+# Запустить с отладкой
+pytest tests/unit/test_search_contracts.py --pdb
+```
+
+### Проблемы с импортами
+
+```bash
+# Проверить PYTHONPATH
+echo $PYTHONPATH
+
+# Запустить из корня проекта
+cd /path/to/ai-service
+pytest tests/unit/ -v
+```
+
+## Расширение тестов
+
+### Добавление новых unit тестов
+
+1. Создайте файл в `tests/unit/`
+2. Используйте маркер `@pytest.mark.unit`
+3. Добавьте фикстуры из `conftest.py`
+
+### Добавление новых integration тестов
+
+1. Создайте файл в `tests/integration/`
+2. Используйте маркер `@pytest.mark.integration`
+3. Используйте фикстуры `elasticsearch_client` и `test_indices`
+
+### Добавление новых performance тестов
+
+1. Создайте файл в `tests/performance/`
+2. Используйте маркер `@pytest.mark.performance`
+3. Измеряйте производительность и проверяйте пороги
+
+## CI/CD
+
+Тесты можно интегрировать в CI/CD пайплайн:
+
+```yaml
+# GitHub Actions example
+- name: Run unit tests
+  run: make test-unit
+
+- name: Run integration tests
+  run: make test-with-docker
+```
