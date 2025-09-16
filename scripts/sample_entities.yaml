@@ -1,0 +1,98 @@
+- entity_id: "person_001"
+  entity_type: "person"
+  normalized_name: "Иван Петров"
+  aliases: ["И. Петров", "Ivan Petrov"]
+  dob: "1980-05-15"
+  country: "RU"
+  meta:
+    source: "sanctions"
+    list: "eu_sanctions"
+
+- entity_id: "person_002"
+  entity_type: "person"
+  normalized_name: "Мария Сидорова"
+  aliases: ["М. Сидорова", "Maria Sidorova"]
+  dob: "1975-12-03"
+  country: "RU"
+  meta:
+    source: "sanctions"
+    list: "us_sanctions"
+
+- entity_id: "person_003"
+  entity_type: "person"
+  normalized_name: "Алексей Козлов"
+  aliases: ["А. Козлов", "Alexey Kozlov"]
+  country: "RU"
+  meta:
+    source: "sanctions"
+    list: "un_sanctions"
+
+- entity_id: "org_001"
+  entity_type: "org"
+  normalized_name: "ООО Газпром"
+  aliases: ["Газпром", "Gazprom", "ОАО Газпром"]
+  country: "RU"
+  meta:
+    source: "sanctions"
+    list: "eu_sanctions"
+    industry: "energy"
+
+- entity_id: "org_002"
+  entity_type: "org"
+  normalized_name: "ПАО Сбербанк"
+  aliases: ["Сбербанк", "Sberbank", "Сбер"]
+  country: "RU"
+  meta:
+    source: "sanctions"
+    list: "us_sanctions"
+    industry: "banking"
+
+- entity_id: "person_004"
+  entity_type: "person"
+  normalized_name: "John Smith"
+  aliases: ["J. Smith", "Джон Смит"]
+  dob: "1970-08-20"
+  country: "US"
+  meta:
+    source: "sanctions"
+    list: "eu_sanctions"
+
+- entity_id: "org_003"
+  entity_type: "org"
+  normalized_name: "Apple Inc."
+  aliases: ["Apple", "Apple Computer", "Эппл"]
+  country: "US"
+  meta:
+    source: "sanctions"
+    list: "us_sanctions"
+    industry: "technology"
+
+- entity_id: "person_005"
+  entity_type: "person"
+  normalized_name: "Анна Волкова"
+  aliases: ["А. Волкова", "Anna Volkova"]
+  dob: "1985-03-10"
+  country: "RU"
+  meta:
+    source: "sanctions"
+    list: "un_sanctions"
+
+- entity_id: "org_004"
+  entity_type: "org"
+  normalized_name: "ТОВ Украина"
+  aliases: ["Украина", "Ukraine Ltd"]
+  country: "UA"
+  meta:
+    source: "sanctions"
+    list: "eu_sanctions"
+    industry: "agriculture"
+
+- entity_id: "person_006"
+  entity_type: "person"
+  normalized_name: "Михаил Иванов"
+  aliases: ["М. Иванов", "Mikhail Ivanov"]
+  dob: "1978-11-25"
+  country: "RU"
+  meta:
+    source: "sanctions"
+    list: "eu_sanctions"
