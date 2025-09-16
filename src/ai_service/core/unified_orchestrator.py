@@ -286,6 +286,36 @@ class UnifiedOrchestrator:
             self.metrics_service.record_histogram('language_detection.confidence', context.language_confidence)
             self.metrics_service.increment_counter(f'language_detection.detected.{context.language}')
 
+    async def _handle_unicode_normalization_layer(
+        self, context: ProcessingContext
+    ) -> str:
+        """
+        Handle Layer 4: Unicode Normalization
+
+        Returns:
+            Unicode normalized text
+        """
+        logger.debug("Stage 4: Unicode Normalization")
+        layer_start = time.time()
+
+        # Unicode normalization after language detection
+        text_in = context.sanitized_text
+        unicode_result = await self._maybe_await(self.unicode_service.normalize_unicode(text_in))
+
+        # Handle both legacy string return and new dict return
+        if isinstance(unicode_result, str):
+            text_u = unicode_result
+        else:
+            text_u = unicode_result.get("normalized", text_in)
+
+        # Debug trace for lengths
+        logger.debug(f"Unicode: input_len={self._safe_len(text_in)}, normalized_len={self._safe_len(text_u)}")
+
+        if self.metrics_service:
+            self.metrics_service.record_timer('processing.layer.unicode_normalization', time.time() - layer_start)
+
+        return text_u
+
     async def process(
         self,
         text: str,
@@ -374,24 +404,7 @@ class UnifiedOrchestrator:
             # ================================================================
             # Layer 4: Unicode Normalization (after language detection)
             # ================================================================
-            logger.debug("Stage 4: Unicode Normalization")
-            layer_start = time.time()
-
-            # Unicode normalization after language detection
-            text_in = context.sanitized_text
-            unicode_result = await self._maybe_await(self.unicode_service.normalize_unicode(text_in))
-
-            # Handle both legacy string return and new dict return
-            if isinstance(unicode_result, str):
-                text_u = unicode_result
-            else:
-                text_u = unicode_result.get("normalized", text_in)
-
-            # Debug trace for lengths
-            logger.debug(f"Unicode: input_len={self._safe_len(text_in)}, normalized_len={self._safe_len(text_u)}")
-
-            if self.metrics_service:
-                self.metrics_service.record_timer('processing.layer.unicode_normalization', time.time() - layer_start)
+            text_u = await self._handle_unicode_normalization_layer(context)
 
             # ================================================================
             # Layer 5: Name Normalization (morph) - THE CORE
