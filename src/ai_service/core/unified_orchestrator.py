@@ -364,6 +364,40 @@ class UnifiedOrchestrator:
 
         return norm_result
 
+    async def _handle_signals_layer(
+        self, text_u: str, norm_result: Any, context: ProcessingContext
+    ) -> Any:
+        """
+        Handle Layer 6: Signals (enrichment)
+
+        Args:
+            text_u: Unicode normalized text
+            norm_result: Result from name normalization
+            context: Processing context
+
+        Returns:
+            Signals extraction result
+        """
+        logger.debug("Stage 6: Signals Extraction")
+        layer_start = time.time()
+
+        signals_result = await self._maybe_await(self.signals_service.extract_signals(
+            text=text_u, normalization_result=norm_result, language=context.language  # Use unicode-normalized text
+        ))
+
+        # Debug logging
+        logger.info(f"Signals result: {signals_result}")
+        logger.info(f"Signals organizations: {signals_result.organizations}")
+        logger.info(f"Signals persons: {signals_result.persons}")
+
+        if self.metrics_service:
+            self.metrics_service.record_timer('processing.layer.signals', time.time() - layer_start)
+            self.metrics_service.record_histogram('signals.confidence', signals_result.confidence)
+            self.metrics_service.record_histogram('signals.persons_count', self._safe_len(signals_result.persons))
+            self.metrics_service.record_histogram('signals.organizations_count', self._safe_len(signals_result.organizations))
+
+        return signals_result
+
     async def process(
         self,
         text: str,
@@ -464,23 +498,7 @@ class UnifiedOrchestrator:
             # ================================================================
             # Layer 6: Signals (enrichment)
             # ================================================================
-            logger.debug("Stage 6: Signals Extraction")
-            layer_start = time.time()
-
-            signals_result = await self._maybe_await(self.signals_service.extract_signals(
-                text=text_u, normalization_result=norm_result, language=context.language  # Use unicode-normalized text
-            ))
-
-            # Debug logging
-            logger.info(f"Signals result: {signals_result}")
-            logger.info(f"Signals organizations: {signals_result.organizations}")
-            logger.info(f"Signals persons: {signals_result.persons}")
-
-            if self.metrics_service:
-                self.metrics_service.record_timer('processing.layer.signals', time.time() - layer_start)
-                self.metrics_service.record_histogram('signals.confidence', signals_result.confidence)
-                self.metrics_service.record_histogram('signals.persons_count', self._safe_len(signals_result.persons))
-                self.metrics_service.record_histogram('signals.organizations_count', self._safe_len(signals_result.organizations))
+            signals_result = await self._handle_signals_layer(text_u, norm_result, context)
 
             # ================================================================
             # Layer 7: Variants (optional)
