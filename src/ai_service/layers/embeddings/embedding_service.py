@@ -87,6 +87,20 @@ class EmbeddingService(BaseService):
         """Initialize the embedding service asynchronously"""
         self.logger.info("EmbeddingService initialization completed")
 
+    # Interface-compatible method used by UnifiedOrchestrator
+    def generate_embeddings(self, text: str) -> List[float]:
+        """
+        Generate embedding vector for a single text (sync API).
+
+        Orchestrator wraps calls with a helper that supports both sync/async,
+        so returning the vector directly is fine.
+        """
+        try:
+            return self.encode_one(text)
+        except Exception as e:
+            self.logger.error(f"generate_embeddings failed: {e}")
+            return []
+
     def _load_model(self, model_name: Optional[str] = None) -> SentenceTransformer:
         """Lazy load the SentenceTransformer model with caching"""
         model_name = model_name or self.config.model_name
@@ -410,4 +424,3 @@ class EmbeddingService(BaseService):
             "embedding_dimension": model.get_sentence_embedding_dimension(),
             "max_seq_length": getattr(model, "max_seq_length", 512),
         }
-
