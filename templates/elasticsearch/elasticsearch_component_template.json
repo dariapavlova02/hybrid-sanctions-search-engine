@@ -1,0 +1,54 @@
+{
+  "template": {
+    "settings": {
+      "analysis": {
+        "normalizer": {
+          "case_insensitive_normalizer": {
+            "type": "custom",
+            "filter": ["lowercase", "asciifolding", "icu_folding"]
+          }
+        },
+        "analyzer": {
+          "icu_text_analyzer": {
+            "type": "custom",
+            "tokenizer": "icu_tokenizer",
+            "filter": ["icu_normalizer", "icu_folding", "lowercase"]
+          },
+          "shingle_analyzer": {
+            "type": "custom",
+            "tokenizer": "icu_tokenizer",
+            "filter": [
+              "icu_normalizer",
+              "icu_folding", 
+              "lowercase",
+              "shingle"
+            ]
+          },
+          "char_ngram_analyzer": {
+            "type": "custom",
+            "tokenizer": "keyword",
+            "filter": [
+              "lowercase",
+              "asciifolding",
+              "char_ngram_filter"
+            ]
+          }
+        },
+        "filter": {
+          "char_ngram_filter": {
+            "type": "ngram",
+            "min_gram": 3,
+            "max_gram": 5,
+            "token_chars": ["letter", "digit"]
+          },
+          "shingle": {
+            "type": "shingle",
+            "min_shingle_size": 2,
+            "max_shingle_size": 3,
+            "output_unigrams": true
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,191 @@
+{
+  "component_templates": {
+    "watchlist_analyzers": {
+      "description": "Custom analyzers and normalizers for watchlist search",
+      "template": {
+        "settings": {
+          "analysis": {
+            "normalizer": {
+              "case_insensitive_normalizer": {
+                "type": "custom",
+                "filter": ["lowercase", "asciifolding", "icu_folding"]
+              }
+            },
+            "analyzer": {
+              "icu_text_analyzer": {
+                "type": "custom",
+                "tokenizer": "icu_tokenizer",
+                "filter": ["icu_normalizer", "icu_folding", "lowercase"]
+              },
+              "shingle_analyzer": {
+                "type": "custom",
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                  "icu_normalizer",
+                  "icu_folding", 
+                  "lowercase",
+                  "shingle"
+                ]
+              },
+              "char_ngram_analyzer": {
+                "type": "custom",
+                "tokenizer": "keyword",
+                "filter": [
+                  "lowercase",
+                  "asciifolding",
+                  "char_ngram_filter"
+                ]
+              }
+            },
+            "filter": {
+              "char_ngram_filter": {
+                "type": "ngram",
+                "min_gram": 3,
+                "max_gram": 5,
+                "token_chars": ["letter", "digit"]
+              },
+              "shingle": {
+                "type": "shingle",
+                "min_shingle_size": 2,
+                "max_shingle_size": 3,
+                "output_unigrams": true
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "index_templates": {
+    "watchlist_persons_v1": {
+      "description": "Index template for person entities with hybrid search fields",
+      "index_patterns": ["watchlist_persons_v1*"],
+      "template": {
+        "settings": {
+          "number_of_shards": 1,
+          "number_of_replicas": 1,
+          "index": {
+            "knn": true,
+            "knn.algo_param.ef_search": 100
+          }
+        },
+        "mappings": {
+          "properties": {
+            "entity_id": {
+              "type": "keyword"
+            },
+            "entity_type": {
+              "type": "keyword"
+            },
+            "dob": {
+              "type": "date",
+              "format": "yyyy-MM-dd||yyyy-MM||yyyy"
+            },
+            "country": {
+              "type": "keyword"
+            },
+            "normalized_name": {
+              "type": "keyword",
+              "normalizer": "case_insensitive_normalizer"
+            },
+            "aliases": {
+              "type": "keyword",
+              "normalizer": "case_insensitive_normalizer"
+            },
+            "name_text": {
+              "type": "text",
+              "analyzer": "icu_text_analyzer",
+              "fields": {
+                "shingle": {
+                  "type": "text",
+                  "analyzer": "shingle_analyzer"
+                }
+              }
+            },
+            "name_ngrams": {
+              "type": "text",
+              "analyzer": "char_ngram_analyzer"
+            },
+            "name_vector": {
+              "type": "dense_vector",
+              "dims": 384,
+              "index": true,
+              "similarity": "cosine"
+            },
+            "meta": {
+              "type": "object",
+              "enabled": true
+            }
+          }
+        }
+      },
+      "composed_of": ["watchlist_analyzers"],
+      "priority": 200
+    },
+    "watchlist_orgs_v1": {
+      "description": "Index template for organization entities with hybrid search fields",
+      "index_patterns": ["watchlist_orgs_v1*"],
+      "template": {
+        "settings": {
+          "number_of_shards": 1,
+          "number_of_replicas": 1,
+          "index": {
+            "knn": true,
+            "knn.algo_param.ef_search": 100
+          }
+        },
+        "mappings": {
+          "properties": {
+            "entity_id": {
+              "type": "keyword"
+            },
+            "entity_type": {
+              "type": "keyword"
+            },
+            "dob": {
+              "type": "date",
+              "format": "yyyy-MM-dd||yyyy-MM||yyyy"
+            },
+            "country": {
+              "type": "keyword"
+            },
+            "normalized_name": {
+              "type": "keyword",
+              "normalizer": "case_insensitive_normalizer"
+            },
+            "aliases": {
+              "type": "keyword",
+              "normalizer": "case_insensitive_normalizer"
+            },
+            "name_text": {
+              "type": "text",
+              "analyzer": "icu_text_analyzer",
+              "fields": {
+                "shingle": {
+                  "type": "text",
+                  "analyzer": "shingle_analyzer"
+                }
+              }
+            },
+            "name_ngrams": {
+              "type": "text",
+              "analyzer": "char_ngram_analyzer"
+            },
+            "name_vector": {
+              "type": "dense_vector",
+              "dims": 384,
+              "index": true,
+              "similarity": "cosine"
+            },
+            "meta": {
+              "type": "object",
+              "enabled": true
+            }
+          }
+        }
+      },
+      "composed_of": ["watchlist_analyzers"],
+      "priority": 200
+    }
+  }
+}

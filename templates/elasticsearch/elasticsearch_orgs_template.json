@@ -1,0 +1,64 @@
+{
+  "index_patterns": ["watchlist_orgs_v1*"],
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1,
+      "index": {
+        "knn": true,
+        "knn.algo_param.ef_search": 100
+      }
+    },
+    "mappings": {
+      "properties": {
+        "entity_id": {
+          "type": "keyword"
+        },
+        "entity_type": {
+          "type": "keyword"
+        },
+        "dob": {
+          "type": "date",
+          "format": "yyyy-MM-dd||yyyy-MM||yyyy"
+        },
+        "country": {
+          "type": "keyword"
+        },
+        "normalized_name": {
+          "type": "keyword",
+          "normalizer": "case_insensitive_normalizer"
+        },
+        "aliases": {
+          "type": "keyword",
+          "normalizer": "case_insensitive_normalizer"
+        },
+        "name_text": {
+          "type": "text",
+          "analyzer": "icu_text_analyzer",
+          "fields": {
+            "shingle": {
+              "type": "text",
+              "analyzer": "shingle_analyzer"
+            }
+          }
+        },
+        "name_ngrams": {
+          "type": "text",
+          "analyzer": "char_ngram_analyzer"
+        },
+        "name_vector": {
+          "type": "dense_vector",
+          "dims": 384,
+          "index": true,
+          "similarity": "cosine"
+        },
+        "meta": {
+          "type": "object",
+          "enabled": true
+        }
+      }
+    }
+  },
+  "composed_of": ["watchlist_analyzers"],
+  "priority": 200
+}
