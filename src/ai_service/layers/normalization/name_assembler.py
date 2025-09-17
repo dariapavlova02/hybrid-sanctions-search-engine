@@ -362,8 +362,8 @@ class NameAssembler:
         if given:
             components.append(given)
         elif initials:
-            # Join initials with dots
-            initials_str = ".".join(initials) + "."
+            # Join initials with dots and spaces: И. И. (guaranteed space between initials)
+            initials_str = ". ".join(initials) + "."
             components.append(initials_str)
         
         # Add patronymic

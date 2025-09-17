@@ -200,17 +200,28 @@ class TokenProcessor:
 
     @staticmethod
     def _split_compound_initials(token: str) -> List[str]:
-        pattern = r"^((?:[A-Za-zА-Яа-яІЇЄҐіїєґ]\.){2,})([A-Za-zА-Яа-яІЇЄҐіїєґ].*)$"
-        match = re.match(pattern, token)
-        if not match:
-            return [token]
-        initials_part = match.group(1)
-        remainder = match.group(2)
-        initials = re.findall(r"[A-Za-zА-Яа-яІЇЄҐіїєґ]\.", initials_part)
-        result = initials[:]
-        if remainder:
-            result.append(remainder)
-        return result
+        # Pattern 1: Compound initials with remainder (e.g., "А.С.Пушкин" -> ["А.", "С.", "Пушкин"])
+        pattern_with_remainder = r"^((?:[A-Za-zА-Яа-яІЇЄҐіїєґ]\.){2,})([A-Za-zА-Яа-яІЇЄҐіїєґ].*)$"
+        match = re.match(pattern_with_remainder, token)
+        if match:
+            initials_part = match.group(1)
+            remainder = match.group(2)
+            initials = re.findall(r"[A-Za-zА-Яа-яІЇЄҐіїєґ]\.", initials_part)
+            result = initials[:]
+            if remainder:
+                result.append(remainder)
+            return result
+        
+        # Pattern 2: Multiple initials without remainder (e.g., "И.И." -> ["И.", "И."])
+        pattern_initials_only = r"^((?:[A-Za-zА-Яа-яІЇЄҐіїєґ]\.){2,})$"
+        match = re.match(pattern_initials_only, token)
+        if match:
+            initials_part = match.group(1)
+            initials = re.findall(r"[A-Za-zА-Яа-яІЇЄҐіїєґ]\.", initials_part)
+            return initials
+        
+        # No match - return original token
+        return [token]
 
     def _apply_feature_flags(
         self, 

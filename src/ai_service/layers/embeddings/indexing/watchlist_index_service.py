@@ -103,15 +103,21 @@ class WatchlistIndexService:
                 overlay_results = self._overlay.search(query, top_k=min(top_k, 200))
                 overlay_time = (time.perf_counter() - start_time) * 1000  # Convert to ms
                 
-                # Convert overlay results to SearchTraceHit
+                # Convert overlay results to SearchTraceHit with signals
                 overlay_hits = []
                 for rank, (doc_id, score) in enumerate(overlay_results, 1):
                     results[doc_id] = max(results.get(doc_id, 0.0), float(score))
+                    
+                    # Extract signals from metadata if available
+                    doc_metadata = self._overlay_docs.get(doc_id, WatchlistDoc("", "", "", {}))
+                    signals = self._extract_signals(doc_id, doc_metadata, query)
+                    
                     hit = SearchTraceHit(
                         doc_id=doc_id,
                         score=float(score),
                         rank=rank,
-                        source="LEXICAL"
+                        source="LEXICAL",
+                        signals=signals
                     )
                     overlay_hits.append(hit)
                     all_hits.append(hit)
@@ -126,7 +132,8 @@ class WatchlistIndexService:
                     meta={
                         "overlay_id": self._overlay_id,
                         "active_id": None,
-                        "search_type": "overlay"
+                        "search_type": "overlay",
+                        "index_type": "char_tfidf"
                     }
                 ))
             else:
@@ -137,15 +144,21 @@ class WatchlistIndexService:
             active_results = self._active.search(query, top_k=min(top_k, 200))
             active_time = (time.perf_counter() - start_time) * 1000  # Convert to ms
             
-            # Convert active results to SearchTraceHit
+            # Convert active results to SearchTraceHit with signals
             active_hits = []
             for rank, (doc_id, score) in enumerate(active_results, 1):
                 results[doc_id] = max(results.get(doc_id, 0.0), float(score))
+                
+                # Extract signals from metadata if available
+                doc_metadata = self._docs.get(doc_id, WatchlistDoc("", "", "", {}))
+                signals = self._extract_signals(doc_id, doc_metadata, query)
+                
                 hit = SearchTraceHit(
                     doc_id=doc_id,
                     score=float(score),
                     rank=rank,
-                    source="LEXICAL"
+                    source="LEXICAL",
+                    signals=signals
                 )
                 active_hits.append(hit)
                 all_hits.append(hit)
@@ -160,7 +173,8 @@ class WatchlistIndexService:
                 meta={
                     "overlay_id": None,
                     "active_id": self._active_id,
-                    "search_type": "active"
+                    "search_type": "active",
+                    "index_type": "char_tfidf"
                 }
             ))
             
@@ -172,11 +186,16 @@ class WatchlistIndexService:
             # Convert final results to SearchTraceHit for rerank step
             rerank_hits = []
             for rank, (doc_id, score) in enumerate(items, 1):
+                # Get the best hit from all_hits for this doc_id
+                best_hit = next((h for h in all_hits if h.doc_id == doc_id), None)
+                signals = best_hit.signals if best_hit else {}
+                
                 hit = SearchTraceHit(
                     doc_id=doc_id,
                     score=score,
                     rank=rank,
-                    source="RERANK"
+                    source="RERANK",
+                    signals=signals
                 )
                 rerank_hits.append(hit)
             
@@ -190,9 +209,14 @@ class WatchlistIndexService:
                 meta={
                     "total_candidates": len(results),
                     "final_results": len(items),
-                    "merge_strategy": "max_score"
+                    "merge_strategy": "max_score",
+                    "overlay_hits": len(overlay_hits) if self._overlay else 0,
+                    "active_hits": len(active_hits)
                 }
             ))
+            
+            # Limit payload size to prevent excessive memory usage
+            trace.limit_payload_size(max_size_kb=200)
             
             trace.note(f"Watchlist search completed: {len(items)} results from {len(results)} candidates")
             return items
@@ -201,6 +225,67 @@ class WatchlistIndexService:
             trace.note(f"Watchlist search failed: {str(e)}")
             self.logger.error(f"Watchlist search failed for query '{query}': {e}")
             return []
+
+    def _extract_signals(self, doc_id: str, doc_metadata: WatchlistDoc, query: str) -> Dict[str, Any]:
+        """Extract signals from document metadata for search trace."""
+        signals = {}
+        
+        # Extract DoB match signal
+        if hasattr(doc_metadata, 'metadata') and doc_metadata.metadata:
+            dob = doc_metadata.metadata.get('dob')
+            if dob:
+                signals['dob_match'] = self._check_dob_match(dob, query)
+        
+        # Extract doc_id match signal
+        signals['doc_id_match'] = self._check_doc_id_match(doc_id, query)
+        
+        # Extract entity type signal
+        if hasattr(doc_metadata, 'entity_type'):
+            signals['entity_type'] = doc_metadata.entity_type
+        
+        # Extract text match signal
+        if hasattr(doc_metadata, 'text'):
+            signals['text_match'] = self._check_text_match(doc_metadata.text, query)
+        
+        return signals
+    
+    def _check_dob_match(self, dob: str, query: str) -> bool:
+        """Check if date of birth matches query."""
+        if not dob or not query:
+            return False
+        
+        # Simple string matching for DOB
+        query_lower = query.lower()
+        dob_lower = dob.lower()
+        
+        # Check for year match
+        if len(dob) >= 4 and len(query) >= 4:
+            dob_year = dob[-4:] if dob[-4:].isdigit() else ""
+            query_year = "".join([c for c in query if c.isdigit()])
+            if dob_year and query_year and dob_year in query_year:
+                return True
+        
+        return dob_lower in query_lower or query_lower in dob_lower
+    
+    def _check_doc_id_match(self, doc_id: str, query: str) -> bool:
+        """Check if document ID matches query."""
+        if not doc_id or not query:
+            return False
+        
+        query_lower = query.lower()
+        doc_id_lower = doc_id.lower()
+        
+        return doc_id_lower in query_lower or query_lower in doc_id_lower
+    
+    def _check_text_match(self, text: str, query: str) -> bool:
+        """Check if document text matches query."""
+        if not text or not query:
+            return False
+        
+        query_lower = query.lower()
+        text_lower = text.lower()
+        
+        return query_lower in text_lower or text_lower in query_lower
 
     def get_doc(self, doc_id: str, trace: Optional[SearchTrace] = None) -> Optional[WatchlistDoc]:
         """Get document by ID from overlay or active index."""

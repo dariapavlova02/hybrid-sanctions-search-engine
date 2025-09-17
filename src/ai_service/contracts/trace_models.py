@@ -106,6 +106,33 @@ class SearchTrace:
         for step in self.steps:
             step.limit_hits(max_hits)
             step.clean_meta_for_snapshot()
+    
+    def limit_payload_size(self, max_size_kb: int = 200) -> None:
+        """Limit trace payload size to prevent excessive memory usage."""
+        max_size_bytes = max_size_kb * 1024
+        
+        # Estimate current size
+        current_size = len(str(self.to_dict()).encode('utf-8'))
+        
+        if current_size <= max_size_bytes:
+            return
+        
+        # Calculate reduction factor
+        reduction_factor = max_size_bytes / current_size
+        
+        # Limit hits per step based on reduction factor
+        max_hits_per_step = max(1, int(10 * reduction_factor))
+        
+        for step in self.steps:
+            if len(step.hits) > max_hits_per_step:
+                step.hits = step.hits[:max_hits_per_step]
+            
+            # Clean meta data to reduce size
+            step.clean_meta_for_snapshot()
+        
+        # Limit notes if still too large
+        if len(self.notes) > 10:
+            self.notes = self.notes[:10]
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert trace to dictionary for serialization."""

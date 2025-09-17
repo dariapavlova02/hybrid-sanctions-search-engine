@@ -1,0 +1,58 @@
+%% Flowchart view of L0→L5 pipeline
+flowchart TD
+    client((Client)) --> api[FastAPI / main.py]
+    api --> orch[UnifiedOrchestrator]
+    orch --> val[ValidationService.validate_and_sanitize]
+    val -->|sync| smart{Smart Filter?}
+    smart -->|allow| smartSkip[[Skip + return filtered response]]
+    smart -->|process| lang[LanguageDetectionService.detect_language_config_driven]
+    lang --> uni[UnicodeService.normalize_unicode]
+    uni --> norm[NormalizationService.normalize_async<br/>→ NormalizationFactory]
+    norm --> role[RoleTaggerService + Morphology]
+    role --> signals[SignalsService.extract_signals]
+    signals --> search{Hybrid Search enabled?}
+    search -->|no| variantsOpt{Variants / Embeddings}
+    search -->|yes| hybrid[HybridSearchService.find_candidates]
+    hybrid --> variantsOpt
+    variantsOpt --> decision[DecisionEngine.decide]
+    decision --> resp[[UnifiedProcessingResult → API response]]
+
+    classDef hot fill:#ffe6e6,stroke:#ff4d4f,stroke-width:1px;
+    classDef optional fill:#e6f2ff,stroke:#3f8cff,stroke-dasharray: 5 5;
+    classDef feature fill:#fffbe6,stroke:#ffb400,stroke-width:1px;
+
+    class norm,role hot
+    class smart,search,variantsOpt optional
+    class hybrid feature
+
+%% Sequence diagram with sync/async notes
+sequenceDiagram
+    participant C as Client
+    participant API as FastAPI
+    participant UO as UnifiedOrchestrator
+    participant NS as NormalizationService
+    participant HS as HybridSearchService
+    participant DE as DecisionEngine
+
+    C->>API: HTTP POST /process (JSON)
+    API->>+UO: process(text, flags)  (sync)
+    UO->>UO: validate & sanitize (sync)
+    UO->>UO: smart_filter.should_process() (async optional)
+    alt smart filter skip
+        UO-->>API: Filtered response
+    else continue
+        UO->>UO: detect_language() (sync)
+        UO->>UO: normalize_unicode() (sync)
+        UO->>+NS: normalize_async(text_u, FeatureFlags) (async hot path)
+        NS-->>-UO: NormalizationResult(trace)
+        UO->>UO: signals.extract_signals() (async)
+        opt enable_ac_tier0 / enable_vector_fallback
+            UO->>+HS: find_candidates(norm, SearchOpts)
+            HS-->>-UO: Candidate[] + SearchTrace
+        end
+        UO->>UO: variants/embeddings (optional async)
+        UO->>+DE: decide(DecisionInput, trace)
+        DE-->>-UO: DecisionOutput
+        UO-->>API: UnifiedProcessingResult
+        API-->>C: HTTP 200 (JSON body)
+    end

@@ -44,6 +44,10 @@ class FeatureFlags:
     enable_ac_tier0: bool = False
     enable_vector_fallback: bool = False
     
+    # English-specific flags
+    enable_nameparser_en: bool = False  # Enable nameparser for English name parsing
+    enable_en_nicknames: bool = False  # Enable English nickname resolution
+    
     # Nominative and gender enforcement flags
     enforce_nominative: bool = True
     preserve_feminine_surnames: bool = True
@@ -62,7 +66,7 @@ class FeatureFlags:
     enable_vector_fallback: bool = False
 
     # Diminutive resolution
-    use_diminutives_dictionary_only: bool = True
+    use_diminutives_dictionary_only: bool = False
     diminutives_allow_cross_lang: bool = False
 
     # Language-specific overrides

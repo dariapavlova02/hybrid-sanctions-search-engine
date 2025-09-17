@@ -78,8 +78,9 @@ class NormalizationServiceDecomposed:
         self.lexicons = load_lexicons()
         
         self.role_tagger = RoleTaggerService(
-            lexicons=self.lexicons,
-            window=org_context_window
+            stopwords=self.lexicons.stopwords,
+            org_legal_forms=self.lexicons.legal_forms,
+            strict_stopwords=strict_stopwords
         )
         
         self.morphology = MorphologyAdapter()
@@ -164,6 +165,12 @@ class NormalizationServiceDecomposed:
             role_tag_time = time.perf_counter() - role_tag_start
             self._stage_times['role_tag'].append(role_tag_time)
             
+            # Get role tagger traces for filter/ignore operations
+            role_tagger_traces = self.role_tagger.get_trace_entries(
+                tokenization_result.tokens, 
+                role_tags
+            )
+            
             # Stage 3: Morphology (if enabled)
             morphology_time = 0.0
             if enable_advanced_features:
@@ -236,6 +243,40 @@ class NormalizationServiceDecomposed:
                 rule="decomposed_processing",
                 output=f"processed {len(tokenization_result.tokens)} tokens, found {len(assembled_names.persons)} persons"
             ))
+            
+            # Add multi-person join trace if multiple persons found
+            if len(assembled_names.persons) > 1:
+                all_traces.append(TokenTrace(
+                    token="multi_person_join",
+                    role="info",
+                    rule="person_separator",
+                    output=f"joined {len(assembled_names.persons)} persons with '{self.person_separator}' separator"
+                ))
+            
+            # Add role tagger traces for filter/ignore operations
+            for trace_entry in role_tagger_traces:
+                if isinstance(trace_entry, dict):
+                    # Convert dict trace to TokenTrace
+                    all_traces.append(TokenTrace(
+                        token=trace_entry.get("token", "unknown"),
+                        role=trace_entry.get("role", "unknown"),
+                        rule=trace_entry.get("reason", "unknown"),
+                        output=f"state: {trace_entry.get('state_from', 'unknown')} -> {trace_entry.get('state_to', 'unknown')}",
+                        notes=f"evidence: {', '.join(trace_entry.get('evidence', []))}"
+                    ))
+            
+            # Add assembly traces for filter/ignore operations
+            for trace_entry in assembled_names.traces:
+                if isinstance(trace_entry, dict):
+                    # Convert dict trace to TokenTrace
+                    all_traces.append(TokenTrace(
+                        token=trace_entry.get("token", "unknown"),
+                        role=trace_entry.get("role", "unknown"),
+                        rule=trace_entry.get("action", "unknown"),
+                        output=trace_entry.get("reason", "no_reason"),
+                        notes=f"type: {trace_entry.get('type', 'unknown')}"
+                    ))
+            
             all_traces.append(TokenTrace(
                 token="timing",
                 role="metrics",

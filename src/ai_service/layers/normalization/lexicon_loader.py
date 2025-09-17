@@ -5,6 +5,7 @@ Loads stopwords, legal forms, and payment context words from lexicon files.
 """
 
 import os
+import json
 from pathlib import Path
 from typing import Dict, Set, Optional
 from dataclasses import dataclass
@@ -15,7 +16,9 @@ class Lexicons:
     """Container for all loaded lexicons."""
     stopwords: Dict[str, Set[str]]  # lang -> set of stopwords
     stopwords_init: Dict[str, Set[str]]  # lang -> set of stopwords for initials conflict prevention
+    stopwords_person: Dict[str, Set[str]]  # lang -> set of person stopwords
     legal_forms: Set[str]  # case-insensitive legal forms
+    legal_forms_lang: Dict[str, Set[str]]  # lang -> set of legal forms
     payment_context: Set[str]  # payment context words
 
 
@@ -44,7 +47,9 @@ def load_lexicons(base_path: Optional[Path] = None) -> Lexicons:
     
     stopwords = {}
     stopwords_init = {}
+    stopwords_person = {}
     legal_forms = set()
+    legal_forms_lang = {}
     payment_context = set()
     
     # Load stopwords for each language
@@ -63,10 +68,26 @@ def load_lexicons(base_path: Optional[Path] = None) -> Lexicons:
         else:
             stopwords_init[lang] = set()
     
+    # Load person stopwords for each language
+    for lang in ["ru", "uk", "en"]:
+        stopwords_person_file = base_path / f"stopwords_person_{lang}.json"
+        if stopwords_person_file.exists():
+            stopwords_person[lang] = _load_word_list(stopwords_person_file)
+        else:
+            stopwords_person[lang] = set()
+    
     # Load legal forms
     legal_forms_file = base_path / "legal_forms.txt"
     if legal_forms_file.exists():
         legal_forms = _load_word_list(legal_forms_file)
+    
+    # Load legal forms for each language
+    for lang in ["ru", "uk", "en"]:
+        legal_forms_lang_file = base_path / f"legal_forms_{lang}.json"
+        if legal_forms_lang_file.exists():
+            legal_forms_lang[lang] = _load_json_word_list(legal_forms_lang_file, lang)
+        else:
+            legal_forms_lang[lang] = set()
     
     # Load payment context
     payment_context_file = base_path / "payment_context.txt"
@@ -76,7 +97,9 @@ def load_lexicons(base_path: Optional[Path] = None) -> Lexicons:
     return Lexicons(
         stopwords=stopwords,
         stopwords_init=stopwords_init,
+        stopwords_person=stopwords_person,
         legal_forms=legal_forms,
+        legal_forms_lang=legal_forms_lang,
         payment_context=payment_context
     )
 
@@ -100,6 +123,31 @@ def _load_word_list(file_path: Path) -> Set[str]:
                 # Skip empty lines and comments
                 if line and not line.startswith('#'):
                     words.add(line.lower())
+    except Exception as e:
+        # Log error but don't fail - return empty set
+        print(f"Warning: Could not load {file_path}: {e}")
+    
+    return words
+
+
+def _load_json_word_list(file_path: Path, lang: str) -> Set[str]:
+    """
+    Load a word list from a JSON file with language-specific structure.
+    
+    Args:
+        file_path: Path to the JSON file.
+        lang: Language code to extract from JSON.
+        
+    Returns:
+        Set of words from the file for the specified language.
+    """
+    words = set()
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            if lang in data and isinstance(data[lang], list):
+                words = set(word.lower() for word in data[lang] if isinstance(word, str))
     except Exception as e:
         # Log error but don't fail - return empty set
         print(f"Warning: Could not load {file_path}: {e}")

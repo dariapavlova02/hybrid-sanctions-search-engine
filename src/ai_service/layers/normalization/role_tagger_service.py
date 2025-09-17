@@ -33,6 +33,24 @@ def is_legal_form(token: str, lexicons: Lexicons) -> bool:
     
     return token.upper() in lexicons.legal_forms
 
+
+def is_legal_form_lang(token: str, lang: str, lexicons: Lexicons) -> bool:
+    """Check if token is a legal form for specific language."""
+    if not lexicons or not lexicons.legal_forms_lang:
+        return False
+    
+    lang_legal_forms = lexicons.legal_forms_lang.get(lang, set())
+    return token.upper() in lang_legal_forms
+
+
+def is_person_stopword(token: str, lang: str, lexicons: Lexicons) -> bool:
+    """Check if token is a person stopword."""
+    if not lexicons or not lexicons.stopwords_person:
+        return False
+    
+    lang_stopwords = lexicons.stopwords_person.get(lang, set())
+    return token.lower() in lang_stopwords
+
 logger = logging.getLogger(__name__)
 
 
@@ -126,7 +144,7 @@ class RoleRules:
     org_context_window: int = 3
     
     # Feature flags
-    strict_stopwords: bool = True
+    strict_stopwords: bool = False
     prefer_surname_first: bool = False
 
 
@@ -247,7 +265,7 @@ class PatronymicSuffixRule(FSMTransitionRule):
 
 
 class OrganizationContextRule(FSMTransitionRule):
-    """Rule for detecting organization context."""
+    """Rule for detecting organization context with ±3 token window."""
     
     def __init__(self, lexicons: Lexicons, window: int = 3):
         self.lexicons = lexicons
@@ -259,27 +277,38 @@ class OrganizationContextRule(FSMTransitionRule):
         end_idx = min(len(context), token.pos + self.window + 1)
         
         for i in range(start_idx, end_idx):
-            if i < len(context) and is_legal_form(context[i].text, self.lexicons):
-                return True
+            if i < len(context):
+                # Check both global and language-specific legal forms
+                if (is_legal_form(context[i].text, self.lexicons) or 
+                    is_legal_form_lang(context[i].text, token.lang, self.lexicons)):
+                    return True
         
         return False
     
     def apply(self, state: FSMState, token: Token, context: List[Token]) -> Tuple[FSMState, TokenRole, str, List[str]]:
         evidence = ["org_legal_form_context"]
         window_tokens = []
+        legal_forms_found = []
         
-        # Find legal form in context
+        # Find legal form in context window
         start_idx = max(0, token.pos - self.window)
         end_idx = min(len(context), token.pos + self.window + 1)
         
         for i in range(start_idx, end_idx):
             if i < len(context):
                 window_tokens.append(context[i].text)
-                if is_legal_form(context[i].text, self.lexicons):
+                # Check both global and language-specific legal forms
+                if (is_legal_form(context[i].text, self.lexicons) or 
+                    is_legal_form_lang(context[i].text, token.lang, self.lexicons)):
+                    legal_forms_found.append(context[i].text)
                     evidence.append(f"legal_form_{context[i].text}")
         
         if token.is_all_caps:
             evidence.append("CAPS")
+        
+        # Add context window information to evidence
+        evidence.append(f"context_window_{len(window_tokens)}")
+        evidence.append(f"legal_forms_count_{len(legal_forms_found)}")
         
         return state, TokenRole.ORG, "org_legal_form_context", evidence
 
@@ -323,6 +352,47 @@ class PaymentContextRule(FSMTransitionRule):
             return state, TokenRole.UNKNOWN, "payment_context_filtered", evidence
         else:
             return state, TokenRole.UNKNOWN, "payment_context_detected", evidence
+
+
+class PersonStopwordRule(FSMTransitionRule):
+    """Rule for detecting person stopwords with context filtering."""
+    
+    def __init__(self, lexicons: Lexicons, strict: bool = False, window: int = 3):
+        self.lexicons = lexicons
+        self.strict = strict
+        self.window = window
+    
+    def can_apply(self, state: FSMState, token: Token, context: List[Token]) -> bool:
+        if not self.strict:
+            return False
+        
+        # Check if token is a person stopword
+        if not is_person_stopword(token.text, token.lang, self.lexicons):
+            return False
+        
+        # Check if there's a legal form in the context window that would make this an ORG
+        start_idx = max(0, token.pos - self.window)
+        end_idx = min(len(context), token.pos + self.window + 1)
+        
+        for i in range(start_idx, end_idx):
+            if i < len(context):
+                if (is_legal_form(context[i].text, self.lexicons) or 
+                    is_legal_form_lang(context[i].text, token.lang, self.lexicons)):
+                    # If there's a legal form nearby, don't filter as person stopword
+                    return False
+        
+        return True
+    
+    def apply(self, state: FSMState, token: Token, context: List[Token]) -> Tuple[FSMState, TokenRole, str, List[str]]:
+        evidence = ["person_stopword_filtered"]
+        
+        # Add context information
+        start_idx = max(0, token.pos - self.window)
+        end_idx = min(len(context), token.pos + self.window + 1)
+        context_tokens = [context[i].text for i in range(start_idx, end_idx) if i < len(context)]
+        evidence.append(f"context_window_{len(context_tokens)}")
+        
+        return state, TokenRole.UNKNOWN, "person_stopword_filtered", evidence
 
 
 class RussianStopwordInitRule(FSMTransitionRule):
@@ -392,7 +462,7 @@ class RoleTaggerService:
             stopwords: Dict[str, Set[str]] - language -> set of stopwords
             org_legal_forms: Set[str] - set of legal forms for organization detection
             lang: str - language code ('ru', 'uk', 'en', 'auto')
-            strict_stopwords: bool - whether to use strict stopword filtering
+            strict_stopwords: bool - whether to use strict stopword filtering (default: False)
         """
         # Load default lexicons if not provided
         self.lexicons = get_lexicons()
@@ -443,6 +513,7 @@ class RoleTaggerService:
             RussianStopwordInitRule(self.lexicons, self.rules.strict_stopwords),
             StopwordRule(self.lexicons, self.rules.strict_stopwords),
             PaymentContextRule(self.lexicons, self.rules.strict_stopwords),
+            PersonStopwordRule(self.lexicons, self.rules.strict_stopwords, self.rules.org_context_window),
             OrganizationContextRule(self.lexicons, self.rules.org_context_window),
             InitialDetectionRule(),
             SurnameSuffixRule(self.rules.surname_suffixes),
@@ -622,6 +693,14 @@ class RoleTaggerService:
             if role_tag.window_context:
                 trace_entry["window"] = len(role_tag.window_context)
                 trace_entry["window_tokens"] = role_tag.window_context
+            
+            # Add specific trace fields for context filtering
+            if "payment_context_filtered" in role_tag.reason:
+                trace_entry["payment_context_filtered"] = True
+            if "org_legal_form_context" in role_tag.reason:
+                trace_entry["org_legal_form_context"] = True
+            if "person_stopword_filtered" in role_tag.reason:
+                trace_entry["person_stopword_filtered"] = True
             
             trace_entries.append(trace_entry)
         

@@ -6,7 +6,7 @@ Provides better error handling, logging, and orchestration of the refactored com
 import json
 import unicodedata
 from pathlib import Path
-from typing import Dict, List, Set, Optional, Tuple, Any
+from typing import Dict, List, Set, Optional, Tuple, Any, Literal
 from dataclasses import dataclass
 from ....utils.logging_config import get_logger
 from ....utils.perf_timer import PerfTimer
@@ -23,7 +23,7 @@ from .token_processor import TokenProcessor
 from .role_classifier import RoleClassifier
 from .morphology_processor import MorphologyProcessor
 from .gender_processor import GenderProcessor
-from ..token_ops import collapse_double_dots, collapse_double_dots_token, normalize_hyphenated_name, is_hyphenated_surname
+from ..token_ops import collapse_double_dots, collapse_double_dots_token, normalize_hyphenated_name, normalize_apostrophe_name, is_hyphenated_surname
 from ..morphology.diminutive_resolver import DiminutiveResolver
 from ..role_tagger import RoleTagger
 from ..role_tagger_service import RoleTaggerService
@@ -95,10 +95,15 @@ class NormalizationConfig:
     en_use_nameparser: bool = True  # Use nameparser for English names
     enable_en_nickname_expansion: bool = True  # Expand English nicknames
     enable_spacy_en_ner: bool = False  # Enable spaCy English NER
+    enable_nameparser_en: bool = False  # Enable nameparser for English name parsing
+    enable_en_nicknames: bool = False  # Enable English nickname resolution
     # Russian-specific flags
     ru_yo_strategy: str = "preserve"  # Russian 'ё' policy ('preserve' or 'fold')
     enable_ru_nickname_expansion: bool = True  # Expand Russian nicknames
     enable_spacy_ru_ner: bool = False  # Enable spaCy Russian NER
+    # Unicode normalization flags
+    normalize_homoglyphs: bool = False  # Normalize Cyrillic/Latin homoglyphs to dominant alphabet
+    yo_strategy: Literal["fold", "preserve"] = "fold"  # Russian 'ё' strategy ('fold' or 'preserve')
     # Caching flags
     enable_cache: bool = True  # Enable caching
     debug_tracing: bool = False  # Enable debug tracing with cache info
@@ -128,8 +133,8 @@ class NormalizationFactory(ErrorReportingMixin):
         # Initialize cached services
         self.tokenizer_service = TokenizerService(
             cache=self.cache_manager.get_tokenizer_cache(),
-            fix_initials_double_dot=True,  # Enable double dot collapse by default
-            preserve_hyphenated_case=True  # Enable hyphenated name preservation by default
+            fix_initials_double_dot=self.feature_flags._flags.fix_initials_double_dot,
+            preserve_hyphenated_case=self.feature_flags._flags.preserve_hyphenated_case
         )
         self.morphology_adapter = MorphologyAdapter()
 
@@ -266,61 +271,68 @@ class NormalizationFactory(ErrorReportingMixin):
 
         # Step 1.6: Apply Russian 'ё' strategy if needed
         yo_traces = []
-        if config.language == "ru" and config.ru_yo_strategy in {"preserve", "fold"}:
-            tokens, yo_traces = self._apply_yo_strategy(tokens, config.ru_yo_strategy)
-            self.logger.debug(f"Applied Russian 'ё' strategy '{config.ru_yo_strategy}': {len(yo_traces)} changes")
+        if config.language == "ru" and config.yo_strategy in {"preserve", "fold"}:
+            tokens, yo_traces = self._apply_yo_strategy(tokens, config.yo_strategy)
+            self.logger.debug(f"Applied Russian 'ё' strategy '{config.yo_strategy}': {len(yo_traces)} changes")
 
         if not tokens:
             return self._build_empty_result(text, config.language)
 
         quoted_segments = token_meta.get("quoted_segments", [])
 
-        # Step 1.6: Role tagging with FSM-based service
-        try:
-            # Get NER hints if enabled
-            ner_hints = None
-            if config.language == "uk" and config.enable_spacy_uk_ner and self.ner_gateway_uk:
-                try:
-                    ner_hints = self.ner_gateway_uk.extract_entities(text)
-                    self.logger.debug(f"Ukrainian NER extracted {len(ner_hints.person_spans)} person spans and {len(ner_hints.org_spans)} org spans")
-                except Exception as e:
-                    self.logger.warning(f"Ukrainian NER extraction failed: {e}")
-            elif config.language == "en" and config.enable_spacy_en_ner and self.ner_gateway_en:
-                try:
-                    ner_hints = self.ner_gateway_en.extract_entities(text)
-                    self.logger.debug(f"English NER extracted {len(ner_hints.person_spans)} person spans and {len(ner_hints.org_spans)} org spans")
-                except Exception as e:
-                    self.logger.warning(f"English NER extraction failed: {e}")
-            elif config.language == "ru" and config.enable_spacy_ru_ner and self.ner_gateway_ru:
-                try:
-                    ner_hints = self.ner_gateway_ru.extract_entities(text)
-                    self.logger.debug(f"Russian NER extracted {len(ner_hints.person_spans)} person spans and {len(ner_hints.org_spans)} org spans")
-                except Exception as e:
-                    self.logger.warning(f"Russian NER extraction failed: {e}")
-            
-            # Use new FSM-based role tagger service with strict_stopwords flag
-            strict_stopwords = getattr(effective_flags, 'strict_stopwords', False)
-            if strict_stopwords != getattr(self.role_tagger_service, '_last_strict_stopwords', None):
-                # Reinitialize with correct strict_stopwords setting
-                self.role_tagger_service = RoleTaggerService(strict_stopwords=strict_stopwords)
-                self.role_tagger_service._last_strict_stopwords = strict_stopwords
-            
-            role_tags = self.role_tagger_service.tag(tokens, config.language)
-            role_tagger_traces = self._create_fsm_role_tagger_traces(role_tags, tokens)
-            self.logger.debug(f"FSM role tagger classified: {[(tag.role.value, tag.reason) for tag in role_tags]}")
-
-            # Extract organization spans for later use
-            org_spans = self._extract_organization_spans_from_fsm_tags(role_tags)
-            if org_spans:
-                for span in org_spans:
-                    role_tagger_traces.append(f"FSM role tagger: organization span '{' '.join(span)}'")
-
-        except Exception as e:
-            self.logger.error(f"FSM role tagging failed: {e}")
-            errors.append(f"FSM role tagging failed: {e}")
+        # Step 1.6: Role tagging with FSM-based service (skip for English nameparser)
+        if config.language == "en" and config.enable_nameparser_en:
+            # Skip FSM role tagger for English nameparser mode
             role_tags = []
             role_tagger_traces = []
             org_spans = []
+            self.logger.debug("FSM role tagger skipped for English nameparser mode")
+        else:
+            try:
+                # Get NER hints if enabled
+                ner_hints = None
+                if config.language == "uk" and config.enable_spacy_uk_ner and self.ner_gateway_uk:
+                    try:
+                        ner_hints = self.ner_gateway_uk.extract_entities(text)
+                        self.logger.debug(f"Ukrainian NER extracted {len(ner_hints.person_spans)} person spans and {len(ner_hints.org_spans)} org spans")
+                    except Exception as e:
+                        self.logger.warning(f"Ukrainian NER extraction failed: {e}")
+                elif config.language == "en" and config.enable_spacy_en_ner and self.ner_gateway_en:
+                    try:
+                        ner_hints = self.ner_gateway_en.extract_entities(text)
+                        self.logger.debug(f"English NER extracted {len(ner_hints.person_spans)} person spans and {len(ner_hints.org_spans)} org spans")
+                    except Exception as e:
+                        self.logger.warning(f"English NER extraction failed: {e}")
+                elif config.language == "ru" and config.enable_spacy_ru_ner and self.ner_gateway_ru:
+                    try:
+                        ner_hints = self.ner_gateway_ru.extract_entities(text)
+                        self.logger.debug(f"Russian NER extracted {len(ner_hints.person_spans)} person spans and {len(ner_hints.org_spans)} org spans")
+                    except Exception as e:
+                        self.logger.warning(f"Russian NER extraction failed: {e}")
+                
+                # Use new FSM-based role tagger service with strict_stopwords flag
+                strict_stopwords = getattr(effective_flags, 'strict_stopwords', False)
+                if strict_stopwords != getattr(self.role_tagger_service, '_last_strict_stopwords', None):
+                    # Reinitialize with correct strict_stopwords setting
+                    self.role_tagger_service = RoleTaggerService(strict_stopwords=strict_stopwords)
+                    self.role_tagger_service._last_strict_stopwords = strict_stopwords
+                
+                role_tags = self.role_tagger_service.tag(tokens, config.language)
+                role_tagger_traces = self._create_fsm_role_tagger_traces(role_tags, tokens)
+                self.logger.debug(f"FSM role tagger classified: {[(tag.role.value, tag.reason) for tag in role_tags]}")
+
+                # Extract organization spans for later use
+                org_spans = self._extract_organization_spans_from_fsm_tags(role_tags)
+                if org_spans:
+                    for span in org_spans:
+                        role_tagger_traces.append(f"FSM role tagger: organization span '{' '.join(span)}'")
+
+            except Exception as e:
+                self.logger.error(f"FSM role tagging failed: {e}")
+                errors.append(f"FSM role tagging failed: {e}")
+                role_tags = []
+                role_tagger_traces = []
+                org_spans = []
 
         # Step 2: Role classification (existing system)
         try:
@@ -330,10 +342,12 @@ class NormalizationFactory(ErrorReportingMixin):
             original_tagged_tokens = list(zip(classified_tokens, roles))
             self.logger.debug(f"Classified roles: {list(zip(classified_tokens, roles))}")
             
-            # Override roles with FSM results if available
-            if role_tags:
+            # Override roles with FSM results if available (but not for English nameparser)
+            if role_tags and not (config.language == "en" and config.enable_nameparser_en):
                 roles = [tag.role.value for tag in role_tags]
                 self.logger.debug(f"FSM overrode roles: {list(zip(classified_tokens, roles))}")
+            elif role_tags and config.language == "en" and config.enable_nameparser_en:
+                self.logger.debug(f"FSM role tagger skipped for English nameparser mode")
         except Exception as e:
             self.logger.error(f"Role classification failed: {e}")
             errors.append(f"Role classification failed: {e}")
@@ -368,17 +382,17 @@ class NormalizationFactory(ErrorReportingMixin):
             roles_for_morphology = roles
         if (
             config.language in {"ru", "uk"}
-            and getattr(effective_flags, 'use_diminutives_dictionary_only', True)
+            and getattr(effective_flags, 'use_diminutives_dictionary_only', False)
         ):
             (
                 tokens_for_morphology,
                 diminutive_traces,
                 unresolved_diminutive_indices,
-            ) = self._apply_diminutive_resolution(
+            ) = self._apply_diminutives(
                 classified_tokens,
                 roles,
                 config.language,
-                allow_cross_lang=getattr(effective_flags, 'diminutives_allow_cross_lang', False),
+                effective_flags,
             )
 
         # Step 3: Morphological normalization
@@ -423,7 +437,7 @@ class NormalizationFactory(ErrorReportingMixin):
             + role_traces
             + morph_traces
             + gender_traces
-            + improvement_traces_post
+            + [str(trace) for trace in improvement_traces_post]
         )
         
         if config.debug_tracing:
@@ -440,11 +454,11 @@ class NormalizationFactory(ErrorReportingMixin):
         if role_tags:
             # Rebuild trace with FSM roles
             fsm_roles = [tag.role.value for tag in role_tags]
-            # Use all classified tokens for both original and final tokens
+            # Use tokens_for_morphology for final tokens to include diminutive resolution
             trace = self._build_token_trace(
                 classified_tokens,
                 fsm_roles,
-                classified_tokens,  # Use same tokens for both original and final
+                tokens_for_morphology,  # Use tokens after diminutive resolution
                 processing_traces,
                 cache_info
             )
@@ -461,6 +475,11 @@ class NormalizationFactory(ErrorReportingMixin):
                         notes=f"Evidence: {tokenization_trace.get('evidence', '')}",
                         is_hyphenated_surname=False
                     ))
+            
+            # Add improvement traces post (like normalize_hyphen_post) to the final trace
+            for improvement_trace in improvement_traces_post:
+                trace.append(improvement_trace)
+                self.logger.debug(f"Added improvement trace: {improvement_trace.rule} - {improvement_trace.token} -> {improvement_trace.output}")
         else:
             trace = self._build_token_trace(
                 classified_tokens,
@@ -469,6 +488,11 @@ class NormalizationFactory(ErrorReportingMixin):
                 processing_traces,
                 cache_info
             )
+            
+            # Add improvement traces post (like normalize_hyphen_post) to the final trace
+            for improvement_trace in improvement_traces_post:
+                trace.append(improvement_trace)
+                self.logger.debug(f"Added improvement trace: {improvement_trace.rule} - {improvement_trace.token} -> {improvement_trace.output}")
 
         # Step 6: Separate personal/org tokens
         personal_tokens = [
@@ -621,8 +645,26 @@ class NormalizationFactory(ErrorReportingMixin):
                 already_cased = getattr(token_trace, 'already_cased', False)
                 
                 if not already_cased:
+                    # Check for apostrophes first (for names like O'Brien)
+                    if "'" in normalized_token:
+                        # Apply apostrophe normalization with titlecase
+                        titlecased_token = normalize_apostrophe_name(normalized_token, titlecase=True)
+                        
+                        # Add specific trace for apostrophe handling
+                        if titlecased_token != normalized_token:
+                            apostrophe_trace = TokenTrace(
+                                token=normalized_token,
+                                role=token_trace.role,
+                                rule="apostrophe_preserved",
+                                output=titlecased_token,
+                                fallback=False,
+                                notes=f"Applied apostrophe normalization: {normalized_token} -> {titlecased_token}",
+                                is_hyphenated_surname=is_hyphenated_surname(normalized_token)
+                            )
+                            trace.append(apostrophe_trace)
+                            self.logger.debug(f"Applied apostrophe normalization: {normalized_token} -> {titlecased_token}")
                     # For hyphenated surnames, apply special titlecase handling
-                    if getattr(token_trace, 'is_hyphenated_surname', False) or is_hyphenated_surname(normalized_token):
+                    elif getattr(token_trace, 'is_hyphenated_surname', False) or is_hyphenated_surname(normalized_token):
                         # Use the hyphenated normalization with titlecase for proper handling
                         titlecased_token = normalize_hyphenated_name(normalized_token, titlecase=True)
 
@@ -692,22 +734,30 @@ class NormalizationFactory(ErrorReportingMixin):
         skipped_tokens = []
         
         for token in tokens:
-            token_key = token.casefold()
-            if token_key not in seen_tokens:
+            # Check if this is an initial (single letter followed by dot)
+            is_initial = len(token) == 2 and token[1] == '.' and token[0].isalpha()
+            
+            if is_initial:
+                # Always allow initials, even if they're duplicates
                 deduplicated.append(token)
-                seen_tokens.add(token_key)
             else:
-                # Add trace for skipped duplicate
-                trace.append(TokenTrace(
-                    token=token,
-                    role="deduplication",
-                    rule="dedup_consecutive_person_tokens",
-                    output="[skipped]",
-                    fallback=False,
-                    notes=f"Skipped duplicate token: '{token}' (already seen)",
-                    is_hyphenated_surname=False
-                ))
-                skipped_tokens.append(token)
+                # For non-initials, apply normal deduplication
+                token_key = token.casefold()
+                if token_key not in seen_tokens:
+                    deduplicated.append(token)
+                    seen_tokens.add(token_key)
+                else:
+                    # Add trace for skipped duplicate
+                    trace.append(TokenTrace(
+                        token=token,
+                        role="deduplication",
+                        rule="dedup_consecutive_person_tokens",
+                        output="[skipped]",
+                        fallback=False,
+                        notes=f"Skipped duplicate token: '{token}' (already seen)",
+                        is_hyphenated_surname=False
+                    ))
+                    skipped_tokens.append(token)
         
         # Add trace for deduplication if any tokens were removed
         if skipped_tokens:
@@ -840,7 +890,7 @@ class NormalizationFactory(ErrorReportingMixin):
         """Classify the role of each token, returning possibly expanded tokens."""
         
         # Handle English names with nameparser if enabled
-        if config.language == "en" and config.en_use_nameparser:
+        if config.language == "en" and config.enable_nameparser_en:
             return await self._classify_english_names(tokens, config, quoted_segments)
         
         # Default classification for other languages
@@ -873,7 +923,15 @@ class NormalizationFactory(ErrorReportingMixin):
             parsed = nameparser.parse_en_name(full_name)
             
             if parsed.confidence < 0.3:
-                # Low confidence, fall back to default classification
+                # Low confidence, try nickname resolution for single names
+                if len(tokens) == 1 and config.enable_en_nicknames:
+                    # Try to resolve single name as nickname
+                    resolved_name, nickname_traces = self._resolve_english_nickname(tokens[0], config)
+                    if resolved_name != tokens[0]:
+                        # Nickname was resolved, treat as given name
+                        return [resolved_name], ["given"], nickname_traces, []
+                
+                # Fall back to default classification
                 tagged_tokens, traces, organizations = self.role_classifier.tag_tokens(
                     tokens, config.language, quoted_segments
                 )
@@ -887,18 +945,30 @@ class NormalizationFactory(ErrorReportingMixin):
             traces = []
             organizations = []
             
-            # Add first name
+            # Add first name with nickname resolution
             if parsed.first:
-                classified_tokens.append(parsed.first)
+                # Apply nickname resolution if enabled
+                if config.enable_en_nicknames:
+                    resolved_first, nickname_traces = self._resolve_english_nickname(parsed.first, config)
+                    traces.extend(nickname_traces)
+                    classified_tokens.append(resolved_first)
+                else:
+                    classified_tokens.append(parsed.first)
+                
                 roles.append("given")
                 if parsed.nickname:
                     traces.append(f"Nickname expansion: '{parsed.nickname}' -> '{parsed.first}'")
                 else:
                     traces.append(f"First name: '{parsed.first}'")
             
-            # Add middle names
+            # Add middle names with nickname resolution
             for middle in parsed.middles:
-                classified_tokens.append(middle)
+                if config.enable_en_nicknames:
+                    resolved_middle, nickname_traces = self._resolve_english_nickname(middle, config)
+                    traces.extend(nickname_traces)
+                    classified_tokens.append(resolved_middle)
+                else:
+                    classified_tokens.append(middle)
                 roles.append("given")
                 traces.append(f"Middle name: '{middle}'")
             
@@ -949,8 +1019,15 @@ class NormalizationFactory(ErrorReportingMixin):
         
         for token, role in zip(tokens, roles):
             if role in {'given', 'surname', 'patronymic', 'initial', 'suffix'}:
+                # Apply nickname resolution if enabled
+                if config.enable_en_nicknames and role == 'given':
+                    normalized, nickname_traces = self._resolve_english_nickname(token, config)
+                    traces.extend(nickname_traces)
+                else:
+                    normalized = token
+                
                 # Apply title case normalization for English names
-                normalized = self._normalize_english_name_token(token, role, config)
+                normalized = self._normalize_english_name_token(normalized, role, config)
                 normalized_tokens.append(normalized)
                 if normalized != token:
                     traces.append(f"English normalization: '{token}' -> '{normalized}'")
@@ -997,6 +1074,34 @@ class NormalizationFactory(ErrorReportingMixin):
             parts.append(current.title())
         
         return "".join(parts)
+
+    def _resolve_english_nickname(self, token: str, config: NormalizationConfig) -> Tuple[str, List[str]]:
+        """Resolve English nickname to full name."""
+        if not token:
+            return token, []
+        
+        traces = []
+        
+        try:
+            from ..nameparser_adapter import get_nameparser_adapter
+            
+            # Get nameparser adapter
+            nameparser = get_nameparser_adapter()
+            
+            # Check if token is a nickname
+            expanded, was_expanded = nameparser.expand_nickname(token)
+            
+            if was_expanded:
+                traces.append(f"nickname.resolved: '{token}' -> '{expanded}'")
+                return expanded, traces
+            else:
+                traces.append(f"nickname.resolved: '{token}' (no expansion found)")
+                return token, traces
+                
+        except Exception as e:
+            self.logger.warning(f"English nickname resolution failed for '{token}': {e}")
+            traces.append(f"nickname.resolved: '{token}' (resolution failed: {e})")
+            return token, traces
 
     async def _normalize_morphology(
         self,
@@ -1395,21 +1500,25 @@ class NormalizationFactory(ErrorReportingMixin):
         trace_entries = []
         
         for token in tokens:
-            processed_token, yo_traces = self.morphology_adapter.apply_yo_strategy(token, strategy)
-            processed_tokens.append(processed_token)
-            
-            # Convert yo_traces to TokenTrace format
-            for trace in yo_traces:
+            if strategy == "fold" and ('ё' in token or 'Ё' in token):
+                # Apply ё → е conversion
+                processed_token = token.replace('ё', 'е').replace('Ё', 'Е')
+                processed_tokens.append(processed_token)
+                
+                # Add trace for yo.fold
                 trace_entries.append(TokenTrace(
                     token=token,
                     role="unknown",  # Will be determined later by role tagger
-                    rule=trace["action"],
+                    rule="yo.fold",
                     normal_form=processed_token,
                     output=processed_token,
                     fallback=False,
-                    notes=f"yo_strategy_{strategy}",
+                    notes=f"yo_strategy_{strategy}: ё → е",
                     is_hyphenated_surname=is_hyphenated_surname(token)
                 ))
+            else:
+                # Preserve original token
+                processed_tokens.append(token)
         
         return processed_tokens, trace_entries
 
@@ -1478,6 +1587,94 @@ class NormalizationFactory(ErrorReportingMixin):
             resolved_tokens.append(token)
 
         return resolved_tokens, traces, unresolved_indices
+
+    def _apply_diminutives(
+        self,
+        tokens: List[str],
+        roles: List[str],
+        language: str,
+        effective_flags
+    ) -> Tuple[List[str], List[str], Set[int]]:
+        """
+        Apply diminutives dictionary-only mapping for RU/UK languages.
+        
+        Args:
+            tokens: List of tokens to process
+            roles: List of corresponding roles
+            language: Language code ('ru' or 'uk')
+            effective_flags: Feature flags object
+            
+        Returns:
+            Tuple of (resolved_tokens, traces, unresolved_indices)
+        """
+        resolved_tokens: List[str] = []
+        traces: List[str] = []
+        unresolved_indices: Set[int] = set()
+        
+        # Load diminutives dictionaries if not already loaded
+        if not hasattr(self, '_diminutives_ru'):
+            self._load_diminutives_dictionaries()
+        
+        # Get the appropriate dictionary
+        diminutives_dict = self._diminutives_ru if language == "ru" else self._diminutives_uk
+        
+        allowed_roles = {"given", "nickname", "unknown", "surname"}
+        
+        for idx, (token, role) in enumerate(zip(tokens, roles)):
+            if role in allowed_roles:
+                # Look up in dictionary using lowercase key
+                token_lower = token.lower()
+                canonical = diminutives_dict.get(token_lower)
+                
+                if canonical:
+                    resolved_tokens.append(canonical)
+                    # Update role to 'given' if it was a diminutive
+                    if role != "given":
+                        roles[idx] = "given"
+                    
+                    # Add trace
+                    traces.append(
+                        json.dumps(
+                            {
+                                "type": "morph",
+                                "action": "diminutive_resolved",
+                                "from": token,
+                                "to": canonical,
+                                "lang": language,
+                                "rule": "morph.diminutive_resolved"
+                            },
+                            ensure_ascii=False,
+                        )
+                    )
+                    continue
+                else:
+                    # No mapping found, mark as unresolved
+                    unresolved_indices.add(idx)
+            
+            resolved_tokens.append(token)
+        
+        return resolved_tokens, traces, unresolved_indices
+
+    def _load_diminutives_dictionaries(self) -> None:
+        """Load diminutives dictionaries from data files."""
+        try:
+            # Load Russian diminutives
+            ru_path = Path(__file__).resolve().parents[5] / "data" / "diminutives_ru.json"
+            with open(ru_path, 'r', encoding='utf-8') as f:
+                self._diminutives_ru = json.load(f)
+            
+            # Load Ukrainian diminutives
+            uk_path = Path(__file__).resolve().parents[5] / "data" / "diminutives_uk.json"
+            with open(uk_path, 'r', encoding='utf-8') as f:
+                self._diminutives_uk = json.load(f)
+                
+            self.logger.info(f"Loaded diminutives dictionaries: RU={len(self._diminutives_ru)} entries, UK={len(self._diminutives_uk)} entries")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to load diminutives dictionaries: {e}")
+            # Set empty dictionaries as fallback
+            self._diminutives_ru = {}
+            self._diminutives_uk = {}
 
     def _create_role_tagger_traces(self, role_tags: List) -> List[str]:
         """Create traces for role tagger results."""

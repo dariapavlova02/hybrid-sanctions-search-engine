@@ -108,6 +108,59 @@ def collapse_double_dots(tokens: List[str], trace: Optional[List[Any]] = None) -
     return result
 
 
+def normalize_apostrophe_name(token: str, *, titlecase: bool = False, trace: Optional[List[Any]] = None) -> str:
+    """
+    Normalize names with apostrophes with proper case handling.
+    
+    Rules:
+    - Preserve apostrophes in names
+    - Apply titlecase to segments around apostrophes
+    - Remove dangling apostrophes at the end
+    
+    Args:
+        token: Token string to normalize
+        titlecase: Whether to apply title case
+        trace: Optional trace list for debugging
+        
+    Returns:
+        Normalized token with proper apostrophe handling
+        
+    Examples:
+        >>> normalize_apostrophe_name("o'brien", titlecase=True)
+        "O'Brien"
+        >>> normalize_apostrophe_name("d'angelo", titlecase=True)
+        "D'Angelo"
+        >>> normalize_apostrophe_name("o'connor'", titlecase=True)  # dangling apostrophe
+        "O'Connor"
+    """
+    if not token or "'" not in token:
+        return token
+    
+    # Remove dangling apostrophes at the end
+    cleaned_token = token.rstrip("'")
+    if not cleaned_token:
+        return token
+    
+    # Apply titlecase if requested
+    if titlecase:
+        # Use title() for proper capitalization including apostrophes
+        # title() handles cases like "o'neil" -> "O'Neil" correctly
+        normalized_token = cleaned_token.title()
+    else:
+        normalized_token = cleaned_token
+    
+    # Add trace step if tracing is enabled and token was changed
+    if trace is not None and normalized_token != token:
+        trace.append({
+            'stage': 'tokenize',
+            'rule': 'apostrophe_preserved',
+            'token_before': token,
+            'token_after': normalized_token
+        })
+    
+    return normalized_token
+
+
 def normalize_hyphenated_name(token: str, *, titlecase: bool = False, trace: Optional[List[Any]] = None) -> str:
     """
     Normalize hyphenated names with proper segmentation and case handling.
@@ -159,9 +212,14 @@ def normalize_hyphenated_name(token: str, *, titlecase: bool = False, trace: Opt
 
         # Apply titlecase if requested
         if titlecase:
-            # Use title() for proper capitalization including apostrophes
-            # title() handles cases like "o'neil" -> "O'Neil" correctly
-            normalized_segment = segment.title()
+            # First normalize apostrophes in the segment, then apply titlecase
+            if "'" in segment:
+                # Remove dangling apostrophes and apply titlecase
+                cleaned_segment = segment.rstrip("'")
+                normalized_segment = cleaned_segment.title()
+            else:
+                # Use title() for proper capitalization
+                normalized_segment = segment.title()
         else:
             normalized_segment = segment
 

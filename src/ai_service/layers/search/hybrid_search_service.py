@@ -19,7 +19,7 @@ from .contracts import (
     SearchMode, 
     SearchMetrics
 )
-from ...contracts.trace_models import SearchTrace
+from ...contracts.trace_models import SearchTrace, SearchTraceHit, SearchTraceStep
 from .config import HybridSearchConfig
 from .elasticsearch_adapters import ElasticsearchACAdapter, ElasticsearchVectorAdapter
 from .elasticsearch_client import ElasticsearchClientFactory
@@ -259,6 +259,9 @@ class HybridSearchService(BaseService, SearchService):
             # Process and rank results
             candidates = self._process_results(candidates, opts)
             
+            # Limit payload size to prevent excessive memory usage
+            search_trace.limit_payload_size(max_size_kb=200)
+            
             # Update metrics
             processing_time = (time.time() - start_time) * 1000  # Convert to ms
             self._update_metrics(True, processing_time, len(candidates))
@@ -288,25 +291,70 @@ class HybridSearchService(BaseService, SearchService):
         """Execute AC search only."""
         self._metrics.ac_requests += 1
 
+        # Create dummy trace if none provided
+        if search_trace is None:
+            search_trace = SearchTrace(enabled=False)
+
         try:
             query_text = normalized.normalized or text
+            start_time = time.perf_counter()
+            
             candidates = await self._ac_adapter.search(
                 query=query_text,
                 opts=opts,
                 index_name=self.config.elasticsearch.ac_index
             )
+            
+            search_time = (time.perf_counter() - start_time) * 1000  # Convert to ms
+            
+            # Convert candidates to SearchTraceHit
+            ac_hits = []
+            for rank, candidate in enumerate(candidates, 1):
+                signals = {
+                    'dob_match': self._check_dob_match(candidate.metadata, query_text),
+                    'doc_id_match': self._check_doc_id_match(candidate.doc_id, query_text),
+                    'entity_type': candidate.entity_type,
+                    'match_fields': candidate.match_fields,
+                    'confidence': candidate.confidence
+                }
+                
+                hit = SearchTraceHit(
+                    doc_id=candidate.doc_id,
+                    score=candidate.score,
+                    rank=rank,
+                    source="AC",
+                    signals=signals
+                )
+                ac_hits.append(hit)
+            
+            # Add AC search step to trace
+            search_trace.add_step(SearchTraceStep(
+                stage="AC",
+                query=query_text,
+                topk=opts.top_k,
+                took_ms=search_time,
+                hits=ac_hits,
+                meta={
+                    "index_name": self.config.elasticsearch.ac_index,
+                    "search_mode": "exact",
+                    "fallback_enabled": self.config.enable_fallback,
+                    "adapter_connected": getattr(self._ac_adapter, "_connected", True)
+                }
+            ))
+            
             if (
                 not candidates
                 and self.config.enable_fallback
                 and not getattr(self._ac_adapter, "_connected", True)
             ):
                 self.logger.warning("AC adapter unavailable – using fallback search")
-                return await self._fallback_search(normalized, text, opts)
+                return await self._fallback_search(normalized, text, opts, search_trace)
 
             return candidates
 
         except Exception as e:
             self.logger.error(f"AC search failed: {e}")
+            search_trace.note(f"AC search failed: {str(e)}")
             return []
 
     async def _vector_search_only(
@@ -319,25 +367,73 @@ class HybridSearchService(BaseService, SearchService):
         """Execute vector search only."""
         self._metrics.vector_requests += 1
 
+        # Create dummy trace if none provided
+        if search_trace is None:
+            search_trace = SearchTrace(enabled=False)
+
         try:
+            query_text = normalized.normalized or text
+            start_time = time.perf_counter()
+            
             query_vector = await self._build_query_vector(normalized, text)
             candidates = await self._vector_adapter.search(
                 query=query_vector,
                 opts=opts,
                 index_name=self.config.elasticsearch.vector_index
             )
+            
+            search_time = (time.perf_counter() - start_time) * 1000  # Convert to ms
+            
+            # Convert candidates to SearchTraceHit
+            vector_hits = []
+            for rank, candidate in enumerate(candidates, 1):
+                signals = {
+                    'dob_match': self._check_dob_match(candidate.metadata, query_text),
+                    'doc_id_match': self._check_doc_id_match(candidate.doc_id, query_text),
+                    'entity_type': candidate.entity_type,
+                    'match_fields': candidate.match_fields,
+                    'confidence': candidate.confidence,
+                    'vector_similarity': candidate.score
+                }
+                
+                hit = SearchTraceHit(
+                    doc_id=candidate.doc_id,
+                    score=candidate.score,
+                    rank=rank,
+                    source="SEMANTIC",
+                    signals=signals
+                )
+                vector_hits.append(hit)
+            
+            # Add vector search step to trace
+            search_trace.add_step(SearchTraceStep(
+                stage="SEMANTIC",
+                query=query_text,
+                topk=opts.top_k,
+                took_ms=search_time,
+                hits=vector_hits,
+                meta={
+                    "index_name": self.config.elasticsearch.vector_index,
+                    "search_mode": "vector_similarity",
+                    "fallback_enabled": self.config.enable_fallback,
+                    "adapter_connected": getattr(self._vector_adapter, "_connected", True),
+                    "embedding_model": getattr(self._embedding_service, 'model_name', 'unknown')
+                }
+            ))
+            
             if (
                 not candidates
                 and self.config.enable_fallback
                 and not getattr(self._vector_adapter, "_connected", True)
             ):
                 self.logger.warning("Vector adapter unavailable – using fallback search")
-                return await self._fallback_search(normalized, text, opts)
+                return await self._fallback_search(normalized, text, opts, search_trace)
 
             return candidates
 
         except Exception as e:
             self.logger.error(f"Vector search failed: {e}")
+            search_trace.note(f"Vector search failed: {str(e)}")
             return []
     
     async def _hybrid_search(
@@ -349,6 +445,13 @@ class HybridSearchService(BaseService, SearchService):
     ) -> List[Candidate]:
         """Execute hybrid search with escalation and vector fallback."""
         self._metrics.hybrid_requests += 1
+        
+        # Create dummy trace if none provided
+        if search_trace is None:
+            search_trace = SearchTrace(enabled=False)
+        
+        query_text = normalized.normalized or text
+        hybrid_start_time = time.perf_counter()
         
         # Step 1: Try AC search first
         ac_candidates = await self._ac_search_only(normalized, text, opts, search_trace)
@@ -373,12 +476,44 @@ class HybridSearchService(BaseService, SearchService):
                 # Remove duplicates and rerank
                 all_candidates = self._deduplicate_and_rerank(all_candidates, opts)
                 
+                # Add hybrid step to trace
+                hybrid_time = (time.perf_counter() - hybrid_start_time) * 1000
+                self._add_hybrid_trace_step(search_trace, query_text, opts, all_candidates, hybrid_time, {
+                    "escalation_triggered": True,
+                    "vector_fallback_used": True,
+                    "ac_candidates": len(ac_candidates),
+                    "vector_candidates": len(vector_candidates),
+                    "fallback_candidates": len(fallback_candidates),
+                    "final_candidates": len(all_candidates)
+                })
+                
                 return all_candidates
             else:
                 # Step 4: Combine and deduplicate results
                 all_candidates = self._combine_results(ac_candidates, vector_candidates, opts)
+                
+                # Add hybrid step to trace
+                hybrid_time = (time.perf_counter() - hybrid_start_time) * 1000
+                self._add_hybrid_trace_step(search_trace, query_text, opts, all_candidates, hybrid_time, {
+                    "escalation_triggered": True,
+                    "vector_fallback_used": False,
+                    "ac_candidates": len(ac_candidates),
+                    "vector_candidates": len(vector_candidates),
+                    "final_candidates": len(all_candidates)
+                })
+                
                 return all_candidates
         else:
+            # Add hybrid step to trace (AC only)
+            hybrid_time = (time.perf_counter() - hybrid_start_time) * 1000
+            self._add_hybrid_trace_step(search_trace, query_text, opts, ac_candidates, hybrid_time, {
+                "escalation_triggered": False,
+                "vector_fallback_used": False,
+                "ac_candidates": len(ac_candidates),
+                "vector_candidates": 0,
+                "final_candidates": len(ac_candidates)
+            })
+            
             return ac_candidates
     
     def _should_escalate(self, ac_candidates: List[Candidate], opts: SearchOpts) -> bool:
@@ -885,3 +1020,75 @@ class HybridSearchService(BaseService, SearchService):
                 "vector": self._fallback_vector_service is not None,
             }
         }
+    
+    def _add_hybrid_trace_step(
+        self, 
+        search_trace: SearchTrace, 
+        query: str, 
+        opts: SearchOpts, 
+        candidates: List[Candidate], 
+        took_ms: float, 
+        meta: Dict[str, Any]
+    ) -> None:
+        """Add hybrid search step to trace."""
+        # Convert candidates to SearchTraceHit
+        hybrid_hits = []
+        for rank, candidate in enumerate(candidates, 1):
+            signals = {
+                'dob_match': self._check_dob_match(candidate.metadata, query),
+                'doc_id_match': self._check_doc_id_match(candidate.doc_id, query),
+                'entity_type': candidate.entity_type,
+                'match_fields': candidate.match_fields,
+                'confidence': candidate.confidence,
+                'search_mode': candidate.search_mode.value
+            }
+            
+            hit = SearchTraceHit(
+                doc_id=candidate.doc_id,
+                score=candidate.score,
+                rank=rank,
+                source="HYBRID",
+                signals=signals
+            )
+            hybrid_hits.append(hit)
+        
+        # Add hybrid step to trace
+        search_trace.add_step(SearchTraceStep(
+            stage="HYBRID",
+            query=query,
+            topk=opts.top_k,
+            took_ms=took_ms,
+            hits=hybrid_hits,
+            meta=meta
+        ))
+    
+    def _check_dob_match(self, metadata: Dict[str, Any], query: str) -> bool:
+        """Check if date of birth matches query."""
+        if not metadata or not query:
+            return False
+        
+        dob = metadata.get('dob')
+        if not dob:
+            return False
+        
+        query_lower = query.lower()
+        dob_lower = str(dob).lower()
+        
+        # Check for year match
+        if len(str(dob)) >= 4 and len(query) >= 4:
+            dob_year = str(dob)[-4:] if str(dob)[-4:].isdigit() else ""
+            query_year = "".join([c for c in query if c.isdigit()])
+            if dob_year and query_year and dob_year in query_year:
+                return True
+        
+        return dob_lower in query_lower or query_lower in dob_lower
+    
+    def _check_doc_id_match(self, doc_id: str, query: str) -> bool:
+        """Check if document ID matches query."""
+        if not doc_id or not query:
+            return False
+        
+        query_lower = query.lower()
+        doc_id_lower = doc_id.lower()
+        
+        return doc_id_lower in query_lower or query_lower in doc_id_lower

@@ -48,7 +48,7 @@ class NameparserAdapter:
         Args:
             lexicons_path: Path to lexicons directory
         """
-        self.lexicons_path = lexicons_path or Path(__file__).parent.parent.parent.parent / "data" / "lexicons"
+        self.lexicons_path = lexicons_path or Path(__file__).parent.parent.parent.parent.parent / "data" / "lexicons"
         self.nicknames: Dict[str, str] = {}
         self.surname_particles: Set[str] = set()
         self._load_lexicons()

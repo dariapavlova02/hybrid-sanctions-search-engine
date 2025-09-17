@@ -44,7 +44,7 @@ class TokenizerService:
     def __init__(
         self, 
         cache: Optional[LruTtlCache] = None,
-        fix_initials_double_dot: bool = True,
+        fix_initials_double_dot: bool = False,
         preserve_hyphenated_case: bool = True
     ):
         """
@@ -248,7 +248,7 @@ class TokenizerService:
     
     def collapse_double_dots(self, token: str) -> str:
         """
-        Collapse double dots in initials while preserving correct pairs.
+        Collapse double dots in initials according to pattern ^([A-Za-zА-Яа-яІЇЄҐїєґ])\.+$ → normalize to X.
         
         Args:
             token: Input token to process
@@ -258,43 +258,22 @@ class TokenizerService:
             
         Examples:
             "И.." → "И."
-            "И.. И." → "И. И." (handled at token level)
-            "A..B." → "A.B." (handled at token level)
+            "A.." → "A."
+            "І.." → "І."
             "ООО" → "ООО" (no change for abbreviations)
             "ТОВ" → "ТОВ" (no change for abbreviations)
         """
         import re
         
-        # Don't touch abbreviations without dots
-        if not '.' in token:
-            return token
-            
-        # Don't touch Latin abbreviations without dots
-        if re.match(r'^[A-Z]{2,}$', token):
-            return token
-            
-        # Don't touch Cyrillic abbreviations without dots
-        if re.match(r'^[А-ЯЁ]{2,}$', token):
-            return token
-            
-        # Pattern for initials: single letter followed by two or more dots
-        # This covers: И.., A.., І.., etc.
-        initial_pattern = r'^([А-Яа-яA-Za-zІіЇїЄєҐґёЁ])\.{2,}$'
+        # Pattern for initials: single letter followed by one or more dots
+        # This covers: И., И.., A., A.., І., І.., etc.
+        # Pattern: ^([A-Za-zА-Яа-яІЇЄҐїєґ])\.+$
+        initial_pattern = r'^([A-Za-zА-Яа-яІЇЄҐїєґ])\.+$'
         match = re.match(initial_pattern, token)
         if match:
             # Collapse to single dot
             letter = match.group(1)
             return f"{letter}."
-            
-        # Pattern for compound initials: A..B., И..П.
-        # This covers cases like "A..B." → "A.B."
-        compound_pattern = r'^([А-Яа-яA-Za-zІіЇїЄєҐґёЁ])\.{2,}([А-Яа-яA-Za-zІіЇїЄєҐґёЁ])\.$'
-        match = re.match(compound_pattern, token)
-        if match:
-            # Collapse to single dot between letters
-            first_letter = match.group(1)
-            second_letter = match.group(2)
-            return f"{first_letter}.{second_letter}."
             
         # No changes needed
         return token

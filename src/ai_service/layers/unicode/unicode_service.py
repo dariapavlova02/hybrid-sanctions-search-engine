@@ -6,7 +6,7 @@ import logging
 import re
 import unicodedata
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Literal
 
 from ...utils.logging_config import get_logger
 
@@ -98,6 +98,36 @@ class UnicodeService:
 
         # Characters that we always preserve
         self.preserved_chars = set("а-яёіїєґА-ЯЁІЇЄҐ")
+
+        # Homoglyph mapping for Cyrillic/Latin character normalization
+        self.homoglyph_mapping = {
+            # Cyrillic to Latin (most common cases)
+            'а': 'a', 'А': 'A',  # Cyrillic а → Latin a
+            'е': 'e', 'Е': 'E',  # Cyrillic е → Latin e  
+            'о': 'o', 'О': 'O',  # Cyrillic о → Latin o
+            'р': 'p', 'Р': 'P',  # Cyrillic р → Latin p
+            'с': 'c', 'С': 'C',  # Cyrillic с → Latin c
+            'х': 'x', 'Х': 'X',  # Cyrillic х → Latin x
+            'у': 'y', 'У': 'Y',  # Cyrillic у → Latin y
+            'і': 'i', 'І': 'I',  # Cyrillic і → Latin i
+            'ј': 'j', 'Ј': 'J',  # Cyrillic ј → Latin j
+            'к': 'k', 'К': 'K',  # Cyrillic к → Latin k
+            'м': 'm', 'М': 'M',  # Cyrillic м → Latin m
+            'н': 'n', 'Н': 'N',  # Cyrillic н → Latin n
+            'т': 't', 'Т': 'T',  # Cyrillic т → Latin t
+            'п': 'n', 'П': 'N',  # Cyrillic п → Latin n (common confusion)
+            'в': 'b', 'В': 'B',  # Cyrillic в → Latin b (common confusion)
+            'г': 'r', 'Г': 'R',  # Cyrillic г → Latin r (common confusion)
+            'з': '3', 'З': '3',  # Cyrillic з → Latin 3 (common confusion)
+            'ч': '4', 'Ч': '4',  # Cyrillic ч → Latin 4 (common confusion)
+            'ш': 'w', 'Ш': 'W',  # Cyrillic ш → Latin w (common confusion)
+            'щ': 'u', 'Щ': 'U',  # Cyrillic щ → Latin u (common confusion)
+            'ь': 'b', 'Ь': 'B',  # Cyrillic ь → Latin b (common confusion)
+            'ъ': 'b', 'Ъ': 'B',  # Cyrillic ъ → Latin b (common confusion)
+            'э': 'e', 'Э': 'E',  # Cyrillic э → Latin e (common confusion)
+            'ю': 'io', 'Ю': 'IO',  # Cyrillic ю → Latin io (common confusion)
+            'я': 'ya', 'Я': 'YA',  # Cyrillic я → Latin ya (common confusion)
+        }
 
         self.logger.info("UnicodeService initialized")
 
@@ -251,13 +281,14 @@ class UnicodeService:
 
         return text
 
-    async def normalize_unicode(self, text: str, aggressive: bool = False) -> Dict[str, Any]:
+    async def normalize_unicode(self, text: str, aggressive: bool = False, normalize_homoglyphs: bool = False) -> Dict[str, Any]:
         """
         Unicode normalization with guaranteed dict return format.
         
         Args:
             text: Input text to normalize
             aggressive: Aggressive normalization (may change meaning)
+            normalize_homoglyphs: Normalize Cyrillic/Latin homoglyphs to dominant alphabet
             
         Returns:
             Dict with structure: {"normalized": str, "aggressive": bool, "notes": Optional[str], ...}
@@ -267,9 +298,9 @@ class UnicodeService:
             >>> result["normalized"]  # "Hello World"
             >>> result["aggressive"]  # False
         """
-        return self.normalize_text(text, aggressive)
+        return self.normalize_text(text, aggressive, normalize_homoglyphs)
 
-    def normalize_text(self, text: str, aggressive: bool = False) -> Dict[str, Any]:
+    def normalize_text(self, text: str, aggressive: bool = False, normalize_homoglyphs: bool = False) -> Dict[str, Any]:
         """
         Unicode normalization of text with focus on preventing FN.
         Always returns a dict with guaranteed structure.
@@ -277,6 +308,7 @@ class UnicodeService:
         Args:
             text: Input text
             aggressive: Aggressive normalization (may change meaning)
+            normalize_homoglyphs: Normalize Cyrillic/Latin homoglyphs to dominant alphabet
 
         Returns:
             Dict with structure: {"normalized": str, "aggressive": bool, "notes": Optional[str], ...}
@@ -313,6 +345,15 @@ class UnicodeService:
             text = recovered_text
             changes_count += 1
 
+        # 0.5. Apply homoglyph normalization if enabled
+        homoglyph_traces = []
+        if normalize_homoglyphs:
+            text, homoglyph_replacements = self._normalize_homoglyphs(text)
+            char_replacements += homoglyph_replacements
+            if homoglyph_replacements > 0:
+                changes_count += 1
+                homoglyph_traces.append(f"unicode.homoglyph_fold: {homoglyph_replacements} characters normalized")
+
         # 1. Replace complex characters FIRST to prevent Unicode normalization from converting them to combining chars
         normalized_text, replacements = self._replace_complex_characters(text)
         char_replacements += replacements
@@ -347,6 +388,10 @@ class UnicodeService:
         )
         # Add original text to result
         result["original"] = original_text
+        
+        # Add homoglyph traces to result
+        if homoglyph_traces:
+            result["homoglyph_traces"] = homoglyph_traces
 
         self.logger.info(
             f"Text normalized: {len(original_text)} -> {len(normalized_text)} chars, confidence: {confidence:.2f}"
@@ -359,6 +404,65 @@ class UnicodeService:
         for text in texts:
             results.append(self.normalize_text(text))
         return results
+
+    def _normalize_homoglyphs(self, text: str) -> tuple[str, int]:
+        """
+        Normalize homoglyphs by detecting the dominant alphabet and converting to it.
+        
+        Args:
+            text: Input text to normalize
+            
+        Returns:
+            Tuple of (normalized_text, replacement_count)
+        """
+        if not text:
+            return text, 0
+            
+        # Detect dominant alphabet
+        cyrillic_count = len(re.findall(r'[а-яёіїєґА-ЯЁІЇЄҐ]', text))
+        latin_count = len(re.findall(r'[a-zA-Z]', text))
+        
+        # Determine dominant alphabet
+        if cyrillic_count > latin_count:
+            # Cyrillic dominant - convert Latin homoglyphs to Cyrillic
+            return self._convert_to_cyrillic(text)
+        elif latin_count > cyrillic_count:
+            # Latin dominant - convert Cyrillic homoglyphs to Latin
+            return self._convert_to_latin(text)
+        else:
+            # Equal counts or no letters - no conversion
+            return text, 0
+
+    def _convert_to_latin(self, text: str) -> tuple[str, int]:
+        """Convert Cyrillic homoglyphs to Latin characters."""
+        replacements = 0
+        result = ""
+        
+        for char in text:
+            if char in self.homoglyph_mapping:
+                result += self.homoglyph_mapping[char]
+                replacements += 1
+            else:
+                result += char
+                
+        return result, replacements
+
+    def _convert_to_cyrillic(self, text: str) -> tuple[str, int]:
+        """Convert Latin homoglyphs to Cyrillic characters."""
+        # Create reverse mapping
+        reverse_mapping = {v: k for k, v in self.homoglyph_mapping.items()}
+        
+        replacements = 0
+        result = ""
+        
+        for char in text:
+            if char in reverse_mapping:
+                result += reverse_mapping[char]
+                replacements += 1
+            else:
+                result += char
+                
+        return result, replacements
 
     def _apply_unicode_normalization(self, text: str) -> str:
         """Apply Unicode normalization"""

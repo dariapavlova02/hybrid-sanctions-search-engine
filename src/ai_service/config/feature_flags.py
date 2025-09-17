@@ -41,9 +41,13 @@ class FeatureFlags:
     # ASCII fastpath optimization
     ascii_fastpath: bool = False
     
+    # Debug and tracing flags
+    debug_tracing: bool = False
+    
     # Validation flags (default OFF, for validation only)
     enable_spacy_ner: bool = False
     enable_nameparser_en: bool = False
+    enable_en_nicknames: bool = False
     strict_stopwords: bool = False
     fsm_tuned_roles: bool = False
     enhanced_diminutives: bool = False
@@ -63,8 +67,10 @@ class FeatureFlags:
             "enforce_nominative": self.enforce_nominative,
             "preserve_feminine_surnames": self.preserve_feminine_surnames,
             "ascii_fastpath": self.ascii_fastpath,
+            "debug_tracing": self.debug_tracing,
             "enable_spacy_ner": self.enable_spacy_ner,
             "enable_nameparser_en": self.enable_nameparser_en,
+            "enable_en_nicknames": self.enable_en_nicknames,
             "strict_stopwords": self.strict_stopwords,
             "fsm_tuned_roles": self.fsm_tuned_roles,
             "enhanced_diminutives": self.enhanced_diminutives,
@@ -169,6 +175,14 @@ def _merge_flags(base_flags: FeatureFlags, override_flags: Dict[str, Any]) -> Fe
         enable_vector_fallback=flags_dict.get("enable_vector_fallback", False),
         enforce_nominative=flags_dict.get("enforce_nominative", True),
         preserve_feminine_surnames=flags_dict.get("preserve_feminine_surnames", True),
+        ascii_fastpath=flags_dict.get("ascii_fastpath", False),
+        debug_tracing=flags_dict.get("debug_tracing", False),
+        enable_spacy_ner=flags_dict.get("enable_spacy_ner", False),
+        enable_nameparser_en=flags_dict.get("enable_nameparser_en", False),
+        enable_en_nicknames=flags_dict.get("enable_en_nicknames", False),
+        fsm_tuned_roles=flags_dict.get("fsm_tuned_roles", False),
+        enhanced_diminutives=flags_dict.get("enhanced_diminutives", False),
+        enhanced_gender_rules=flags_dict.get("enhanced_gender_rules", False),
     )
 
 
