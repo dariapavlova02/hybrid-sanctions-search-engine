@@ -5,6 +5,7 @@ Decision Engine for risk assessment and decision making.
 from typing import Any, Dict, List, Optional
 
 from ..contracts.decision_contracts import DecisionInput, DecisionOutput, RiskLevel, SmartFilterInfo, SignalsInfo, SimilarityInfo
+from ..contracts.trace_models import SearchTrace
 from ..config.settings import DecisionConfig, DECISION_CONFIG
 from ..utils.logging_config import get_logger
 from ..monitoring.metrics_service import MetricsService, MetricDefinition, MetricType
@@ -24,7 +25,7 @@ class DecisionEngine:
         if self.metrics_service:
             self._register_decision_metrics()
     
-    def decide(self, inp: DecisionInput) -> DecisionOutput:
+    def decide(self, inp: DecisionInput, search_trace: Optional[SearchTrace] = None) -> DecisionOutput:
         """
         Make a decision based on input signals and data.
         
@@ -83,6 +84,10 @@ class DecisionEngine:
         # Record metrics if available
         if self.metrics_service:
             self._record_decision_metrics(risk, score, inp)
+        
+        # Add search trace to details if available
+        if search_trace and search_trace.enabled:
+            details["search_trace"] = search_trace.to_dict()
         
         return DecisionOutput(
             risk=risk,

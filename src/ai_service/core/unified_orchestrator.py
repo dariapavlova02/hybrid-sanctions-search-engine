@@ -45,6 +45,7 @@ from ..contracts.decision_contracts import (
     SignalsInfo,
     SimilarityInfo,
 )
+from ..contracts.trace_models import SearchTrace, SearchTraceBuilder
 from ..core.decision_engine import DecisionEngine
 from ..config.settings import DecisionConfig
 from ..exceptions import InternalServerError, ServiceInitializationError
@@ -513,7 +514,8 @@ class UnifiedOrchestrator:
         signals_result: Any,
         variants: Optional[list],
         embeddings: Optional[list],
-        errors: list
+        errors: list,
+        search_trace: Optional[SearchTrace] = None
     ) -> Optional[Any]:
         """
         Handle Layer 9: Decision & Response
@@ -558,7 +560,7 @@ class UnifiedOrchestrator:
                 )
 
                 # Make decision using our new DecisionEngine
-                decision_result = self.decision_engine.decide(decision_input)
+                decision_result = self.decision_engine.decide(decision_input, search_trace)
 
                 logger.debug(
                     f"Decision made: {decision_result.risk.value} "
@@ -589,6 +591,8 @@ class UnifiedOrchestrator:
         generate_variants: Optional[bool] = None,
         generate_embeddings: Optional[bool] = None,
         feature_flags: Optional[FeatureFlags] = None,
+        # Search tracing
+        search_trace_enabled: bool = False,
         # Legacy compatibility kwargs (ignored but accepted)
         cache_result: Optional[bool] = None,
         embeddings: Optional[bool] = None,
@@ -613,6 +617,11 @@ class UnifiedOrchestrator:
         start_time = time.time()
         context = ProcessingContext(original_text=text)
         errors = []
+        
+        # Initialize search trace if enabled
+        search_trace = None
+        if search_trace_enabled:
+            search_trace = SearchTrace(enabled=True)
 
         # Defensive handling of feature flags
         effective_flags = self._validate_and_normalize_flags(feature_flags)
@@ -661,6 +670,10 @@ class UnifiedOrchestrator:
             smart_filter_result = await self._handle_smart_filter_layer(context, start_time)
             if smart_filter_result is not None:  # Early return if filtered
                 return smart_filter_result
+            
+            # Add trace note for smart filter
+            if search_trace:
+                search_trace.note("Smart filter passed - continuing with processing")
 
             # ================================================================
             # Layer 3: Language Detection (on original text to preserve language markers)
@@ -678,6 +691,18 @@ class UnifiedOrchestrator:
             norm_result = await self._handle_name_normalization_layer(
                 text_u, context, remove_stop_words, preserve_names, enable_advanced_features, effective_flags, errors
             )
+            
+            # Add trace note for AC patterns after normalization
+            if search_trace and hasattr(norm_result, 'tokens') and norm_result.tokens:
+                # Simple check for potential AC patterns
+                has_tier0_patterns = any(
+                    len(token) > 3 and token.isupper() 
+                    for token in norm_result.tokens
+                )
+                if not has_tier0_patterns:
+                    search_trace.note("AC skipped - no tier0/1 patterns detected")
+                else:
+                    search_trace.note("AC patterns detected - proceeding with search")
 
             # ================================================================
             # Layer 6: Signals (enrichment)
@@ -693,12 +718,16 @@ class UnifiedOrchestrator:
             # Layer 8: Embeddings (optional)
             # ================================================================
             embeddings = await self._handle_embeddings_layer(norm_result, generate_embeddings, errors)
+            
+            # Add trace note for vector fallback
+            if search_trace and embeddings:
+                search_trace.note("Vector fallback engaged - embeddings generated for search")
 
             # ================================================================
             # Layer 9: Decision & Response
             # ================================================================
             decision_result = await self._handle_decision_layer(
-                context, norm_result, signals_result, variants, embeddings, errors
+                context, norm_result, signals_result, variants, embeddings, errors, search_trace
             )
 
             processing_time = time.time() - start_time

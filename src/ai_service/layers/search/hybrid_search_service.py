@@ -19,6 +19,7 @@ from .contracts import (
     SearchMode, 
     SearchMetrics
 )
+from ...contracts.trace_models import SearchTrace
 from .config import HybridSearchConfig
 from .elasticsearch_adapters import ElasticsearchACAdapter, ElasticsearchVectorAdapter
 from .elasticsearch_client import ElasticsearchClientFactory
@@ -222,7 +223,8 @@ class HybridSearchService(BaseService, SearchService):
         self, 
         normalized: NormalizationResult, 
         text: str, 
-        opts: SearchOpts
+        opts: SearchOpts,
+        search_trace: Optional[SearchTrace] = None
     ) -> List[Candidate]:
         """
         Find search candidates using hybrid search strategy.
@@ -238,17 +240,21 @@ class HybridSearchService(BaseService, SearchService):
         if not self._initialized:
             self.initialize()
         
+        # Create dummy trace if none provided
+        if search_trace is None:
+            search_trace = SearchTrace(enabled=False)
+        
         start_time = time.time()
         self._metrics.total_requests += 1
         
         try:
             # Determine search strategy based on options
             if opts.search_mode == SearchMode.AC:
-                candidates = await self._ac_search_only(normalized, text, opts)
+                candidates = await self._ac_search_only(normalized, text, opts, search_trace)
             elif opts.search_mode == SearchMode.VECTOR:
-                candidates = await self._vector_search_only(normalized, text, opts)
+                candidates = await self._vector_search_only(normalized, text, opts, search_trace)
             else:  # HYBRID mode
-                candidates = await self._hybrid_search(normalized, text, opts)
+                candidates = await self._hybrid_search(normalized, text, opts, search_trace)
             
             # Process and rank results
             candidates = self._process_results(candidates, opts)
@@ -270,13 +276,14 @@ class HybridSearchService(BaseService, SearchService):
             self.logger.error(f"Search failed: {e}")
             
             # TODO: Implement fallback to local indexes
-            return await self._fallback_search(normalized, text, opts)
+            return await self._fallback_search(normalized, text, opts, search_trace)
     
     async def _ac_search_only(
         self, 
         normalized: NormalizationResult, 
         text: str, 
-        opts: SearchOpts
+        opts: SearchOpts,
+        search_trace: Optional[SearchTrace] = None
     ) -> List[Candidate]:
         """Execute AC search only."""
         self._metrics.ac_requests += 1
@@ -306,7 +313,8 @@ class HybridSearchService(BaseService, SearchService):
         self, 
         normalized: NormalizationResult, 
         text: str, 
-        opts: SearchOpts
+        opts: SearchOpts,
+        search_trace: Optional[SearchTrace] = None
     ) -> List[Candidate]:
         """Execute vector search only."""
         self._metrics.vector_requests += 1
@@ -336,13 +344,14 @@ class HybridSearchService(BaseService, SearchService):
         self, 
         normalized: NormalizationResult, 
         text: str, 
-        opts: SearchOpts
+        opts: SearchOpts,
+        search_trace: Optional[SearchTrace] = None
     ) -> List[Candidate]:
         """Execute hybrid search with escalation and vector fallback."""
         self._metrics.hybrid_requests += 1
         
         # Step 1: Try AC search first
-        ac_candidates = await self._ac_search_only(normalized, text, opts)
+        ac_candidates = await self._ac_search_only(normalized, text, opts, search_trace)
         
         # Check if AC results are sufficient
         if self._should_escalate(ac_candidates, opts):
@@ -350,12 +359,12 @@ class HybridSearchService(BaseService, SearchService):
             self._metrics.escalation_triggered += 1
             
             # Step 2: Execute vector search
-            vector_candidates = await self._vector_search_only(normalized, text, opts)
+            vector_candidates = await self._vector_search_only(normalized, text, opts, search_trace)
             
             # Step 3: Check if vector fallback is needed
             if self._should_use_vector_fallback(ac_candidates, vector_candidates, opts):
                 self.logger.info("Using vector fallback for better results")
-                fallback_candidates = await self._vector_fallback_search(normalized, text, opts)
+                fallback_candidates = await self._vector_fallback_search(normalized, text, opts, search_trace)
                 
                 # Combine all results
                 all_candidates = self._combine_results(ac_candidates, vector_candidates, opts)
@@ -415,7 +424,8 @@ class HybridSearchService(BaseService, SearchService):
         self, 
         normalized: NormalizationResult, 
         text: str, 
-        opts: SearchOpts
+        opts: SearchOpts,
+        search_trace: Optional[SearchTrace] = None
     ) -> List[Candidate]:
         """Execute vector fallback search with kNN + BM25."""
         try:
@@ -735,7 +745,8 @@ class HybridSearchService(BaseService, SearchService):
         self, 
         normalized: NormalizationResult, 
         text: str, 
-        opts: SearchOpts
+        opts: SearchOpts,
+        search_trace: Optional[SearchTrace] = None
     ) -> List[Candidate]:
         """Fallback to local indexes when Elasticsearch is unavailable."""
         self.logger.warning("Using fallback search due to Elasticsearch unavailability")
@@ -748,9 +759,9 @@ class HybridSearchService(BaseService, SearchService):
         query_text = normalized.normalized or text
 
         if self._fallback_watchlist_service and self._fallback_watchlist_service.ready():
-            ac_hits = self._fallback_watchlist_service.search(query_text, top_k=opts.top_k)
+            ac_hits = self._fallback_watchlist_service.search(query_text, top_k=opts.top_k, trace=search_trace)
             for doc_id, score in ac_hits:
-                doc = self._fallback_watchlist_service.get_doc(doc_id)
+                doc = self._fallback_watchlist_service.get_doc(doc_id, trace=search_trace)
                 if not doc:
                     continue
                 fallback_results.append(
@@ -771,7 +782,7 @@ class HybridSearchService(BaseService, SearchService):
             for doc_id, score in vector_hits:
                 doc = None
                 if self._fallback_watchlist_service:
-                    doc = self._fallback_watchlist_service.get_doc(doc_id)
+                    doc = self._fallback_watchlist_service.get_doc(doc_id, trace=search_trace)
                 fallback_results.append(
                     Candidate(
                         doc_id=doc_id,
