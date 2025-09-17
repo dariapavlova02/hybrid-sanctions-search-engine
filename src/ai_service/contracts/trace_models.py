@@ -39,6 +39,36 @@ class SearchTraceStep:
     took_ms: float
     hits: List[SearchTraceHit] = field(default_factory=list)
     meta: Dict[str, Any] = field(default_factory=dict)  # thresholds, flags
+    
+    def __post_init__(self):
+        """Round took_ms to 0.1ms precision for stable snapshots."""
+        self.took_ms = round(self.took_ms, 1)
+        # Sort hits deterministically: score desc, doc_id asc
+        self.hits = self._sort_hits_deterministically()
+    
+    def _sort_hits_deterministically(self) -> List[SearchTraceHit]:
+        """Sort hits deterministically for stable snapshots."""
+        return sorted(self.hits, key=lambda h: (-h.score, h.doc_id))
+    
+    def limit_hits(self, max_hits: int = 10) -> None:
+        """Limit hits to top N for stable snapshots."""
+        if len(self.hits) > max_hits:
+            self.hits = self.hits[:max_hits]
+    
+    def clean_meta_for_snapshot(self) -> None:
+        """Remove volatile fields from meta data for stable snapshots."""
+        volatile_fields = {
+            'timestamp', 'created_at', 'updated_at', 'start_time', 'end_time',
+            'random_seed', 'session_id', 'request_id', 'trace_id',
+            'duration_ms', 'elapsed_time', 'processing_time'
+        }
+        
+        cleaned_meta = {}
+        for key, value in self.meta.items():
+            if key.lower() not in volatile_fields:
+                cleaned_meta[key] = value
+        
+        self.meta = cleaned_meta
 
 
 @dataclass
@@ -70,6 +100,12 @@ class SearchTrace:
     def get_hit_count(self) -> int:
         """Get total number of hits across all steps."""
         return sum(len(step.hits) for step in self.steps)
+    
+    def prepare_for_snapshot(self, max_hits: int = 3) -> None:
+        """Prepare trace for stable snapshot comparison."""
+        for step in self.steps:
+            step.limit_hits(max_hits)
+            step.clean_meta_for_snapshot()
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert trace to dictionary for serialization."""

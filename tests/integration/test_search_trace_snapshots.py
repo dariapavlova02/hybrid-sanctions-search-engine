@@ -10,82 +10,13 @@ from typing import Dict, Any, List
 from src.ai_service.core.unified_orchestrator import UnifiedOrchestrator
 from src.ai_service.config.feature_flags import FeatureFlags
 from src.ai_service.contracts.trace_models import SearchTrace
+from tests.utils.snapshots import (
+    normalize_trace_for_snapshot,
+    create_stable_snapshot,
+    assert_trace_snapshot_matches,
+)
 
 
-class SearchTraceSnapshotNormalizer:
-    """Normalizes SearchTrace data for stable snapshot comparison."""
-    
-    @staticmethod
-    def normalize_trace_data(trace_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Normalize trace data for stable comparison."""
-        if not trace_data or not isinstance(trace_data, dict):
-            return trace_data
-        
-        normalized = trace_data.copy()
-        
-        # Normalize steps
-        if "steps" in normalized:
-            normalized["steps"] = [
-                SearchTraceSnapshotNormalizer._normalize_step(step)
-                for step in normalized["steps"]
-            ]
-        
-        # Remove dynamic fields
-        normalized.pop("total_time_ms", None)
-        normalized.pop("total_hits", None)
-        
-        return normalized
-    
-    @staticmethod
-    def _normalize_step(step: Dict[str, Any]) -> Dict[str, Any]:
-        """Normalize a single search step."""
-        if not isinstance(step, dict):
-            return step
-        
-        normalized_step = step.copy()
-        
-        # Normalize timing
-        normalized_step.pop("took_ms", None)
-        
-        # Normalize hits (keep only top 3)
-        if "hits" in normalized_step and isinstance(normalized_step["hits"], list):
-            hits = normalized_step["hits"]
-            if len(hits) > 3:
-                # Keep top 3 and add summary
-                top_hits = hits[:3]
-                summary = {
-                    "doc_id": f"...{len(hits) - 3} more hits",
-                    "score": 0.0,
-                    "rank": 0,
-                    "source": "SUMMARY",
-                    "signals": {"total_hits": len(hits)}
-                }
-                normalized_step["hits"] = top_hits + [summary]
-        
-        # Normalize meta fields
-        if "meta" in normalized_step and isinstance(normalized_step["meta"], dict):
-            meta = normalized_step["meta"]
-            # Remove dynamic timing fields
-            meta.pop("load_time_ms", None)
-            meta.pop("search_time_ms", None)
-            
-            # Normalize tier counts
-            if "tiers" in meta and isinstance(meta["tiers"], dict):
-                tiers = meta["tiers"]
-                # Keep only essential tier info
-                normalized_tiers = {}
-                for tier_key in ["t0", "t1", "t2"]:
-                    if tier_key in tiers:
-                        normalized_tiers[tier_key] = tiers[tier_key]
-                meta["tiers"] = normalized_tiers
-        
-        return normalized_step
-
-
-@pytest.fixture
-def search_trace_normalizer():
-    """Fixture for SearchTrace normalizer."""
-    return SearchTraceSnapshotNormalizer()
 
 
 @pytest.fixture
@@ -157,8 +88,7 @@ def orchestrator_with_search_trace(minimal_watchlist_index):
 @pytest.mark.search_trace
 @pytest.mark.asyncio
 async def test_ac_tier_trace_snapshot(
-    orchestrator_with_search_trace, 
-    search_trace_normalizer
+    orchestrator_with_search_trace
 ):
     """Test AC tier trace snapshot with document ID and full name patterns."""
     orchestrator, watchlist_index = orchestrator_with_search_trace
@@ -200,8 +130,7 @@ async def test_ac_tier_trace_snapshot(
     assert captured_search_trace.enabled is True
     
     # Get trace data
-    trace_data = captured_search_trace.to_dict()
-    normalized_trace = search_trace_normalizer.normalize_trace_data(trace_data)
+    normalized_trace = normalize_trace_for_snapshot(captured_search_trace, max_hits=3)
     
     # Verify trace structure
     assert "steps" in normalized_trace
@@ -233,8 +162,7 @@ async def test_ac_tier_trace_snapshot(
 @pytest.mark.search_trace
 @pytest.mark.asyncio
 async def test_vector_fallback_trace_snapshot(
-    orchestrator_with_search_trace,
-    search_trace_normalizer
+    orchestrator_with_search_trace
 ):
     """Test vector fallback trace snapshot with semantic search."""
     orchestrator, watchlist_index = orchestrator_with_search_trace
@@ -275,8 +203,7 @@ async def test_vector_fallback_trace_snapshot(
     assert captured_search_trace.enabled is True
     
     # Get trace data
-    trace_data = captured_search_trace.to_dict()
-    normalized_trace = search_trace_normalizer.normalize_trace_data(trace_data)
+    normalized_trace = normalize_trace_for_snapshot(captured_search_trace, max_hits=3)
     
     # Verify trace structure
     assert "steps" in normalized_trace
@@ -307,8 +234,7 @@ async def test_vector_fallback_trace_snapshot(
 @pytest.mark.search_trace
 @pytest.mark.asyncio
 async def test_hybrid_rerank_trace_snapshot(
-    orchestrator_with_search_trace,
-    search_trace_normalizer
+    orchestrator_with_search_trace
 ):
     """Test hybrid rerank trace snapshot with BM25+semantic different top-1."""
     orchestrator, watchlist_index = orchestrator_with_search_trace
@@ -350,8 +276,7 @@ async def test_hybrid_rerank_trace_snapshot(
     assert captured_search_trace.enabled is True
     
     # Get trace data
-    trace_data = captured_search_trace.to_dict()
-    normalized_trace = search_trace_normalizer.normalize_trace_data(trace_data)
+    normalized_trace = normalize_trace_for_snapshot(captured_search_trace, max_hits=3)
     
     # Verify trace structure
     assert "steps" in normalized_trace

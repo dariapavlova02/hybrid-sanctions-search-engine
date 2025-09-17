@@ -155,7 +155,8 @@ class TestSearchTraceIntegration:
             unicode_service=mock_unicode,
             normalization_service=mock_normalization,
             signals_service=mock_signals,
-            decision_engine=mock_decision_engine
+            decision_engine=mock_decision_engine,
+            enable_decision_engine=True
         )
         
         # Test with search trace enabled
@@ -214,7 +215,8 @@ class TestSearchTraceIntegration:
             unicode_service=mock_unicode,
             normalization_service=mock_normalization,
             signals_service=mock_signals,
-            decision_engine=mock_decision_engine
+            decision_engine=mock_decision_engine,
+            enable_decision_engine=True
         )
         
         # Test without search trace
@@ -276,7 +278,8 @@ class TestSearchTraceIntegration:
             normalization_service=mock_normalization,
             signals_service=mock_signals,
             embeddings_service=mock_embeddings,
-            decision_engine=mock_decision_engine
+            decision_engine=mock_decision_engine,
+            enable_decision_engine=True
         )
         
         # Test with search trace enabled
