@@ -32,6 +32,21 @@ from .decision_contracts import (  # Decision engine contracts
     SimilarityInfo,
 )
 
+from .trace_models import (  # Search trace models
+    SearchStage,
+    SearchTrace,
+    SearchTraceBuilder,
+    SearchTraceHit,
+    SearchTraceStep,
+    create_ac_hit,
+    create_hybrid_hit,
+    create_lexical_hit,
+    create_rerank_hit,
+    create_search_hit,
+    create_semantic_hit,
+    create_watchlist_hit,
+)
+
 __all__ = [
     # Data structures
     "TokenTrace",
@@ -50,6 +65,19 @@ __all__ = [
     "SmartFilterInfo",
     "SignalsInfo",
     "SimilarityInfo",
+    # Search trace structures
+    "SearchStage",
+    "SearchTrace",
+    "SearchTraceBuilder",
+    "SearchTraceHit",
+    "SearchTraceStep",
+    "create_ac_hit",
+    "create_hybrid_hit",
+    "create_lexical_hit",
+    "create_rerank_hit",
+    "create_search_hit",
+    "create_semantic_hit",
+    "create_watchlist_hit",
     # Interfaces
     "ProcessingStage",
     "ValidationServiceInterface",
