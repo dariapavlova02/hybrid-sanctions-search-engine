@@ -34,6 +34,7 @@ class FeatureFlags:
     # Debug and monitoring
     enable_dual_processing: bool = False  # Process with both implementations for comparison
     log_implementation_choice: bool = True
+    debug_tracing: bool = False  # Enable debug tracing
 
     # New feature flags for safe rollout
     use_factory_normalizer: bool = False

@@ -151,7 +151,7 @@ _spacy_ru_ner: Optional[SpacyRuNER] = None
 
 def get_spacy_ru_ner() -> Optional[SpacyRuNER]:
     """
-    Get singleton instance of Russian spaCy NER.
+    Get singleton instance of Russian spaCy NER with graceful fallback.
     
     Returns:
         SpacyRuNER instance if available, None otherwise
@@ -159,9 +159,13 @@ def get_spacy_ru_ner() -> Optional[SpacyRuNER]:
     global _spacy_ru_ner
     
     if _spacy_ru_ner is None:
-        _spacy_ru_ner = SpacyRuNER()
+        try:
+            _spacy_ru_ner = SpacyRuNER()
+        except Exception as e:
+            logger.warning(f"Failed to initialize Russian NER: {e}")
+            _spacy_ru_ner = None
     
-    return _spacy_ru_ner if _spacy_ru_ner.is_available else None
+    return _spacy_ru_ner if _spacy_ru_ner and _spacy_ru_ner.is_available else None
 
 
 def clear_spacy_ru_ner():

@@ -6,11 +6,16 @@ lexicons and context rules.
 """
 
 import re
-from typing import List, Optional, Set, Tuple
+import ahocorasick
+from typing import List, Optional, Set, Tuple, Dict, Any
 from dataclasses import dataclass
 from enum import Enum
 
-from .lexicon_loader import Lexicons
+# Import unified lexicon
+from ..variants.templates.lexicon import (
+    get_stopwords, is_legal_form, is_payment_context,
+    get_all_lexicon_tokens, LEGAL_FORMS
+)
 
 
 class TokenRole(Enum):
@@ -32,33 +37,65 @@ class RoleTag:
 
 
 class RoleTagger:
-    """Role tagger for token classification."""
-    
-    def __init__(self, lexicons: Lexicons, window: int = 3):
+    """Role tagger for token classification with Aho-Corasick acceleration."""
+
+    def __init__(self, window: int = 3, enable_ac: bool = True):
         """
         Initialize role tagger.
 
         Args:
-            lexicons: Loaded lexicons
             window: Context window size for organization detection
+            enable_ac: Enable Aho-Corasick acceleration for pattern matching
         """
-        self.lexicons = lexicons
         self.window = window
-        
+        self.enable_ac = enable_ac
+
         # Pre-compile patterns for efficiency
         self._uppercase_pattern = re.compile(r'^[А-ЯA-Z]{2,}$')
         self._legal_form_pattern = re.compile(
-            r'^(' + '|'.join(re.escape(form) for form in lexicons.legal_forms) + r')$',
+            r'^(' + '|'.join(re.escape(form) for form in LEGAL_FORMS) + r')$',
             re.IGNORECASE
         )
+
+        # Initialize Aho-Corasick automaton for fast pattern matching
+        self._ac_automaton = None
+        if enable_ac:
+            self._build_ac_automaton()
         
         # Pre-compile additional common patterns
         self._initial_pattern = re.compile(r'^[A-Za-zА-ЯЁІЇЄҐ]\.$')
         self._punctuation_pattern = re.compile(r'^[^\w\s]+$')
         self._cyrillic_pattern = re.compile(r'[А-Яа-яЁёІіЇїЄєҐґ]')
         self._latin_pattern = re.compile(r'[A-Za-z]')
+
+    def _build_ac_automaton(self):
+        """Build Aho-Corasick automaton from lexicon patterns."""
+        try:
+            automaton = ahocorasick.Automaton()
+
+            # Add all lexicon tokens as patterns
+            all_tokens = get_all_lexicon_tokens()
+            for i, token in enumerate(all_tokens):
+                # Store token with metadata for classification
+                automaton.add_word(token.lower(), (i, token, self._classify_lexicon_token(token)))
+
+            automaton.make_automaton()
+            self._ac_automaton = automaton
+        except ImportError:
+            # Fallback to regex if ahocorasick not available
+            self.enable_ac = False
+            self._ac_automaton = None
+
+    def _classify_lexicon_token(self, token: str) -> str:
+        """Classify a lexicon token by type."""
+        if is_legal_form(token):
+            return 'legal_form'
+        elif is_payment_context(token):
+            return 'payment_context'
+        else:
+            return 'stopword'
     
-    def tag(self, tokens: List[str], language: str) -> List[RoleTag]:
+    def tag(self, tokens: List[str], language: str, trace: Optional[List[Any]] = None) -> List[RoleTag]:
         """
         Tag tokens with roles based on lexicons and context rules.
 
@@ -73,36 +110,13 @@ class RoleTagger:
             return []
 
         # Get stopwords for the language
-        stopwords = self.lexicons.stopwords.get(language, set())
+        stopwords = get_stopwords(language)
         
-        # First pass: tag stopwords and identify legal forms
-        tags = []
-        legal_form_indices = []
-        
-        for i, token in enumerate(tokens):
-            token_lower = token.lower()
-            
-            # Check if token is a stopword
-            if token_lower in stopwords:
-                tags.append(RoleTag(
-                    token=token,
-                    role=TokenRole.STOPWORD,
-                    reason="stopword"
-                ))
-            # Check if token is a legal form
-            elif self._is_legal_form(token):
-                legal_form_indices.append(i)
-                tags.append(RoleTag(
-                    token=token,
-                    role=TokenRole.UNKNOWN,  # Will be updated in second pass
-                    reason="legal_form"
-                ))
-            else:
-                tags.append(RoleTag(
-                    token=token,
-                    role=TokenRole.UNKNOWN,
-                    reason="unknown"
-                ))
+        # First pass: use AC automaton or fallback to basic matching
+        if self.enable_ac and self._ac_automaton:
+            tags, legal_form_indices = self._tag_with_ac(tokens, language, trace)
+        else:
+            tags, legal_form_indices = self._tag_basic(tokens, stopwords, trace)
         
         # Second pass: identify organization spans
         organization_spans = self._find_organization_spans(tokens, legal_form_indices)
@@ -111,21 +125,213 @@ class RoleTagger:
         for span in organization_spans:
             for i in range(span[0], span[1] + 1):
                 if i < len(tags):
+                    original_role = tags[i].role.value
                     tags[i].role = TokenRole.ORGANIZATION
                     tags[i].span_id = span[2]  # span_id
                     tags[i].reason = "organization_span"
+
+                    # Add trace step if tracing is enabled
+                    if trace is not None:
+                        trace.append({
+                            'stage': 'role_tagger',
+                            'rule': f'organization_span_{span[2]}',
+                            'token': tags[i].token,
+                            'role': 'organization',
+                            'evidence': {
+                                'pos': i,
+                                'original_role': original_role,
+                                'span': f'{span[0]}-{span[1]}'
+                            }
+                        })
         
         # Third pass: mark remaining unknown tokens as person candidates
-        for tag in tags:
+        for i, tag in enumerate(tags):
             if tag.role == TokenRole.UNKNOWN:
                 tag.role = TokenRole.PERSON_CANDIDATE
                 tag.reason = "person_candidate"
+
+                # Add trace step if tracing is enabled
+                if trace is not None:
+                    trace.append({
+                        'stage': 'role_tagger',
+                        'rule': 'unknown_to_person_candidate',
+                        'token': tag.token,
+                        'role': 'person_candidate',
+                        'evidence': {
+                            'pos': i,
+                            'default_assignment': True
+                        }
+                    })
         
         return tags
 
+    def _tag_with_ac(self, tokens: List[str], language: str, trace: Optional[List[Any]] = None) -> Tuple[List[RoleTag], List[int]]:
+        """Tag tokens using Aho-Corasick automaton for fast pattern matching."""
+        tags = []
+        legal_form_indices = []
+        stopwords = get_stopwords(language)
+
+        # For small token sets, AC overhead is not worth it, use basic matching
+        if len(tokens) < 10:
+            return self._tag_basic(tokens, stopwords, trace)
+
+        # Create matches dict by checking each token individually (more efficient than concatenation)
+        matches = {}
+        for token in tokens:
+            token_lower = token.lower()
+            # Use the automaton to find exact matches for this token
+            for end_idx, (pattern_id, original_token, token_type) in self._ac_automaton.iter(token_lower):
+                if end_idx == len(token_lower) - 1:  # Exact match
+                    matches[token_lower] = token_type
+                    break
+
+        # Tag individual tokens based on matches, prioritizing language-specific stopwords
+        for i, token in enumerate(tokens):
+            token_lower = token.lower()
+
+            # First check language-specific stopwords (highest priority)
+            if token_lower in stopwords:
+                tags.append(RoleTag(
+                    token=token,
+                    role=TokenRole.STOPWORD,
+                    reason="stopword"
+                ))
+
+                # Add trace step if tracing is enabled
+                if trace is not None:
+                    trace.append({
+                        'stage': 'role_tagger',
+                        'rule': f'stopword_{language}',
+                        'token': token,
+                        'role': 'stopword',
+                        'evidence': {
+                            'pos': i,
+                            'language': language,
+                            'method': 'language_specific'
+                        }
+                    })
+            # Then check AC matches
+            elif token_lower in matches:
+                token_type = matches[token_lower]
+                if token_type == 'legal_form':
+                    legal_form_indices.append(i)
+                    tags.append(RoleTag(
+                        token=token,
+                        role=TokenRole.UNKNOWN,
+                        reason="legal_form"
+                    ))
+
+                    # Add trace step if tracing is enabled
+                    if trace is not None:
+                        trace.append({
+                            'stage': 'role_tagger',
+                            'rule': 'ac_legal_form',
+                            'token': token,
+                            'role': 'unknown',
+                            'evidence': {
+                                'pos': i,
+                                'token_type': token_type,
+                                'method': 'aho_corasick'
+                            }
+                        })
+
+                elif token_type == 'payment_context':
+                    tags.append(RoleTag(
+                        token=token,
+                        role=TokenRole.STOPWORD,
+                        reason="payment_context"
+                    ))
+
+                    # Add trace step if tracing is enabled
+                    if trace is not None:
+                        trace.append({
+                            'stage': 'role_tagger',
+                            'rule': 'ac_payment_context',
+                            'token': token,
+                            'role': 'stopword',
+                            'evidence': {
+                                'pos': i,
+                                'token_type': token_type,
+                                'method': 'aho_corasick'
+                            }
+                        })
+
+                else:
+                    tags.append(RoleTag(
+                        token=token,
+                        role=TokenRole.UNKNOWN,
+                        reason=token_type
+                    ))
+            else:
+                tags.append(RoleTag(
+                    token=token,
+                    role=TokenRole.UNKNOWN,
+                    reason="unknown"
+                ))
+
+        return tags, legal_form_indices
+
+    def _tag_basic(self, tokens: List[str], stopwords: set, trace: Optional[List[Any]] = None) -> Tuple[List[RoleTag], List[int]]:
+        """Fallback tagging method using basic pattern matching."""
+        tags = []
+        legal_form_indices = []
+
+        for i, token in enumerate(tokens):
+            token_lower = token.lower()
+
+            # Check if token is a stopword
+            if token_lower in stopwords:
+                tags.append(RoleTag(
+                    token=token,
+                    role=TokenRole.STOPWORD,
+                    reason="stopword"
+                ))
+
+                # Add trace step if tracing is enabled
+                if trace is not None:
+                    trace.append({
+                        'stage': 'role_tagger',
+                        'rule': 'basic_stopword',
+                        'token': token,
+                        'role': 'stopword',
+                        'evidence': {
+                            'pos': i,
+                            'method': 'basic_lookup'
+                        }
+                    })
+            # Check if token is a legal form
+            elif self._is_legal_form(token):
+                legal_form_indices.append(i)
+                tags.append(RoleTag(
+                    token=token,
+                    role=TokenRole.UNKNOWN,
+                    reason="legal_form"
+                ))
+
+                # Add trace step if tracing is enabled
+                if trace is not None:
+                    trace.append({
+                        'stage': 'role_tagger',
+                        'rule': 'basic_legal_form',
+                        'token': token,
+                        'role': 'unknown',
+                        'evidence': {
+                            'pos': i,
+                            'method': 'basic_lookup'
+                        }
+                    })
+            else:
+                tags.append(RoleTag(
+                    token=token,
+                    role=TokenRole.UNKNOWN,
+                    reason="unknown"
+                ))
+
+        return tags, legal_form_indices
+
     def _is_legal_form(self, token: str) -> bool:
         """Check if token is a legal form."""
-        return bool(self._legal_form_pattern.match(token))
+        return is_legal_form(token)
     
     def _is_uppercase_name(self, token: str) -> bool:
         """Check if token looks like an uppercase organization name."""

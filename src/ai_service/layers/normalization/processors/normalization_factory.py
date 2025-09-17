@@ -23,11 +23,37 @@ from .token_processor import TokenProcessor
 from .role_classifier import RoleClassifier
 from .morphology_processor import MorphologyProcessor
 from .gender_processor import GenderProcessor
-from ..token_ops import collapse_double_dots, normalize_hyphenated_name
+from ..token_ops import collapse_double_dots, collapse_double_dots_token, normalize_hyphenated_name, is_hyphenated_surname
 from ..morphology.diminutive_resolver import DiminutiveResolver
 from ..role_tagger import RoleTagger
 from ..role_tagger_service import RoleTaggerService
 from ..lexicon_loader import get_lexicons
+
+
+def _to_title(word: str) -> str:
+    """
+    Convert word to title case while preserving apostrophes and hyphens.
+    
+    Args:
+        word: Input word to convert
+        
+    Returns:
+        Word in title case (first letter uppercase, rest lowercase)
+    """
+    if not word:
+        return word
+    
+    # Handle hyphenated words - apply titlecase to each segment
+    if '-' in word:
+        segments = word.split('-')
+        return '-'.join(_to_title(segment) for segment in segments)
+    
+    # Handle single word - use title() for proper apostrophe handling
+    if len(word) == 1:
+        return word.upper()
+
+    # Use title() method which handles apostrophes correctly (e.g., "o'neil" -> "O'Neil")
+    return word.title()
 
 try:
     from ....data.dicts import russian_names, ukrainian_names
@@ -100,7 +126,11 @@ class NormalizationFactory(ErrorReportingMixin):
         self.metrics_collector = MetricsCollector(self.cache_metrics)
 
         # Initialize cached services
-        self.tokenizer_service = TokenizerService(self.cache_manager.get_tokenizer_cache())
+        self.tokenizer_service = TokenizerService(
+            cache=self.cache_manager.get_tokenizer_cache(),
+            fix_initials_double_dot=True,  # Enable double dot collapse by default
+            preserve_hyphenated_case=True  # Enable hyphenated name preservation by default
+        )
         self.morphology_adapter = MorphologyAdapter()
 
         # Initialize processors
@@ -110,22 +140,35 @@ class NormalizationFactory(ErrorReportingMixin):
         self.gender_processor = GenderProcessor()
         self.diminutive_resolver = DiminutiveResolver(Path(__file__).resolve().parents[5])
 
-        # Initialize role taggers with lexicons
+        # Initialize role taggers with unified lexicon and AC acceleration
         self.lexicons = get_lexicons()
-        self.role_tagger = RoleTagger(self.lexicons)  # Legacy role tagger
-        self.role_tagger_service = RoleTaggerService(self.lexicons)  # New FSM-based role tagger
+        self.role_tagger = RoleTagger(window=3, enable_ac=False)  # Conservative: AC disabled for now
+        self.role_tagger_service = RoleTaggerService()  # New FSM-based role tagger with default lexicons
         
-        # Initialize NER gateways
+        # Initialize NER gateways with graceful fallback
         self.ner_gateway_uk = None
         self.ner_gateway_en = None
         self.ner_gateway_ru = None
+        self.ner_disabled = False
+        
         try:
             from ..ner_gateways import get_spacy_uk_ner, get_spacy_en_ner, get_spacy_ru_ner
             self.ner_gateway_uk = get_spacy_uk_ner()
             self.ner_gateway_en = get_spacy_en_ner()
             self.ner_gateway_ru = get_spacy_ru_ner()
-        except ImportError:
-            self.logger.warning("NER gateways not available")
+            
+            # Check if any NER is available
+            if not any([self.ner_gateway_uk, self.ner_gateway_en, self.ner_gateway_ru]):
+                self.ner_disabled = True
+                self.logger.warning("No NER models available, falling back to rules-only mode")
+            else:
+                self.logger.info("NER gateways initialized successfully")
+        except ImportError as e:
+            self.logger.warning(f"NER gateways not available: {e}")
+            self.ner_disabled = True
+        except Exception as e:
+            self.logger.warning(f"Failed to initialize NER gateways: {e}")
+            self.ner_disabled = True
 
         # Cache for performance
         self._normalization_cache = {}
@@ -140,6 +183,8 @@ class NormalizationFactory(ErrorReportingMixin):
         feature_flags: Optional[Any] = None
     ) -> NormalizationResult:
         """Normalize text and return a complete NormalizationResult."""
+        # Use passed feature flags or fall back to global flags
+        effective_flags = feature_flags if feature_flags is not None else self.feature_flags
         with PerfTimer() as timer:
             try:
                 # Propagate feature flags to config
@@ -155,7 +200,7 @@ class NormalizationFactory(ErrorReportingMixin):
                     result.success = len(result.errors or []) == 0
                     return result
                 
-                result = await self._normalize_with_error_handling(text, config)
+                result = await self._normalize_with_error_handling(text, config, effective_flags)
                 result.processing_time = timer.elapsed
                 result.success = len(result.errors or []) == 0
                 return result
@@ -166,7 +211,8 @@ class NormalizationFactory(ErrorReportingMixin):
     async def _normalize_with_error_handling(
         self,
         text: str,
-        config: NormalizationConfig
+        config: NormalizationConfig,
+        effective_flags
     ) -> NormalizationResult:
         """Core normalization logic with comprehensive error handling."""
 
@@ -215,7 +261,7 @@ class NormalizationFactory(ErrorReportingMixin):
             return self._build_error_result(text, f"Tokenization failed: {e}")
 
         # Step 1.5: Apply tokenizer improvements (pre-processing)
-        tokens, improvement_traces_pre = self._apply_tokenizer_improvements(tokens, tokenization_traces)
+        tokens, improvement_traces_pre = self._apply_tokenizer_improvements(tokens, tokenization_traces, effective_flags)
         self.logger.debug(f"Applied pre-processing tokenizer improvements: {len(improvement_traces_pre)} improvements")
 
         # Step 1.6: Apply Russian 'ё' strategy if needed
@@ -252,7 +298,13 @@ class NormalizationFactory(ErrorReportingMixin):
                 except Exception as e:
                     self.logger.warning(f"Russian NER extraction failed: {e}")
             
-            # Use new FSM-based role tagger service
+            # Use new FSM-based role tagger service with strict_stopwords flag
+            strict_stopwords = getattr(effective_flags, 'strict_stopwords', False)
+            if strict_stopwords != getattr(self.role_tagger_service, '_last_strict_stopwords', None):
+                # Reinitialize with correct strict_stopwords setting
+                self.role_tagger_service = RoleTaggerService(strict_stopwords=strict_stopwords)
+                self.role_tagger_service._last_strict_stopwords = strict_stopwords
+            
             role_tags = self.role_tagger_service.tag(tokens, config.language)
             role_tagger_traces = self._create_fsm_role_tagger_traces(role_tags, tokens)
             self.logger.debug(f"FSM role tagger classified: {[(tag.role.value, tag.reason) for tag in role_tags]}")
@@ -277,6 +329,11 @@ class NormalizationFactory(ErrorReportingMixin):
             )
             original_tagged_tokens = list(zip(classified_tokens, roles))
             self.logger.debug(f"Classified roles: {list(zip(classified_tokens, roles))}")
+            
+            # Override roles with FSM results if available
+            if role_tags:
+                roles = [tag.role.value for tag in role_tags]
+                self.logger.debug(f"FSM overrode roles: {list(zip(classified_tokens, roles))}")
         except Exception as e:
             self.logger.error(f"Role classification failed: {e}")
             errors.append(f"Role classification failed: {e}")
@@ -287,9 +344,12 @@ class NormalizationFactory(ErrorReportingMixin):
             original_tagged_tokens = list(zip(classified_tokens, roles))
 
         # Step 2.5: Filter tokens based on FSM role tagger results
-        if role_tags and self.feature_flags._flags.strict_stopwords:
+        self.logger.debug(f"Filtering check: role_tags={len(role_tags) if role_tags else 0}, strict_stopwords={getattr(effective_flags, 'strict_stopwords', False)}")
+        if role_tags and getattr(effective_flags, 'strict_stopwords', False):
+            # Pass trace if debug tracing is enabled
+            trace_steps = [] if getattr(effective_flags, 'debug_tracing', False) else None
             filtered_tokens, filtered_roles, filter_traces = self._apply_role_filtering(
-                classified_tokens, roles, role_tags
+                classified_tokens, roles, role_tags, effective_flags=effective_flags, trace=trace_steps
             )
             self.logger.debug(f"FSM role filtering removed {len(classified_tokens) - len(filtered_tokens)} tokens")
         else:
@@ -300,7 +360,7 @@ class NormalizationFactory(ErrorReportingMixin):
         diminutive_traces: List[str] = []
         unresolved_diminutive_indices: Set[int] = set()
         # Use filtered tokens and roles if filtering was applied
-        if role_tags and self.feature_flags._flags.strict_stopwords:
+        if role_tags and getattr(effective_flags, 'strict_stopwords', False):
             tokens_for_morphology = filtered_tokens
             roles_for_morphology = filtered_roles
         else:
@@ -308,7 +368,7 @@ class NormalizationFactory(ErrorReportingMixin):
             roles_for_morphology = roles
         if (
             config.language in {"ru", "uk"}
-            and self.feature_flags.use_diminutives_dictionary_only()
+            and getattr(effective_flags, 'use_diminutives_dictionary_only', True)
         ):
             (
                 tokens_for_morphology,
@@ -318,7 +378,7 @@ class NormalizationFactory(ErrorReportingMixin):
                 classified_tokens,
                 roles,
                 config.language,
-                allow_cross_lang=self.feature_flags.allow_diminutives_cross_lang(),
+                allow_cross_lang=getattr(effective_flags, 'diminutives_allow_cross_lang', False),
             )
 
         # Step 3: Morphological normalization
@@ -345,27 +405,28 @@ class NormalizationFactory(ErrorReportingMixin):
             gender_info = {}
 
         # Step 4.5: Apply tokenizer improvements (post-processing)
-        final_tokens, improvement_traces_post = self._apply_tokenizer_improvements_post(final_tokens, roles)
+        final_tokens, improvement_traces_post = self._apply_tokenizer_improvements_post(final_tokens, roles, effective_flags)
         self.logger.debug(f"Applied post-processing tokenizer improvements: {len(improvement_traces_post)} improvements")
 
-        # Step 5: Build trace (only if debug_tracing is enabled)
+        # Step 5: Build trace
         processing_traces: List[str] = []
         cache_info = None
         
+        # Always include improvement traces for collapse_double_dots rule
+        processing_traces = (
+            tokenization_traces
+            + improvement_traces_pre
+            + [str(trace) for trace in yo_traces]
+            + [str(trace) for trace in role_tagger_traces]
+            + filter_traces
+            + diminutive_traces
+            + role_traces
+            + morph_traces
+            + gender_traces
+            + improvement_traces_post
+        )
+        
         if config.debug_tracing:
-            processing_traces = (
-                tokenization_traces
-                + [str(trace) for trace in improvement_traces_pre]
-                + [str(trace) for trace in yo_traces]
-                + [str(trace) for trace in role_tagger_traces]
-                + filter_traces
-                + diminutive_traces
-                + role_traces
-                + morph_traces
-                + gender_traces
-                + [str(trace) for trace in improvement_traces_post]
-            )
-            
             # Add FSM role traces to the trace
             if role_tags:
                 fsm_trace_entries = self.role_tagger_service.get_trace_entries(tokens, role_tags)
@@ -375,13 +436,39 @@ class NormalizationFactory(ErrorReportingMixin):
             # Get cache info for debug tracing
             cache_info = getattr(self, '_debug_cache_info', None)
         
-        trace = self._build_token_trace(
-            classified_tokens,
-            roles,
-            final_tokens,
-            processing_traces,
-            cache_info
-        )
+        # Update trace with FSM roles if available
+        if role_tags:
+            # Rebuild trace with FSM roles
+            fsm_roles = [tag.role.value for tag in role_tags]
+            # Use all classified tokens for both original and final tokens
+            trace = self._build_token_trace(
+                classified_tokens,
+                fsm_roles,
+                classified_tokens,  # Use same tokens for both original and final
+                processing_traces,
+                cache_info
+            )
+            
+            # Add tokenization traces (like collapse_double_dots) to the final trace
+            for tokenization_trace in tokenization_traces:
+                if isinstance(tokenization_trace, dict) and tokenization_trace.get('rule') == 'collapse_double_dots':
+                    trace.append(TokenTrace(
+                        token=tokenization_trace.get('before', ''),
+                        role='tokenizer',
+                        rule='collapse_double_dots',
+                        output=tokenization_trace.get('after', ''),
+                        fallback=False,
+                        notes=f"Evidence: {tokenization_trace.get('evidence', '')}",
+                        is_hyphenated_surname=False
+                    ))
+        else:
+            trace = self._build_token_trace(
+                classified_tokens,
+                roles,
+                final_tokens,
+                processing_traces,
+                cache_info
+            )
 
         # Step 6: Separate personal/org tokens
         personal_tokens = [
@@ -393,6 +480,26 @@ class NormalizationFactory(ErrorReportingMixin):
 
         filtered_person_tokens = self._filter_person_tokens(trace, config.preserve_names)
         final_normalized_text = " ".join(filtered_person_tokens)
+        
+        # Debug logging
+        self.logger.debug(f"Final normalized text: '{final_normalized_text}'")
+        self.logger.debug(f"Filtered person tokens: {filtered_person_tokens}")
+        self.logger.debug(f"Final normalized text length: {len(final_normalized_text)}")
+        self.logger.debug(f"Filtered person tokens count: {len(filtered_person_tokens)}")
+
+        # Add trace step for final assembly if debug tracing is enabled
+        if getattr(effective_flags, 'debug_tracing', False) and filtered_person_tokens:
+            # Add assembly trace to the main trace
+            assembly_trace = TokenTrace(
+                token="[assembly]",
+                role="assembly",
+                rule="assemble_done",
+                output=final_normalized_text,
+                fallback=False,
+                notes=f"Assembled {len(filtered_person_tokens)} person tokens into final normalized text",
+                is_hyphenated_surname=False  # Assembly trace is not a hyphenated surname
+            )
+            trace.append(assembly_trace)
 
         persons = self._extract_persons(
             original_tagged_tokens,
@@ -422,7 +529,14 @@ class NormalizationFactory(ErrorReportingMixin):
             persons_core=persons_core,
             organizations_core=organizations,
             persons=persons,
+            ner_disabled=self.ner_disabled,
         )
+        
+        # Debug logging after result creation
+        self.logger.debug(f"Result normalized: '{result.normalized}'")
+        self.logger.debug(f"Result tokens: {result.tokens}")
+        self.logger.debug(f"Result normalized length: {len(result.normalized)}")
+        self.logger.debug(f"Result token count: {len(result.tokens)}")
 
         # Set gender information for single person cases
         if persons and len(persons) == 1:
@@ -483,12 +597,132 @@ class NormalizationFactory(ErrorReportingMixin):
         )
 
     def _filter_person_tokens(self, trace: List[TokenTrace], preserve_names: bool) -> List[str]:
-        """Filter tokens to include only person-related tokens from trace."""
+        """Filter tokens to include only person-related tokens from trace with proper titlecase."""
         filtered_tokens = []
-        for token_trace in trace:
+        processed_tokens = set()  # Track processed tokens to avoid duplicates
+        
+        self.logger.debug(f"Filtering person tokens from {len(trace)} trace entries")
+        for i, token_trace in enumerate(trace):
+            self.logger.debug(f"  {i}: token='{token_trace.token}' role='{token_trace.role}' output='{token_trace.output}'")
             if token_trace.role in PERSON_ROLES:
-                filtered_tokens.append(token_trace.output)
-        return filtered_tokens
+                # For initials, allow duplicates (И. И. Петров)
+                # For other roles, skip if we've already processed this token
+                if token_trace.role != 'initial' and token_trace.output in processed_tokens:
+                    continue
+                    
+                if token_trace.role != 'initial':
+                    processed_tokens.add(token_trace.output)
+                
+                # Apply titlecase to person tokens
+                original_token = token_trace.token
+                normalized_token = token_trace.output
+                
+                # Check if token is already properly cased (avoid double processing)
+                already_cased = getattr(token_trace, 'already_cased', False)
+                
+                if not already_cased:
+                    # For hyphenated surnames, apply special titlecase handling
+                    if getattr(token_trace, 'is_hyphenated_surname', False) or is_hyphenated_surname(normalized_token):
+                        # Use the hyphenated normalization with titlecase for proper handling
+                        titlecased_token = normalize_hyphenated_name(normalized_token, titlecase=True)
+
+                        # Add specific trace for hyphenated surnames
+                        if titlecased_token != normalized_token:
+                            titlecase_trace = TokenTrace(
+                                token=normalized_token,
+                                role=token_trace.role,
+                                rule="hyphenated_join",
+                                output=titlecased_token,
+                                fallback=False,
+                                notes=f"Applied hyphenated surname titlecase: {normalized_token} -> {titlecased_token}",
+                                is_hyphenated_surname=True
+                            )
+                            trace.append(titlecase_trace)
+                            self.logger.debug(f"Applied hyphenated surname titlecase: {normalized_token} -> {titlecased_token}")
+                    else:
+                        # Apply regular titlecase to person tokens
+                        titlecased_token = _to_title(normalized_token)
+
+                        # Add trace step for titlecase transformation
+                        if titlecased_token != normalized_token:
+                            # Add a new trace step for titlecase transformation
+                            titlecase_trace = TokenTrace(
+                                token=normalized_token,
+                                role=token_trace.role,
+                                rule="titlecase_person_token",
+                                output=titlecased_token,
+                                fallback=False,
+                                notes=f"Applied titlecase to {token_trace.role} token",
+                                is_hyphenated_surname=is_hyphenated_surname(normalized_token)
+                            )
+                            trace.append(titlecase_trace)
+                            self.logger.debug(f"Applied titlecase: {normalized_token} -> {titlecased_token}")
+
+                    filtered_tokens.append(titlecased_token)
+                    self.logger.debug(f"Added titlecased token: {titlecased_token}")
+                else:
+                    filtered_tokens.append(normalized_token)
+                    self.logger.debug(f"Added normalized token (already_cased): {normalized_token}")
+        
+        # Apply deduplication of consecutive identical person tokens
+        deduplicated_tokens = self._deduplicate_consecutive_person_tokens(filtered_tokens, trace)
+        
+        self.logger.debug(f"Filtered person tokens: {filtered_tokens}")
+        self.logger.debug(f"Deduplicated person tokens: {deduplicated_tokens}")
+        
+        
+        return deduplicated_tokens
+
+    def _deduplicate_consecutive_person_tokens(self, tokens: List[str], trace: List[TokenTrace]) -> List[str]:
+        """
+        Deduplicate identical person tokens using casefold() comparison.
+        
+        Args:
+            tokens: List of person tokens
+            trace: List of TokenTrace objects to add deduplication trace
+            
+        Returns:
+            List of deduplicated tokens
+        """
+        if not tokens:
+            return tokens
+            
+        deduplicated = []
+        seen_tokens = set()
+        skipped_tokens = []
+        
+        for token in tokens:
+            token_key = token.casefold()
+            if token_key not in seen_tokens:
+                deduplicated.append(token)
+                seen_tokens.add(token_key)
+            else:
+                # Add trace for skipped duplicate
+                trace.append(TokenTrace(
+                    token=token,
+                    role="deduplication",
+                    rule="dedup_consecutive_person_tokens",
+                    output="[skipped]",
+                    fallback=False,
+                    notes=f"Skipped duplicate token: '{token}' (already seen)",
+                    is_hyphenated_surname=False
+                ))
+                skipped_tokens.append(token)
+        
+        # Add trace for deduplication if any tokens were removed
+        if skipped_tokens:
+            removed_count = len(skipped_tokens)
+            trace.append(TokenTrace(
+                token="[deduplication]",
+                role="deduplication",
+                rule="dedup_consecutive_person_tokens",
+                output=f"removed {removed_count} duplicate tokens",
+                fallback=False,
+                notes=f"Original: {tokens}, Deduplicated: {deduplicated}",
+                is_hyphenated_surname=False
+            ))
+        
+        return deduplicated
 
     def _extract_persons(
         self,
@@ -953,6 +1187,14 @@ class NormalizationFactory(ErrorReportingMixin):
             if cache_info and orig in cache_info:
                 cache_data = cache_info[orig]
 
+            # Detect if this is a hyphenated surname
+            is_hyphenated = is_hyphenated_surname(orig)
+
+            # Add flags including ner_disabled
+            flags = {}
+            if self.ner_disabled:
+                flags['ner_disabled'] = True
+
             trace.append(TokenTrace(
                 token=orig,
                 role=role,
@@ -960,7 +1202,9 @@ class NormalizationFactory(ErrorReportingMixin):
                 output=final,
                 cache=cache_data,
                 fallback=final == orig,
-                notes="; ".join(token_traces[:2])  # Limit notes length
+                notes="; ".join(token_traces[:2]),  # Limit notes length
+                is_hyphenated_surname=is_hyphenated,
+                flags=flags if flags else None
             ))
 
         return trace
@@ -968,7 +1212,8 @@ class NormalizationFactory(ErrorReportingMixin):
     def _apply_tokenizer_improvements(
         self,
         tokens: List[str],
-        base_traces: List[TokenTrace]
+        base_traces: List[TokenTrace],
+        effective_flags
     ) -> Tuple[List[str], List[TokenTrace]]:
         """
         Apply tokenizer improvements based on feature flags.
@@ -982,15 +1227,19 @@ class NormalizationFactory(ErrorReportingMixin):
         """
         improved_tokens = tokens[:]
         improvement_traces = []
+        trace_steps = [] if getattr(effective_flags, 'debug_tracing', False) else None
 
-        self.logger.debug(f"Tokenizer improvements: fix_initials={self.feature_flags._flags.fix_initials_double_dot}, preserve_hyphenated={self.feature_flags._flags.preserve_hyphenated_case}")
+        self.logger.debug(f"Tokenizer improvements: fix_initials={getattr(effective_flags, 'fix_initials_double_dot', True)}, preserve_hyphenated={getattr(effective_flags, 'preserve_hyphenated_case', True)}")
 
         # Apply double dot collapse if enabled
-        if self.feature_flags._flags.fix_initials_double_dot:
+        if getattr(effective_flags, 'fix_initials_double_dot', True):
             self.logger.debug(f"Applying double dot collapse to tokens: {improved_tokens}")
             original_count = len(improved_tokens)
             original_tokens = improved_tokens[:]
-            improved_tokens = collapse_double_dots(improved_tokens)
+            
+            # Always pass trace_steps to get detailed traces
+            trace_steps = []
+            improved_tokens = collapse_double_dots(improved_tokens, trace=trace_steps)
             self.logger.debug(f"After collapse: {improved_tokens}")
 
             dots_collapsed = original_count - len(improved_tokens)
@@ -998,33 +1247,65 @@ class NormalizationFactory(ErrorReportingMixin):
             tokens_changed = [i for i, (orig, new) in enumerate(zip(original_tokens, improved_tokens)) if orig != new]
 
             if dots_collapsed > 0 or tokens_changed:
-                improvement_traces.append({
-                    "type": "tokenizer",
-                    "action": "collapse_double_dots",
-                    "count": dots_collapsed,
-                    "changed_tokens": tokens_changed
-                })
+                improvement_traces.append(TokenTrace(
+                    token="[tokenizer]",
+                    role="tokenizer",
+                    rule="collapse_double_dots",
+                    output=f"collapsed {dots_collapsed} double dots",
+                    fallback=False,
+                    notes=f"Changed tokens: {tokens_changed}"
+                ))
                 self.logger.debug(f"Double dots collapsed: {dots_collapsed}, changed tokens: {tokens_changed}")
+            
+            # Add detailed trace steps
+            if trace_steps:
+                for trace_step in trace_steps:
+                    improvement_traces.append(TokenTrace(
+                        token=trace_step.get('token_before', ''),
+                        role="tokenizer",
+                        rule=trace_step.get('rule', 'unknown'),
+                        output=trace_step.get('token_after', ''),
+                        fallback=False,
+                        notes=f"Stage: {trace_step.get('stage', 'tokenize')}"
+                    ))
 
         # Apply hyphenated name normalization if enabled
-        if self.feature_flags._flags.preserve_hyphenated_case:
+        if getattr(effective_flags, 'preserve_hyphenated_case', True):
             for i, token in enumerate(improved_tokens):
-                if '-' in token and token != normalize_hyphenated_name(token, titlecase=True):
+                if '-' in token:
                     original = token
-                    improved_tokens[i] = normalize_hyphenated_name(token, titlecase=True)
-                    improvement_traces.append({
-                        "type": "tokenizer",
-                        "action": "normalize_hyphen",
-                        "original": original,
-                        "normalized": improved_tokens[i]
-                    })
+                    normalized = normalize_hyphenated_name(token, titlecase=True, trace=trace_steps)
+                    if normalized != original:
+                        improved_tokens[i] = normalized
+                    improvement_traces.append(TokenTrace(
+                        token=original,
+                        role="tokenizer",
+                        rule="normalize_hyphen",
+                        output=improved_tokens[i],
+                        fallback=False,
+                        notes=f"Normalized hyphenated name: {original} -> {improved_tokens[i]}"
+                    ))
+
+        # Convert trace_steps to improvement_traces format if we have any
+        if trace_steps:
+            for trace_step in trace_steps:
+                # Convert trace_step dict to improvement_traces format
+                    improvement_traces.append(TokenTrace(
+                        token=trace_step.get('token_before', ''),
+                        role="tokenizer",
+                        rule=trace_step.get('rule', 'unknown'),
+                        output=trace_step.get('token_after', ''),
+                        fallback=False,
+                        notes=f"Stage: {trace_step.get('stage', 'tokenize')}"
+                    ))
 
         return improved_tokens, improvement_traces
 
     def _apply_tokenizer_improvements_post(
         self,
         tokens: List[str],
-        roles: List[str]
+        roles: List[str],
+        effective_flags
     ) -> Tuple[List[str], List[TokenTrace]]:
         """
         Apply tokenizer improvements after morphological processing.
@@ -1041,44 +1322,61 @@ class NormalizationFactory(ErrorReportingMixin):
         """
         improved_tokens = tokens[:]
         improvement_traces = []
+        trace_steps = [] if getattr(effective_flags, 'debug_tracing', False) else None
 
-        self.logger.debug(f"Post-processing tokenizer improvements: fix_initials={self.feature_flags._flags.fix_initials_double_dot}")
+        self.logger.debug(f"Post-processing tokenizer improvements: fix_initials={getattr(effective_flags, 'fix_initials_double_dot', True)}")
 
         # Apply double dot collapse to initials if enabled
-        if self.feature_flags._flags.fix_initials_double_dot:
+        if getattr(effective_flags, 'fix_initials_double_dot', True):
             for i, (token, role) in enumerate(zip(improved_tokens, roles)):
-                if role == "initial" and ".." in token:
+                # Process any token with double dots, not just initials
+                if ".." in token:
                     original = token
                     # Apply collapse_double_dots to single token
-                    improved = collapse_double_dots([token])[0]
+                    improved = collapse_double_dots([token], trace=trace_steps)[0]
                     if improved != original:
                         improved_tokens[i] = improved
-                        improvement_traces.append({
-                            "type": "tokenizer",
-                            "action": "collapse_double_dots_post",
-                            "original": original,
-                            "normalized": improved,
-                            "role": role
-                        })
+                        improvement_traces.append(TokenTrace(
+                            token=original,
+                            role="tokenizer",
+                            rule="collapse_double_dots_post",
+                            output=improved,
+                            fallback=False,
+                            notes=f"Role: {role}"
+                        ))
                         self.logger.debug(f"Post-processing: collapsed '{original}' to '{improved}' for role '{role}'")
 
         # Apply hyphenated name normalization if enabled
-        if self.feature_flags._flags.preserve_hyphenated_case:
+        if getattr(effective_flags, 'preserve_hyphenated_case', True):
             for i, (token, role) in enumerate(zip(improved_tokens, roles)):
                 if '-' in token and role in ("surname", "given"):
                     original = token
                     # Apply normalize_hyphenated_name
-                    improved = normalize_hyphenated_name(token, titlecase=True)
+                    improved = normalize_hyphenated_name(token, titlecase=True, trace=trace_steps)
                     if improved != original:
                         improved_tokens[i] = improved
-                        improvement_traces.append({
-                            "type": "tokenizer",
-                            "action": "normalize_hyphen_post",
-                            "original": original,
-                            "normalized": improved,
-                            "role": role
-                        })
+                        improvement_traces.append(TokenTrace(
+                            token=original,
+                            role="tokenizer",
+                            rule="normalize_hyphen_post",
+                            output=improved,
+                            fallback=False,
+                            notes=f"Role: {role}"
+                        ))
                         self.logger.debug(f"Post-processing: normalized hyphenated '{original}' to '{improved}' for role '{role}'")
+
+        # Convert trace_steps to improvement_traces format if we have any
+        if trace_steps:
+            for trace_step in trace_steps:
+                # Convert trace_step dict to improvement_traces format
+                    improvement_traces.append(TokenTrace(
+                        token=trace_step.get('token_before', ''),
+                        role="tokenizer",
+                        rule=trace_step.get('rule', 'unknown'),
+                        output=trace_step.get('token_after', ''),
+                        fallback=False,
+                        notes=f"Stage: {trace_step.get('stage', 'tokenize')}"
+                    ))
 
         return improved_tokens, improvement_traces
 
@@ -1109,7 +1407,8 @@ class NormalizationFactory(ErrorReportingMixin):
                     normal_form=processed_token,
                     output=processed_token,
                     fallback=False,
-                    notes=f"yo_strategy_{strategy}"
+                    notes=f"yo_strategy_{strategy}",
+                    is_hyphenated_surname=is_hyphenated_surname(token)
                 ))
         
         return processed_tokens, trace_entries
@@ -1256,7 +1555,7 @@ class NormalizationFactory(ErrorReportingMixin):
         
         return org_spans
 
-    def _apply_role_filtering(self, tokens: List[str], roles: List[str], role_tags: List) -> Tuple[List[str], List[str], List[str]]:
+    def _apply_role_filtering(self, tokens: List[str], roles: List[str], role_tags: List, effective_flags, trace: Optional[List[Any]] = None) -> Tuple[List[str], List[str], List[str]]:
         """Filter tokens based on FSM role tagger results."""
         if not role_tags or len(role_tags) != len(tokens):
             return tokens, roles, []
@@ -1268,12 +1567,56 @@ class NormalizationFactory(ErrorReportingMixin):
         # FSM role tags use TokenRole enum values
         excluded_roles = {"unknown", "org"}  # Exclude unknown and organization roles
         removed_count = 0
+        org_context_windows = []
 
-        for token, role, tag in zip(tokens, roles, role_tags):
+        for i, (token, role, tag) in enumerate(zip(tokens, roles, role_tags)):
             # Check if token should be excluded based on FSM role
-            if self.feature_flags._flags.strict_stopwords and tag.role.value in excluded_roles:
+            if getattr(effective_flags, 'strict_stopwords', False) and tag.role.value in excluded_roles:
                 removed_count += 1
-                traces.append(f"FSM filtering: removed '{token}' (role: {tag.role.value}, reason: {tag.reason})")
+
+                if tag.role.value == "unknown" and tag.reason in ["stopword", "payment_context_filtered"]:
+                    # This is a stopword or payment context removal
+                    traces.append(f"FSM filtering: removed '{token}' (role: {tag.role.value}, reason: {tag.reason})")
+
+                    # Add detailed trace step if tracing is enabled
+                    if trace is not None:
+                        trace.append({
+                            'stage': 'filter',
+                            'rule': 'stopword_removed',
+                            'token': token,
+                            'reason': 'service_word'
+                        })
+
+                elif tag.role.value == "org":
+                    # This is an organization context removal
+                    traces.append(f"FSM filtering: removed '{token}' (role: {tag.role.value}, reason: {tag.reason})")
+
+                    # Find legal forms in context window
+                    window_start = max(0, i - 3)
+                    window_end = min(len(tokens), i + 4)
+                    context_window = tokens[window_start:window_end]
+
+                    # Look for legal forms in the window
+                    legal_forms_in_window = []
+                    for j, ctx_token in enumerate(context_window):
+                        ctx_tag = role_tags[window_start + j] if window_start + j < len(role_tags) else None
+                        if ctx_tag and ctx_tag.reason == "legal_form":
+                            legal_forms_in_window.append(ctx_token)
+
+                    if legal_forms_in_window:
+                        org_context_windows.append(f"±3: {legal_forms_in_window}")
+
+                    # Add detailed trace step if tracing is enabled
+                    if trace is not None:
+                        trace.append({
+                            'stage': 'filter',
+                            'rule': 'org_legal_form_context',
+                            'window': f'±3',
+                            'hit': legal_forms_in_window
+                        })
+                else:
+                    traces.append(f"FSM filtering: removed '{token}' (role: {tag.role.value}, reason: {tag.reason})")
+
                 continue
 
             filtered_tokens.append(token)
@@ -1281,6 +1624,9 @@ class NormalizationFactory(ErrorReportingMixin):
 
         if removed_count > 0:
             traces.append(f"FSM role filtering removed {removed_count} tokens")
+
+        if org_context_windows:
+            traces.append(f"Organization context detected: {', '.join(org_context_windows)}")
 
         return filtered_tokens, filtered_roles, traces
 
@@ -1351,7 +1697,8 @@ class NormalizationFactory(ErrorReportingMixin):
                     normal_form=token,
                     output=token,
                     fallback=False,
-                    notes=f"ASCII fastpath processing"
+                    notes=f"ASCII fastpath processing",
+                    is_hyphenated_surname=is_hyphenated_surname(token)
                 ))
             
             # Create result

@@ -1,0 +1,11 @@
+# Development requirements for AI normalization service
+# These are optional dependencies that enhance functionality but are not required for basic operation
+
+# NLP and NER dependencies
+spacy>=3.7
+nameparser>=1.1
+
+# Note: After installing spacy, download the language models:
+# python -m spacy download ru_core_news_sm || true
+# python -m spacy download uk_core_news_sm || true  
+# python -m spacy download en_core_web_sm || true

@@ -364,17 +364,122 @@ def create_search_info(search_result: SearchResult) -> SearchInfo:
         has_phrase_matches=len(phrase_matches) > 0,
         has_ngram_matches=len(ngram_matches) > 0,
         has_vector_matches=len(search_result.vector_results) > 0,
-        
+
         exact_confidence=exact_confidence,
         phrase_confidence=phrase_confidence,
         ngram_confidence=ngram_confidence,
         vector_confidence=vector_confidence,
-        
+
         total_matches=len(search_result.candidates),
         high_confidence_matches=high_confidence_matches,
         search_time=search_result.processing_time,
-        
+
         ac_results=search_result.ac_results,
         vector_results=search_result.vector_results,
         fusion_candidates=search_result.candidates
+    )
+
+
+# Search Tracing Support
+
+@dataclass
+class SearchTraceStep:
+    """
+    Detailed trace step for search operations.
+
+    This provides comprehensive tracing for search integration,
+    supporting both Aho-Corasick tier matching and fallback strategies.
+    """
+    stage: str = "search"
+    rule: str = ""  # One of: ac_tier0, ac_tier1, ac_tier2, ac_tier3, knn_fallback, hybrid_rerank
+    query: str = ""
+    hits: List[Dict[str, Any]] = field(default_factory=list)
+    took_ms: float = 0.0
+
+    # Additional search-specific fields
+    tier: Optional[str] = None  # T0, T1, T2, T3 for AC tiers
+    confidence: float = 0.0
+    method_fallback: bool = False
+    total_results: int = 0
+    filtered_results: int = 0
+
+    # Performance metrics
+    search_time_ms: float = 0.0
+    rerank_time_ms: float = 0.0
+    total_time_ms: float = 0.0
+
+    def __post_init__(self):
+        # Ensure took_ms is set from total_time_ms if not provided
+        if self.took_ms == 0.0 and self.total_time_ms > 0.0:
+            self.took_ms = self.total_time_ms
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for logging and serialization."""
+        return {
+            'stage': self.stage,
+            'rule': self.rule,
+            'query': self.query,
+            'hits_count': len(self.hits),
+            'took_ms': self.took_ms,
+            'tier': self.tier,
+            'confidence': self.confidence,
+            'method_fallback': self.method_fallback,
+            'total_results': self.total_results,
+            'filtered_results': self.filtered_results,
+            'search_time_ms': self.search_time_ms,
+            'rerank_time_ms': self.rerank_time_ms,
+            'total_time_ms': self.total_time_ms
+        }
+
+
+# Factory functions for common search trace scenarios
+
+def create_ac_tier0_trace(query: str, patterns: List[str], took_ms: float) -> SearchTraceStep:
+    """Create trace for AC Tier 0 (exact documents & IDs) match."""
+    return SearchTraceStep(
+        stage="search",
+        rule="ac_tier0",
+        query=query,
+        hits=[{'pattern': p, 'score': 1.0, 'type': 'exact_document'} for p in patterns],
+        took_ms=took_ms,
+        tier="T0",
+        confidence=0.95,
+        total_results=len(patterns),
+        filtered_results=len(patterns),
+        search_time_ms=took_ms,
+        total_time_ms=took_ms
+    )
+
+
+def create_knn_fallback_trace(query: str, results: List[Dict], took_ms: float) -> SearchTraceStep:
+    """Create trace for KNN fallback when AC tiers don't match."""
+    return SearchTraceStep(
+        stage="search",
+        rule="knn_fallback",
+        query=query,
+        hits=results,
+        took_ms=took_ms,
+        confidence=0.6,
+        method_fallback=True,
+        total_results=len(results),
+        filtered_results=len(results),
+        search_time_ms=took_ms,
+        total_time_ms=took_ms
+    )
+
+
+def create_hybrid_rerank_trace(query: str, results: List[Dict], search_ms: float, rerank_ms: float) -> SearchTraceStep:
+    """Create trace for hybrid search with reranking."""
+    return SearchTraceStep(
+        stage="search",
+        rule="hybrid_rerank",
+        query=query,
+        hits=results,
+        took_ms=search_ms + rerank_ms,
+        confidence=0.85,
+        total_results=len(results),
+        filtered_results=len(results),
+        search_time_ms=search_ms,
+        rerank_time_ms=rerank_ms,
+        total_time_ms=search_ms + rerank_ms
     )

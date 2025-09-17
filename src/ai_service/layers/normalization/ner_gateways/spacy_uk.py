@@ -208,19 +208,23 @@ class SpacyUkNER:
 _spacy_uk_ner: Optional[SpacyUkNER] = None
 
 
-def get_spacy_uk_ner() -> SpacyUkNER:
+def get_spacy_uk_ner() -> Optional[SpacyUkNER]:
     """
-    Get global spaCy Ukrainian NER instance.
+    Get global spaCy Ukrainian NER instance with graceful fallback.
     
     Returns:
-        SpacyUkNER instance
+        SpacyUkNER instance if available, None otherwise
     """
     global _spacy_uk_ner
     
     if _spacy_uk_ner is None:
-        _spacy_uk_ner = SpacyUkNER()
+        try:
+            _spacy_uk_ner = SpacyUkNER()
+        except Exception as e:
+            logger.warning(f"Failed to initialize Ukrainian NER: {e}")
+            _spacy_uk_ner = None
     
-    return _spacy_uk_ner
+    return _spacy_uk_ner if _spacy_uk_ner and _spacy_uk_ner.is_available() else None
 
 
 def clear_ner_cache():

@@ -290,7 +290,20 @@ class RoleClassifier:
             parts = key.split("_")
             if len(parts) < 2:
                 continue
-            lang, kind = parts[0], parts[1]
+            
+            # Handle both formats: "given_names_ru" and "ru_given"
+            if len(parts) == 3 and parts[1] == "names":
+                # Format: "given_names_ru"
+                kind, _, lang = parts
+            elif len(parts) == 2:
+                # Format: "ru_given" or "given_names_ru" (fallback)
+                if parts[0] in {"ru", "uk", "en"}:
+                    lang, kind = parts
+                else:
+                    continue
+            else:
+                continue
+                
             norm_values = {v.lower() for v in values}
             if lang not in self.given_names:
                 self.given_names[lang] = set()

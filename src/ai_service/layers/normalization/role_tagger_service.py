@@ -14,6 +14,7 @@ from typing import Dict, List, Optional, Set, Tuple, Any
 from abc import ABC, abstractmethod
 
 from .lexicon_loader import Lexicons, get_lexicons
+from .token_ops import is_hyphenated_surname
 
 
 def is_stopword(token: str, lang: str, lexicons: Lexicons) -> bool:
@@ -303,6 +304,27 @@ class StopwordRule(FSMTransitionRule):
             return state, TokenRole.UNKNOWN, "stopword_detected", evidence
 
 
+class PaymentContextRule(FSMTransitionRule):
+    """Rule for detecting payment context words."""
+    
+    def __init__(self, lexicons: Lexicons, strict: bool = True):
+        self.lexicons = lexicons
+        self.strict = strict
+    
+    def can_apply(self, state: FSMState, token: Token, context: List[Token]) -> bool:
+        if not self.lexicons or not self.lexicons.payment_context:
+            return False
+        return token.text.lower() in self.lexicons.payment_context
+    
+    def apply(self, state: FSMState, token: Token, context: List[Token]) -> Tuple[FSMState, TokenRole, str, List[str]]:
+        evidence = ["payment_context_word"]
+        
+        if self.strict:
+            return state, TokenRole.UNKNOWN, "payment_context_filtered", evidence
+        else:
+            return state, TokenRole.UNKNOWN, "payment_context_detected", evidence
+
+
 class RussianStopwordInitRule(FSMTransitionRule):
     """Rule for preventing Russian stopwords from being marked as initials."""
     
@@ -329,10 +351,12 @@ class DefaultPersonRule(FSMTransitionRule):
     """Default rule for person name tokens."""
     
     def can_apply(self, state: FSMState, token: Token, context: List[Token]) -> bool:
-        return (token.is_capitalized and 
-                not token.is_punct and 
+        # Accept both capitalized and non-capitalized names
+        # but exclude punctuation, all-caps, and single characters
+        return (not token.is_punct and 
                 not token.is_all_caps and
-                len(token.text) > 1)
+                len(token.text) > 1 and
+                token.text.isalpha())  # Only alphabetic characters
     
     def apply(self, state: FSMState, token: Token, context: List[Token]) -> Tuple[FSMState, TokenRole, str, List[str]]:
         evidence = ["person_heuristic"]
@@ -340,8 +364,18 @@ class DefaultPersonRule(FSMTransitionRule):
         if state == FSMState.START:
             return FSMState.GIVEN_EXPECTED, TokenRole.GIVEN, "given_detected", evidence
         elif state == FSMState.GIVEN_EXPECTED:
+            # Check if this token is the same as the previous given name (duplicate)
+            if context and len(context) >= 1:
+                prev_token = context[-1]  # Previous token
+                if prev_token.text.lower() == token.text.lower():
+                    return FSMState.GIVEN_EXPECTED, TokenRole.GIVEN, "duplicate_given_detected", evidence
             return FSMState.SURNAME_EXPECTED, TokenRole.GIVEN, "given_detected", evidence
         elif state == FSMState.SURNAME_EXPECTED:
+            # Check if this token is the same as the previous given name (duplicate)
+            if context and len(context) >= 2:
+                prev_token = context[-2]  # Previous token
+                if prev_token.text.lower() == token.text.lower():
+                    return FSMState.SURNAME_EXPECTED, TokenRole.GIVEN, "duplicate_given_detected", evidence
             return FSMState.PATRONYMIC_EXPECTED, TokenRole.SURNAME, "surname_detected", evidence
         else:
             return state, TokenRole.UNKNOWN, "fallback_unknown", evidence
@@ -350,18 +384,36 @@ class DefaultPersonRule(FSMTransitionRule):
 class RoleTaggerService:
     """FSM-based role tagger service with detailed tracing."""
     
-    def __init__(self, lexicons: Lexicons = None, rules: RoleRules = None, window: int = 3):
+    def __init__(self, stopwords=None, org_legal_forms=None, lang='auto', strict_stopwords=False):
         """
         Initialize role tagger service.
         
         Args:
-            lexicons: Lexicons object for stopword/legal form detection
-            rules: RoleRules configuration
-            window: Context window size for organization detection
+            stopwords: Dict[str, Set[str]] - language -> set of stopwords
+            org_legal_forms: Set[str] - set of legal forms for organization detection
+            lang: str - language code ('ru', 'uk', 'en', 'auto')
+            strict_stopwords: bool - whether to use strict stopword filtering
         """
-        self.lexicons = lexicons or get_lexicons()
-        self.rules = rules or RoleRules()
-        self.window = window
+        # Load default lexicons if not provided
+        self.lexicons = get_lexicons()
+        
+        # Override with provided parameters if given
+        if stopwords is not None:
+            if not isinstance(stopwords, dict):
+                raise TypeError(f"stopwords must be Dict[str, Set[str]], got {type(stopwords)}")
+            self.lexicons.stopwords.update(stopwords)
+        
+        if org_legal_forms is not None:
+            if not isinstance(org_legal_forms, set):
+                raise TypeError(f"org_legal_forms must be Set[str], got {type(org_legal_forms)}")
+            self.lexicons.legal_forms.update(org_legal_forms)
+        
+        # Initialize rules with strict_stopwords setting
+        self.rules = RoleRules()
+        self.rules.strict_stopwords = strict_stopwords
+        
+        # Set context window for organization detection
+        self.window = 3
         
         # Pre-compile regex patterns for efficiency
         self._init_patterns()
@@ -369,7 +421,7 @@ class RoleTaggerService:
         # Initialize FSM rules
         self._init_rules()
         
-        logger.debug(f"RoleTaggerService initialized with window={window}")
+        logger.debug(f"RoleTaggerService initialized with window={self.window}")
     
     def _init_patterns(self):
         """Initialize pre-compiled regex patterns."""
@@ -390,6 +442,7 @@ class RoleTaggerService:
         self.rules_list = [
             RussianStopwordInitRule(self.lexicons, self.rules.strict_stopwords),
             StopwordRule(self.lexicons, self.rules.strict_stopwords),
+            PaymentContextRule(self.lexicons, self.rules.strict_stopwords),
             OrganizationContextRule(self.lexicons, self.rules.org_context_window),
             InitialDetectionRule(),
             SurnameSuffixRule(self.rules.surname_suffixes),
@@ -463,7 +516,7 @@ class RoleTaggerService:
             role_tag.state_from = current_state
             
             # Update state based on the assigned role
-            current_state = self._update_state(current_state, role_tag.role)
+            current_state = self._update_state(current_state, role_tag.role, token)
             
             # Set final state
             role_tag.state_to = current_state
@@ -498,7 +551,7 @@ class RoleTaggerService:
             state_to=state
         )
     
-    def _update_state(self, current_state: FSMState, role: TokenRole) -> FSMState:
+    def _update_state(self, current_state: FSMState, role: TokenRole, token: Optional[Token] = None) -> FSMState:
         """Update FSM state based on assigned role."""
         if role == TokenRole.INITIAL:
             if current_state == FSMState.START:
@@ -511,17 +564,27 @@ class RoleTaggerService:
             elif current_state == FSMState.GIVEN_EXPECTED:
                 return FSMState.SURNAME_EXPECTED
         elif role == TokenRole.SURNAME:
-            if current_state == FSMState.START:
-                return FSMState.GIVEN_EXPECTED
-            elif current_state == FSMState.GIVEN_EXPECTED:
-                return FSMState.PATRONYMIC_EXPECTED
-            elif current_state == FSMState.SURNAME_EXPECTED:
-                return FSMState.PATRONYMIC_EXPECTED
+            # Special handling for hyphenated surnames - stay in SURNAME_EXPECTED
+            if token and is_hyphenated_surname(token.text):
+                if current_state == FSMState.START:
+                    return FSMState.SURNAME_EXPECTED  # Allow more surnames after hyphenated
+                elif current_state == FSMState.GIVEN_EXPECTED:
+                    return FSMState.SURNAME_EXPECTED  # Allow more surnames after hyphenated
+                elif current_state == FSMState.SURNAME_EXPECTED:
+                    return FSMState.SURNAME_EXPECTED  # Stay in surname mode
+            else:
+                # Regular surname handling
+                if current_state == FSMState.START:
+                    return FSMState.GIVEN_EXPECTED
+                elif current_state == FSMState.GIVEN_EXPECTED:
+                    return FSMState.PATRONYMIC_EXPECTED
+                elif current_state == FSMState.SURNAME_EXPECTED:
+                    return FSMState.PATRONYMIC_EXPECTED
         elif role == TokenRole.PATRONYMIC:
             return FSMState.DONE
         elif role == TokenRole.ORG:
             return FSMState.ORG_EXPECTED
-        
+
         return current_state
     
     def _get_role_summary(self, tags: List[RoleTag]) -> Dict[str, int]:

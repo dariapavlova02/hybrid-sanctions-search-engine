@@ -10,7 +10,7 @@ from src.ai_service.layers.normalization.tokenizer_service import TokenizerServi
 class TestTokenizerServiceInitialsAndHyphen:
     """Test cases for TokenizerService initials and hyphen handling."""
     
-    def test_collapse_double_dot_in_initials(self):
+    def test_collapse_double_dots_in_initials(self):
         """Test that double dots in initials are collapsed to single dot."""
         tokenizer = TokenizerService(fix_initials_double_dot=True)
         
@@ -20,13 +20,19 @@ class TestTokenizerServiceInitialsAndHyphen:
             ("А..", "А."),
             ("В...", "В."),
             ("П....", "П."),
+            ("A..", "A."),  # Latin
+            ("І..", "І."),  # Ukrainian
             ("И.И.", "И.И."),  # Should not change
             ("Иван", "Иван"),  # Should not change
             ("И.", "И."),      # Already single dot
+            ("ООО", "ООО"),    # Abbreviation without dots
+            ("ТОВ", "ТОВ"),    # Abbreviation without dots
+            ("A..B.", "A.B."), # Compound initials
+            ("И..П.", "И.П."), # Compound initials
         ]
         
         for input_token, expected in test_cases:
-            result = tokenizer._collapse_double_dot(input_token)
+            result = tokenizer.collapse_double_dots(input_token)
             assert result == expected, f"Failed for input: {input_token}"
     
     def test_looks_like_initial_with_double_dot(self):
@@ -74,8 +80,8 @@ class TestTokenizerServiceInitialsAndHyphen:
         
         # Check traces
         assert len(traces) == 3  # 2 double dot fixes + 1 hyphen detection
-        assert any(trace["action"] == "collapse_initial_double_dot" for trace in traces)
-        assert any(trace["action"] == "preserve_hyphenated_name" for trace in traces)
+        assert any(trace["rule"] == "collapse_double_dots" for trace in traces)
+        assert any(trace.get("action") == "preserve_hyphenated_name" for trace in traces)
     
     def test_post_processing_rules_without_double_dots(self):
         """Test post-processing rules with double dots disabled."""
@@ -89,7 +95,7 @@ class TestTokenizerServiceInitialsAndHyphen:
         
         # Check traces (only hyphen detection)
         assert len(traces) == 1
-        assert any(trace["action"] == "preserve_hyphenated_name" for trace in traces)
+        assert any(trace.get("action") == "preserve_hyphenated_name" for trace in traces)
     
     def test_post_processing_rules_without_hyphen_preservation(self):
         """Test post-processing rules with hyphen preservation disabled."""
@@ -103,7 +109,7 @@ class TestTokenizerServiceInitialsAndHyphen:
         
         # Check traces (only double dot fixes)
         assert len(traces) == 2
-        assert all(trace["action"] == "collapse_initial_double_dot" for trace in traces)
+        assert all(trace["rule"] == "collapse_double_dots" for trace in traces)
     
     def test_full_tokenization_with_rules(self):
         """Test full tokenization with post-processing rules."""
@@ -131,7 +137,7 @@ class TestTokenizerServiceInitialsAndHyphen:
             assert result.tokens == ["И.", "Петрова-Сидорова", "А.", "В."]
             
             # Check that traces include post-processing
-            assert any("collapse_initial_double_dot" in str(trace) for trace in result.traces)
+            assert any("collapse_double_dots" in str(trace) for trace in result.traces)
             assert any("preserve_hyphenated_name" in str(trace) for trace in result.traces)
             
         finally:

@@ -29,7 +29,7 @@ except ImportError:
     class CollectorRegistry:
         pass
 
-from ai_service.utils.logging_config import get_logger
+from ..utils.logging_config import get_logger
 
 
 class CacheMetrics:

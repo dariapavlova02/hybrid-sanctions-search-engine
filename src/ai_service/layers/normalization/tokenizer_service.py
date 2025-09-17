@@ -222,15 +222,15 @@ class TokenizerService:
             
             # Rule 1: Collapse double dots in initials (И.. → И.)
             if self.fix_initials_double_dot:
-                if self._looks_like_initial_with_double_dot(token):
-                    processed_token = self._collapse_double_dot(token)
-                    if processed_token != original_token:
-                        traces.append({
-                            "type": "tokenize",
-                            "action": "collapse_initial_double_dot",
-                            "from": original_token,
-                            "to": processed_token
-                        })
+                processed_token = self.collapse_double_dots(processed_token)
+                if processed_token != original_token:
+                    trace_entry = {
+                        "rule": "collapse_double_dots",
+                        "before": original_token,
+                        "after": processed_token,
+                        "evidence": "initials"
+                    }
+                    traces.append(trace_entry)
             
             # Rule 2: Preserve hyphenated names (add has_hyphen flag to metadata)
             if self.preserve_hyphenated_case:
@@ -245,6 +245,59 @@ class TokenizerService:
             processed_tokens.append(processed_token)
         
         return processed_tokens, traces
+    
+    def collapse_double_dots(self, token: str) -> str:
+        """
+        Collapse double dots in initials while preserving correct pairs.
+        
+        Args:
+            token: Input token to process
+            
+        Returns:
+            Processed token with collapsed double dots
+            
+        Examples:
+            "И.." → "И."
+            "И.. И." → "И. И." (handled at token level)
+            "A..B." → "A.B." (handled at token level)
+            "ООО" → "ООО" (no change for abbreviations)
+            "ТОВ" → "ТОВ" (no change for abbreviations)
+        """
+        import re
+        
+        # Don't touch abbreviations without dots
+        if not '.' in token:
+            return token
+            
+        # Don't touch Latin abbreviations without dots
+        if re.match(r'^[A-Z]{2,}$', token):
+            return token
+            
+        # Don't touch Cyrillic abbreviations without dots
+        if re.match(r'^[А-ЯЁ]{2,}$', token):
+            return token
+            
+        # Pattern for initials: single letter followed by two or more dots
+        # This covers: И.., A.., І.., etc.
+        initial_pattern = r'^([А-Яа-яA-Za-zІіЇїЄєҐґёЁ])\.{2,}$'
+        match = re.match(initial_pattern, token)
+        if match:
+            # Collapse to single dot
+            letter = match.group(1)
+            return f"{letter}."
+            
+        # Pattern for compound initials: A..B., И..П.
+        # This covers cases like "A..B." → "A.B."
+        compound_pattern = r'^([А-Яа-яA-Za-zІіЇїЄєҐґёЁ])\.{2,}([А-Яа-яA-Za-zІіЇїЄєҐґёЁ])\.$'
+        match = re.match(compound_pattern, token)
+        if match:
+            # Collapse to single dot between letters
+            first_letter = match.group(1)
+            second_letter = match.group(2)
+            return f"{first_letter}.{second_letter}."
+            
+        # No changes needed
+        return token
     
     def _looks_like_initial_with_double_dot(self, token: str) -> bool:
         """

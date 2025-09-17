@@ -47,6 +47,12 @@ jobs:
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: poetry install
     
+    - name: Install optional spaCy models
+      run: |
+        python -m spacy download ru_core_news_sm || true
+        python -m spacy download uk_core_news_sm || true
+        python -m spacy download en_core_web_sm || true
+    
     - name: Run tests
       run: poetry run pytest tests/ -v --tb=short
     
@@ -96,6 +102,12 @@ jobs:
     - name: Install dev dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: poetry install
+    
+    - name: Install optional spaCy models
+      run: |
+        python -m spacy download ru_core_news_sm || true
+        python -m spacy download uk_core_news_sm || true
+        python -m spacy download en_core_web_sm || true
     
     - name: Create artifacts directory
       run: mkdir -p artifacts
@@ -193,6 +205,12 @@ jobs:
     - name: Install dev dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: poetry install
+    
+    - name: Install optional spaCy models
+      run: |
+        python -m spacy download ru_core_news_sm || true
+        python -m spacy download uk_core_news_sm || true
+        python -m spacy download en_core_web_sm || true
     
     - name: Wait for Elasticsearch
       run: |

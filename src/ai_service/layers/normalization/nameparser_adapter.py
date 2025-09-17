@@ -11,9 +11,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
-from nameparser import HumanName
-
 logger = logging.getLogger(__name__)
+
+# Graceful fallback for nameparser
+try:
+    from nameparser import HumanName
+    NAMEPARSER_AVAILABLE = True
+except ImportError:
+    logger.warning("nameparser not available, using fallback parsing")
+    NAMEPARSER_AVAILABLE = False
+    HumanName = None
 
 
 @dataclass
@@ -72,7 +79,7 @@ class NameparserAdapter:
 
     def parse_en_name(self, text: str) -> ParsedName:
         """
-        Parse an English name using nameparser.
+        Parse an English name using nameparser with graceful fallback.
 
         Args:
             text: The name text to parse
@@ -85,6 +92,11 @@ class NameparserAdapter:
                 first="", middles=[], last="", suffix="", 
                 nickname="", particles=[], full_name="", confidence=0.0
             )
+
+        # Graceful fallback if nameparser is not available
+        if not NAMEPARSER_AVAILABLE or HumanName is None:
+            logger.warning("nameparser not available, using fallback parsing")
+            return self._fallback_parse_en_name(text.strip())
 
         try:
             # Parse with nameparser
@@ -259,6 +271,47 @@ class NameparserAdapter:
             parts.append(parsed.suffix)
         
         return " ".join(parts)
+
+    def _fallback_parse_en_name(self, text: str) -> ParsedName:
+        """
+        Fallback parsing when nameparser is not available.
+        
+        Args:
+            text: The name text to parse
+            
+        Returns:
+            ParsedName object with basic parsing
+        """
+        if not text:
+            return ParsedName(
+                first="", middles=[], last="", suffix="", 
+                nickname="", particles=[], full_name="", confidence=0.0
+            )
+        
+        # Simple fallback: split by spaces and assume first is given, last is surname
+        parts = text.strip().split()
+        
+        if len(parts) == 0:
+            return ParsedName(
+                first="", middles=[], last="", suffix="", 
+                nickname="", particles=[], full_name=text, confidence=0.0
+            )
+        elif len(parts) == 1:
+            # Single name - assume it's a surname
+            return ParsedName(
+                first="", middles=[], last=parts[0].title(), suffix="", 
+                nickname="", particles=[], full_name=text, confidence=0.3
+            )
+        else:
+            # Multiple parts - first is given, last is surname, middle are middle names
+            first = parts[0].title()
+            last = parts[-1].title()
+            middles = [part.title() for part in parts[1:-1]]
+            
+            return ParsedName(
+                first=first, middles=middles, last=last, suffix="", 
+                nickname="", particles=[], full_name=text, confidence=0.5
+            )
 
 
 # Singleton instance

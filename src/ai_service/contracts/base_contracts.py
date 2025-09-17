@@ -66,6 +66,8 @@ class TokenTrace(BaseModel):
     fallback: bool = False
     notes: Optional[str] = None
     cache: Optional[Dict[str, str]] = None  # Cache hit/miss info: {"tokenizer": "hit|miss", "morph": "hit|miss"}
+    is_hyphenated_surname: bool = False  # Flag for hyphenated surnames like "Петров-Сидоров"
+    flags: Optional[Dict[str, bool]] = None  # Additional flags like ner_disabled
 
 
 class NormalizationResult(BaseModel):
@@ -103,6 +105,9 @@ class NormalizationResult(BaseModel):
     original_text: Optional[str] = None
     token_variants: Optional[Dict[str, List[str]]] = None
     total_variants: Optional[int] = None
+    
+    # Processing flags
+    ner_disabled: bool = False  # Flag indicating NER was disabled due to missing models
 
     @property
     def normalized_text(self) -> str:

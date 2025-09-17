@@ -93,17 +93,20 @@ _spacy_en_ner: Optional[SpacyEnNER] = None
 
 def get_spacy_en_ner() -> Optional[SpacyEnNER]:
     """
-    Returns a singleton instance of SpacyEnNER.
+    Returns a singleton instance of SpacyEnNER with graceful fallback.
     """
     global _spacy_en_ner
     if _spacy_en_ner is None:
-        _, available = _load_spacy_en()
-        if available:
-            try:
+        try:
+            _, available = _load_spacy_en()
+            if available:
                 _spacy_en_ner = SpacyEnNER()
-            except RuntimeError as e:
-                logger.error(f"Failed to initialize SpacyEnNER: {e}")
+            else:
+                logger.warning("English NER model not available")
                 _spacy_en_ner = None
+        except Exception as e:
+            logger.warning(f"Failed to initialize English NER: {e}")
+            _spacy_en_ner = None
     return _spacy_en_ner
 
 

@@ -48,6 +48,10 @@ class TokenProcessor:
         cleaned = re.sub(r"\s+", " ", transliterated.strip())
         traces.append("Collapsed whitespace")
 
+        # Apply explicit edge character rules before general cleanup
+        cleaned, edge_traces = self._apply_edge_character_rules(cleaned, preserve_names)
+        traces.extend(edge_traces)
+
         cleaned = re.sub(r"\d+", " ", cleaned)
         if preserve_names:
             cleaned = re.sub(r"[^\w\s\.\-\'\,\u0400-\u04FF\u0370-\u03FF]", " ", cleaned)
@@ -127,6 +131,64 @@ class TokenProcessor:
             traces.append("No tokens after filtering")
 
         return result_tokens, traces, {"quoted_segments": quoted_segments}
+
+    def _apply_edge_character_rules(self, text: str, preserve_names: bool) -> Tuple[str, List[str]]:
+        """
+        Apply explicit rules for edge characters before general cleanup.
+        
+        Rules:
+        1. Digits and single characters: pass through without modification, 
+           but record in trace as role="other", rule="passthrough_digit_or_single"
+        2. Special characters like ª: ignore in final name, but add trace 
+           rule="ignored_special_char"
+        
+        Args:
+            text: Input text to process
+            preserve_names: Whether to preserve name-specific punctuation
+            
+        Returns:
+            Tuple of (processed_text, traces)
+        """
+        traces = []
+        processed_text = text
+        
+        # Rule 1: Handle digits and single characters
+        # Find standalone digits and single non-alphanumeric characters
+        digit_pattern = r'\b\d+\b'
+        single_char_pattern = r'\b[^\w\s]\b'
+        
+        # Process digits
+        digits_found = re.findall(digit_pattern, processed_text)
+        if digits_found:
+            traces.append(f"Found {len(digits_found)} digit sequences: {digits_found}")
+            # Note: We don't remove them here, just mark them for trace
+            for digit in digits_found:
+                traces.append(f"Digit sequence '{digit}' marked for passthrough_digit_or_single rule")
+        
+        # Process single characters
+        single_chars = re.findall(single_char_pattern, processed_text)
+        if single_chars:
+            traces.append(f"Found {len(single_chars)} single characters: {single_chars}")
+            for char in single_chars:
+                traces.append(f"Single character '{char}' marked for passthrough_digit_or_single rule")
+        
+        # Rule 2: Handle special characters like ª, º, etc.
+        special_chars = ['ª', 'º', '°', '§', '¶', '†', '‡', '•', '‰', '′', '″', '‴', '※']
+        special_found = []
+        for char in special_chars:
+            if char in processed_text:
+                special_found.append(char)
+                # Remove the special character but add trace
+                processed_text = processed_text.replace(char, ' ')
+                traces.append(f"Special character '{char}' removed with ignored_special_char rule")
+        
+        if special_found:
+            traces.append(f"Removed {len(special_found)} special characters: {special_found}")
+        
+        # Clean up extra spaces that might have been introduced
+        processed_text = re.sub(r'\s+', ' ', processed_text).strip()
+        
+        return processed_text, traces
 
     @staticmethod
     def _basic_transliterate(text: str) -> str:

@@ -76,7 +76,7 @@ class NormalizationService:
 
         # Initialize role tagger for stopword and organization filtering
         lexicons = get_lexicons()
-        self.role_tagger = RoleTagger(lexicons, window=3)
+        self.role_tagger = RoleTagger(window=3)
 
         # Initialize legacy service for fallback
         self._legacy_service = None
@@ -92,6 +92,41 @@ class NormalizationService:
         }
 
         self.logger.info("NormalizationService initialized as thin facade with feature flags")
+
+    def _to_title(self, word: str) -> str:
+        """
+        Convert word to title case while preserving apostrophes and hyphens.
+        
+        Args:
+            word: Input word to convert
+            
+        Returns:
+            Word in title case (first letter uppercase, rest lowercase)
+        """
+        if not word:
+            return word
+        
+        # Handle hyphenated words - apply titlecase to each segment
+        if '-' in word:
+            segments = word.split('-')
+            return '-'.join(self._to_title(segment) for segment in segments)
+        
+        # Handle single word - first letter uppercase, rest lowercase
+        if len(word) == 1:
+            return word.upper()
+        
+        # Handle apostrophes - capitalize letter after apostrophe
+        result = word[0].upper()
+        i = 1
+        while i < len(word):
+            if word[i] == "'" and i + 1 < len(word):
+                result += "'" + word[i + 1].upper()
+                i += 2
+            else:
+                result += word[i].lower()
+                i += 1
+        
+        return result
 
     def _apply_role_filtering(self, text: str, language: str, feature_flags: Optional[FeatureFlags] = None) -> Tuple[str, List[Dict]]:
         """
@@ -534,20 +569,44 @@ class NormalizationService:
         if DICTIONARIES_AVAILABLE:
             try:
                 # Load Russian names
-                if hasattr(russian_names, 'GIVEN_NAMES_RU'):
-                    dictionaries['given_names_ru'] = set(russian_names.GIVEN_NAMES_RU)
-                if hasattr(russian_names, 'SURNAMES_RU'):
-                    dictionaries['surnames_ru'] = set(russian_names.SURNAMES_RU)
-                if hasattr(russian_names, 'DIMINUTIVES_RU'):
-                    dictionaries['diminutives_ru'] = set(russian_names.DIMINUTIVES_RU)
+                if hasattr(russian_names, 'RUSSIAN_NAMES'):
+                    # Extract given names from RUSSIAN_NAMES
+                    given_names = set()
+                    surnames = set()
+                    diminutives = set()
+                    
+                    for name, props in russian_names.RUSSIAN_NAMES.items():
+                        given_names.add(name)
+                        if 'variants' in props:
+                            given_names.update(props['variants'])
+                        if 'diminutives' in props:
+                            diminutives.update(props['diminutives'])
+                        if 'declensions' in props:
+                            given_names.update(props['declensions'])
+                    
+                    dictionaries['given_names_ru'] = given_names
+                    dictionaries['diminutives_ru'] = diminutives
+                    dictionaries['surnames_ru'] = surnames
 
                 # Load Ukrainian names
-                if hasattr(ukrainian_names, 'GIVEN_NAMES_UK'):
-                    dictionaries['given_names_uk'] = set(ukrainian_names.GIVEN_NAMES_UK)
-                if hasattr(ukrainian_names, 'SURNAMES_UK'):
-                    dictionaries['surnames_uk'] = set(ukrainian_names.SURNAMES_UK)
-                if hasattr(ukrainian_names, 'DIMINUTIVES_UK'):
-                    dictionaries['diminutives_uk'] = set(ukrainian_names.DIMINUTIVES_UK)
+                if hasattr(ukrainian_names, 'UKRAINIAN_NAMES'):
+                    # Extract given names from UKRAINIAN_NAMES
+                    given_names = set()
+                    surnames = set()
+                    diminutives = set()
+                    
+                    for name, props in ukrainian_names.UKRAINIAN_NAMES.items():
+                        given_names.add(name)
+                        if 'variants' in props:
+                            given_names.update(props['variants'])
+                        if 'diminutives' in props:
+                            diminutives.update(props['diminutives'])
+                        if 'declensions' in props:
+                            given_names.update(props['declensions'])
+                    
+                    dictionaries['given_names_uk'] = given_names
+                    dictionaries['diminutives_uk'] = diminutives
+                    dictionaries['surnames_uk'] = surnames
 
                 self.logger.info(f"Loaded {len(dictionaries)} name dictionaries")
             except Exception as e:
@@ -630,7 +689,7 @@ class NormalizationService:
             enable_ru_nickname_expansion=enable_ru_nickname_expansion,
             enable_spacy_ru_ner=enable_spacy_ru_ner,
         )
-        result = await self.normalization_factory.normalize_text(text, config)
+        result = await self.normalization_factory.normalize_text(text, config, feature_flags)
         return self._enforce_nominative_and_gender(result, language)
 
     async def _process_with_legacy(
@@ -724,7 +783,7 @@ class NormalizationService:
             return result
 
         lang = (language or result.language or "ru").lower()
-        if lang not in {"ru", "uk"}:
+        if lang not in {"ru", "uk", "en"}:
             return result
 
         adapter = self.morphology_adapter
@@ -740,16 +799,18 @@ class NormalizationService:
                 original_output = trace.output
                 nominative = adapter.to_nominative(original_output, lang)
                 if nominative and nominative != original_output:
+                    # Apply titlecase to nominative result
+                    titlecased_nominative = self._to_title(nominative)
                     trace.notes = self._append_trace_note(
                         trace.notes,
                         {
                             "type": "morph",
                             "action": "to_nominative",
                             "token": original_output,
-                            "result": nominative,
+                            "result": titlecased_nominative,
                         },
                     )
-                    trace.output = nominative
+                    trace.output = titlecased_nominative
 
                 if role == "given" and given_gender == "unknown":
                     detected_gender = adapter.detect_gender(trace.output, lang)
@@ -769,13 +830,63 @@ class NormalizationService:
                     payload["result"] = preferred
                 trace.notes = self._append_trace_note(trace.notes, payload)
 
+            # Don't collect personal sequence here to avoid duplicates
+
+        # Remove duplicate traces and collect personal sequence, but allow duplicate initials
+        seen_tokens = set()
+        unique_traces = []
+        for trace in result.trace:
+            # For initials, allow duplicates (И. И. Петров)
+            # For other roles, check for duplicates
+            if trace.role != 'initial':
+                token_key = (trace.token, trace.role)
+                if token_key not in seen_tokens:
+                    seen_tokens.add(token_key)
+                    unique_traces.append(trace)
+                else:
+                    # Update existing trace with new output
+                    for existing_trace in unique_traces:
+                        if existing_trace.token == trace.token and existing_trace.role == trace.role:
+                            existing_trace.output = trace.output
+                            break
+            else:
+                # For initials, always add (allow duplicates)
+                unique_traces.append(trace)
+        
+        # Update result.trace with unique traces
+        result.trace = unique_traces
+        
+        # Collect personal sequence from unique traces
+        for trace in result.trace:
+            role = trace.role
             if role in personal_roles:
                 personal_sequence.append((role, trace.output))
 
         person_tokens = [token for _, token in personal_sequence]
 
         if person_tokens:
-            result.normalized = " ".join(person_tokens)
+            # Remove duplicates while preserving order, but allow duplicate initials
+            seen = set()
+            unique_person_tokens = []
+            for i, (role, token) in enumerate(personal_sequence):
+                # For initials, allow duplicates (И. И. Петров)
+                # For other roles, skip if we've already processed this token
+                if role != 'initial' and token.lower() in seen:
+                    continue
+                    
+                if role != 'initial':
+                    seen.add(token.lower())
+                    
+                unique_person_tokens.append(token)
+            
+            # Apply titlecase to person tokens
+            titlecased_tokens = []
+            for token in unique_person_tokens:
+                titlecased_token = self._to_title(token)
+                titlecased_tokens.append(titlecased_token)
+            
+            result.normalized = " ".join(titlecased_tokens)
+            person_tokens = titlecased_tokens  # Update person_tokens for tokens field
 
         organization_tokens = list(result.organizations_core or [])
         if not organization_tokens:
