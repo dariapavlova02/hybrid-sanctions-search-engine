@@ -41,6 +41,16 @@ class FeatureFlags:
     # ASCII fastpath optimization
     ascii_fastpath: bool = False
     
+    # Validation flags (default OFF, for validation only)
+    enable_spacy_ner: bool = False
+    enable_nameparser_en: bool = False
+    strict_stopwords: bool = False
+    fsm_tuned_roles: bool = False
+    enhanced_diminutives: bool = False
+    enhanced_gender_rules: bool = False
+    enable_ac_tier0: bool = False
+    enable_vector_fallback: bool = False
+    
     def to_dict(self) -> Dict[str, Any]:
         """Convert feature flags to dictionary for tracing and serialization."""
         return {
@@ -53,6 +63,14 @@ class FeatureFlags:
             "enforce_nominative": self.enforce_nominative,
             "preserve_feminine_surnames": self.preserve_feminine_surnames,
             "ascii_fastpath": self.ascii_fastpath,
+            "enable_spacy_ner": self.enable_spacy_ner,
+            "enable_nameparser_en": self.enable_nameparser_en,
+            "strict_stopwords": self.strict_stopwords,
+            "fsm_tuned_roles": self.fsm_tuned_roles,
+            "enhanced_diminutives": self.enhanced_diminutives,
+            "enhanced_gender_rules": self.enhanced_gender_rules,
+            "enable_ac_tier0": self.enable_ac_tier0,
+            "enable_vector_fallback": self.enable_vector_fallback,
         }
     
     def __str__(self) -> str:

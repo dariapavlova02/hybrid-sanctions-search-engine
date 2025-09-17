@@ -360,6 +360,16 @@ class UnifiedOrchestrator:
             enable_advanced_features=enable_advanced_features,
             feature_flags=feature_flags,
         ))
+        
+        # Add flag reasons to trace if debug_trace is enabled
+        if hasattr(norm_result, 'debug_trace') and norm_result.debug_trace:
+            from ..utils.flag_propagation import create_flag_context
+            flag_context = create_flag_context(feature_flags, "normalization", True)
+            
+            # Add flag reasons to trace
+            if hasattr(norm_result, 'trace') and isinstance(norm_result.trace, list):
+                for reason in flag_context.get_reasons():
+                    norm_result.trace.append({"type": "flag_reason", "value": reason, "scope": "normalization"})
 
         flag_entry = {"type": "flags", "value": feature_flags.to_dict(), "scope": "request"}
         trace_payload = getattr(norm_result, 'trace', None)

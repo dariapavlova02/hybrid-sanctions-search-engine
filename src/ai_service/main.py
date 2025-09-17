@@ -215,6 +215,13 @@ def _merge_feature_flags(request_flags: Optional[FeatureFlags]) -> FeatureFlags:
         strict_stopwords=request_flags.strict_stopwords,
         enable_ac_tier0=request_flags.enable_ac_tier0,
         enable_vector_fallback=request_flags.enable_vector_fallback,
+        # New validation flags
+        enable_spacy_ner=request_flags.enable_spacy_ner,
+        enable_nameparser_en=request_flags.enable_nameparser_en,
+        fsm_tuned_roles=request_flags.fsm_tuned_roles,
+        enhanced_diminutives=request_flags.enhanced_diminutives,
+        enhanced_gender_rules=request_flags.enhanced_gender_rules,
+        ascii_fastpath=request_flags.ascii_fastpath,
         # Keep other global flags
         normalization_implementation=global_flags.normalization_implementation,
         factory_rollout_percentage=global_flags.factory_rollout_percentage,

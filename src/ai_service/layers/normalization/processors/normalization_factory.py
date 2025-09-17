@@ -54,6 +54,15 @@ class NormalizationConfig:
     use_factory: bool = True  # Flag to use factory vs legacy implementation
     # Ukrainian-specific flags
     strict_stopwords: bool = False  # Use strict stopword filtering for initials
+    
+    # Validation flags (default OFF, for validation only)
+    enable_spacy_ner: bool = False
+    enable_nameparser_en: bool = False
+    fsm_tuned_roles: bool = False
+    enhanced_diminutives: bool = False
+    enhanced_gender_rules: bool = False
+    enable_ac_tier0: bool = False
+    enable_vector_fallback: bool = False
     preserve_feminine_suffix_uk: bool = False  # Preserve Ukrainian feminine suffixes (-ська/-цька)
     enable_spacy_uk_ner: bool = False  # Enable spaCy Ukrainian NER
     # English-specific flags
@@ -127,11 +136,18 @@ class NormalizationFactory(ErrorReportingMixin):
     async def normalize_text(
         self,
         text: str,
-        config: NormalizationConfig
+        config: NormalizationConfig,
+        feature_flags: Optional[Any] = None
     ) -> NormalizationResult:
         """Normalize text and return a complete NormalizationResult."""
         with PerfTimer() as timer:
             try:
+                # Propagate feature flags to config
+                if feature_flags:
+                    from ...utils.flag_propagation import create_flag_context, propagate_flags_to_layer
+                    flag_context = create_flag_context(feature_flags, "normalization", config.debug_tracing)
+                    config = propagate_flags_to_layer(flag_context, "normalization", config)
+                
                 # Check for ASCII fastpath
                 if config.ascii_fastpath and self._is_ascii_fastpath_eligible(text, config):
                     result = await self._ascii_fastpath_normalize(text, config)
