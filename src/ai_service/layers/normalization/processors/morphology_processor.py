@@ -1,220 +1,196 @@
-"""
-Morphological processing for name normalization.
-Handles the complex morphological analysis extracted from the main service.
-"""
+"""Thin wrapper around language-specific morphology analyzers."""
 
-import asyncio
-from functools import lru_cache
-from typing import Dict, List, Optional, Tuple, Any
+from __future__ import annotations
+
+from typing import Dict, List, Optional, Tuple
+
 from ....utils.logging_config import get_logger
+from ....utils.profiling import profile_function, profile_time
+from ..morphology.gender_rules import (
+    convert_given_name_to_nominative,
+    convert_patronymic_to_nominative,
+    convert_surname_to_nominative,
+)
+from ..morphology.russian_morphology import RussianMorphologyAnalyzer
+from ..morphology.ukrainian_morphology import UkrainianMorphologyAnalyzer
+
+PersonalRole = Optional[str]
 
 
 class MorphologyProcessor:
-    """Handles morphological analysis for name normalization."""
+    """Provide morphology-aware normalization for Slavic names."""
 
-    def __init__(self):
+    def __init__(self, diminutive_maps: Optional[Dict[str, Dict[str, str]]] = None) -> None:
         self.logger = get_logger(__name__)
-        self._morphs = {}
-        self._cache = {}
-        self._initialize_morphology_analyzers()
+        self.dim2full_maps = diminutive_maps or {}
+        self._analyzers: Dict[str, object] = {}
+        self._cache: Dict[Tuple[str, str, PersonalRole], Tuple[str, bool, List[str]]] = {}
+        self._initialise_analyzers()
 
-    def _initialize_morphology_analyzers(self):
-        """Initialize morphology analyzers for supported languages."""
+    def _initialise_analyzers(self) -> None:
         try:
-            import pymorphy3
-            self._morphs['ru'] = pymorphy3.MorphAnalyzer(lang='ru')
-            self._morphs['uk'] = pymorphy3.MorphAnalyzer(lang='uk')
-            self.logger.info("Morphology analyzers initialized for ru, uk")
-        except ImportError:
-            self.logger.warning("pymorphy3 not available, morphological analysis disabled")
-        except Exception as e:
-            self.logger.warning(f"Failed to initialize morphology analyzers: {e}")
-
-    @lru_cache(maxsize=10000)
-    def morph_nominal(
-        self,
-        token: str,
-        language: str,
-        role: str = None
-    ) -> Tuple[str, bool, List[str]]:
-        """
-        Perform morphological normalization to nominative case.
-
-        Args:
-            token: Token to normalize
-            language: Language code (ru, uk)
-            role: Token role hint (given, surname, patronymic)
-
-        Returns:
-            Tuple of (normalized_token, fallback_used, trace)
-        """
-        if not token or language not in self._morphs:
-            return token, True, ["No morphological analysis available"]
-
+            self._analyzers["ru"] = RussianMorphologyAnalyzer()
+        except Exception as exc:  # pragma: no cover - optional dependency failures
+            self.logger.warning("RussianMorphologyAnalyzer unavailable: %s", exc)
         try:
-            return self._analyze_morphology(token, language, role)
-        except Exception as e:
-            self.logger.warning(f"Morphological analysis failed for '{token}': {e}")
-            return token, True, [f"Morphological analysis error: {e}"]
+            self._analyzers["uk"] = UkrainianMorphologyAnalyzer()
+        except Exception as exc:  # pragma: no cover
+            self.logger.warning("UkrainianMorphologyAnalyzer unavailable: %s", exc)
 
-    def _analyze_morphology(
-        self,
-        token: str,
-        language: str,
-        role: str = None
-    ) -> Tuple[str, bool, List[str]]:
-        """Core morphological analysis logic."""
-        morph = self._morphs[language]
-        trace = []
-
-        # Parse the word
-        parses = morph.parse(token)
-        if not parses:
-            trace.append("No morphological parses found")
-            return token, True, trace
-
-        # Find best parse based on role
-        best_parse = self._select_best_parse(parses, role, token)
-        trace.append(f"Selected parse: {best_parse.tag}")
-
-        # Check if already nominative
-        if 'nomn' in best_parse.tag:
-            trace.append("Already in nominative case")
-            return token, False, trace
-
-        # Try to inflect to nominative
-        try:
-            nominative = best_parse.inflect({'nomn'})
-            if nominative and nominative.word != token:
-                trace.append(f"Inflected to nominative: '{token}' -> '{nominative.word}'")
-                return nominative.word, False, trace
-        except Exception as e:
-            trace.append(f"Inflection failed: {e}")
-
-        # Use normal form as fallback
-        if best_parse.normal_form and best_parse.normal_form != token:
-            trace.append(f"Using normal form: '{token}' -> '{best_parse.normal_form}'")
-            return best_parse.normal_form, False, trace
-
-        trace.append("No morphological changes applied")
-        return token, True, trace
-
-    def _select_best_parse(self, parses: List[Any], role: str, token: str) -> Any:
-        """Select the best morphological parse based on role and context."""
-        if not parses:
-            return None
-
-        # Score each parse
-        scored_parses = []
-        for parse in parses:
-            score = self._score_parse(parse, role, token)
-            scored_parses.append((score, parse))
-
-        # Return highest scoring parse
-        scored_parses.sort(key=lambda x: x[0], reverse=True)
-        return scored_parses[0][1]
-
-    def _score_parse(self, parse: Any, role: str, token: str) -> float:
-        """Score a morphological parse based on role and token characteristics."""
-        score = 0.0
-
-        # Base score for having a part of speech
-        if hasattr(parse, 'tag') and parse.tag.POS:
-            score += 1.0
-
-        # Role-specific scoring
-        if role == 'given' and 'Name' in str(parse.tag):
-            score += 3.0
-        elif role == 'surname' and 'Surn' in str(parse.tag):
-            score += 3.0
-        elif role == 'patronymic' and 'Patr' in str(parse.tag):
-            score += 3.0
-
-        # Prefer proper nouns for names
-        if 'NOUN' in str(parse.tag):
-            score += 1.0
-
-        # Prefer exact matches
-        if hasattr(parse, 'word') and parse.word.lower() == token.lower():
-            score += 2.0
-
-        # Penalty for very short words that might be incorrectly analyzed
-        if len(token) < 3:
-            score -= 0.5
-
-        return score
-
+    @profile_function("morphology_processor.normalize_slavic_token")
     async def normalize_slavic_token(
         self,
         token: str,
-        role: str,
+        role: PersonalRole,
         language: str,
-        enable_morphology: bool = True
+        enable_morphology: bool = True,
+        preserve_feminine_suffix_uk: bool = False,
     ) -> Tuple[str, List[str]]:
-        """
-        Normalize a Slavic language token.
-
-        Args:
-            token: Token to normalize
-            role: Token role
-            language: Language code
-            enable_morphology: Whether to use morphological analysis
-
-        Returns:
-            Tuple of (normalized_token, trace)
-        """
-        trace = []
+        """Normalize a single token to nominative form using language analyzers."""
+        if not token:
+            return token, ["Empty token"]
 
         if not enable_morphology:
-            # Simple capitalization
-            normalized = token.capitalize() if role in {'given', 'surname', 'patronymic'} else token
-            trace.append(f"Simple normalization: '{token}' -> '{normalized}'")
-            return normalized, trace
+            return self._title_case(token) if role in {"given", "surname", "patronymic"} else token, [
+                "Morphology disabled"
+            ]
 
-        # Use morphological analysis
-        normalized, fallback_used, morph_trace = self.morph_nominal(token, language, role)
-        trace.extend(morph_trace)
+        cached = self._cache.get((token, language, role))
+        if cached:
+            normalized, _, trace = cached
+            return normalized, trace.copy()
 
-        # Apply case normalization if morphology didn't change anything
-        if fallback_used and role in {'given', 'surname', 'patronymic'}:
-            normalized = normalized.capitalize()
-            trace.append(f"Applied capitalization fallback: '{normalized}'")
+        normalized, fallback, trace = self._normalize_token(token, language, role, preserve_feminine_suffix_uk)
+        if fallback and role in {"given", "surname", "patronymic"}:
+            title = self._title_case(normalized)
+            if title != normalized:
+                trace.append(f"Capitalization fallback: '{normalized}' -> '{title}'")
+                normalized = title
 
+        self._cache[(token, language, role)] = (normalized, fallback, trace)
         return normalized, trace
 
-    def handle_diminutives(
+    def _normalize_token(
         self,
         token: str,
         language: str,
-        diminutive_maps: Dict[str, Dict[str, str]] = None
+        role: PersonalRole,
+        preserve_feminine_suffix_uk: bool = False,
     ) -> Tuple[str, bool, List[str]]:
-        """
-        Convert diminutive forms to full names.
+        trace: List[str] = []
+        normalized = token
+        fallback = True
 
-        Args:
-            token: Token to check
-            language: Language code
-            diminutive_maps: Diminutive to full name mappings
+        if role == "given":
+            normalized, fallback, trace = self._normalize_given(token, language)
+        elif role == "surname":
+            normalized, fallback, trace = self._normalize_surname(token, language, preserve_feminine_suffix_uk)
+        elif role == "patronymic":
+            normalized, fallback, trace = self._normalize_patronymic(token, language)
+        else:
+            analyzer_norm = self._analyzer_normalize(token, language)
+            if analyzer_norm and analyzer_norm.lower() != token.lower():
+                trace.append(f"Analyzer normalized '{token}' -> '{analyzer_norm}'")
+                normalized = analyzer_norm
+                fallback = False
+            else:
+                normalized = token
+                fallback = True
 
-        Returns:
-            Tuple of (normalized_token, was_diminutive, trace)
-        """
-        trace = []
-        diminutive_maps = diminutive_maps or {}
+        return normalized, fallback, trace
 
-        lang_map = diminutive_maps.get(language, {})
-        token_lower = token.lower()
+    def _normalize_given(self, token: str, language: str) -> Tuple[str, bool, List[str]]:
+        trace: List[str] = []
+        fallback = True
+        normalized = token
 
-        if token_lower in lang_map:
-            full_form = lang_map[token_lower]
-            trace.append(f"Converted diminutive: '{token}' -> '{full_form}'")
-            return full_form, True, trace
+        full = self.dim2full_maps.get(language, {}).get(token.lower())
+        if full:
+            normalized = self._title_case(full)
+            trace.append(f"Diminutive expansion: '{token}' -> '{normalized}'")
+            fallback = False
 
-        trace.append("No diminutive conversion found")
-        return token, False, trace
+        converted = convert_given_name_to_nominative(normalized, language)
+        if converted != normalized:
+            normalized = self._title_case(converted)
+            trace.append(f"Given name to nominative: '{token}' -> '{normalized}'")
+            fallback = False
 
-    def clear_cache(self):
-        """Clear the morphological analysis cache."""
-        self.morph_nominal.cache_clear()
+        analyzer_norm = self._analyzer_normalize(normalized, language)
+        if analyzer_norm and analyzer_norm.lower() != normalized.lower():
+            trace.append(f"Analyzer normalized given name '{normalized}' -> '{analyzer_norm}'")
+            normalized = analyzer_norm
+            fallback = False
+
+        return normalized, fallback, trace
+
+    def _normalize_surname(self, token: str, language: str, preserve_feminine_suffix_uk: bool = False) -> Tuple[str, bool, List[str]]:
+        trace: List[str] = []
+        normalized = convert_surname_to_nominative(token, language, preserve_feminine_suffix_uk)
+        fallback = normalized.lower() == token.lower()
+        if not fallback:
+            normalized = self._title_case(normalized)
+            if preserve_feminine_suffix_uk and language == "uk":
+                trace.append(f"Ukrainian surname to nominative (preserving feminine suffix): '{token}' -> '{normalized}'")
+            else:
+                trace.append(f"Surname to nominative: '{token}' -> '{normalized}'")
+
+        analyzer_norm = self._analyzer_normalize(normalized, language)
+        if analyzer_norm and analyzer_norm.lower() != normalized.lower():
+            trace.append(f"Analyzer normalized surname '{normalized}' -> '{analyzer_norm}'")
+            normalized = analyzer_norm
+            fallback = False
+
+        return normalized, fallback, trace
+
+    def _normalize_patronymic(self, token: str, language: str) -> Tuple[str, bool, List[str]]:
+        trace: List[str] = []
+        normalized = convert_patronymic_to_nominative(token, language)
+        fallback = normalized.lower() == token.lower()
+        if not fallback:
+            normalized = self._title_case(normalized)
+            trace.append(f"Patronymic to nominative: '{token}' -> '{normalized}'")
+
+        analyzer_norm = self._analyzer_normalize(normalized, language)
+        if analyzer_norm and analyzer_norm.lower() != normalized.lower():
+            trace.append(f"Analyzer normalized patronymic '{normalized}' -> '{analyzer_norm}'")
+            normalized = analyzer_norm
+            fallback = False
+
+        return normalized, fallback, trace
+
+    def _analyzer_normalize(self, token: str, language: str) -> Optional[str]:
+        analyzer = self._analyzers.get(language)
+        if not analyzer or not token:
+            return None
+
+        try:
+            if hasattr(analyzer, "analyze_name"):
+                normalized = analyzer.analyze_name(token)
+                if normalized:
+                    return normalized
+
+            morph = getattr(analyzer, "morph_analyzer", None)
+            pick_best = getattr(analyzer, "pick_best_parse", None)
+            if morph and pick_best:
+                parses = morph.parse(token)
+                if parses:
+                    best = pick_best(parses)
+                    if best and getattr(best, "normal_form", None):
+                        normal_form = best.normal_form
+                        if normal_form:
+                            return self._title_case(normal_form)
+        except Exception as exc:  # pragma: no cover - analyzer specific failures
+            self.logger.debug("Analyzer normalization failed for '%s': %s", token, exc)
+
+        return None
+
+    def _title_case(self, token: str) -> str:
+        if not token:
+            return token
+        return token[0].upper() + token[1:].lower()
+
+    def clear_cache(self) -> None:
         self._cache.clear()
         self.logger.info("Morphology cache cleared")
+

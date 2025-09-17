@@ -103,19 +103,114 @@ class TestEmbeddingPreprocessor:
         
         assert result == "Ivan Ivanov"
 
-    def test_include_attrs_future_flag(self):
-        """Test that include_attrs=True is not yet implemented"""
+    def test_include_attrs_enabled(self):
+        """Test that include_attrs=True is now implemented"""
         preprocessor = EmbeddingPreprocessor()
         
-        # Should return False by default
-        assert preprocessor.should_include_attrs() is False
+        # Should return True by default (enabled in config)
+        assert preprocessor.should_include_attrs() is True
         
-        # Should warn when include_attrs=True is used
-        text = "Ivan Ivanov 1980-01-01 passport12345"
+        # Test with attributes provided
+        text = "Ivan Ivanov"
+        attributes = {"country": "UA", "dob": "1980-01-01", "gender": "M"}
+        result = preprocessor.normalize_for_embedding(text, include_attrs=True, attributes=attributes)
+        
+        # Should include attributes
+        assert "Ivan Ivanov" in result
+        assert "country:UA" in result
+        assert "dob:1980-01-01" in result
+        assert "gender:M" in result
+
+    def test_extract_attributes_from_text(self):
+        """Test attribute extraction from text"""
+        preprocessor = EmbeddingPreprocessor()
+        
+        # Test country extraction
+        text = "Ivan Ivanov country:UA"
+        result = preprocessor.normalize_for_embedding(text, include_attrs=True)
+        assert "country:UA" in result
+        
+        # Test DOB extraction
+        text = "Ivan Ivanov dob:1980-01-01"
+        result = preprocessor.normalize_for_embedding(text, include_attrs=True)
+        assert "dob:1980-01-01" in result
+        
+        # Test gender extraction
+        text = "Ivan Ivanov gender:M"
+        result = preprocessor.normalize_for_embedding(text, include_attrs=True)
+        assert "gender:M" in result
+
+    def test_attribute_normalization(self):
+        """Test attribute value normalization"""
+        preprocessor = EmbeddingPreprocessor()
+        
+        # Test country normalization
+        text = "Ivan Ivanov country:ua"
+        result = preprocessor.normalize_for_embedding(text, include_attrs=True)
+        assert "country:UA" in result
+        
+        # Test date normalization
+        text = "Ivan Ivanov dob:01.01.1980"
+        result = preprocessor.normalize_for_embedding(text, include_attrs=True)
+        assert "dob:1980-01-01" in result
+        
+        # Test gender normalization
+        text = "Ivan Ivanov gender:male"
+        result = preprocessor.normalize_for_embedding(text, include_attrs=True)
+        assert "gender:M" in result
+
+    def test_normalize_with_attributes_method(self):
+        """Test the convenience method for attribute normalization"""
+        preprocessor = EmbeddingPreprocessor()
+        
+        text = "Ivan Ivanov"
+        attributes = {"country": "UA", "dob": "1980-01-01", "gender": "M"}
+        result = preprocessor.normalize_with_attributes(text, attributes)
+        
+        assert "Ivan Ivanov" in result
+        assert "country:UA" in result
+        assert "dob:1980-01-01" in result
+        assert "gender:M" in result
+
+    def test_mixed_language_attributes(self):
+        """Test attribute extraction in different languages"""
+        preprocessor = EmbeddingPreprocessor()
+        
+        # Russian attributes
+        text = "Иван Иванов страна:RU пол:М"
+        result = preprocessor.normalize_for_embedding(text, include_attrs=True)
+        assert "Иван Иванов" in result
+        assert "country:RU" in result
+        assert "gender:M" in result
+        
+        # Ukrainian attributes
+        text = "Іван Іванов країна:UA стать:Ч"
+        result = preprocessor.normalize_for_embedding(text, include_attrs=True)
+        assert "Іван Іванов" in result
+        assert "country:UA" in result
+        assert "gender:M" in result
+
+    def test_include_attrs_with_dates_and_ids(self):
+        """Test that dates and IDs are still removed when include_attrs=True"""
+        preprocessor = EmbeddingPreprocessor()
+        
+        text = "Ivan Ivanov 1980-01-01 passport12345 country:UA"
         result = preprocessor.normalize_for_embedding(text, include_attrs=True)
         
-        # Should still remove dates/IDs since include_attrs is not implemented
-        assert result == "Ivan Ivanov"
+        assert "Ivan Ivanov" in result
+        assert "country:UA" in result
+        assert "1980-01-01" not in result
+        assert "passport12345" not in result
+
+    def test_configuration_loading(self):
+        """Test that configuration is loaded correctly"""
+        preprocessor = EmbeddingPreprocessor()
+        
+        # Test that config is loaded
+        assert preprocessor.config is not None
+        assert "include_attrs" in preprocessor.config
+        assert preprocessor.config["include_attrs"]["enabled"] is True
+        assert "country" in preprocessor.config["include_attrs"]["attributes"]
 
     def test_complex_text_processing(self):
         """Test processing of complex text with multiple dates and IDs"""

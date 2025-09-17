@@ -1,0 +1,1220 @@
+[
+  {
+    "input": "Оплата за послуги, платник Петрик П.",
+    "language_hint": "uk",
+    "expected": "Петро П.",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Петро П.",
+      "tokens": [
+        "Петро",
+        "П."
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Для Петруся Іванова, за ремонт",
+    "language_hint": "uk",
+    "expected": "Петро Іванов",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Петро Іванова",
+      "tokens": [
+        "Петро",
+        "Іванова"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": false,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Переказ від Вовчика Зеленського В. О.",
+    "language_hint": "uk",
+    "expected": "Володимир Зеленський В. О.",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Вовчико Зеленського",
+      "tokens": [
+        "Вовчико",
+        "Зеленського",
+        "В."
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": false,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Подарунок для Дашеньки Квіткової",
+    "language_hint": "uk",
+    "expected": "Дарія Квіткова",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Дашенька Квіткова",
+      "tokens": [
+        "Дашенька",
+        "Квіткова"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": false,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Від Сашка Положинського за квитки",
+    "language_hint": "uk",
+    "expected": "Олександр Положинський",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Сашко Положинського",
+      "tokens": [
+        "Сашко",
+        "Положинського"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": false,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Для Жені Галича з групи O.Torvald",
+    "language_hint": "uk",
+    "expected": "Євген Галич",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Євген Галича",
+      "tokens": [
+        "Євген",
+        "Галича"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": false,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Дякуємо Сергієві Жадану за творчість",
+    "language_hint": "uk",
+    "expected": "Сергій Жадан",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Сергій Жадан",
+      "tokens": [
+        "Сергій",
+        "Жадан"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Зустріч з Ліною Костенко",
+    "language_hint": "uk",
+    "expected": "Ліна Костенко",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Ліна Костенко",
+      "tokens": [
+        "Ліна",
+        "Костенко"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Подарунок для Оксани Забужко",
+    "language_hint": "uk",
+    "expected": "Оксана Забужко",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Оксана Забужко",
+      "tokens": [
+        "Оксана",
+        "Забужко"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Розмовляв з Валерієм Залужним",
+    "language_hint": "uk",
+    "expected": "Валерій Залужний",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Валерій Залужним",
+      "tokens": [
+        "Валерій",
+        "Залужним"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": false,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Плтіж від В'ячеслава вакарчука (океан ельзи)",
+    "language_hint": "uk",
+    "expected": "В'ячеслав Вакарчук",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "В'ячеслав Вакарчуко",
+      "tokens": [
+        "В'ячеслав",
+        "Вакарчуко"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": false,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Переказ ОЛЕГУ СКРИПЦІ",
+    "language_hint": "uk",
+    "expected": "Олег Скрипка",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Олег Скрипка",
+      "tokens": [
+        "Олег",
+        "Скрипка"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Для Іванова-Петренка С.В.",
+    "language_hint": "uk",
+    "expected": "Іванов-Петренко С.В.",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_role_based_normalization.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Іванова-Петренко С. В.",
+      "tokens": [
+        "Іванова-Петренко",
+        "С.",
+        "В."
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": false,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Перевод от Саши Пушкина Александровича",
+    "language_hint": "ru",
+    "expected": "Александр Пушкин Александрович",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Александр Пушкинин Александровича",
+      "tokens": [
+        "Александр",
+        "Пушкинин",
+        "Александровича"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": false,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Оплата для Володи Высоцкого",
+    "language_hint": "ru",
+    "expected": "Владимир Высоцкий",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Владимир Высоцкого",
+      "tokens": [
+        "Владимир",
+        "Высоцкого"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": false,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Платёж от Димы Медведева",
+    "language_hint": "ru",
+    "expected": "Дмитрий Медведев",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Дмитрий Медведев",
+      "tokens": [
+        "Дмитрий",
+        "Медведев"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Для Аллы Борисовны Пугачевой",
+    "language_hint": "ru",
+    "expected": "Алла Борисовна Пугачева",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Алла Борисовна Пугачевой",
+      "tokens": [
+        "Алла",
+        "Борисовна",
+        "Пугачевой"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": false,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Благодарность Петру Чайковскому",
+    "language_hint": "ru",
+    "expected": "Петр Чайковский",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Петр Чайковском",
+      "tokens": [
+        "Петр",
+        "Чайковском"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": false,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Встреча с Анной Ахматовой",
+    "language_hint": "ru",
+    "expected": "Анна Ахматова",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Анна Ахматовой",
+      "tokens": [
+        "Анна",
+        "Ахматовой"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": false,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Перевод средств Ивану Бунину",
+    "language_hint": "ru",
+    "expected": "Иван Бунин",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Иван Бунин",
+      "tokens": [
+        "Иван",
+        "Бунин"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Отправлено для Есенина С. А.",
+    "language_hint": "ru",
+    "expected": "Есенин С. А.",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Есенина С. А.",
+      "tokens": [
+        "Есенина",
+        "С.",
+        "А."
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": false,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Зачисление от Лермонтова М.Ю.",
+    "language_hint": "ru",
+    "expected": "Лермонтов М.Ю.",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Лермонтова М. Ю.",
+      "tokens": [
+        "Лермонтова",
+        "М.",
+        "Ю."
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": false,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Payment from John Fitzgerald Kennedy",
+    "language_hint": "en",
+    "expected": "John Fitzgerald Kennedy",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "John Fitzgerald Kennedy",
+      "tokens": [
+        "John",
+        "Fitzgerald",
+        "Kennedy"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Transfer to Stephen E. King for services",
+    "language_hint": "en",
+    "expected": "Stephen E. King",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Stephen E. King",
+      "tokens": [
+        "Stephen",
+        "E.",
+        "King"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "For Mr. Sherlock Holmes, Baker st. 221b",
+    "language_hint": "en",
+    "expected": "Sherlock Holmes",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Sherlock Holmes",
+      "tokens": [
+        "Sherlock",
+        "Holmes"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Refund to Ms. Joanna Rowling",
+    "language_hint": "en",
+    "expected": "Joanna Rowling",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Joanna Rowling",
+      "tokens": [
+        "Joanna",
+        "Rowling"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "From Bill Gates for charity",
+    "language_hint": "en",
+    "expected": "William Gates",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "William Gates",
+      "tokens": [
+        "William",
+        "Gates"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "For Liz Truss, former PM",
+    "language_hint": "en",
+    "expected": "Elizabeth Truss",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Elizabeth Truss",
+      "tokens": [
+        "Elizabeth",
+        "Truss"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Payment from Mike Johnson",
+    "language_hint": "en",
+    "expected": "Michael Johnson",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Michael Johnson",
+      "tokens": [
+        "Michael",
+        "Johnson"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Sent to ELON MUSK for X corp",
+    "language_hint": "en",
+    "expected": "Elon Musk",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Elon Musk",
+      "tokens": [
+        "Elon",
+        "Musk"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "For BARACK H. OBAMA, invoice 123",
+    "language_hint": "en",
+    "expected": "Barack H. Obama",
+    "sources": [
+      "tests/unit/text_processing/test_normalization_logic.py",
+      "tests/integration/test_full_normalization_suite.py"
+    ],
+    "legacy": {
+      "normalized": "Barack H. Obama",
+      "tokens": [
+        "Barack",
+        "H.",
+        "Obama"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Аллы Борисовны Пугачевой",
+    "language_hint": "ru",
+    "expected": "Алла Борисовна Пугачева",
+    "sources": [
+      "tests/integration/test_role_based_normalization.py"
+    ],
+    "legacy": {
+      "normalized": "Алла Борисовна Пугачевой",
+      "tokens": [
+        "Алла",
+        "Борисовна",
+        "Пугачевой"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": false,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Петру Чайковскому",
+    "language_hint": "ru",
+    "expected": "Петр Чайковский",
+    "sources": [
+      "tests/integration/test_role_based_normalization.py"
+    ],
+    "legacy": {
+      "normalized": "Петр Чайковском",
+      "tokens": [
+        "Петр",
+        "Чайковском"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": false,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Сергієві Жадану",
+    "language_hint": "uk",
+    "expected": "Сергій Жадан",
+    "sources": [
+      "tests/integration/test_role_based_normalization.py"
+    ],
+    "legacy": {
+      "normalized": "Сергій Жадан",
+      "tokens": [
+        "Сергій",
+        "Жадан"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Оксані Забужко",
+    "language_hint": "uk",
+    "expected": "Оксана Забужко",
+    "sources": [
+      "tests/integration/test_role_based_normalization.py"
+    ],
+    "legacy": {
+      "normalized": "Оксана Забужко",
+      "tokens": [
+        "Оксана",
+        "Забужко"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Петра Иванова",
+    "language_hint": "uk",
+    "expected": "Петро Иванов",
+    "sources": [
+      "tests/integration/test_role_based_normalization.py"
+    ],
+    "legacy": {
+      "normalized": "Петро Иванов",
+      "tokens": [
+        "Петро",
+        "Иванов"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "от Александра Александровича",
+    "language_hint": "ru",
+    "expected": "Александр Александрович",
+    "sources": [
+      "tests/integration/test_role_based_normalization.py"
+    ],
+    "legacy": {
+      "normalized": "Александра Александровича",
+      "tokens": [
+        "Александра",
+        "Александровича"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": false,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "для Іванівни",
+    "language_hint": "uk",
+    "expected": "Іванівна",
+    "sources": [
+      "tests/integration/test_role_based_normalization.py"
+    ],
+    "legacy": {
+      "normalized": "Іванівна",
+      "tokens": [
+        "Іванівна"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Payment from JOHN DOE",
+    "language_hint": "en",
+    "expected": "John Doe",
+    "sources": [
+      "tests/integration/test_role_based_normalization.py"
+    ],
+    "legacy": {
+      "normalized": "John Doe",
+      "tokens": [
+        "John",
+        "Doe"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Оплата від Петра Порошенка",
+    "language_hint": "uk",
+    "expected": "Петро Порошенко",
+    "sources": [
+      "tests/integration/test_role_based_normalization.py"
+    ],
+    "legacy": {
+      "normalized": "Петро Порошенко",
+      "tokens": [
+        "Петро",
+        "Порошенко"
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "Есенин с. а.",
+    "language_hint": "ru",
+    "expected": "Есенин С. А.",
+    "sources": [
+      "tests/integration/test_role_based_normalization.py"
+    ],
+    "legacy": {
+      "normalized": "Есенин С. А.",
+      "tokens": [
+        "Есенин",
+        "С.",
+        "А."
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": true,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  },
+  {
+    "input": "пушкин а с",
+    "language_hint": "ru",
+    "expected": "Пушкин А. С.",
+    "sources": [
+      "tests/integration/test_role_based_normalization.py"
+    ],
+    "legacy": {
+      "normalized": "пушкин А.",
+      "tokens": [
+        "пушкин",
+        "А."
+      ],
+      "success": true,
+      "errors": []
+    },
+    "matches_expected_legacy": false,
+    "factory": {
+      "normalized": "",
+      "tokens": [],
+      "success": false,
+      "errors": [
+        "Normalization failed: ai_service.contracts.base_contracts.NormalizationResult() got multiple values for keyword argument 'original_length'"
+      ]
+    },
+    "matches_expected_factory": false,
+    "legacy_equals_factory": false
+  }
+]

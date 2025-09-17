@@ -48,6 +48,7 @@ class NormalizationConfig:
     preserve_names: bool = True
     enable_advanced_features: bool = True
     enable_morphology: bool = True
+    ascii_fastpath: bool = False
     enable_gender_adjustment: bool = True
     language: str = 'ru'
     use_factory: bool = True  # Flag to use factory vs legacy implementation
@@ -131,6 +132,13 @@ class NormalizationFactory(ErrorReportingMixin):
         """Normalize text and return a complete NormalizationResult."""
         with PerfTimer() as timer:
             try:
+                # Check for ASCII fastpath
+                if config.ascii_fastpath and self._is_ascii_fastpath_eligible(text, config):
+                    result = await self._ascii_fastpath_normalize(text, config)
+                    result.processing_time = timer.elapsed
+                    result.success = len(result.errors or []) == 0
+                    return result
+                
                 result = await self._normalize_with_error_handling(text, config)
                 result.processing_time = timer.elapsed
                 result.success = len(result.errors or []) == 0
@@ -1255,3 +1263,97 @@ class NormalizationFactory(ErrorReportingMixin):
             traces.append(f"FSM role filtering removed {removed_count} tokens")
 
         return filtered_tokens, filtered_roles, traces
+
+    def _is_ascii_fastpath_eligible(self, text: str, config: NormalizationConfig) -> bool:
+        """
+        Check if text is eligible for ASCII fastpath processing.
+        
+        Args:
+            text: Input text to check
+            config: Normalization configuration
+            
+        Returns:
+            True if text is eligible for ASCII fastpath, False otherwise
+        """
+        from ....utils.ascii_utils import is_ascii_name
+        
+        # Check if ASCII fastpath is enabled
+        if not config.ascii_fastpath:
+            return False
+        
+        # Check if text is ASCII and suitable for fastpath
+        if not is_ascii_name(text):
+            return False
+        
+        # Check if language is English (ASCII fastpath is primarily for English names)
+        if config.language not in ["en", "english"]:
+            return False
+        
+        # Check if advanced features are not required (fastpath is simpler)
+        if config.enable_advanced_features and config.enable_morphology:
+            # Only use fastpath if morphology is not critical
+            return False
+        
+        return True
+
+    async def _ascii_fastpath_normalize(self, text: str, config: NormalizationConfig) -> NormalizationResult:
+        """
+        ASCII fastpath normalization without heavy Unicode/morphology operations.
+        
+        Args:
+            text: ASCII text to normalize
+            config: Normalization configuration
+            
+        Returns:
+            NormalizationResult with fastpath processing
+        """
+        from ....utils.ascii_utils import ascii_fastpath_normalize
+        
+        try:
+            # Use ASCII fastpath normalization
+            tokens, roles, normalized_text = ascii_fastpath_normalize(text, config.language)
+            
+            # Create token traces for ASCII fastpath
+            traces = [
+                f"ASCII fastpath: processed '{text}' -> '{normalized_text}'",
+                f"ASCII fastpath: {len(tokens)} tokens, roles: {roles}",
+                "ASCII fastpath: skipped Unicode normalization and morphology"
+            ]
+            
+            # Create token traces
+            token_traces = []
+            for i, (token, role) in enumerate(zip(tokens, roles)):
+                token_traces.append(TokenTrace(
+                    token=token,
+                    role=role,
+                    rule="ascii_fastpath",
+                    morph_lang=None,
+                    normal_form=token,
+                    output=token,
+                    fallback=False,
+                    notes=f"ASCII fastpath processing"
+                ))
+            
+            # Create result
+            result = NormalizationResult(
+                normalized=normalized_text,
+                tokens=tokens,
+                trace=traces,
+                errors=[],
+                language=config.language,
+                confidence=0.95,  # High confidence for ASCII names
+                original_length=len(text),
+                normalized_length=len(normalized_text),
+                token_count=len(tokens),
+                processing_time=0.0,  # Will be set by caller
+                success=True,
+                token_traces=token_traces
+            )
+            
+            self.logger.info(f"ASCII fastpath: processed '{text}' -> '{normalized_text}' ({len(tokens)} tokens)")
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"ASCII fastpath failed for '{text}': {e}")
+            # Fall back to regular processing
+            return await self._normalize_with_error_handling(text, config)

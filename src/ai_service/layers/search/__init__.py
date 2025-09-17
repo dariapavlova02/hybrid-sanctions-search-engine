@@ -21,6 +21,7 @@ from .elasticsearch_adapters import (
     ElasticsearchACAdapter,
     ElasticsearchVectorAdapter,
 )
+from .elasticsearch_client import ElasticsearchClientFactory
 
 __all__ = [
     "HybridSearchService",
@@ -32,4 +33,5 @@ __all__ = [
     "SearchMetrics",
     "ElasticsearchACAdapter",
     "ElasticsearchVectorAdapter",
+    "ElasticsearchClientFactory",
 ]

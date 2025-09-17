@@ -1,0 +1,151 @@
+# Канареечные кейсы: апострофы (' vs ')
+# Цель: предотвратить потерю апострофов в именах
+
+cases:
+  - name: "straight_apostrophe"
+    input: "O'Connor"
+    invariants:
+      must_contain: ["O'Connor"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "curly_apostrophe"
+    input: "O'Connor"
+    invariants:
+      must_contain: ["O'Connor"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "apostrophe_surnames"
+    input: "D'Angelo"
+    invariants:
+      must_contain: ["D'Angelo"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "apostrophe_compound"
+    input: "Jean-Baptiste O'Connor"
+    invariants:
+      must_contain: ["Jean", "Baptiste", "O'Connor"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "apostrophe_initials"
+    input: "J. O'Connor"
+    invariants:
+      must_contain: ["O'Connor"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "apostrophe_feminine"
+    input: "Mary O'Connor"
+    invariants:
+      must_contain: ["Mary", "O'Connor"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: true
+
+  - name: "apostrophe_middle_name"
+    input: "John D'Angelo Smith"
+    invariants:
+      must_contain: ["John", "D'Angelo", "Smith"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "apostrophe_ukrainian"
+    input: "О'Коннор"
+    invariants:
+      must_contain: ["О'Коннор"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "apostrophe_russian"
+    input: "О'Коннор"
+    invariants:
+      must_contain: ["О'Коннор"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "apostrophe_mixed_scripts"
+    input: "Александр O'Connor"
+    invariants:
+      must_contain: ["Александр", "O'Connor"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "apostrophe_cyrillic"
+    input: "Олександр О'Коннор"
+    invariants:
+      must_contain: ["Олександр", "О'Коннор"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "apostrophe_compound_cyrillic"
+    input: "Жан-Батист О'Коннор"
+    invariants:
+      must_contain: ["Жан", "Батист", "О'Коннор"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "apostrophe_double"
+    input: "D'Angelo O'Connor"
+    invariants:
+      must_contain: ["D'Angelo", "O'Connor"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "apostrophe_initials_compound"
+    input: "J. D'Angelo O'Connor"
+    invariants:
+      must_contain: ["D'Angelo", "O'Connor"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "apostrophe_feminine_compound"
+    input: "Mary-Jane O'Connor"
+    invariants:
+      must_contain: ["Mary", "Jane", "O'Connor"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: true
+
+  - name: "apostrophe_mixed_scripts_compound"
+    input: "Александр-Марія O'Connor"
+    invariants:
+      must_contain: ["Александр", "Марія", "O'Connor"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: true
+
+  - name: "apostrophe_cyrillic_compound"
+    input: "Олександр-Марія О'Коннор"
+    invariants:
+      must_contain: ["Олександр", "Марія", "О'Коннор"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: true
+
+  - name: "apostrophe_triple_compound"
+    input: "Jean-Baptiste D'Angelo O'Connor"
+    invariants:
+      must_contain: ["Jean", "Baptiste", "D'Angelo", "O'Connor"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "apostrophe_very_short"
+    input: "D'Art"
+    invariants:
+      must_contain: ["D'Art"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "apostrophe_cyrillic_short"
+    input: "О'К"
+    invariants:
+      must_contain: ["О'К"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false

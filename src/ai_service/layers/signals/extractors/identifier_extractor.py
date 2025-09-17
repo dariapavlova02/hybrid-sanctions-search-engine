@@ -23,6 +23,8 @@ class IdentifierExtractor(BaseExtractor):
             "vat_eu",
             "lei",
             "ein",
+            "iban",
+            "swift_bic",
         }
 
         self._person_id_types = {"inn_ua", "inn_ru", "snils", "ssn", "passport_ua", "passport_rf"}

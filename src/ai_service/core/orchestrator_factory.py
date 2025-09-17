@@ -7,7 +7,7 @@ into the unified orchestrator architecture.
 
 from typing import Optional
 
-from ..config import SERVICE_CONFIG
+from ..config import SERVICE_CONFIG, FEATURE_FLAGS
 from ..exceptions import ServiceInitializationError
 # EmbeddingService imported locally to avoid circular imports
 from ..layers.language.language_detection_service import LanguageDetectionService
@@ -193,6 +193,8 @@ class OrchestratorFactory:
                 variants_service=variants_service,
                 embeddings_service=embeddings_service,
                 decision_engine=decision_engine,
+                metrics_service=metrics_service,
+                default_feature_flags=FEATURE_FLAGS,
                 # Configuration
                 enable_smart_filter=enable_smart_filter,
                 enable_variants=enable_variants,

@@ -88,7 +88,7 @@ class OrchestratorFactoryWithSearch:
         # Language detection service (required)
         if language_service is None:
             try:
-                from ..layers.language_detection.language_detection_service import LanguageDetectionService
+                from ..layers.language.language_detection_service import LanguageDetectionService
                 language_service = LanguageDetectionService()
                 logger.info("Language detection service initialized")
             except Exception as e:
@@ -162,7 +162,7 @@ class OrchestratorFactoryWithSearch:
         if enable_hybrid_search and hybrid_search_service is None:
             try:
                 from ..layers.search import HybridSearchService, HybridSearchConfig
-                search_config = HybridSearchConfig()
+                search_config = HybridSearchConfig.from_env()
                 hybrid_search_service = HybridSearchService(search_config)
                 await hybrid_search_service.initialize()
                 logger.info("Hybrid search service initialized")

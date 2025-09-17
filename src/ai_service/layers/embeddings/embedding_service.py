@@ -85,7 +85,7 @@ class EmbeddingService(BaseService):
         self.logger.info("EmbeddingService initialization completed")
 
         # Perform warmup if enabled in config
-        if getattr(config, 'warmup_on_init', False):
+        if getattr(self.config, 'warmup_on_init', False):
             self._warmup()
 
     async def initialize(self) -> None:

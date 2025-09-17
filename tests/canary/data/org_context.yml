@@ -1,0 +1,156 @@
+# Канареечные кейсы: org-контекст (ООО/ТОВ/LLC + CAPS), чтобы не утекало в person
+# Цель: предотвратить попадание организационных аббревиатур в персональные имена
+
+cases:
+  - name: "russian_org_with_person"
+    input: "ООО ПриватБанк директор Иван Петров"
+    invariants:
+      must_contain: ["Иван", "Петров"]
+      must_not_contain: ["ООО", "ПриватБанк"]
+      feminine_required: false
+
+  - name: "ukrainian_org_with_person"
+    input: "ТОВ ПриватБанк директор Олександр Петренко"
+    invariants:
+      must_contain: ["Олександр", "Петренко"]
+      must_not_contain: ["ТОВ", "ПриватБанк"]
+      feminine_required: false
+
+  - name: "english_org_with_person"
+    input: "Apple Inc CEO John Smith"
+    invariants:
+      must_contain: ["John", "Smith"]
+      must_not_contain: ["Apple", "Inc"]
+      feminine_required: false
+
+  - name: "mixed_orgs_with_person"
+    input: "ООО Apple Inc директор Александр Smith"
+    invariants:
+      must_contain: ["Александр", "Smith"]
+      must_not_contain: ["ООО", "Apple", "Inc"]
+      feminine_required: false
+
+  - name: "org_abbreviations_only"
+    input: "ООО ТОВ LLC Inc Corp"
+    invariants:
+      must_contain: []
+      must_not_contain: ["ООО", "ТОВ", "LLC", "Inc", "Corp"]
+      feminine_required: false
+
+  - name: "org_with_initials"
+    input: "ООО ПриватБанк И. Петров"
+    invariants:
+      must_contain: ["Петров"]
+      must_not_contain: ["ООО", "ПриватБанк"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "org_with_compound_name"
+    input: "ТОВ ПриватБанк Жан-Батист Петров"
+    invariants:
+      must_contain: ["Жан", "Батист", "Петров"]
+      must_not_contain: ["ТОВ", "ПриватБанк"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "org_with_hyphenated_surname"
+    input: "LLC Apple Inc John Smith-Johnson"
+    invariants:
+      must_contain: ["John", "Smith", "Johnson"]
+      must_not_contain: ["LLC", "Apple", "Inc"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "org_with_apostrophe_name"
+    input: "ООО ПриватБанк Jean-Baptiste O'Connor"
+    invariants:
+      must_contain: ["Jean", "Baptiste", "O'Connor"]
+      must_not_contain: ["ООО", "ПриватБанк"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "org_with_feminine_name"
+    input: "ТОВ ПриватБанк Марія Петренко"
+    invariants:
+      must_contain: ["Марія", "Петренко"]
+      must_not_contain: ["ТОВ", "ПриватБанк"]
+      feminine_required: true
+
+  - name: "multiple_orgs_with_person"
+    input: "ООО Apple Inc ТОВ ПриватБанк директор Иван Петров"
+    invariants:
+      must_contain: ["Иван", "Петров"]
+      must_not_contain: ["ООО", "Apple", "Inc", "ТОВ", "ПриватБанк"]
+      feminine_required: false
+
+  - name: "org_with_mixed_scripts"
+    input: "ООО Apple Inc Александр Smith"
+    invariants:
+      must_contain: ["Александр", "Smith"]
+      must_not_contain: ["ООО", "Apple", "Inc"]
+      feminine_required: false
+
+  - name: "org_with_cyrillic_apostrophe"
+    input: "ТОВ ПриватБанк Олександр О'Коннор"
+    invariants:
+      must_contain: ["Олександр", "О'Коннор"]
+      must_not_contain: ["ТОВ", "ПриватБанк"]
+      feminine_required: false
+
+  - name: "org_with_initials_compound"
+    input: "LLC Apple Inc Ж.-Б. O'Connor"
+    invariants:
+      must_contain: ["O'Connor"]
+      must_not_contain: ["LLC", "Apple", "Inc"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "org_with_very_long_name"
+    input: "ООО ПриватБанк Жан-Батист-Пьер Петров-Сидоров-Козлов"
+    invariants:
+      must_contain: ["Жан", "Батист", "Пьер", "Петров", "Сидоров", "Козлов"]
+      must_not_contain: ["ООО", "ПриватБанк"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "org_with_patronymic"
+    input: "ТОВ ПриватБанк Иван Петрович Козлов"
+    invariants:
+      must_contain: ["Иван", "Петрович", "Козлов"]
+      must_not_contain: ["ТОВ", "ПриватБанк"]
+      feminine_required: false
+
+  - name: "org_with_feminine_patronymic"
+    input: "ООО ПриватБанк Марія Петрівна Козлова"
+    invariants:
+      must_contain: ["Марія", "Петрівна", "Козлова"]
+      must_not_contain: ["ООО", "ПриватБанк"]
+      feminine_required: true
+
+  - name: "org_with_mixed_org_types"
+    input: "ООО ТОВ LLC Inc Corp GmbH директор Иван Петров"
+    invariants:
+      must_contain: ["Иван", "Петров"]
+      must_not_contain: ["ООО", "ТОВ", "LLC", "Inc", "Corp", "GmbH"]
+      feminine_required: false
+
+  - name: "org_with_caps_person"
+    input: "ООО ПРИВАТБАНК ИВАН ПЕТРОВ"
+    invariants:
+      must_contain: ["ИВАН", "ПЕТРОВ"]
+      must_not_contain: ["ООО", "ПРИВАТБАНК"]
+      feminine_required: false
+
+  - name: "org_with_mixed_caps"
+    input: "ООО ПриватБанк ИВАН Петров"
+    invariants:
+      must_contain: ["ИВАН", "Петров"]
+      must_not_contain: ["ООО", "ПриватБанк"]
+      feminine_required: false
+
+  - name: "org_with_numbers"
+    input: "ООО ПриватБанк-2024 директор Иван Петров"
+    invariants:
+      must_contain: ["Иван", "Петров"]
+      must_not_contain: ["ООО", "ПриватБанк", "2024"]
+      feminine_required: false

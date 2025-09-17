@@ -1,0 +1,176 @@
+# Канареечные кейсы: дефисные фамилии (двойные), инициалы с точками
+# Цель: предотвратить потерю дефисов и неправильное форматирование инициалов
+
+cases:
+  - name: "double_surname_hyphen"
+    input: "Иван Петров-Сидоров"
+    invariants:
+      must_contain: ["Иван", "Петров", "Сидоров"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "double_surname_feminine"
+    input: "Мария Петрова-Сидорова"
+    invariants:
+      must_contain: ["Мария", "Петрова", "Сидорова"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: true
+
+  - name: "compound_first_name"
+    input: "Жан-Батист Петров"
+    invariants:
+      must_contain: ["Жан", "Батист", "Петров"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "compound_feminine_name"
+    input: "Мария-Анна Петрова"
+    invariants:
+      must_contain: ["Мария", "Анна", "Петрова"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: true
+
+  - name: "double_compound_names"
+    input: "Жан-Батист Петров-Сидоров"
+    invariants:
+      must_contain: ["Жан", "Батист", "Петров", "Сидоров"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "initials_with_dots"
+    input: "И. П. Сидоров"
+    invariants:
+      must_contain: ["Сидоров"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "initials_compound_surname"
+    input: "И. П. Петров-Сидоров"
+    invariants:
+      must_contain: ["Петров", "Сидоров"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "initials_compound_first_name"
+    input: "Ж.-Б. Петров"
+    invariants:
+      must_contain: ["Петров"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "ukrainian_hyphenated"
+    input: "Олександр Петренко-Сміт"
+    invariants:
+      must_contain: ["Олександр", "Петренко", "Сміт"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "ukrainian_feminine_hyphenated"
+    input: "Марія Петренко-Сміт"
+    invariants:
+      must_contain: ["Марія", "Петренко", "Сміт"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: true
+
+  - name: "english_hyphenated"
+    input: "John Smith-Johnson"
+    invariants:
+      must_contain: ["John", "Smith", "Johnson"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "english_feminine_hyphenated"
+    input: "Mary Smith-Johnson"
+    invariants:
+      must_contain: ["Mary", "Smith", "Johnson"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: true
+
+  - name: "mixed_scripts_hyphenated"
+    input: "Александр Smith-Johnson"
+    invariants:
+      must_contain: ["Александр", "Smith", "Johnson"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "initials_mixed_scripts"
+    input: "А. Smith-Johnson"
+    invariants:
+      must_contain: ["Smith", "Johnson"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "triple_hyphenated"
+    input: "Жан-Батист-Пьер Петров-Сидоров-Козлов"
+    invariants:
+      must_contain: ["Жан", "Батист", "Пьер", "Петров", "Сидоров", "Козлов"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "initials_triple_hyphenated"
+    input: "Ж.-Б.-П. Петров-Сидоров-Козлов"
+    invariants:
+      must_contain: ["Петров", "Сидоров", "Козлов"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "apostrophe_hyphenated"
+    input: "Jean-Baptiste O'Connor-Smith"
+    invariants:
+      must_contain: ["Jean", "Baptiste", "O'Connor", "Smith"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "initials_apostrophe_hyphenated"
+    input: "Ж.-Б. O'Connor-Smith"
+    invariants:
+      must_contain: ["O'Connor", "Smith"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "cyrillic_apostrophe_hyphenated"
+    input: "Жан-Батист О'Коннор-Сміт"
+    invariants:
+      must_contain: ["Жан", "Батист", "О'Коннор", "Сміт"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "very_long_hyphenated"
+    input: "Александр-Марія-Анна Петров-Сидоров-Козлов-Іванов"
+    invariants:
+      must_contain: ["Александр", "Марія", "Анна", "Петров", "Сидоров", "Козлов", "Іванов"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: true
+
+  - name: "initials_very_long_hyphenated"
+    input: "А.-М.-А. Петров-Сидоров-Козлов-Іванов"
+    invariants:
+      must_contain: ["Петров", "Сидоров", "Козлов", "Іванов"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      hyphen_preserved: true
+      feminine_required: false

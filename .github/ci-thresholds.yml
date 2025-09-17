@@ -1,0 +1,98 @@
+# CI Quality Gate Thresholds for Golden Test Monitor
+# These thresholds determine when builds should fail
+
+# Core Quality Metrics
+quality_gates:
+  # Minimum parity rate between legacy and factory implementations
+  # Build fails if parity falls below this threshold
+  min_parity_rate: 0.8  # 80%
+
+  # Maximum allowable success rate degradation
+  # Factory implementation must maintain this success rate
+  min_success_rate: 0.95  # 95%
+
+  # Factory accuracy compared to golden cases
+  # This is aspirational - not enforced as hard gate yet
+  target_accuracy: 0.8  # 80%
+
+# Performance Thresholds
+performance:
+  # Maximum p95 latency for factory implementation
+  # Build fails if p95 latency exceeds this (in milliseconds)
+  max_p95_latency_ms: 50.0
+
+  # Maximum average latency for factory implementation
+  # Build fails if average latency exceeds this (in milliseconds)
+  max_avg_latency_ms: 20.0
+
+  # Performance regression threshold (for PR comparisons)
+  # Fail if current performance is worse than base by this factor
+  max_regression_factor: 1.5  # 50% regression tolerance
+
+# Environment-Specific Overrides
+environments:
+  # Development environment - more lenient thresholds
+  development:
+    min_parity_rate: 0.6
+    max_p95_latency_ms: 100.0
+    max_avg_latency_ms: 50.0
+
+  # Staging environment - stricter than dev, looser than prod
+  staging:
+    min_parity_rate: 0.75
+    max_p95_latency_ms: 75.0
+    max_avg_latency_ms: 30.0
+
+  # Production environment - strictest thresholds
+  production:
+    min_parity_rate: 0.9
+    max_p95_latency_ms: 30.0
+    max_avg_latency_ms: 15.0
+    min_success_rate: 0.99
+
+# Feature Flag Configuration for CI
+feature_flags:
+  # Default implementation for CI testing
+  normalization_implementation: "factory"
+
+  # Rollout percentage for canary testing
+  factory_rollout_percentage: 100
+
+  # Enable dual processing for comparison in CI
+  enable_dual_processing: true
+
+  # Log implementation choices for debugging
+  log_implementation_choice: true
+
+# Alert Configuration
+alerts:
+  # Slack webhook for critical failures
+  slack_webhook_url: "${SLACK_WEBHOOK_URL}"
+
+  # Teams to notify on failures
+  notification_teams:
+    - "@ai-service-team"
+    - "@platform-engineering"
+
+  # Critical failure conditions that trigger immediate alerts
+  critical_conditions:
+    - "parity_rate < 0.5"  # Severe parity degradation
+    - "factory_success_rate < 0.9"  # High failure rate
+    - "factory_p95_latency_ms > 100"  # Severe performance degradation
+
+# Monitoring Dashboard Configuration
+monitoring:
+  # Metrics to track over time
+  tracked_metrics:
+    - parity_rate
+    - factory_accuracy
+    - factory_success_rate
+    - factory_avg_latency_ms
+    - factory_p95_latency_ms
+    - legacy_avg_latency_ms
+
+  # Retention period for metrics
+  metrics_retention_days: 90
+
+  # Dashboard refresh interval
+  dashboard_refresh_minutes: 5

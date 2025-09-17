@@ -1,0 +1,150 @@
+# Канареечные кейсы: гомоглифы (латинская a/о/е в кириллице, bidi)
+# Цель: предотвратить путаницу между похожими символами
+
+cases:
+  - name: "latin_a_in_cyrillic"
+    input: "Александр"
+    invariants:
+      must_contain: ["Александр"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "latin_o_in_cyrillic"
+    input: "Олександр"
+    invariants:
+      must_contain: ["Олександр"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "latin_e_in_cyrillic"
+    input: "Елена"
+    invariants:
+      must_contain: ["Елена"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: true
+
+  - name: "mixed_homoglyphs"
+    input: "Александр-Олександр"
+    invariants:
+      must_contain: ["Александр", "Олександр"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "latin_cyrillic_confusion"
+    input: "Александр Oлександр"
+    invariants:
+      must_contain: ["Александр", "Oлександр"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "homoglyph_surnames"
+    input: "Петр Петренко"
+    invariants:
+      must_contain: ["Петр", "Петренко"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "latin_e_cyrillic_e"
+    input: "Елена Elena"
+    invariants:
+      must_contain: ["Елена", "Elena"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: true
+
+  - name: "homoglyph_initials"
+    input: "А. О."
+    invariants:
+      must_contain: ["А", "О"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "bidi_mixed_scripts"
+    input: "Александр Smith"
+    invariants:
+      must_contain: ["Александр", "Smith"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "homoglyph_patronymics"
+    input: "Иван Петрович"
+    invariants:
+      must_contain: ["Иван", "Петрович"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "latin_cyrillic_surnames"
+    input: "Петренко Petrenko"
+    invariants:
+      must_contain: ["Петренко", "Petrenko"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "homoglyph_feminine"
+    input: "Елена Петренко"
+    invariants:
+      must_contain: ["Елена", "Петренко"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: true
+
+  - name: "mixed_homoglyph_initials"
+    input: "А. Е. О."
+    invariants:
+      must_contain: ["А", "Е", "О"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "bidi_complex_names"
+    input: "Александр-Елена Smith"
+    invariants:
+      must_contain: ["Александр", "Елена", "Smith"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: true
+
+  - name: "homoglyph_compound"
+    input: "Жан-Батист"
+    invariants:
+      must_contain: ["Жан", "Батист"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "latin_cyrillic_compound"
+    input: "Жан-Батист Jean-Baptiste"
+    invariants:
+      must_contain: ["Жан", "Батист", "Jean", "Baptiste"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "homoglyph_apostrophe"
+    input: "О'Коннор"
+    invariants:
+      must_contain: ["О'Коннор"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "bidi_apostrophe_mixed"
+    input: "О'Коннор O'Connor"
+    invariants:
+      must_contain: ["О'Коннор", "O'Connor"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "homoglyph_very_similar"
+    input: "Александр Aleksandr"
+    invariants:
+      must_contain: ["Александр", "Aleksandr"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "bidi_mixed_scripts_complex"
+    input: "Александр-Елена Smith-Johnson"
+    invariants:
+      must_contain: ["Александр", "Елена", "Smith", "Johnson"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: true

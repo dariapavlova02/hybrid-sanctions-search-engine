@@ -2,70 +2,52 @@
 Configuration for property-based tests
 
 This module provides pytest fixtures and configuration for property-based
-testing of the hybrid search system.
+testing of the normalization service.
 """
 
 import pytest
-import asyncio
-from typing import AsyncGenerator
+import sys
+from pathlib import Path
 
-from test_anti_cheat_regression import HybridSearchTester
+# Add src to path for module imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'src'))
+
+
+@pytest.fixture(scope="module")
+def normalization_service():
+    """Module-scoped normalization service fixture."""
+    from src.ai_service.layers.normalization.normalization_service import NormalizationService
+    service = NormalizationService()
+    yield service
+    # Cleanup caches
+    if hasattr(service, 'normalization_factory'):
+        if hasattr(service.normalization_factory, '_normalization_cache'):
+            service.normalization_factory._normalization_cache.clear()
 
 
 @pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+def flags():
+    """Session-scoped flags fixture."""
+    return {
+        "remove_stop_words": True,
+        "preserve_names": True,
+        "enable_advanced_features": True,
+        "strict_stopwords": True,
+        "preserve_feminine_suffix_uk": False,
+        "enable_spacy_uk_ner": False
+    }
 
 
-@pytest.fixture(scope="session")
-async def search_tester() -> AsyncGenerator[HybridSearchTester, None]:
-    """
-    Create a search tester instance for the entire test session.
-    
-    This fixture ensures that the search tester is properly initialized
-    and cleaned up for all property-based tests.
-    """
-    tester = HybridSearchTester()
-    
-    # Verify Elasticsearch is available
-    try:
-        health_response = await tester.client.get(f"{tester.es_url}/_cluster/health")
-        if health_response.status_code != 200:
-            pytest.skip("Elasticsearch is not available")
-    except Exception:
-        pytest.skip("Elasticsearch is not available")
-    
-    yield tester
-    
-    # Cleanup
-    await tester.cleanup()
-
-
-@pytest.fixture(scope="function")
-async def isolated_search_tester() -> AsyncGenerator[HybridSearchTester, None]:
-    """
-    Create an isolated search tester instance for each test function.
-    
-    This fixture provides complete isolation between test functions,
-    ensuring that tests don't interfere with each other.
-    """
-    tester = HybridSearchTester()
-    
-    # Verify Elasticsearch is available
-    try:
-        health_response = await tester.client.get(f"{tester.es_url}/_cluster/health")
-        if health_response.status_code != 200:
-            pytest.skip("Elasticsearch is not available")
-    except Exception:
-        pytest.skip("Elasticsearch is not available")
-    
-    yield tester
-    
-    # Cleanup
-    await tester.cleanup()
+def pytest_addoption(parser):
+    """Add command line options for property-based tests."""
+    # Only add options if they don't already exist
+    if not any(opt.dest == 'property_max_examples' for opt in parser._anonymous.options):
+        parser.addoption(
+            "--property-max-examples",
+            type=int,
+            default=1000,
+            help="Maximum examples for property-based tests"
+        )
 
 
 # Pytest configuration for property-based tests
@@ -90,11 +72,9 @@ def pytest_collection_modifyitems(config, items):
     """Modify test collection for property-based tests."""
     for item in items:
         # Mark property-based tests
-        if "test_anti_cheat_regression" in item.nodeid:
+        if "test_normalization_properties" in item.nodeid:
             item.add_marker(pytest.mark.property)
             item.add_marker(pytest.mark.invariant)
-            item.add_marker(pytest.mark.slow)
-            item.add_marker(pytest.mark.integration)
         
         # Mark slow tests
         if "slow" in item.name or "invariant" in item.name:

@@ -116,10 +116,13 @@ NORMALIZATION_CONFIG = {
 }
 
 # Cache configuration
+import os
+
 CACHE_CONFIG = {
     "default_ttl": 3600,  # Default TTL (seconds)
-    "max_size": 10000,  # Maximum cache size
+    "max_size": int(os.getenv("NORM_CACHE_LRU", 10000)),  # Maximum cache size
     "cleanup_interval": 300,  # Cleanup interval (seconds)
+    "morph_cache_size": int(os.getenv("MORPH_CACHE_LRU", 10000)),  # Morphology cache size
 }
 
 # Performance configuration
@@ -128,6 +131,7 @@ PERFORMANCE_CONFIG = {
     "batch_size": 100,  # Batch size for processing
     "memory_limit_mb": 1024,  # Memory limit (MB)
     "cpu_limit_percent": 80,  # CPU limit (%)
+    "disable_debug_tracing": os.getenv("DISABLE_DEBUG_TRACING", "false").lower() == "true",  # Disable debug tracing
 }
 
 # Security configuration

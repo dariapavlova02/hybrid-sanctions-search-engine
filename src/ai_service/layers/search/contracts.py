@@ -19,6 +19,8 @@ class SearchMode(Enum):
     AC = "ac"  # Exact/almost-exact search
     VECTOR = "vector"  # kNN vector search
     HYBRID = "hybrid"  # Both modes with escalation
+    FALLBACK_AC = "fallback_ac"
+    FALLBACK_VECTOR = "fallback_vector"
 
 
 @dataclass
@@ -33,10 +35,11 @@ class Candidate:
     search_mode: SearchMode
     match_fields: List[str]  # Fields that matched
     confidence: float = 0.0
+    trace: Optional[Dict[str, Any]] = None  # Trace information for debugging
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization"""
-        return {
+        result = {
             "doc_id": self.doc_id,
             "score": self.score,
             "text": self.text,
@@ -46,6 +49,9 @@ class Candidate:
             "match_fields": self.match_fields,
             "confidence": self.confidence,
         }
+        if self.trace:
+            result["trace"] = self.trace
+        return result
 
 
 class SearchOpts(BaseModel):
@@ -161,8 +167,8 @@ class ElasticsearchAdapter(ABC):
     
     @abstractmethod
     async def search(
-        self, 
-        query: str, 
+        self,
+        query: Any,
         opts: SearchOpts,
         index_name: str = "watchlist"
     ) -> List[Candidate]:

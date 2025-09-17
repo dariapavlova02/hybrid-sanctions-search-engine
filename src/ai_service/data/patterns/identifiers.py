@@ -10,6 +10,28 @@ from dataclasses import dataclass
 from typing import Dict, List, Pattern, Tuple
 
 
+# ISO 3166-1 alpha-2 country codes used for SWIFT/BIC validation
+ISO_COUNTRY_CODES = {
+    "AD", "AE", "AF", "AG", "AI", "AL", "AM", "AO", "AQ", "AR", "AS", "AT", "AU", "AW", "AX",
+    "AZ", "BA", "BB", "BD", "BE", "BF", "BG", "BH", "BI", "BJ", "BL", "BM", "BN", "BO", "BQ",
+    "BR", "BS", "BT", "BV", "BW", "BY", "BZ", "CA", "CC", "CD", "CF", "CG", "CH", "CI", "CK",
+    "CL", "CM", "CN", "CO", "CR", "CU", "CV", "CW", "CX", "CY", "CZ", "DE", "DJ", "DK", "DM",
+    "DO", "DZ", "EC", "EE", "EG", "EH", "ER", "ES", "ET", "FI", "FJ", "FK", "FM", "FO", "FR",
+    "GA", "GB", "GD", "GE", "GF", "GG", "GH", "GI", "GL", "GM", "GN", "GP", "GQ", "GR", "GS",
+    "GT", "GU", "GW", "GY", "HK", "HM", "HN", "HR", "HT", "HU", "ID", "IE", "IL", "IM", "IN",
+    "IO", "IQ", "IR", "IS", "IT", "JE", "JM", "JO", "JP", "KE", "KG", "KH", "KI", "KM", "KN",
+    "KP", "KR", "KW", "KY", "KZ", "LA", "LB", "LC", "LI", "LK", "LR", "LS", "LT", "LU", "LV",
+    "LY", "MA", "MC", "MD", "ME", "MF", "MG", "MH", "MK", "ML", "MM", "MN", "MO", "MP", "MQ",
+    "MR", "MS", "MT", "MU", "MV", "MW", "MX", "MY", "MZ", "NA", "NC", "NE", "NF", "NG", "NI",
+    "NL", "NO", "NP", "NR", "NU", "NZ", "OM", "PA", "PE", "PF", "PG", "PH", "PK", "PL", "PM",
+    "PN", "PR", "PS", "PT", "PW", "PY", "QA", "RE", "RO", "RS", "RU", "RW", "SA", "SB", "SC",
+    "SD", "SE", "SG", "SH", "SI", "SJ", "SK", "SL", "SM", "SN", "SO", "SR", "SS", "ST", "SV",
+    "SX", "SY", "SZ", "TC", "TD", "TF", "TG", "TH", "TJ", "TK", "TL", "TM", "TN", "TO", "TR",
+    "TT", "TV", "TW", "TZ", "UA", "UG", "UM", "US", "UY", "UZ", "VA", "VC", "VE", "VG", "VI",
+    "VN", "VU", "WF", "WS", "YE", "YT", "ZA", "ZM", "ZW",
+}
+
+
 @dataclass
 class IdentifierPattern:
     """Pattern definition for identifier detection"""
@@ -94,10 +116,28 @@ IDENTIFIER_PATTERNS = [
         description="Legal Entity Identifier"
     ),
     IdentifierPattern(
+        name="IBAN_GENERIC",
+        type="iban",
+        pattern=r"\b(?:IBAN[:\s]*)?([A-Z]{2}\s*\d{2}(?:\s*[A-Z0-9]){11,30})\b",
+        description="International Bank Account Number"
+    ),
+    IdentifierPattern(
+        name="SWIFT_BIC",
+        type="swift_bic",
+        pattern=r"\b(?:SWIFT|BIC|SWIFT/BIC|МФО|MFO)[:\s]*([A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?)\b",
+        description="SWIFT/BIC code"
+    ),
+    IdentifierPattern(
         name="EIN_US",
         type="ein",
         pattern=r"\b(?:EIN|ein|федеральный\s+налоговый\s+номер)[:\s]*(\d{2}-\d{7})\b",
         description="US Employer Identification Number"
+    ),
+    IdentifierPattern(
+        name="SSN_US",
+        type="ssn",
+        pattern=r"\b(?:SSN|Social\s+Security\s+Number)?[:\s]*((?:\d{3}-\d{2}-\d{4})|\d{9})\b",
+        description="US Social Security Number"
     ),
 
     # Passport patterns
@@ -224,9 +264,15 @@ def normalize_identifier(value: str, identifier_type: str) -> str:
     elif identifier_type == 'lei':
         # Keep letters and digits, ensure uppercase
         normalized = re.sub(r'[^A-Z0-9]', '', normalized.upper())
+    elif identifier_type == 'iban':
+        normalized = re.sub(r'\s+', '', normalized.upper())
+    elif identifier_type == 'swift_bic':
+        normalized = re.sub(r'[^A-Z0-9]', '', normalized.upper())
     elif identifier_type == 'ein':
         # Keep only digits and hyphens
         normalized = re.sub(r'[^\d-]', '', normalized)
+    elif identifier_type == 'ssn':
+        normalized = re.sub(r'[^\d]', '', normalized)
     elif identifier_type in ['passport_rf', 'passport_ua']:
         # Keep letters and digits, remove spaces between series and number
         normalized = re.sub(r'[^A-ZА-Я0-9]', '', normalized.upper())
@@ -257,6 +303,9 @@ def get_validation_function(identifier_type: str):
         'vat': validate_vat,
         'lei': validate_lei,
         'ein': validate_ein,
+        'iban': validate_iban,
+        'swift_bic': validate_swift_bic,
+        'ssn': validate_ssn,
     }
     return validation_functions.get(identifier_type)
 
@@ -341,12 +390,108 @@ def validate_ein(value: str) -> bool:
     """Validate EIN"""
     if not value:
         return False
-    
-    # EIN format: XX-XXXXXXX
-    if re.match(r'^\d{2}-\d{7}$', value):
-        return True
-    
-    return False
+
+    digits_only = re.sub(r'[^\d]', '', value)
+    if len(digits_only) != 9 or not digits_only.isdigit():
+        return False
+
+    prefix = digits_only[:2]
+    valid_prefixes = {
+        '01', '02', '03', '04', '05', '06',
+        '10', '11', '12', '13', '14', '15', '16',
+        '20', '21', '22', '23', '24', '25', '26', '27',
+        '30', '31', '32', '33', '34', '35', '36', '37', '38', '39',
+        '40', '41', '42', '43', '44', '45', '46', '47', '48',
+        '50', '51', '52', '53', '54', '55', '56', '57', '58', '59',
+        '60', '61', '62', '63', '64', '65', '66', '67', '68',
+        '71', '72', '73', '74', '75', '76', '77',
+        '80', '81', '82', '83', '84', '85', '86', '87', '88',
+        '90', '91', '92', '93', '94', '95', '98', '99',
+    }
+
+    if prefix not in valid_prefixes:
+        return False
+
+    # If formatted with hyphen, ensure placement is correct
+    if '-' in value and not re.match(r'^\d{2}-\d{7}$', value):
+        return False
+
+    return True
+
+
+def validate_iban(value: str) -> bool:
+    """Validate IBAN using ISO 7064 mod-97-10."""
+    if not value:
+        return False
+
+    normalized = re.sub(r'\s+', '', value.upper())
+    if not 15 <= len(normalized) <= 34:
+        return False
+    if not re.fullmatch(r'[A-Z0-9]+', normalized):
+        return False
+
+    rearranged = normalized[4:] + normalized[:4]
+    remainder = 0
+    for char in rearranged:
+        if char.isdigit():
+            remainder = (remainder * 10 + int(char)) % 97
+        else:
+            remainder = (remainder * 100 + (ord(char) - 55)) % 97
+
+    return remainder == 1
+
+
+def validate_swift_bic(value: str) -> bool:
+    """Validate SWIFT/BIC format and structural rules."""
+    if not value:
+        return False
+
+    normalized = re.sub(r'\s+', '', value.upper())
+    if len(normalized) not in (8, 11):
+        return False
+
+    if not re.fullmatch(r'[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?', normalized):
+        return False
+
+    country_code = normalized[4:6]
+    if country_code not in ISO_COUNTRY_CODES:
+        return False
+
+    location_code = normalized[6:8]
+    if location_code in {"00", "0O", "O0", "OO"}:
+        return False
+
+    if len(normalized) == 11:
+        branch_code = normalized[8:]
+        if branch_code.upper() == "XXX":
+            return True
+        if branch_code == "000":
+            return False
+
+    return True
+
+
+def validate_ssn(value: str) -> bool:
+    """Validate US Social Security Number."""
+    if not value:
+        return False
+
+    digits_only = re.sub(r'[^\d]', '', value)
+    if len(digits_only) != 9:
+        return False
+
+    area, group, serial = digits_only[:3], digits_only[3:5], digits_only[5:]
+
+    if area == '000' or area == '666' or '900' <= area <= '999':
+        return False
+    if group == '00' or serial == '0000':
+        return False
+
+    # Exclude well-known invalid SSNs that routinely appear in fraud datasets
+    if digits_only in {'078051120', '219099999'}:
+        return False
+
+    return True
 
 
 def extract_identifiers(text: str, identifier_types: List[str] = None) -> List[Dict]:
@@ -361,7 +506,7 @@ def extract_identifiers(text: str, identifier_types: List[str] = None) -> List[D
         List of found identifiers with metadata
     """
     if identifier_types is None:
-        identifier_types = ['inn', 'edrpou', 'ogrn', 'ogrnip', 'vat', 'lei', 'ein']
+        identifier_types = ['inn', 'edrpou', 'ogrn', 'ogrnip', 'vat', 'lei', 'ein', 'iban', 'swift_bic', 'ssn']
     
     found_identifiers = []
     
@@ -377,9 +522,7 @@ def extract_identifiers(text: str, identifier_types: List[str] = None) -> List[D
             validator = get_validation_function(pattern_def.type)
             is_valid = True
             if validator:
-                validation_func = globals().get(validator)
-                if validation_func:
-                    is_valid = validation_func(normalized_value)
+                is_valid = validator(normalized_value)
             
             confidence = 0.9 if is_valid else 0.6
             

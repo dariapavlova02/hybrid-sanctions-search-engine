@@ -1,0 +1,51 @@
+{
+  "include_attrs": {
+    "enabled": true,
+    "attributes": ["country", "dob", "gender"],
+    "format": "key:value",
+    "separator": " "
+  },
+  "attribute_mapping": {
+    "country": {
+      "aliases": ["country", "страна", "країна"],
+      "format": "country:{value}",
+      "normalize": "uppercase"
+    },
+    "dob": {
+      "aliases": ["dob", "дата рождения", "дата народження", "birth"],
+      "format": "dob:{value}",
+      "normalize": "iso_date"
+    },
+    "gender": {
+      "aliases": ["gender", "пол", "стать"],
+      "format": "gender:{value}",
+      "normalize": "mf"
+    }
+  },
+  "patterns": {
+    "country": {
+      "additional_patterns": [
+        "\\b(?:UA|RU|US|GB|DE|FR|IT|ES|PL|RO|MD|BY|KZ|UZ|AZ|AM|GE|KG|TJ|TM)\\b"
+      ]
+    },
+    "dob": {
+      "additional_patterns": [
+        "\\b(?:dob|дата рождения|дата народження|birth)\\s*:?\\s*(\\d{4}-\\d{2}-\\d{2})\\b",
+        "\\b(?:dob|дата рождения|дата народження|birth)\\s*:?\\s*(\\d{2}\\.\\d{2}\\.\\d{4})\\b",
+        "\\b(?:dob|дата рождения|дата народження|birth)\\s*:?\\s*(\\d{2}/\\d{2}/\\d{4})\\b"
+      ]
+    },
+    "gender": {
+      "additional_patterns": [
+        "\\b(?:gender|пол|стать)\\s*:?\\s*([MFmf])\\b",
+        "\\b(?:male|female|мужской|женский|чоловічий|жіночий)\\b"
+      ]
+    }
+  },
+  "processing": {
+    "remove_dates_when_include_attrs": true,
+    "remove_ids_when_include_attrs": true,
+    "fold_spaces": true,
+    "case_sensitive": false
+  }
+}

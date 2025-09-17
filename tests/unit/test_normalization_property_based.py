@@ -6,16 +6,20 @@ of input variations, making it impossible to "fit" tests to broken behavior.
 """
 
 import pytest
-from hypothesis import given, strategies as st, assume
+from hypothesis import given, strategies as st, assume, settings, HealthCheck
 import string
 
 from src.ai_service.layers.normalization.normalization_service import NormalizationService
+
+# Configure Hypothesis settings for CI
+settings.register_profile("ci", suppress_health_check=[HealthCheck.function_scoped_fixture], max_examples=200)
+settings.load_profile("ci")
 
 
 class TestNormalizationServiceProperties:
     """Property-based tests for normalization service invariants"""
 
-    @pytest.fixture
+    @pytest.fixture(scope="module")
     def normalization_service(self):
         return NormalizationService()
 

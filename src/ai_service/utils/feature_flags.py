@@ -42,6 +42,13 @@ class FeatureFlags:
     strict_stopwords: bool = False  # Filter stopwords from tokens
     enable_ac_tier0: bool = False
     enable_vector_fallback: bool = False
+    
+    # Nominative and gender enforcement flags
+    enforce_nominative: bool = True
+    preserve_feminine_surnames: bool = True
+    
+    # ASCII fastpath optimization
+    ascii_fastpath: bool = False
 
     # Diminutive resolution
     use_diminutives_dictionary_only: bool = True
@@ -63,6 +70,9 @@ class FeatureFlags:
             "strict_stopwords": self.strict_stopwords,
             "enable_ac_tier0": self.enable_ac_tier0,
             "enable_vector_fallback": self.enable_vector_fallback,
+            "enforce_nominative": self.enforce_nominative,
+            "preserve_feminine_surnames": self.preserve_feminine_surnames,
+            "ascii_fastpath": self.ascii_fastpath,
         }
 
 class FeatureFlagManager:
@@ -104,6 +114,10 @@ class FeatureFlagManager:
         strict_stopwords = os.getenv("AISVC_FLAG_STRICT_STOPWORDS", "false").lower() == "true"
         enable_ac_tier0 = os.getenv("AISVC_FLAG_ENABLE_AC_TIER0", "false").lower() == "true"
         enable_vector_fallback = os.getenv("AISVC_FLAG_ENABLE_VECTOR_FALLBACK", "false").lower() == "true"
+        
+        # Nominative and gender enforcement flags
+        enforce_nominative = os.getenv("AISVC_FLAG_ENFORCE_NOMINATIVE", "true").lower() == "true"
+        preserve_feminine_surnames = os.getenv("AISVC_FLAG_PRESERVE_FEMININE_SURNAMES", "true").lower() == "true"
 
         # Use default values for diminutive features
         DIMINUTIVE_FEATURE_DEFAULTS = type('DIMINUTIVE_FEATURE_DEFAULTS', (), {
@@ -150,6 +164,8 @@ class FeatureFlagManager:
             strict_stopwords=strict_stopwords,
             enable_ac_tier0=enable_ac_tier0,
             enable_vector_fallback=enable_vector_fallback,
+            enforce_nominative=enforce_nominative,
+            preserve_feminine_surnames=preserve_feminine_surnames,
             use_diminutives_dictionary_only=use_dim_dict_only,
             diminutives_allow_cross_lang=dim_cross_lang,
             language_overrides=language_overrides,
@@ -172,6 +188,10 @@ class FeatureFlagManager:
         Returns:
             True if factory should be used, False for legacy
         """
+
+        # Check new use_factory_normalizer flag first (highest priority)
+        if self._flags.use_factory_normalizer:
+            return True
 
         # Check language-specific override
         if language and language in self._flags.language_overrides:
@@ -272,6 +292,14 @@ class FeatureFlagManager:
     def allow_diminutives_cross_lang(self) -> bool:
         """Return whether cross-language diminutive lookup is permitted."""
         return self._flags.diminutives_allow_cross_lang
+
+    def enforce_nominative(self) -> bool:
+        """Return whether nominative case enforcement is enabled."""
+        return self._flags.enforce_nominative
+
+    def preserve_feminine_surnames(self) -> bool:
+        """Return whether feminine surname preservation is enabled."""
+        return self._flags.preserve_feminine_surnames
 
 # Global feature flag manager instance
 _feature_flag_manager = None

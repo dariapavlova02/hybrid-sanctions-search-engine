@@ -6,7 +6,7 @@ import logging
 import re
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from ....utils.logging_config import get_logger
 
@@ -640,6 +640,49 @@ class OptimizedACPatternGenerator:
                 result["tier_3_low_confidence"].append(pattern.pattern)
 
         return result
+
+    def export_t0_t1_patterns_for_elasticsearch(
+        self, patterns: List[OptimizedPattern]
+    ) -> List[Dict[str, Any]]:
+        """
+        Экспорт T0/T1 паттернов для Elasticsearch с метаданными.
+        
+        Returns:
+            List[Dict]: Список документов для индекса ac_patterns с полями:
+            - pattern: str - сам паттерн
+            - tier: int - уровень (0 или 1)
+            - meta: dict - метаданные паттерна
+        """
+        es_docs = []
+        
+        for pattern in patterns:
+            # Определяем tier на основе типа и confidence
+            if pattern.pattern_type.startswith("document_"):
+                tier = 0  # TIER-0: Exact documents and IDs
+                reason = "exact_doc_id"
+            elif pattern.boost_score >= 1.8 and pattern.confidence >= 0.9:
+                tier = 1  # TIER-1: High confidence contextual names
+                reason = "full_name_context"
+            else:
+                continue  # Пропускаем паттерны ниже T1
+            
+            es_doc = {
+                "pattern": pattern.pattern,
+                "tier": tier,
+                "meta": {
+                    "pattern_type": pattern.pattern_type,
+                    "language": pattern.language,
+                    "confidence": pattern.confidence,
+                    "boost_score": pattern.boost_score,
+                    "context_required": pattern.context_required,
+                    "min_match_length": pattern.min_match_length,
+                    "reason": reason,
+                    **pattern.metadata
+                }
+            }
+            es_docs.append(es_doc)
+        
+        return es_docs
 
     def get_pattern_statistics(self, patterns: List[OptimizedPattern]) -> Dict:
         """Статистика паттернов"""

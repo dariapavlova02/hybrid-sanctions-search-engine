@@ -17,6 +17,7 @@ import numpy as np
 
 from ....utils.logging_config import get_logger
 from .vector_index_service import CharTfidfVectorIndex, VectorIndexConfig
+from .enhanced_vector_index_service import EnhancedVectorIndex, EnhancedVectorIndexConfig
 
 
 @dataclass
@@ -30,11 +31,11 @@ class WatchlistDoc:
 class WatchlistIndexService:
     """Manages active + overlay indexes and metadata with atomic swaps."""
 
-    def __init__(self, cfg: Optional[VectorIndexConfig] = None) -> None:
+    def __init__(self, cfg: Optional[EnhancedVectorIndexConfig] = None) -> None:
         self.logger = get_logger(__name__)
-        self.cfg = cfg or VectorIndexConfig()
-        self._active = CharTfidfVectorIndex(self.cfg)
-        self._overlay: Optional[CharTfidfVectorIndex] = None
+        self.cfg = cfg or EnhancedVectorIndexConfig()
+        self._active = EnhancedVectorIndex(self.cfg)
+        self._overlay: Optional[EnhancedVectorIndex] = None
         self._docs: Dict[str, WatchlistDoc] = {}
         self._overlay_docs: Dict[str, WatchlistDoc] = {}
         self._active_id: Optional[str] = None
@@ -61,7 +62,7 @@ class WatchlistIndexService:
     def set_overlay_from_corpus(
         self, corpus: List[Tuple[str, str, str, Dict]], overlay_id: Optional[str] = None
     ) -> None:
-        idx = CharTfidfVectorIndex(self.cfg)
+        idx = EnhancedVectorIndex(self.cfg)
         docs = [(doc_id, text) for (doc_id, text, _et, _md) in corpus]
         idx.rebuild(docs)
         self._overlay = idx

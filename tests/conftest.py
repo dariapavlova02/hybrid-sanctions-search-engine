@@ -698,6 +698,74 @@ def sample_query_vector():
     return [0.1 + (i * 0.001) for i in range(384)]
 
 
+# ============================================================================
+# Property-based Testing Support
+# ============================================================================
+
+@pytest.fixture(scope="session")
+def feminine_names():
+    """Provide lists of feminine names by language for property tests."""
+    return {
+        'ru': [
+            'Анна', 'Мария', 'Елена', 'Ольга', 'Татьяна', 'Наталья', 'Ирина',
+            'Светлана', 'Юлия', 'Анастасия', 'Дарья', 'Екатерина', 'Валентина',
+            'Людмила', 'Галина', 'Лариса', 'Вера', 'Нина', 'Зоя', 'Раиса'
+        ],
+        'uk': [
+            'Анна', 'Марія', 'Олена', 'Ольга', 'Тетяна', 'Наталія', 'Ірина',
+            'Світлана', 'Юлія', 'Анастасія', 'Дарія', 'Катерина', 'Валентина',
+            'Людмила', 'Галина', 'Лариса', 'Віра', 'Ніна', 'Зоя', 'Раїса'
+        ],
+        'en': [
+            'Mary', 'Elizabeth', 'Patricia', 'Jennifer', 'Linda', 'Barbara',
+            'Margaret', 'Susan', 'Dorothy', 'Sarah', 'Jessica', 'Helen',
+            'Nancy', 'Betty', 'Sandra', 'Donna', 'Carol', 'Ruth', 'Sharon',
+            'Michelle'
+        ]
+    }
+
+
+@pytest.fixture(scope="session")
+def nickname_maps():
+    """Provide nickname to full name mappings by language for property tests."""
+    return {
+        'ru': {
+            'саша': 'александр', 'сашко': 'александр', 'сашенька': 'александр',
+            'маша': 'мария', 'машенька': 'мария', 'маруся': 'мария',
+            'ваня': 'иван', 'ванька': 'иван', 'иванушка': 'иван',
+            'оленька': 'елена', 'лена': 'елена', 'елочка': 'елена'
+        },
+        'uk': {
+            'сашко': 'олександр', 'сашенько': 'олександр', 'сашок': 'олександр',
+            'маша': 'марія', 'машенька': 'марія', 'маруся': 'марія',
+            'ванько': 'іван', 'івасько': 'іван', 'іванушка': 'іван',
+            'оленька': 'олена', 'лена': 'олена', 'елочка': 'олена'
+        },
+        'en': {
+            'bill': 'william', 'billy': 'william', 'will': 'william',
+            'bob': 'robert', 'bobby': 'robert', 'rob': 'robert',
+            'jim': 'james', 'jimmy': 'james', 'jamie': 'james',
+            'mike': 'michael', 'mickey': 'michael', 'mick': 'michael'
+        }
+    }
+
+
+def pytest_addoption(parser):
+    """Add command line options for property-based tests."""
+    parser.addoption(
+        "--allow-order-swap",
+        action="store_true",
+        default=False,
+        help="Allow order swapping in metamorphic tests"
+    )
+    parser.addoption(
+        "--property-max-examples",
+        type=int,
+        default=1000,
+        help="Maximum examples for property-based tests"
+    )
+
+
 # Pytest markers
 def pytest_configure(config):
     """Configure pytest markers."""
@@ -706,3 +774,85 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "performance: Performance tests")
     config.addinivalue_line("markers", "slow: Slow tests")
     config.addinivalue_line("markers", "docker: Tests requiring Docker")
+    config.addinivalue_line("markers", "canary: Canary tests for regression detection")
+    config.addinivalue_line("markers", "property: Property-based tests using Hypothesis")
+    config.addinivalue_line("markers", "health_check: Health check tests")
+
+
+# Хук для добавления опций командной строки
+def pytest_addoption(parser):
+    """Добавляет опции командной строки для тестов."""
+    parser.addoption(
+        "--strict-perf",
+        action="store_true",
+        default=False,
+        help="Enable strict performance testing (p95 < 10ms)"
+    )
+    parser.addoption(
+        "--allow-order-swap",
+        action="store_true",
+        default=False,
+        help="Allow order swapping in test results"
+    )
+    parser.addoption(
+        "--suppress-health-checks",
+        action="store_true",
+        default=False,
+        help="Suppress health check warnings"
+    )
+
+
+# Фикстуры для канареечных тестов
+@pytest.fixture(scope="module")
+def canary_data_dir():
+    """Предоставляет директорию с данными канареечных тестов."""
+    return Path(__file__).parent / 'canary' / 'data'
+
+
+@pytest.fixture(scope="module")
+def property_test_strategies():
+    """Предоставляет стратегии для property-based тестов."""
+    from hypothesis import strategies as st
+    
+    return {
+        'name_text': st.text(min_size=1, max_size=100),
+        'cyrillic_text': st.text(alphabet="абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ", min_size=1, max_size=50),
+        'latin_text': st.text(alphabet="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ '-", min_size=1, max_size=50),
+    }
+
+
+# Фикстуры для подавления health checks
+@pytest.fixture(autouse=True)
+def suppress_health_checks(request):
+    """Автоматически подавляет health check предупреждения если включено."""
+    if request.config.getoption("--suppress-health-checks"):
+        import warnings
+        warnings.filterwarnings("ignore", category=UserWarning, message=".*health.*")
+
+
+# Хук для генерации отчетов
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    """Генерирует сводный отчет о тестах."""
+    terminalreporter.write_sep("=", "Test Summary")
+    
+    # Статистика по маркерам
+    stats = terminalreporter.stats
+    if stats:
+        terminalreporter.write_line(f"Total tests: {sum(len(tests) for tests in stats.values())}")
+        
+        # Считаем канареечные тесты
+        canary_tests = 0
+        if 'passed' in stats:
+            canary_tests += len([t for t in stats['passed'] if hasattr(t, 'keywords') and 'canary' in t.keywords])
+        if 'failed' in stats:
+            canary_tests += len([t for t in stats['failed'] if hasattr(t, 'keywords') and 'canary' in t.keywords])
+        
+        if canary_tests > 0:
+            terminalreporter.write_line(f"Canary tests: {canary_tests}")
+    
+    # Проверка производительности
+    if config.getoption("--strict-perf"):
+        terminalreporter.write_line("Strict performance testing enabled (p95 < 10ms)")
+    
+    terminalreporter.write_line("")
+    config.addinivalue_line("markers", "property: Property-based tests using Hypothesis")

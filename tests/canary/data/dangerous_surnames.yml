@@ -1,0 +1,155 @@
+# Канареечные кейсы: опасные фамилии (короткие, частые, омонимы)
+# Цель: предотвратить ложные срабатывания на коротких/частых фамилиях
+
+cases:
+  - name: "short_surnames"
+    input: "И. Коз"
+    invariants:
+      must_contain: ["Коз"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "common_surnames"
+    input: "Петр Иванов"
+    invariants:
+      must_contain: ["Петр", "Иванов"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "ambiguous_surnames"
+    input: "А. Сокол"
+    invariants:
+      must_contain: ["Сокол"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "short_with_patronymic"
+    input: "Иван Петрович Коз"
+    invariants:
+      must_contain: ["Иван", "Петрович", "Коз"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "frequent_ukrainian_surnames"
+    input: "Олександр Коваленко"
+    invariants:
+      must_contain: ["Олександр", "Коваленко"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "short_ukrainian_surnames"
+    input: "М. Лев"
+    invariants:
+      must_contain: ["Лев"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "common_russian_surnames"
+    input: "Сергей Петров"
+    invariants:
+      must_contain: ["Сергей", "Петров"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "ambiguous_short_surnames"
+    input: "В. Лис"
+    invariants:
+      must_contain: ["Лис"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "very_short_surnames"
+    input: "А. К"
+    invariants:
+      must_contain: ["К"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "frequent_english_surnames"
+    input: "John Smith"
+    invariants:
+      must_contain: ["John", "Smith"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "short_english_surnames"
+    input: "J. Fox"
+    invariants:
+      must_contain: ["Fox"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "ambiguous_english_surnames"
+    input: "Robert King"
+    invariants:
+      must_contain: ["Robert", "King"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "mixed_short_surnames"
+    input: "А. Fox"
+    invariants:
+      must_contain: ["Fox"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "very_common_surnames"
+    input: "Иван Иванов"
+    invariants:
+      must_contain: ["Иван", "Иванов"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "short_with_middle_name"
+    input: "А. Б. Коз"
+    invariants:
+      must_contain: ["Коз"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "frequent_ukrainian_short"
+    input: "О. Коз"
+    invariants:
+      must_contain: ["Коз"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "common_russian_short"
+    input: "С. Пет"
+    invariants:
+      must_contain: ["Пет"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "ambiguous_very_short"
+    input: "В. К"
+    invariants:
+      must_contain: ["К"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "frequent_english_short"
+    input: "J. S"
+    invariants:
+      must_contain: ["S"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "mixed_common_surnames"
+    input: "Александр Smith"
+    invariants:
+      must_contain: ["Александр", "Smith"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false

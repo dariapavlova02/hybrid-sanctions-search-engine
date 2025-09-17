@@ -1,0 +1,150 @@
+# Канареечные кейсы: транслиты (ru↔uk↔en), смешанные скрипты
+# Цель: предотвратить потерю информации при транслитерации
+
+cases:
+  - name: "russian_to_ukrainian_transliteration"
+    input: "Александр Петров"
+    invariants:
+      must_contain: ["Александр", "Петров"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "ukrainian_to_russian_transliteration"
+    input: "Олександр Петренко"
+    invariants:
+      must_contain: ["Олександр", "Петренко"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "mixed_cyrillic_latin"
+    input: "Александр Smith"
+    invariants:
+      must_contain: ["Александр", "Smith"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "ukrainian_latin_mixed"
+    input: "Олександр Johnson"
+    invariants:
+      must_contain: ["Олександр", "Johnson"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "russian_ukrainian_mixed"
+    input: "Александр Петренко"
+    invariants:
+      must_contain: ["Александр", "Петренко"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "transliterated_english_names"
+    input: "Джон Сміт"
+    invariants:
+      must_contain: ["Джон", "Сміт"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "transliterated_russian_names"
+    input: "Иван Петров"
+    invariants:
+      must_contain: ["Иван", "Петров"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "mixed_scripts_with_initials"
+    input: "А. Smith"
+    invariants:
+      must_contain: ["Smith"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "ukrainian_latin_initials"
+    input: "О. Johnson"
+    invariants:
+      must_contain: ["Johnson"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "russian_ukrainian_initials"
+    input: "А. Петренко"
+    invariants:
+      must_contain: ["Петренко"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      initials_dot: true
+      feminine_required: false
+
+  - name: "complex_mixed_scripts"
+    input: "Александр-Марія O'Connor"
+    invariants:
+      must_contain: ["Александр", "Марія", "O'Connor"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: true
+
+  - name: "transliterated_patronymics"
+    input: "Іван Петрович Коваленко"
+    invariants:
+      must_contain: ["Іван", "Петрович", "Коваленко"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "mixed_scripts_patronymics"
+    input: "Александр Петрович Smith"
+    invariants:
+      must_contain: ["Александр", "Петрович", "Smith"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "ukrainian_russian_transliteration"
+    input: "Олександр Петров"
+    invariants:
+      must_contain: ["Олександр", "Петров"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "russian_ukrainian_transliteration"
+    input: "Александр Петренко"
+    invariants:
+      must_contain: ["Александр", "Петренко"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "mixed_scripts_feminine"
+    input: "Марія-Анна Smith"
+    invariants:
+      must_contain: ["Марія", "Анна", "Smith"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: true
+
+  - name: "transliterated_compound_names"
+    input: "Жан-Батист Петренко"
+    invariants:
+      must_contain: ["Жан", "Батист", "Петренко"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "mixed_scripts_compound"
+    input: "Жан-Батист O'Connor"
+    invariants:
+      must_contain: ["Жан", "Батист", "O'Connor"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      hyphen_preserved: true
+      feminine_required: false
+
+  - name: "transliterated_apostrophe_names"
+    input: "О'Коннор Петренко"
+    invariants:
+      must_contain: ["О'Коннор", "Петренко"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false
+
+  - name: "mixed_scripts_apostrophe"
+    input: "О'Коннор Сміт"
+    invariants:
+      must_contain: ["О'Коннор", "Сміт"]
+      must_not_contain: ["ООО", "ТОВ", "LLC"]
+      feminine_required: false

@@ -38,6 +38,17 @@
     "require_document_evidence": false,
     "enable_fuzzy_fallback": true
   },
+  "search_fusion": {
+    "description": "Weights used when combining AC and vector search results",
+    "weights": {
+      "ac": 0.65,
+      "vector": 0.35
+    },
+    "boosts": {
+      "shared_hit_bonus": 0.15,
+      "metadata_match_bonus": 0.05
+    }
+  },
   "environment_overrides": {
     "production": {
       "auto_hit": 0.90,

@@ -1,11 +1,20 @@
-"""
-Gender processing for name normalization.
+"""Gender processing for name normalization.
 Handles gender inference and surname gender adjustment.
 """
 
 import re
 from typing import Dict, List, Tuple, Optional, Set
+
 from ....utils.logging_config import get_logger
+from ..morphology.gender_rules import (
+    convert_given_name_to_nominative,
+    convert_patronymic_to_nominative,
+    convert_surname_to_nominative,
+    get_female_given_names,
+    is_invariable_surname,
+    looks_like_feminine_ru,
+    looks_like_feminine_uk,
+)
 
 
 class GenderProcessor:
@@ -15,6 +24,10 @@ class GenderProcessor:
         self.logger = get_logger(__name__)
         self._feminine_patterns = self._compile_feminine_patterns()
         self._masculine_patterns = self._compile_masculine_patterns()
+        self._female_name_sets = {
+            'ru': get_female_given_names('ru') or set(),
+            'uk': get_female_given_names('uk') or set(),
+        }
 
     def infer_gender(
         self,
@@ -36,9 +49,17 @@ class GenderProcessor:
         evidence = []
         gender_scores = {'masc': 0.0, 'femn': 0.0}
 
-        for token, role in zip(tokens, roles):
+        nominative_tokens = [
+            convert_given_name_to_nominative(token, language) if role == 'given'
+            else convert_patronymic_to_nominative(token, language) if role == 'patronymic'
+            else convert_surname_to_nominative(token, language) if role == 'surname'
+            else token
+            for token, role in zip(tokens, roles)
+        ]
+
+        for token, base_token, role in zip(tokens, nominative_tokens, roles):
             token_gender, confidence, token_evidence = self._infer_token_gender(
-                token, role, language
+                base_token, role, language
             )
 
             if token_gender:
@@ -66,9 +87,9 @@ class GenderProcessor:
 
         if role == 'surname':
             return self._infer_surname_gender(token, language)
-        elif role == 'patronymic':
+        if role == 'patronymic':
             return self._infer_patronymic_gender(token, language)
-        elif role == 'given':
+        if role == 'given':
             return self._infer_given_name_gender(token, language)
 
         return None, 0.0, evidence
@@ -79,16 +100,25 @@ class GenderProcessor:
         language: str
     ) -> Tuple[Optional[str], float, List[str]]:
         """Infer gender from surname patterns."""
-        evidence = []
+        evidence: List[str] = []
         surname_lower = surname.lower()
 
-        # Check feminine patterns
+        if language == 'ru':
+            is_feminine, fem_form = looks_like_feminine_ru(surname)
+            if is_feminine:
+                evidence.append("Feminine surname indicators (ru)")
+                return 'femn', 0.9, evidence
+        elif language == 'uk':
+            is_feminine, fem_form = looks_like_feminine_uk(surname)
+            if is_feminine:
+                evidence.append("Feminine surname indicators (uk)")
+                return 'femn', 0.9, evidence
+
         for pattern_name, pattern in self._feminine_patterns.get(language, {}).items():
             if pattern.search(surname_lower):
                 evidence.append(f"Feminine surname pattern: {pattern_name}")
                 return 'femn', 0.8, evidence
 
-        # Check masculine patterns
         for pattern_name, pattern in self._masculine_patterns.get(language, {}).items():
             if pattern.search(surname_lower):
                 evidence.append(f"Masculine surname pattern: {pattern_name}")
@@ -128,8 +158,13 @@ class GenderProcessor:
         language: str
     ) -> Tuple[Optional[str], float, List[str]]:
         """Infer gender from given name patterns."""
-        evidence = []
+        evidence: List[str] = []
         name_lower = given_name.lower()
+        female_names = self._female_name_sets.get(language, set())
+
+        if female_names and name_lower in female_names:
+            evidence.append("Known feminine given name")
+            return 'femn', 0.95, evidence
 
         # Common feminine endings
         fem_endings = {
@@ -181,6 +216,10 @@ class GenderProcessor:
             trace.append("Invalid input for gender adjustment")
             return surname, False, trace
 
+        if is_invariable_surname(surname):
+            trace.append("Surname is invariable; no adjustment")
+            return surname, False, trace
+
         current_gender, confidence, gender_evidence = self._infer_surname_gender(surname, language)
         trace.extend(gender_evidence)
 
@@ -206,54 +245,92 @@ class GenderProcessor:
         """Convert surname to target gender using pattern rules."""
         if language == 'ru':
             return self._convert_russian_surname_gender(surname, target_gender)
-        elif language == 'uk':
+        if language == 'uk':
             return self._convert_ukrainian_surname_gender(surname, target_gender)
-
         return surname
 
     def _convert_russian_surname_gender(self, surname: str, target_gender: str) -> str:
         """Convert Russian surname gender."""
-        if target_gender == 'femn':
-            # Convert to feminine
-            if surname.endswith('ов'):
-                return surname + 'а'
-            elif surname.endswith('ев'):
-                return surname + 'а'
-            elif surname.endswith('ин'):
-                return surname + 'а'
-            elif surname.endswith('ский'):
-                return surname[:-2] + 'ая'
-            elif surname.endswith('цкий'):
-                return surname[:-2] + 'ая'
-        else:
-            # Convert to masculine
-            if surname.endswith('ова'):
-                return surname[:-1]
-            elif surname.endswith('ева'):
-                return surname[:-1]
-            elif surname.endswith('ина'):
-                return surname[:-1]
-            elif surname.endswith('ская'):
-                return surname[:-2] + 'ий'
-            elif surname.endswith('цкая'):
-                return surname[:-2] + 'ий'
+        base = convert_surname_to_nominative(surname, 'ru')
+        base_title = self._title_case(base) if base else surname
 
+        if target_gender == 'femn':
+            is_feminine, fem_form = looks_like_feminine_ru(surname)
+            if is_feminine and fem_form:
+                return self._title_case(fem_form)
+            is_feminine, fem_form = looks_like_feminine_ru(base_title)
+            if is_feminine and fem_form:
+                return self._title_case(fem_form)
+
+            for suffix, replacement in (
+                ('ов', 'ова'),
+                ('ев', 'ева'),
+                ('ин', 'ина'),
+                ('ын', 'ына'),
+                ('ский', 'ская'),
+                ('цкий', 'цкая'),
+            ):
+                if base_title.endswith(suffix):
+                    return base_title[:-len(suffix)] + replacement
+            return surname
+
+        lower = surname.lower()
+        for suffix, replacement in (
+            ('ова', 'ов'),
+            ('ева', 'ев'),
+            ('ина', 'ин'),
+            ('ская', 'ский'),
+            ('цкая', 'цкий'),
+        ):
+            if lower.endswith(suffix):
+                trimmed = surname[:-len(suffix)] + replacement
+                return self._title_case(trimmed)
+
+        masculine = convert_surname_to_nominative(surname, 'ru')
+        if masculine and masculine.lower() != lower:
+            return self._title_case(masculine)
         return surname
 
     def _convert_ukrainian_surname_gender(self, surname: str, target_gender: str) -> str:
         """Convert Ukrainian surname gender."""
-        if target_gender == 'femn':
-            if surname.endswith('ський'):
-                return surname[:-2] + 'а'
-            elif surname.endswith('цький'):
-                return surname[:-2] + 'а'
-        else:
-            if surname.endswith('ська'):
-                return surname[:-2] + 'ий'
-            elif surname.endswith('цька'):
-                return surname[:-2] + 'ий'
+        base = convert_surname_to_nominative(surname, 'uk')
+        base_title = self._title_case(base) if base else surname
 
+        if target_gender == 'femn':
+            is_feminine, fem_form = looks_like_feminine_uk(surname)
+            if is_feminine and fem_form:
+                return self._title_case(fem_form)
+            is_feminine, fem_form = looks_like_feminine_uk(base_title)
+            if is_feminine and fem_form:
+                return self._title_case(fem_form)
+
+            for suffix, replacement in (
+                ('ський', 'ська'),
+                ('цький', 'цька'),
+                ('ий', 'а'),
+            ):
+                if base_title.endswith(suffix):
+                    return base_title[:-len(suffix)] + replacement
+            return surname
+
+        lower = surname.lower()
+        for suffix, replacement in (
+            ('ська', 'ський'),
+            ('цька', 'цький'),
+        ):
+            if lower.endswith(suffix):
+                trimmed = surname[:-len(suffix)] + replacement
+                return self._title_case(trimmed)
+
+        masculine = convert_surname_to_nominative(surname, 'uk')
+        if masculine and masculine.lower() != lower:
+            return self._title_case(masculine)
         return surname
+
+    def _title_case(self, token: str) -> str:
+        if not token:
+            return token
+        return token[0].upper() + token[1:].lower()
 
     def _compile_feminine_patterns(self) -> Dict[str, Dict[str, re.Pattern]]:
         """Compile feminine surname patterns."""
@@ -264,7 +341,7 @@ class GenderProcessor:
             },
             'uk': {
                 'adjective_fem': re.compile(r'(ська|цька)$'),
-                'possessive_fem': re.compile(r'(енко|ук|юк|чук)$'),  # These are unisex in Ukrainian
+                'possessive_fem': re.compile(r'(ова|ева|іна)$'),
             }
         }
 

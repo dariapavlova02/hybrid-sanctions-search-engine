@@ -1,11 +1,26 @@
-"""
-Gender rules for surname post-processing in Russian and Ukrainian.
-
-This module provides functions to detect feminine surname forms and convert
-oblique cases to feminine nominative forms.
-"""
+"""Gender heuristics for Slavic surname normalization and preservation."""
 
 from typing import Optional, Tuple, List
+
+
+FEMALE_SUFFIXES_RU = ["ова", "ева", "ина", "ына", "ая"]
+FEMALE_SUFFIXES_UK = ["іна", "ська", "цька", "а"]
+
+# Frequently encountered feminine tokens that should remain untouched even if
+# they do not follow standard surname suffix rules.
+EXCEPTIONS_KEEP_FEM = {
+    "анна",
+    "мария",
+    "марія",
+    "юлия",
+    "юлія",
+    "лия",
+    "лія",
+    "ольга",
+    "олена",
+    "ірина",
+    "ирина",
+}
 
 
 # Female patronymic suffixes
@@ -204,6 +219,86 @@ def to_feminine_nominative_uk(token: str) -> str:
     if is_fem and fem_nom:
         return fem_nom
     return token
+
+
+def is_likely_feminine_surname(token: str, lang: str) -> bool:
+    """Check whether ``token`` already looks like a feminine surname."""
+    if not token:
+        return False
+
+    token_lower = token.lower()
+    if token_lower in EXCEPTIONS_KEEP_FEM:
+        return True
+
+    suffixes: List[str]
+    if lang == "ru":
+        suffixes = FEMALE_SUFFIXES_RU
+    elif lang == "uk":
+        suffixes = FEMALE_SUFFIXES_UK
+    else:
+        return False
+
+    return any(token_lower.endswith(suffix) for suffix in suffixes)
+
+
+def prefer_feminine_form(surname_nom: str, given_gender: str, lang: str) -> str:
+    """Return a feminine-friendly surname form when gender is feminine."""
+    if given_gender != "femn" or not surname_nom:
+        return surname_nom
+
+    if is_likely_feminine_surname(surname_nom, lang):
+        return surname_nom
+
+    lowered = surname_nom.lower()
+
+    if lang == "ru":
+        replacements = [
+            ("ский", "ская"),
+            ("цкий", "цкая"),
+            ("кой", "кая"),
+            ("ой", "ая"),
+            ("ов", "ова"),
+            ("ев", "ева"),
+            ("ин", "ина"),
+            ("ын", "ына"),
+        ]
+    elif lang == "uk":
+        replacements = [
+            ("ський", "ська"),
+            ("зький", "зька"),
+            ("цький", "цька"),
+            ("ій", "я"),
+            ("ий", "а"),
+        ]
+    else:
+        return surname_nom
+
+    for src, dst in replacements:
+        if lowered.endswith(src):
+            base = surname_nom[:-len(src)] if len(src) else surname_nom
+            candidate = base + dst
+            return _preserve_case(surname_nom, candidate)
+
+    return surname_nom
+
+
+def _preserve_case(source: str, target: str) -> str:
+    """Apply the casing pattern of ``source`` to ``target``."""
+    if not target:
+        return target
+
+    if source.isupper():
+        return target.upper()
+
+    if source.istitle():
+        return "-".join(part[:1].upper() + part[1:] if part else part for part in target.split("-"))
+
+    if source.islower():
+        return target.lower()
+
+    # Mixed case: best effort by preserving first character casing.
+    prefix = target[0].upper() if source[0].isupper() else target[0].lower()
+    return prefix + target[1:]
 
 
 def is_invariable_surname(token: str) -> bool:
@@ -520,7 +615,7 @@ def convert_patronymic_to_nominative_uk(token: str) -> str:
     return token
 
 
-def convert_surname_to_nominative(token: str, language: str) -> str:
+def convert_surname_to_nominative(token: str, language: str, preserve_feminine_suffix_uk: bool = False) -> str:
     """
     Convert a surname from oblique case to nominative case.
     This handles masculine surnames that may be in dative/instrumental cases.
@@ -528,6 +623,7 @@ def convert_surname_to_nominative(token: str, language: str) -> str:
     Args:
         token: The token to convert (e.g., "Иванову" -> "Иванов")
         language: Language code ('ru' or 'uk')
+        preserve_feminine_suffix_uk: If True, preserve Ukrainian feminine suffixes (-ська/-цька)
 
     Returns:
         Nominative form of the surname
@@ -535,7 +631,7 @@ def convert_surname_to_nominative(token: str, language: str) -> str:
     if language == "ru":
         return convert_surname_to_nominative_ru(token)
     elif language == "uk":
-        return convert_surname_to_nominative_uk(token)
+        return convert_surname_to_nominative_uk(token, preserve_feminine_suffix_uk)
     else:
         return token
 
@@ -566,17 +662,24 @@ def convert_surname_to_nominative_ru(token: str) -> str:
     return token
 
 
-def convert_surname_to_nominative_uk(token: str) -> str:
+def convert_surname_to_nominative_uk(token: str, preserve_feminine_suffix_uk: bool = False) -> str:
     """
     Convert a Ukrainian surname from oblique case to nominative case.
 
     Args:
         token: The token to convert
+        preserve_feminine_suffix_uk: If True, preserve Ukrainian feminine suffixes (-ська/-цька)
 
     Returns:
         Nominative form of the surname
     """
     token_lower = token.lower()
+
+    # If preserving feminine suffixes, check for feminine forms first
+    if preserve_feminine_suffix_uk:
+        is_fem, fem_nom = looks_like_feminine_uk(token)
+        if is_fem and fem_nom:
+            return fem_nom
 
     # Masculine surnames in oblique cases
     if token_lower.endswith("ову"):

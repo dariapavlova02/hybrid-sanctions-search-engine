@@ -26,12 +26,15 @@ from .identifiers import (
     get_compiled_patterns_cached,
     get_validation_function,
     normalize_identifier,
+    validate_iban,
     validate_ein,
     validate_edrpou,
     validate_inn,
     validate_lei,
     validate_ogrn,
     validate_ogrnip,
+    validate_ssn,
+    validate_swift_bic,
     validate_vat,
 )
 
@@ -67,12 +70,15 @@ __all__ = [
     "get_compiled_patterns_cached",
     "get_validation_function",
     "normalize_identifier",
+    "validate_iban",
     "validate_ein",
     "validate_edrpou", 
     "validate_inn",
     "validate_lei",
     "validate_ogrn",
     "validate_ogrnip",
+    "validate_ssn",
+    "validate_swift_bic",
     "validate_vat",
     
     # Dates

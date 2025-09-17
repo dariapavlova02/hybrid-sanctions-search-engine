@@ -1,0 +1,29 @@
+# Feature flags configuration for AI normalization service
+# Environment-specific configurations for safe rollout
+
+development:
+  feature_flags:
+    use_factory_normalizer: false
+    fix_initials_double_dot: false
+    preserve_hyphenated_case: false
+    strict_stopwords: false
+    enable_ac_tier0: false
+    enable_vector_fallback: false
+
+staging:
+  feature_flags:
+    use_factory_normalizer: true
+    fix_initials_double_dot: true
+    preserve_hyphenated_case: false
+    strict_stopwords: false
+    enable_ac_tier0: true
+    enable_vector_fallback: false
+
+production:
+  feature_flags:
+    use_factory_normalizer: false
+    fix_initials_double_dot: false
+    preserve_hyphenated_case: false
+    strict_stopwords: false
+    enable_ac_tier0: false
+    enable_vector_fallback: false

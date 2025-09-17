@@ -37,12 +37,99 @@ from ai_service.exceptions import (
 from ai_service.utils import get_logger, setup_logging
 from ai_service.utils.response_formatter import format_processing_result
 from ai_service.contracts.base_contracts import NormalizationResponse, ProcessResponse, UnifiedProcessingResult
+from ai_service.utils.feature_flags import FeatureFlags, get_feature_flag_manager
 
 # Setup centralized logging
 setup_logging()
 logger = get_logger(__name__)
 
 # Create FastAPI application
+
+class NormalizationOptions(BaseModel):
+    """Normalization options including feature flags"""
+    
+    flags: Optional[FeatureFlags] = None
+
+
+class TextNormalizationRequest(BaseModel):
+    """Request model for text normalization"""
+
+    text: str = Field(..., max_length=SERVICE_CONFIG.max_input_length)
+    language: str = "auto"
+    remove_stop_words: bool = False  # For names, don't remove stop words
+    apply_stemming: bool = False  # For names, don't apply stemming
+    apply_lemmatization: bool = True  # For names, apply lemmatization
+    clean_unicode: bool = True
+    preserve_names: bool = True  # Preserve names and surnames
+    options: Optional[NormalizationOptions] = None
+
+
+class VariantGenerationRequest(BaseModel):
+    """Request model for variant generation"""
+
+    text: str = Field(..., max_length=SERVICE_CONFIG.max_input_length)
+    language: str = "en"
+    max_variants: int = 10
+    similarity_threshold: float = 0.8
+
+
+class EmbeddingRequest(BaseModel):
+    """Request model for embedding generation"""
+
+    texts: List[str] = Field(..., max_length=SERVICE_CONFIG.max_input_length)
+    model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
+
+
+class ProcessTextRequest(BaseModel):
+    """Request model for text processing"""
+
+    text: str = Field(..., max_length=SERVICE_CONFIG.max_input_length)
+    generate_variants: bool = True
+    generate_embeddings: bool = False
+    cache_result: bool = True
+    options: Optional[NormalizationOptions] = None
+
+    @validator("text")
+    def validate_text_length(cls, v):
+        """Validate text length"""
+        if len(v) > SERVICE_CONFIG.max_input_length:
+            raise ValueError(f"Text too long: {len(v)} > {SERVICE_CONFIG.max_input_length}")
+        return v
+
+
+class ProcessBatchRequest(BaseModel):
+    """Request model for batch text processing"""
+
+    texts: List[str]
+    generate_variants: bool = True
+    generate_embeddings: bool = False
+    max_concurrent: int = 10
+
+    @validator("texts")
+    def validate_texts(cls, v):
+        """Validate each text in the list"""
+        for text in v:
+            if len(text) > SERVICE_CONFIG.max_input_length:
+                raise ValueError(f"Text too long: {len(text)} > {SERVICE_CONFIG.max_input_length}")
+        return v
+
+
+class SearchSimilarRequest(BaseModel):
+    """Request model for searching similar names"""
+
+    query: str
+    candidates: List[str]
+    threshold: float = 0.7
+    top_k: int = 10
+    use_embeddings: bool = True
+
+
+class ComplexityAnalysisRequest(BaseModel):
+    """Request model for text processing"""
+
+    text: str = Field(..., max_length=SERVICE_CONFIG.max_input_length)
+
+
 app = FastAPI(
     title="Sanctions AI Service",
     description="AI service for normalization and variant generation of sanctions data",
@@ -113,6 +200,36 @@ def _extract_decision_dict(result: UnifiedProcessingResult) -> Dict[str, Any]:
     }
 
 
+def _merge_feature_flags(request_flags: Optional[FeatureFlags]) -> FeatureFlags:
+    """Merge request feature flags with global configuration."""
+    global_flags = get_feature_flag_manager()._flags
+    
+    if request_flags is None:
+        return global_flags
+    
+    # Create a new FeatureFlags instance with request flags taking precedence
+    return FeatureFlags(
+        use_factory_normalizer=request_flags.use_factory_normalizer,
+        fix_initials_double_dot=request_flags.fix_initials_double_dot,
+        preserve_hyphenated_case=request_flags.preserve_hyphenated_case,
+        strict_stopwords=request_flags.strict_stopwords,
+        enable_ac_tier0=request_flags.enable_ac_tier0,
+        enable_vector_fallback=request_flags.enable_vector_fallback,
+        # Keep other global flags
+        normalization_implementation=global_flags.normalization_implementation,
+        factory_rollout_percentage=global_flags.factory_rollout_percentage,
+        enable_performance_fallback=global_flags.enable_performance_fallback,
+        max_latency_threshold_ms=global_flags.max_latency_threshold_ms,
+        enable_accuracy_monitoring=global_flags.enable_accuracy_monitoring,
+        min_confidence_threshold=global_flags.min_confidence_threshold,
+        enable_dual_processing=global_flags.enable_dual_processing,
+        log_implementation_choice=global_flags.log_implementation_choice,
+        use_diminutives_dictionary_only=global_flags.use_diminutives_dictionary_only,
+        diminutives_allow_cross_lang=global_flags.diminutives_allow_cross_lang,
+        language_overrides=global_flags.language_overrides,
+    )
+
+
 def verify_admin_token(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> str:
@@ -142,92 +259,6 @@ def verify_admin_token(
 
     return credentials.credentials
 
-
-class TextNormalizationRequest(BaseModel):
-    """Request model for text normalization"""
-
-    text: str = Field(..., max_length=SERVICE_CONFIG.max_input_length)
-    language: str = "auto"
-    remove_stop_words: bool = False  # For names, don't remove stop words
-    apply_stemming: bool = False  # For names, don't apply stemming
-    apply_lemmatization: bool = True  # For names, apply lemmatization
-    clean_unicode: bool = True
-    preserve_names: bool = True  # Preserve names and surnames
-
-
-class VariantGenerationRequest(BaseModel):
-    """Request model for variant generation"""
-
-    text: str = Field(..., max_length=SERVICE_CONFIG.max_input_length)
-    language: str = "en"
-    max_variants: int = 10
-    similarity_threshold: float = 0.8
-
-
-class EmbeddingRequest(BaseModel):
-    """Request model for embedding generation"""
-
-    texts: List[str] = Field(..., max_length=SERVICE_CONFIG.max_input_length)
-    model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
-
-
-class ProcessTextRequest(BaseModel):
-    """Request model for text processing"""
-
-    text: str = Field(..., max_length=SERVICE_CONFIG.max_input_length)
-    generate_variants: bool = True
-    generate_embeddings: bool = False
-    cache_result: bool = True
-
-    @validator("text")
-    def validate_text_length(cls, v):
-        """Validate text length"""
-        if len(v) > SERVICE_CONFIG.max_input_length:
-            raise ValueError(f"Text too long: {len(v)} > {SERVICE_CONFIG.max_input_length}")
-        return v
-
-
-class ProcessBatchRequest(BaseModel):
-    """Request model for batch text processing"""
-
-    texts: List[str]
-    generate_variants: bool = True
-    generate_embeddings: bool = False
-    max_concurrent: int = 10
-
-    @validator("texts")
-    def validate_texts(cls, v):
-        """Validate each text in the list"""
-        for text in v:
-            if len(text) > SERVICE_CONFIG.max_input_length:
-                raise ValueError(
-                    f"Text length {len(text)} exceeds maximum allowed length {SERVICE_CONFIG.max_input_length}"
-                )
-        return v
-
-
-class SearchSimilarRequest(BaseModel):
-    """Request model for similar text search"""
-
-    query: str = Field(..., max_length=SERVICE_CONFIG.max_input_length)
-    candidates: List[str]
-    threshold: float = 0.7
-    top_k: int = 10
-    use_embeddings: bool = False
-
-    @validator("candidates")
-    def validate_candidates(cls, v):
-        """Validate each candidate text in the list"""
-        for text in v:
-            if len(text) > SERVICE_CONFIG.max_input_length:
-                raise ValueError(
-                    f"Candidate text length {len(text)} exceeds maximum allowed length {SERVICE_CONFIG.max_input_length}"
-                )
-        return v
-
-
-class ComplexityAnalysisRequest(BaseModel):
-    """Request model for text complexity analysis"""
 
     text: str = Field(..., max_length=SERVICE_CONFIG.max_input_length)
 
@@ -395,6 +426,12 @@ async def process_text(request: ProcessTextRequest):
         raise HTTPException(status_code=503, detail="Orchestrator not initialized")
 
     try:
+        # Merge feature flags from request with global configuration
+        merged_flags = _merge_feature_flags(request.options.flags if request.options else None)
+        
+        # Log feature flags for tracing
+        logger.info(f"Processing with feature flags: {merged_flags.to_dict()}")
+        
         result = await orchestrator.process(
             text=request.text,
             generate_variants=request.generate_variants,
@@ -403,7 +440,17 @@ async def process_text(request: ProcessTextRequest):
             remove_stop_words=True,
             preserve_names=True,
             enable_advanced_features=True,
+            # Pass feature flags to orchestrator
+            feature_flags=merged_flags,
         )
+
+        # Add feature flags to trace
+        if result.trace:
+            result.trace.append({
+                "type": "flags",
+                "value": merged_flags.to_dict(),
+                "scope": "request"
+            })
 
         # Convert to ProcessResponse model
         return ProcessResponse(
@@ -448,6 +495,12 @@ async def normalize_text(request: TextNormalizationRequest):
         logger.info(f"Processing text: '{request.text}'")
         logger.info(f"Orchestrator initialized: {orchestrator is not None}")
         
+        # Merge feature flags from request with global configuration
+        merged_flags = _merge_feature_flags(request.options.flags if request.options else None)
+        
+        # Log feature flags for tracing
+        logger.info(f"Normalizing with feature flags: {merged_flags.to_dict()}")
+        
         # Use unified orchestrator for normalization only
         result = await orchestrator.process(
             text=request.text,
@@ -457,7 +510,17 @@ async def normalize_text(request: TextNormalizationRequest):
             remove_stop_words=request.remove_stop_words,
             preserve_names=request.preserve_names,
             enable_advanced_features=request.apply_lemmatization,
+            # Pass feature flags to orchestrator
+            feature_flags=merged_flags,
         )
+        
+        # Add feature flags to trace
+        if result.trace:
+            result.trace.append({
+                "type": "flags",
+                "value": merged_flags.to_dict(),
+                "scope": "request"
+            })
         
         # Debug logging
         logger.info(f"Result: success={result.success}, tokens={result.tokens}, language={result.language}")

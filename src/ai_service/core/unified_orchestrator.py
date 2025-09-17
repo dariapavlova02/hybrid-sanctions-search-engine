@@ -21,6 +21,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 from ..config import SERVICE_CONFIG
+from ..config.feature_flags import FeatureFlags
 from ..contracts.base_contracts import (
     EmbeddingsServiceInterface,
     LanguageDetectionInterface,
@@ -75,6 +76,7 @@ class UnifiedOrchestrator:
         embeddings_service: Optional[EmbeddingsServiceInterface] = None,
         decision_engine: Optional[DecisionEngine] = None,
         metrics_service: Optional[MetricsService] = None,
+        default_feature_flags: Optional[FeatureFlags] = None,
         # Configuration - defaults from SERVICE_CONFIG
         enable_smart_filter: Optional[bool] = None,
         enable_variants: Optional[bool] = None,
@@ -104,6 +106,7 @@ class UnifiedOrchestrator:
         self.embeddings_service = embeddings_service
         self.decision_engine = decision_engine
         self.metrics_service = metrics_service
+        self.default_feature_flags = default_feature_flags or FeatureFlags()
         
         # Legacy compatibility attributes for old tests
         self.cache_service = getattr(self, "cache_service", None)
@@ -323,6 +326,7 @@ class UnifiedOrchestrator:
         remove_stop_words: bool,
         preserve_names: bool,
         enable_advanced_features: bool,
+        feature_flags: FeatureFlags,
         errors: list
     ) -> Any:
         """
@@ -342,6 +346,11 @@ class UnifiedOrchestrator:
         logger.debug("Stage 5: Name Normalization")
         layer_start = time.time()
 
+        # Align legacy flags with feature flag directives
+        remove_stop_words = feature_flags.strict_stopwords
+        if feature_flags.preserve_hyphenated_case:
+            preserve_names = True
+
         # Use unicode-normalized text for normalization
         norm_result = await self._maybe_await(self.normalization_service.normalize_async(
             text_u,  # Use unicode-normalized text
@@ -349,7 +358,17 @@ class UnifiedOrchestrator:
             remove_stop_words=remove_stop_words,
             preserve_names=preserve_names,
             enable_advanced_features=enable_advanced_features,
+            feature_flags=feature_flags,
         ))
+
+        flag_entry = {"type": "flags", "value": feature_flags.to_dict(), "scope": "request"}
+        trace_payload = getattr(norm_result, 'trace', None)
+        if isinstance(trace_payload, list):
+            trace_payload.append(flag_entry)
+        elif trace_payload is None:
+            norm_result.trace = [flag_entry]
+        else:
+            norm_result.trace = list(trace_payload) + [flag_entry]
 
         if self.metrics_service:
             self.metrics_service.record_timer('processing.layer.normalization', time.time() - layer_start)
@@ -559,6 +578,7 @@ class UnifiedOrchestrator:
         language_hint: Optional[str] = None,
         generate_variants: Optional[bool] = None,
         generate_embeddings: Optional[bool] = None,
+        feature_flags: Optional[FeatureFlags] = None,
         # Legacy compatibility kwargs (ignored but accepted)
         cache_result: Optional[bool] = None,
         embeddings: Optional[bool] = None,
@@ -583,6 +603,11 @@ class UnifiedOrchestrator:
         start_time = time.time()
         context = ProcessingContext(original_text=text)
         errors = []
+
+        # Defensive handling of feature flags
+        effective_flags = self._validate_and_normalize_flags(feature_flags)
+        context.processing_flags["feature_flags"] = effective_flags.to_dict()
+        context.metadata["feature_flags"] = effective_flags.to_dict()
 
         # Handle legacy kwargs mapping
         if embeddings is not None:
@@ -641,7 +666,7 @@ class UnifiedOrchestrator:
             # Layer 5: Name Normalization (morph) - THE CORE
             # ================================================================
             norm_result = await self._handle_name_normalization_layer(
-                text_u, context, remove_stop_words, preserve_names, enable_advanced_features, errors
+                text_u, context, remove_stop_words, preserve_names, enable_advanced_features, effective_flags, errors
             )
 
             # ================================================================
@@ -984,6 +1009,41 @@ class UnifiedOrchestrator:
                 )
                 results.append(error_result)
         return results
+
+    def _validate_and_normalize_flags(self, feature_flags: Optional[FeatureFlags]) -> FeatureFlags:
+        """
+        Validate and normalize feature flags with defensive handling.
+        
+        Args:
+            feature_flags: Feature flags to validate, can be None
+            
+        Returns:
+            Valid FeatureFlags instance, defaults to self.default_feature_flags if invalid
+        """
+        if feature_flags is None:
+            return self.default_feature_flags
+        
+        # Validate that it's a FeatureFlags instance
+        if not isinstance(feature_flags, FeatureFlags):
+            logger.warning(f"Invalid feature_flags type: {type(feature_flags)}, using defaults")
+            return self.default_feature_flags
+        
+        # Validate individual flag values
+        try:
+            # Check for any invalid boolean values
+            flag_dict = feature_flags.to_dict()
+            for flag_name, flag_value in flag_dict.items():
+                if not isinstance(flag_value, bool):
+                    logger.warning(f"Invalid flag value for {flag_name}: {flag_value} (type: {type(flag_value)}), using default")
+                    # Reset to default value
+                    if hasattr(self.default_feature_flags, flag_name):
+                        setattr(feature_flags, flag_name, getattr(self.default_feature_flags, flag_name))
+            
+            return feature_flags
+            
+        except Exception as e:
+            logger.warning(f"Error validating feature flags: {e}, using defaults")
+            return self.default_feature_flags
 
     async def search_similar_names(self, query: str, limit: int = 10, candidates: Optional[List[str]] = None, use_embeddings: bool = True, **kwargs) -> Dict[str, Any]:
         """Legacy method for searching similar names"""

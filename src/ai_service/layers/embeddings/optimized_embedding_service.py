@@ -21,6 +21,8 @@ except ImportError:
 
 from ...utils.logging_config import get_logger
 from .embedding_service import EmbeddingService
+from .models.embedding_model_manager import EmbeddingModelManager
+from .models.model_config import ModelConfig, get_model_config
 
 
 class OptimizedEmbeddingService(EmbeddingService):
@@ -54,6 +56,13 @@ class OptimizedEmbeddingService(EmbeddingService):
         # Store the default model name
         self.default_model = default_model
         
+        # Initialize model manager
+        self.model_manager = EmbeddingModelManager(
+            max_models=3,
+            enable_gpu=enable_gpu,
+            thread_pool_size=thread_pool_size
+        )
+
         # Initialize model cache
         self.model_cache = {}
 
@@ -183,28 +192,17 @@ class OptimizedEmbeddingService(EmbeddingService):
     def _load_model_optimized(self, model_name: str):
         """Load model with GPU acceleration if available"""
         try:
-            if model_name not in self.model_cache:
-                from sentence_transformers import SentenceTransformer
-
-                self.logger.info(f"Loading optimized model: {model_name}")
-
-                # Configure device
-                device = "cuda" if self.gpu_available else "cpu"
-
-                model = SentenceTransformer(model_name, device=device)
-
-                # Enable half precision for GPU if available
-                if self.gpu_available:
-                    try:
-                        model = model.half()  # Use FP16 for faster inference
-                        self.logger.info(f"Enabled FP16 for model {model_name}")
-                    except Exception as e:
-                        self.logger.warning(f"FP16 not available: {e}")
-
-                self.model_cache[model_name] = model
-                self.logger.info(f"Model {model_name} loaded on {device}")
-
-            return self.model_cache[model_name]
+            # Use model manager for optimized loading
+            model_config = get_model_config(model_name)
+            model_config.enable_gpu = self.enable_gpu
+            model_config.use_fp16 = self.enable_gpu
+            
+            model = self.model_manager.get_model(model_name, model_config)
+            
+            # Cache in local cache for backward compatibility
+            self.model_cache[model_name] = model
+            
+            return model
 
         except Exception as e:
             self.logger.error(f"Failed to load optimized model {model_name}: {e}")

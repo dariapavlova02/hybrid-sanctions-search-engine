@@ -65,6 +65,7 @@ class TokenTrace(BaseModel):
     output: str
     fallback: bool = False
     notes: Optional[str] = None
+    cache: Optional[Dict[str, str]] = None  # Cache hit/miss info: {"tokenizer": "hit|miss", "morph": "hit|miss"}
 
 
 class NormalizationResult(BaseModel):

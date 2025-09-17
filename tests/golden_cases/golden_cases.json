@@ -1,0 +1,681 @@
+[
+  {
+    "id": "ru_basic_full",
+    "description": "Базовое русское ФИО с отчеством",
+    "language": "ru",
+    "input": "Иванов Иван Петрович",
+    "expected_personas": [
+      {
+        "normalized": "Иван Иванов Петрович",
+        "tokens": [
+          {"text": "Иван", "lemma": "Иван", "role": "given"},
+          {"text": "Иванов", "lemma": "Иванов", "role": "surname"},
+          {"text": "Петрович", "lemma": "Петрович", "role": "patronymic"}
+        ],
+        "language": "ru",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:given+surname+patronymic", "morph:nominative"],
+          "gender": "male",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Имя и отчество приводятся к именительному падежу"
+  },
+  {
+    "id": "ru_feminine_surname",
+    "description": "Женская фамилия сохраняет женский род",
+    "language": "ru",
+    "input": "Мария Иванова",
+    "expected_personas": [
+      {
+        "normalized": "Мария Иванова",
+        "tokens": [
+          {"text": "Мария", "lemma": "Мария", "role": "given"},
+          {"text": "Иванова", "lemma": "Иванова", "role": "surname"}
+        ],
+        "language": "ru",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:given+surname"],
+          "gender": "female",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Не обрезаем женскую фамилию до мужской формы"
+  },
+  {
+    "id": "ru_declension_to_nominative",
+    "description": "Склонение в именительный падеж",
+    "language": "ru",
+    "input": "платёж Ивану Петрову",
+    "expected_personas": [
+      {
+        "normalized": "Иван Петров",
+        "tokens": [
+          {"text": "Иван", "lemma": "Иван", "role": "given"},
+          {"text": "Петров", "lemma": "Петров", "role": "surname"}
+        ],
+        "language": "ru",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:given+surname", "morph:nominative"],
+          "gender": "male",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Выравниваем падеж имени и фамилии"
+  },
+  {
+    "id": "ru_diminutive",
+    "description": "Диминутив заменяется на каноническое имя",
+    "language": "ru",
+    "input": "Сашка Пушкин",
+    "expected_personas": [
+      {
+        "normalized": "Александр Пушкин",
+        "tokens": [
+          {"text": "Александр", "lemma": "Александр", "role": "given"},
+          {"text": "Пушкин", "lemma": "Пушкин", "role": "surname"}
+        ],
+        "language": "ru",
+        "trace": {
+          "rules": ["nfkc", "diminutive", "role_tagger:given+surname"],
+          "gender": "male",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Должен использоваться словарь уменьшительных форм"
+  },
+  {
+    "id": "ru_initials",
+    "description": "Инициалы нормализуются с пробелами",
+    "language": "ru",
+    "input": "Иванов И.И.",
+    "expected_personas": [
+      {
+        "normalized": "Иванов И. И.",
+        "tokens": [
+          {"text": "Иванов", "lemma": "Иванов", "role": "surname"},
+          {"text": "И.", "lemma": "И.", "role": "initial"},
+          {"text": "И.", "lemma": "И.", "role": "initial"}
+        ],
+        "language": "ru",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:surname+initials"],
+          "gender": null,
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Точки и пробелы приводятся к каноническому виду"
+  },
+  {
+    "id": "ru_hyphenated_surname",
+    "description": "Дефисная фамилия должна сохраняться",
+    "language": "ru",
+    "input": "Анна Петрова-Сидорова",
+    "expected_personas": [
+      {
+        "normalized": "Анна Петрова-Сидорова",
+        "tokens": [
+          {"text": "Анна", "lemma": "Анна", "role": "given"},
+          {"text": "Петрова-Сидорова", "lemma": "Петрова-Сидорова", "role": "surname"}
+        ],
+        "language": "ru",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:given+surname"],
+          "gender": "female",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Дефис не удаляется"
+  },
+  {
+    "id": "ru_apostrophe",
+    "description": "Нормализуем апостроф в фамилии",
+    "language": "ru",
+    "input": "Ольга Д'яченко",
+    "expected_personas": [
+      {
+        "normalized": "Ольга Д’яченко",
+        "tokens": [
+          {"text": "Ольга", "lemma": "Ольга", "role": "given"},
+          {"text": "Д’яченко", "lemma": "Д'яченко", "role": "surname"}
+        ],
+        "language": "ru",
+        "trace": {
+          "rules": ["nfkc", "unicode:apostrophe", "role_tagger:given+surname"],
+          "gender": "female",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Косая кавычка заменяется на типографский апостроф"
+  },
+  {
+    "id": "ru_context_words",
+    "description": "Сервисные слова не попадают в normalized",
+    "language": "ru",
+    "input": "получатель: гражданин РФ Петр Сергеев",
+    "expected_personas": [
+      {
+        "normalized": "Петр Сергеев",
+        "tokens": [
+          {"text": "Петр", "lemma": "Петр", "role": "given"},
+          {"text": "Сергеев", "lemma": "Сергеев", "role": "surname"}
+        ],
+        "language": "ru",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:given+surname", "context_filter"],
+          "gender": "male",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Контекстные слова удаляются"
+  },
+  {
+    "id": "ru_homoglyph",
+    "description": "Гомоглифы приводятся к латинице",
+    "language": "auto",
+    "input": "Pаvlov",
+    "expected_personas": [
+      {
+        "normalized": "Pavlov",
+        "tokens": [
+          {"text": "Pavlov", "lemma": "Pavlov", "role": "surname"}
+        ],
+        "language": "en",
+        "trace": {
+          "rules": ["nfkc", "homoglyph_fold", "role_tagger:surname"],
+          "gender": null,
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Кириллическая 'а' заменяется латинской"
+  },
+  {
+    "id": "ru_multiple_persons",
+    "description": "Два человека в одной строке",
+    "language": "ru",
+    "input": "Иван Петров, Мария Иванова",
+    "expected_personas": [
+      {
+        "normalized": "Иван Петров",
+        "tokens": [
+          {"text": "Иван", "lemma": "Иван", "role": "given"},
+          {"text": "Петров", "lemma": "Петров", "role": "surname"}
+        ],
+        "language": "ru",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:given+surname"],
+          "gender": "male",
+          "warnings": []
+        }
+      },
+      {
+        "normalized": "Мария Иванова",
+        "tokens": [
+          {"text": "Мария", "lemma": "Мария", "role": "given"},
+          {"text": "Иванова", "lemma": "Иванова", "role": "surname"}
+        ],
+        "language": "ru",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:given+surname"],
+          "gender": "female",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "NormalizationResult должен содержать два спана"
+  },
+  {
+    "id": "uk_declension",
+    "description": "Украинское ФИО из дательного падежа",
+    "language": "uk",
+    "input": "переказ Олені Петренко",
+    "expected_personas": [
+      {
+        "normalized": "Олена Петренко",
+        "tokens": [
+          {"text": "Олена", "lemma": "Олена", "role": "given"},
+          {"text": "Петренко", "lemma": "Петренко", "role": "surname"}
+        ],
+        "language": "uk",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:given+surname", "morph:nominative"],
+          "gender": "female",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Должна использоваться украинская морфология"
+  },
+  {
+    "id": "uk_feminine_suffix",
+    "description": "Украинская фамилия на -ська",
+    "language": "uk",
+    "input": "Наталія Ковальська",
+    "expected_personas": [
+      {
+        "normalized": "Наталія Ковальська",
+        "tokens": [
+          {"text": "Наталія", "lemma": "Наталія", "role": "given"},
+          {"text": "Ковальська", "lemma": "Ковальська", "role": "surname"}
+        ],
+        "language": "uk",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:given+surname"],
+          "gender": "female",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Женские суффиксы сохраняются"
+  },
+  {
+    "id": "uk_diminutive",
+    "description": "Украинский диминутив",
+    "language": "uk",
+    "input": "Петрик Шевченко",
+    "expected_personas": [
+      {
+        "normalized": "Петро Шевченко",
+        "tokens": [
+          {"text": "Петро", "lemma": "Петро", "role": "given"},
+          {"text": "Шевченко", "lemma": "Шевченко", "role": "surname"}
+        ],
+        "language": "uk",
+        "trace": {
+          "rules": ["nfkc", "diminutive", "role_tagger:given+surname"],
+          "gender": "male",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Используем украинские словари уменьшительных"
+  },
+  {
+    "id": "uk_initials_preposition",
+    "description": "Инициал после предлога",
+    "language": "uk",
+    "input": "з О. Іваненко",
+    "expected_personas": [
+      {
+        "normalized": "О. Іваненко",
+        "tokens": [
+          {"text": "О.", "lemma": "О.", "role": "initial"},
+          {"text": "Іваненко", "lemma": "Іваненко", "role": "surname"}
+        ],
+        "language": "uk",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:initial+surname"],
+          "gender": null,
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Предлоги не становятся инициалами"
+  },
+  {
+    "id": "uk_ner_gate",
+    "description": "Не принимаем Украину за имя",
+    "language": "uk",
+    "input": "Президент України Володимир Зеленський",
+    "expected_personas": [
+      {
+        "normalized": "Володимир Зеленський",
+        "tokens": [
+          {"text": "Володимир", "lemma": "Володимир", "role": "given"},
+          {"text": "Зеленський", "lemma": "Зеленський", "role": "surname"}
+        ],
+        "language": "uk",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:given+surname", "ner_filter"],
+          "gender": "male",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Организация/страна не попадает в normalized"
+  },
+  {
+    "id": "en_title_suffix",
+    "description": "Убираем титул и суффикс",
+    "language": "en",
+    "input": "Dr. John A. Smith Jr.",
+    "expected_personas": [
+      {
+        "normalized": "John Smith",
+        "tokens": [
+          {"text": "John", "lemma": "John", "role": "given"},
+          {"text": "Smith", "lemma": "Smith", "role": "surname"}
+        ],
+        "language": "en",
+        "trace": {
+          "rules": ["nfkc", "title_suffix_filter", "role_tagger:given+surname"],
+          "gender": "male",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Титулы и суффиксы не попадают в итоговую строку"
+  },
+  {
+    "id": "en_nickname",
+    "description": "Никнейм → каноническое имя",
+    "language": "en",
+    "input": "Bill Gates",
+    "expected_personas": [
+      {
+        "normalized": "William Gates",
+        "tokens": [
+          {"text": "William", "lemma": "William", "role": "given"},
+          {"text": "Gates", "lemma": "Gates", "role": "surname"}
+        ],
+        "language": "en",
+        "trace": {
+          "rules": ["nfkc", "nickname", "role_tagger:given+surname"],
+          "gender": "male",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Используем словарь nicknames"
+  },
+  {
+    "id": "en_middle_name",
+    "description": "Middle name опционален",
+    "language": "en",
+    "input": "Mary Jane Watson",
+    "expected_personas": [
+      {
+        "normalized": "Mary Watson",
+        "tokens": [
+          {"text": "Mary", "lemma": "Mary", "role": "given"},
+          {"text": "Watson", "lemma": "Watson", "role": "surname"}
+        ],
+        "language": "en",
+        "trace": {
+          "rules": ["nfkc", "middle_name_filter", "role_tagger:given+surname"],
+          "gender": "female",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Middle name убирается из normalized"
+  },
+  {
+    "id": "en_apostrophe",
+    "description": "Апостроф в ирландских фамилиях",
+    "language": "en",
+    "input": "O'Connor, Sean",
+    "expected_personas": [
+      {
+        "normalized": "Sean O’Connor",
+        "tokens": [
+          {"text": "Sean", "lemma": "Sean", "role": "given"},
+          {"text": "O’Connor", "lemma": "O'Connor", "role": "surname"}
+        ],
+        "language": "en",
+        "trace": {
+          "rules": ["nfkc", "unicode:apostrophe", "role_tagger:given+surname"],
+          "gender": "male",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Используем типографский апостроф"
+  },
+  {
+    "id": "en_double_surname",
+    "description": "Двойная фамилия через дефис",
+    "language": "en",
+    "input": "Emily Blunt-Krasinski",
+    "expected_personas": [
+      {
+        "normalized": "Emily Blunt-Krasinski",
+        "tokens": [
+          {"text": "Emily", "lemma": "Emily", "role": "given"},
+          {"text": "Blunt-Krasinski", "lemma": "Blunt-Krasinski", "role": "surname"}
+        ],
+        "language": "en",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:given+surname"],
+          "gender": "female",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Дефисная фамилия сохраняется"
+  },
+  {
+    "id": "mixed_org_noise",
+    "description": "Организация и дата не попадает в normalized",
+    "language": "uk",
+    "input": "Оплата ТОВ \"ПРИВАТБАНК\" Ивану Петрову, 1980-01-01",
+    "expected_personas": [
+      {
+        "normalized": "Іван Петров",
+        "tokens": [
+          {"text": "Іван", "lemma": "Іван", "role": "given"},
+          {"text": "Петров", "lemma": "Петров", "role": "surname"}
+        ],
+        "language": "uk",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:given+surname", "context_filter"],
+          "gender": "male",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Юрлица и даты не попадают в normalized"
+  },
+  {
+    "id": "mixed_languages",
+    "description": "Два языка в одной строке",
+    "language": "auto",
+    "input": "John Smith та Олена Петренко",
+    "expected_personas": [
+      {
+        "normalized": "John Smith",
+        "tokens": [
+          {"text": "John", "lemma": "John", "role": "given"},
+          {"text": "Smith", "lemma": "Smith", "role": "surname"}
+        ],
+        "language": "en",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:given+surname"],
+          "gender": "male",
+          "warnings": []
+        }
+      },
+      {
+        "normalized": "Олена Петренко",
+        "tokens": [
+          {"text": "Олена", "lemma": "Олена", "role": "given"},
+          {"text": "Петренко", "lemma": "Петренко", "role": "surname"}
+        ],
+        "language": "uk",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:given+surname"],
+          "gender": "female",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Два спана: английский и украинский"
+  },
+  {
+    "id": "mixed_diacritics",
+    "description": "Комбинированные диакритики не мешают",
+    "language": "uk",
+    "input": "Café José → оплата Івану",
+    "expected_personas": [
+      {
+        "normalized": "Іван",
+        "tokens": [
+          {"text": "Іван", "lemma": "Іван", "role": "given"}
+        ],
+        "language": "uk",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:given", "morph:nominative"],
+          "gender": "male",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Латинские слова игнорируются"
+  },
+  {
+    "id": "mixed_function_words",
+    "description": "Служебные слова не дают персон",
+    "language": "ru",
+    "input": "и в у о к з",
+    "expected_personas": [],
+    "notes": "Нет персональных токенов"
+  },
+  {
+    "id": "ru_single_surname",
+    "description": "Политика для одиночной фамилии",
+    "language": "ru",
+    "input": "Иванов",
+    "expected_personas": [
+      {
+        "normalized": "Иванов",
+        "tokens": [
+          {"text": "Иванов", "lemma": "Иванов", "role": "surname"}
+        ],
+        "language": "ru",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:surname"],
+          "gender": null,
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Разрешаем только фамилию"
+  },
+  {
+    "id": "uk_passport",
+    "description": "ФИО рядом с паспортом",
+    "language": "uk",
+    "input": "Паспорт AB123456: Сергій Іванов",
+    "expected_personas": [
+      {
+        "normalized": "Сергій Іванов",
+        "tokens": [
+          {"text": "Сергій", "lemma": "Сергій", "role": "given"},
+          {"text": "Іванов", "lemma": "Іванов", "role": "surname"}
+        ],
+        "language": "uk",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:given+surname", "context_filter"],
+          "gender": "male",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Документ остаётся в evidence"
+  },
+  {
+    "id": "uk_dob",
+    "description": "Дата рождения рядом с именем",
+    "language": "uk",
+    "input": "Іван Петров (1980-01-01)",
+    "expected_personas": [
+      {
+        "normalized": "Іван Петров",
+        "tokens": [
+          {"text": "Іван", "lemma": "Іван", "role": "given"},
+          {"text": "Петров", "lemma": "Петров", "role": "surname"}
+        ],
+        "language": "uk",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:given+surname", "context_filter"],
+          "gender": "male",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Дата не входит в normalized"
+  },
+  {
+    "id": "behavior_idempotent",
+    "description": "Идемпотентность нормализации",
+    "language": "ru",
+    "input": "Петр Сергеев",
+    "expected_personas": [
+      {
+        "normalized": "Петр Сергеев",
+        "tokens": [
+          {"text": "Петр", "lemma": "Петр", "role": "given"},
+          {"text": "Сергеев", "lemma": "Сергеев", "role": "surname"}
+        ],
+        "language": "ru",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:given+surname"],
+          "gender": "male",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Используется для проверки normalize(normalize(x))"
+  },
+  {
+    "id": "behavior_unknown_preserve",
+    "description": "Сохраняем unknown токены при флаге",
+    "language": "en",
+    "input": "Mr. John ??? Smith",
+    "expected_personas": [
+      {
+        "normalized": "John Smith",
+        "tokens": [
+          {"text": "John", "lemma": "John", "role": "given"},
+          {"text": "Smith", "lemma": "Smith", "role": "surname"}
+        ],
+        "language": "en",
+        "trace": {
+          "rules": ["nfkc", "role_tagger:given+surname", "unknown:preserved"],
+          "gender": "male",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Unknown токены остаются только в trace"
+  },
+  {
+    "id": "behavior_case_policy",
+    "description": "Приведение к Title Case",
+    "language": "ru",
+    "input": "иван ПЕТРОВ",
+    "expected_personas": [
+      {
+        "normalized": "Иван Петров",
+        "tokens": [
+          {"text": "Иван", "lemma": "Иван", "role": "given"},
+          {"text": "Петров", "lemma": "Петров", "role": "surname"}
+        ],
+        "language": "ru",
+        "trace": {
+          "rules": ["nfkc", "case_policy", "role_tagger:given+surname"],
+          "gender": "male",
+          "warnings": []
+        }
+      }
+    ],
+    "notes": "Тест на политику регистров"
+  },
+  {
+    "id": "behavior_empty_input",
+    "description": "Пустой ввод",
+    "language": "auto",
+    "input": "\t\n",
+    "expected_personas": [],
+    "notes": "Должен возвращаться пустой результат"
+  }
+]

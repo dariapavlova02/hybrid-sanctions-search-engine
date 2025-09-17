@@ -6,10 +6,19 @@ without breaking existing layer contracts.
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, TypedDict
 from enum import Enum
 
 from .base_contracts import NormalizationResult
+
+
+class SearchCandidate(TypedDict):
+    """Search candidate data structure"""
+    id: str
+    name: str
+    tier: int
+    score: float
+    meta: Dict[str, Any]
 
 
 class SearchMode(str, Enum):
@@ -254,15 +263,15 @@ def _get(obj, key, default=None):
         return getattr(obj, key, default)
 
 
-def extract_search_candidates(signals_result: Any) -> List[str]:
+def extract_search_candidates(signals_result: Any) -> List[SearchCandidate]:
     """
-    Extract candidate strings from Signals result
+    Extract candidate objects from Signals result
     
     Args:
         signals_result: Result from Signals layer
         
     Returns:
-        List of candidate strings for search
+        List of SearchCandidate objects for search
     """
     candidates = []
     
@@ -272,10 +281,23 @@ def extract_search_candidates(signals_result: Any) -> List[str]:
         for person in persons:
             normalized_name = _get(person, 'normalized_name')
             if normalized_name:
-                candidates.append(normalized_name)
+                candidates.append(SearchCandidate(
+                    id=_get(person, 'id', ''),
+                    name=normalized_name,
+                    tier=_get(person, 'tier', 0),
+                    score=_get(person, 'score', 0.0),
+                    meta=_get(person, 'metadata', {})
+                ))
             aliases = _get(person, 'aliases')
             if aliases:
-                candidates.extend(aliases)
+                for alias in aliases:
+                    candidates.append(SearchCandidate(
+                        id=_get(person, 'id', ''),
+                        name=alias,
+                        tier=_get(person, 'tier', 0),
+                        score=_get(person, 'score', 0.0),
+                        meta=_get(person, 'metadata', {})
+                    ))
 
     # Extract from organizations
     organizations = _get(signals_result, 'organizations')
@@ -283,13 +305,34 @@ def extract_search_candidates(signals_result: Any) -> List[str]:
         for org in organizations:
             normalized_name = _get(org, 'normalized_name')
             if normalized_name:
-                candidates.append(normalized_name)
+                candidates.append(SearchCandidate(
+                    id=_get(org, 'id', ''),
+                    name=normalized_name,
+                    tier=_get(org, 'tier', 0),
+                    score=_get(org, 'score', 0.0),
+                    meta=_get(org, 'metadata', {})
+                ))
             aliases = _get(org, 'aliases')
             if aliases:
-                candidates.extend(aliases)
+                for alias in aliases:
+                    candidates.append(SearchCandidate(
+                        id=_get(org, 'id', ''),
+                        name=alias,
+                        tier=_get(org, 'tier', 0),
+                        score=_get(org, 'score', 0.0),
+                        meta=_get(org, 'metadata', {})
+                    ))
     
-    # Remove duplicates and empty strings
-    return list(set(filter(None, candidates)))
+    # Remove duplicates based on id+name combination
+    seen = set()
+    unique_candidates = []
+    for candidate in candidates:
+        key = (candidate['id'], candidate['name'])
+        if key not in seen:
+            seen.add(key)
+            unique_candidates.append(candidate)
+    
+    return unique_candidates
 
 
 def create_search_info(search_result: SearchResult) -> SearchInfo:

@@ -24,6 +24,15 @@ test-micro: ## Run micro-benchmarks
 test-perf: ## Run all performance tests
 	poetry run python -m pytest tests/ -v -m "performance or perf_micro"
 
+test-ascii: ## Run ASCII fastpath tests
+	poetry run python -m pytest tests/integration/test_ascii_fastpath_equivalence.py tests/integration/test_ascii_fastpath_golden_integration.py -v
+
+test-ascii-perf: ## Run ASCII fastpath performance tests
+	poetry run python -m pytest tests/performance/test_ascii_fastpath_performance.py -v -m performance
+
+ascii-parity: ## Run ASCII fastpath parity job
+	poetry run python scripts/ascii_fastpath_parity.py
+
 clean: ## Clean up containers and images
 	docker-compose down -v
 	docker rmi ai-service:latest || true

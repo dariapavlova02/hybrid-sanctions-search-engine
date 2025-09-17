@@ -1,0 +1,27 @@
+# Ukrainian stopwords that conflict with initials
+# These words should never be tagged as initials or name roles
+# when strict_stopwords=True flag is enabled
+
+# Prepositions
+з
+зі
+у
+в
+до
+за
+над
+під
+при
+по
+о
+об
+без
+для
+між
+
+# Conjunctions
+та
+і
+й
+або
+чи

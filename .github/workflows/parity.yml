@@ -1,0 +1,79 @@
+name: Parity Check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  parity_check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml', '**/poetry.lock', '**/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            pip install .
+          fi
+
+      - name: Run parity check
+        env:
+          PYTHONPATH: src
+        run: |
+          python tools/parity_check.py --input tests/fixtures/parity_golden.jsonl
+
+      - name: Evaluate parity metrics
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          metrics_path = Path('artifacts/parity/metrics.json')
+          if not metrics_path.exists():
+              raise SystemExit('metrics.json not found; parity_check likely failed')
+
+          metrics = json.loads(metrics_path.read_text(encoding='utf-8'))
+          parity = metrics.get('parity_percent', 0.0)
+          factory_latency = metrics.get('latency', {}).get('factory', {})
+          factory_p95 = factory_latency.get('p95_ms', 0.0)
+          divergences = metrics.get('divergences', [])
+
+          print(f"Parity percent: {parity:.2f}%")
+          print(f"Factory p95 latency: {factory_p95:.2f} ms")
+          print(f"Divergences reported: {len(divergences)}")
+
+          if parity < 70.0:
+              raise SystemExit(f"Parity gate failed: {parity:.2f}% < 70%")
+          if factory_p95 > 20.0:
+              raise SystemExit(f"Latency gate failed: {factory_p95:.2f} ms > 20 ms")
+          PY
+
+      - name: Upload parity artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-report
+          path: |
+            artifacts/parity/report.html
+            artifacts/parity/parity_diff.csv
+            artifacts/parity/metrics.json
+          retention-days: 7
