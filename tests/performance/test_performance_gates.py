@@ -8,6 +8,7 @@ to ensure they meet latency requirements.
 import pytest
 import time
 import statistics
+import asyncio
 from typing import List, Dict, Any
 from dataclasses import dataclass
 
@@ -143,14 +144,14 @@ class TestPerformanceGates:
             ]
         }
     
-    def _measure_performance(self, func, *args, **kwargs) -> List[float]:
+    async def _measure_performance(self, func, *args, **kwargs) -> List[float]:
         """Measure performance of a function."""
         times = []
         iterations = 100  # Number of iterations for measurement
         
         for _ in range(iterations):
             start_time = time.perf_counter()
-            func(*args, **kwargs)
+            await func(*args, **kwargs)
             end_time = time.perf_counter()
             times.append(end_time - start_time)
         
@@ -168,6 +169,7 @@ class TestPerformanceGates:
         }
     
     @pytest.mark.perf_micro
+    @pytest.mark.asyncio
     async def test_ru_normalization_performance(self, normalization_factory, test_configs, test_flags, test_cases):
         """Test Russian normalization performance."""
         config = test_configs["ru"]
@@ -176,8 +178,8 @@ class TestPerformanceGates:
         all_times = []
         
         for case in cases:
-            times = self._measure_performance(
-                lambda: normalization_factory.normalize_text(case, config, test_flags)
+            times = await self._measure_performance(
+                normalization_factory.normalize_text, case, config, test_flags
             )
             all_times.extend(times)
         
@@ -198,6 +200,7 @@ class TestPerformanceGates:
         assert result.p99 <= result.p99_threshold, f"P99 threshold exceeded: {result.p99:.3f}s > {result.p99_threshold:.3f}s"
     
     @pytest.mark.perf_micro
+    @pytest.mark.asyncio
     async def test_uk_normalization_performance(self, normalization_factory, test_configs, test_flags, test_cases):
         """Test Ukrainian normalization performance."""
         config = test_configs["uk"]
@@ -206,8 +209,8 @@ class TestPerformanceGates:
         all_times = []
         
         for case in cases:
-            times = self._measure_performance(
-                lambda: normalization_factory.normalize_text(case, config, test_flags)
+            times = await self._measure_performance(
+                normalization_factory.normalize_text, case, config, test_flags
             )
             all_times.extend(times)
         
@@ -228,6 +231,7 @@ class TestPerformanceGates:
         assert result.p99 <= result.p99_threshold, f"P99 threshold exceeded: {result.p99:.3f}s > {result.p99_threshold:.3f}s"
     
     @pytest.mark.perf_micro
+    @pytest.mark.asyncio
     async def test_en_normalization_performance(self, normalization_factory, test_configs, test_flags, test_cases):
         """Test English normalization performance."""
         config = test_configs["en"]
@@ -236,8 +240,8 @@ class TestPerformanceGates:
         all_times = []
         
         for case in cases:
-            times = self._measure_performance(
-                lambda: normalization_factory.normalize_text(case, config, test_flags)
+            times = await self._measure_performance(
+                normalization_factory.normalize_text, case, config, test_flags
             )
             all_times.extend(times)
         
@@ -258,6 +262,7 @@ class TestPerformanceGates:
         assert result.p99 <= result.p99_threshold, f"P99 threshold exceeded: {result.p99:.3f}s > {result.p99_threshold:.3f}s"
     
     @pytest.mark.perf_micro
+    @pytest.mark.asyncio
     async def test_ascii_fastpath_performance(self, normalization_factory, test_flags):
         """Test ASCII fastpath performance."""
         config = NormalizationConfig(
@@ -281,8 +286,8 @@ class TestPerformanceGates:
         all_times = []
         
         for case in ascii_cases:
-            times = self._measure_performance(
-                lambda: normalization_factory.normalize_text(case, config, test_flags)
+            times = await self._measure_performance(
+                normalization_factory.normalize_text, case, config, test_flags
             )
             all_times.extend(times)
         
@@ -303,6 +308,7 @@ class TestPerformanceGates:
         assert result.p99 <= result.p99_threshold, f"P99 threshold exceeded: {result.p99:.3f}s > {result.p99_threshold:.3f}s"
     
     @pytest.mark.perf_micro
+    @pytest.mark.asyncio
     async def test_flag_propagation_performance(self, normalization_factory, test_flags):
         """Test flag propagation performance."""
         config = NormalizationConfig(
@@ -320,8 +326,8 @@ class TestPerformanceGates:
         all_times = []
         
         for case in test_cases:
-            times = self._measure_performance(
-                lambda: normalization_factory.normalize_text(case, config, test_flags)
+            times = await self._measure_performance(
+                normalization_factory.normalize_text, case, config, test_flags
             )
             all_times.extend(times)
         

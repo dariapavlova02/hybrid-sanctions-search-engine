@@ -144,7 +144,7 @@ class NormalizationFactory(ErrorReportingMixin):
             try:
                 # Propagate feature flags to config
                 if feature_flags:
-                    from ...utils.flag_propagation import create_flag_context, propagate_flags_to_layer
+                    from ....utils.flag_propagation import create_flag_context, propagate_flags_to_layer
                     flag_context = create_flag_context(feature_flags, "normalization", config.debug_tracing)
                     config = propagate_flags_to_layer(flag_context, "normalization", config)
                 
@@ -438,6 +438,7 @@ class NormalizationFactory(ErrorReportingMixin):
 
     def _build_error_result(self, text: str, error_msg: str, processing_time: float = 0.0) -> NormalizationResult:
         """Build error result for failed normalization."""
+        text = text or ""  # Handle None input
         return NormalizationResult(
             normalized="",
             tokens=[],
@@ -460,6 +461,7 @@ class NormalizationFactory(ErrorReportingMixin):
 
     def _build_empty_result(self, text: str, language: str) -> NormalizationResult:
         """Build empty result for texts with no tokens."""
+        text = text or ""  # Handle None input
         return NormalizationResult(
             normalized="",
             tokens=[],
@@ -808,9 +810,9 @@ class NormalizationFactory(ErrorReportingMixin):
                             feature_flags
                         )
                         
-                        normalized = morph_result.normalized
-                        morph_traces = morph_result.traces
-                        cache_hit = morph_result.cache_hit
+                        # morph_result is a tuple (normalized_token, trace_info)
+                        normalized, morph_traces = morph_result
+                        cache_hit = False  # Not available from this method
                         
                         # Record cache info for debug tracing
                         cache_info[token] = {
@@ -830,10 +832,12 @@ class NormalizationFactory(ErrorReportingMixin):
                             traces.append(f"Morphology normalization: '{token}' -> '{normalized}'")
                     else:
                         # Use direct morphology processor
-                        normalized, morph_traces = self.morphology_processor.normalize_slavic_token(
+                        morph_result = self.morphology_processor.normalize_slavic_token(
                             token, role, config.language, config.enable_advanced_features,
                             config.preserve_feminine_suffix_uk
                         )
+                        # morph_result is a tuple (normalized_token, trace_info)
+                        normalized, morph_traces = morph_result
                         traces.extend(morph_traces)
                         cache_info[token] = {'morph': 'disabled'}
                     

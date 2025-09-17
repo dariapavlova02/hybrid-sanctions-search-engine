@@ -421,6 +421,10 @@ class MorphologyAdapter:
             "nominative_cache_size": self._to_nominative_cached.cache_info().currsize,
             "gender_cache_size": self._detect_gender_cached.cache_info().currsize,
         }
+    
+    def get_stats(self) -> Dict[str, int]:
+        """Get adapter statistics (alias for get_cache_stats)."""
+        return self.get_cache_stats()
 
     def is_uk_available(self) -> bool:
         """Check if Ukrainian dictionary is available."""
