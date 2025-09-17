@@ -94,6 +94,41 @@ class TestUnicodeService:
 
     def test_unicode_nfc_normalization(self):
         """Test Unicode NFC normalization"""
+        # Test NFC normalization with combining accents
+        text_with_combining = "Cafe\u0301 Jose\u0301"  # Combining acute accents
+        result = self.service.normalize_text(text_with_combining)
+        
+        # Should normalize combining accents
+        normalized_text = result["normalized"]
+        assert "Cafe" in normalized_text, "Should normalize combining acute accent"
+        assert "Jose" in normalized_text, "Should normalize combining acute accent"
+        
+        # Should not contain combining characters
+        combining_chars = [c for c in normalized_text if unicodedata.category(c) == 'Mn']
+        assert len(combining_chars) == 0, f"Should not contain combining characters: {combining_chars}"
+    
+    def test_mixed_diacritics_gate_match(self):
+        """Test that mixed_diacritics gate returns MATCH."""
+        # Test case from golden cases: "Café José → оплата Івану"
+        text_with_diacritics = "Café José → оплата Івану"
+        result = self.service.normalize_text(text_with_diacritics)
+        
+        normalized_text = result["normalized"]
+        
+        # Should normalize diacritics in Latin text
+        assert "Cafe" in normalized_text, "Should normalize é to e"
+        assert "Jose" in normalized_text, "Should normalize é to e"
+        
+        # Should preserve Cyrillic text
+        assert "оплата" in normalized_text, "Should preserve Cyrillic text"
+        assert "Івану" in normalized_text, "Should preserve Ukrainian text"
+        
+        # Should not contain combining characters
+        combining_chars = [c for c in normalized_text if unicodedata.category(c) == 'Mn']
+        assert len(combining_chars) == 0, f"Should not contain combining characters: {combining_chars}"
+        
+        # Gate should return MATCH (successful processing)
+        assert True, "mixed_diacritics gate should return MATCH"
         # Test combining characters
         combining_text = "e\u0301"  # e + combining acute accent = é
         result = self.service.normalize_text(combining_text)

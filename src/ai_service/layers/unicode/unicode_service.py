@@ -465,14 +465,191 @@ class UnicodeService:
         return result, replacements
 
     def _apply_unicode_normalization(self, text: str) -> str:
-        """Apply Unicode normalization"""
+        """Apply Unicode normalization with NFC and combining accent replacement."""
         try:
-            # NFD -> NFKC for better handling of complex characters
-            normalized = unicodedata.normalize("NFKC", text)
+            # First apply NFC normalization to combine combining characters
+            normalized = unicodedata.normalize("NFC", text)
+            
+            # Replace combining accents with base characters for mixed_diacritics
+            # This helps with names that have combining diacritics
+            normalized = self._replace_combining_accents(normalized)
+            
+            # Then apply NFKC for better handling of complex characters
+            normalized = unicodedata.normalize("NFKC", normalized)
+            
             return normalized
         except Exception as e:
             self.logger.warning(f"Unicode normalization failed: {e}")
             return text
+    
+    def _replace_combining_accents(self, text: str) -> str:
+        """Replace combining accents with base characters for mixed_diacritics support."""
+        # Mapping of combining accents to base characters
+        combining_accent_map = {
+            # Combining acute accent (U+0301) - most common
+            '\u0301': '',  # Remove combining acute accent
+            # Combining grave accent (U+0300)
+            '\u0300': '',  # Remove combining grave accent
+            # Combining circumflex (U+0302)
+            '\u0302': '',  # Remove combining circumflex
+            # Combining tilde (U+0303)
+            '\u0303': '',  # Remove combining tilde
+            # Combining diaeresis (U+0308)
+            '\u0308': '',  # Remove combining diaeresis
+            # Combining cedilla (U+0327)
+            '\u0327': '',  # Remove combining cedilla
+            # Combining caron (U+030C)
+            '\u030C': '',  # Remove combining caron
+            # Combining double acute (U+030B)
+            '\u030B': '',  # Remove combining double acute
+            # Combining breve (U+0306)
+            '\u0306': '',  # Remove combining breve
+            # Combining dot above (U+0307)
+            '\u0307': '',  # Remove combining dot above
+            # Combining ring above (U+030A)
+            '\u030A': '',  # Remove combining ring above
+            # Combining hook above (U+0309)
+            '\u0309': '',  # Remove combining hook above
+            # Combining horn (U+031B)
+            '\u031B': '',  # Remove combining horn
+            # Combining double grave (U+030F)
+            '\u030F': '',  # Remove combining double grave
+            # Combining inverted breve (U+0311)
+            '\u0311': '',  # Remove combining inverted breve
+            # Combining turned comma above (U+0312)
+            '\u0312': '',  # Remove combining turned comma above
+            # Combining comma above (U+0313)
+            '\u0313': '',  # Remove combining comma above
+            # Combining reversed comma above (U+0314)
+            '\u0314': '',  # Remove combining reversed comma above
+            # Combining comma above right (U+0315)
+            '\u0315': '',  # Remove combining comma above right
+            # Combining grave accent below (U+0316)
+            '\u0316': '',  # Remove combining grave accent below
+            # Combining acute accent below (U+0317)
+            '\u0317': '',  # Remove combining acute accent below
+            # Combining left tack below (U+0318)
+            '\u0318': '',  # Remove combining left tack below
+            # Combining right tack below (U+0319)
+            '\u0319': '',  # Remove combining right tack below
+            # Combining left angle above (U+031A)
+            '\u031A': '',  # Remove combining left angle above
+            # Combining horn (U+031B)
+            '\u031B': '',  # Remove combining horn
+            # Combining left half ring below (U+031C)
+            '\u031C': '',  # Remove combining left half ring below
+            # Combining up tack below (U+031D)
+            '\u031D': '',  # Remove combining up tack below
+            # Combining down tack below (U+031E)
+            '\u031E': '',  # Remove combining down tack below
+            # Combining plus sign below (U+031F)
+            '\u031F': '',  # Remove combining plus sign below
+            # Combining minus sign below (U+0320)
+            '\u0320': '',  # Remove combining minus sign below
+            # Combining palatalized hook below (U+0321)
+            '\u0321': '',  # Remove combining palatalized hook below
+            # Combining retroflex hook below (U+0322)
+            '\u0322': '',  # Remove combining retroflex hook below
+            # Combining dot below (U+0323)
+            '\u0323': '',  # Remove combining dot below
+            # Combining diaeresis below (U+0324)
+            '\u0324': '',  # Remove combining diaeresis below
+            # Combining ring below (U+0325)
+            '\u0325': '',  # Remove combining ring below
+            # Combining comma below (U+0326)
+            '\u0326': '',  # Remove combining comma below
+            # Combining cedilla (U+0327)
+            '\u0327': '',  # Remove combining cedilla
+            # Combining ogonek (U+0328)
+            '\u0328': '',  # Remove combining ogonek
+            # Combining vertical line below (U+0329)
+            '\u0329': '',  # Remove combining vertical line below
+            # Combining bridge below (U+032A)
+            '\u032A': '',  # Remove combining bridge below
+            # Combining inverted double arch below (U+032B)
+            '\u032B': '',  # Remove combining inverted double arch below
+            # Combining caron below (U+032C)
+            '\u032C': '',  # Remove combining caron below
+            # Combining circumflex accent below (U+032D)
+            '\u032D': '',  # Remove combining circumflex accent below
+            # Combining breve below (U+032E)
+            '\u032E': '',  # Remove combining breve below
+            # Combining inverted breve below (U+032F)
+            '\u032F': '',  # Remove combining inverted breve below
+            # Combining tilde below (U+0330)
+            '\u0330': '',  # Remove combining tilde below
+            # Combining macron below (U+0331)
+            '\u0331': '',  # Remove combining macron below
+            # Combining low line (U+0332)
+            '\u0332': '',  # Remove combining low line
+            # Combining double low line (U+0333)
+            '\u0333': '',  # Remove combining double low line
+            # Combining tilde overlay (U+0334)
+            '\u0334': '',  # Remove combining tilde overlay
+            # Combining short stroke overlay (U+0335)
+            '\u0335': '',  # Remove combining short stroke overlay
+            # Combining long stroke overlay (U+0336)
+            '\u0336': '',  # Remove combining long stroke overlay
+            # Combining short solidus overlay (U+0337)
+            '\u0337': '',  # Remove combining short solidus overlay
+            # Combining long solidus overlay (U+0338)
+            '\u0338': '',  # Remove combining long solidus overlay
+            # Combining horizontal bar (U+0339)
+            '\u0339': '',  # Remove combining horizontal bar
+            # Combining double overline (U+033A)
+            '\u033A': '',  # Remove combining double overline
+            # Combining double low line (U+033B)
+            '\u033B': '',  # Remove combining double low line
+            # Combining wavy line below (U+033C)
+            '\u033C': '',  # Remove combining wavy line below
+            # Combining double wavy line below (U+033D)
+            '\u033D': '',  # Remove combining double wavy line below
+            # Combining dotted grave accent (U+033E)
+            '\u033E': '',  # Remove combining dotted grave accent
+            # Combining dotted acute accent (U+033F)
+            '\u033F': '',  # Remove combining dotted acute accent
+            # Combining double acute accent (U+0340)
+            '\u0340': '',  # Remove combining double acute accent
+            # Combining double grave accent (U+0341)
+            '\u0341': '',  # Remove combining double grave accent
+            # Combining double tilde (U+0342)
+            '\u0342': '',  # Remove combining double tilde
+            # Combining double breve (U+0343)
+            '\u0343': '',  # Remove combining double breve
+            # Combining double circumflex (U+0344)
+            '\u0344': '',  # Remove combining double circumflex
+            # Combining double caron (U+0345)
+            '\u0345': '',  # Remove combining double caron
+            # Combining double macron (U+0346)
+            '\u0346': '',  # Remove combining double macron
+            # Combining double low line (U+0347)
+            '\u0347': '',  # Remove combining double low line
+            # Combining double overline (U+0348)
+            '\u0348': '',  # Remove combining double overline
+            # Combining double underline (U+0349)
+            '\u0349': '',  # Remove combining double underline
+            # Combining double wavy line (U+034A)
+            '\u034A': '',  # Remove combining double wavy line
+            # Combining double dotted line (U+034B)
+            '\u034B': '',  # Remove combining double dotted line
+            # Combining double solidus (U+034C)
+            '\u034C': '',  # Remove combining double solidus
+            # Combining double vertical line (U+034D)
+            '\u034D': '',  # Remove combining double vertical line
+            # Combining double horizontal line (U+034E)
+            '\u034E': '',  # Remove combining double horizontal line
+            # Combining double diagonal line (U+034F)
+            '\u034F': '',  # Remove combining double diagonal line
+        }
+        
+        # Apply the mapping
+        result = text
+        for combining_char, replacement in combining_accent_map.items():
+            if combining_char in result:
+                result = result.replace(combining_char, replacement)
+                self.logger.debug(f"unicode.nfc_applied: Replaced combining accent {combining_char} with {replacement}")
+        
+        return result
 
     def _normalize_case(self, text: str) -> str:
         """Case normalization - preserve original case for name processing"""

@@ -313,6 +313,66 @@ class OrganizationContextRule(FSMTransitionRule):
         return state, TokenRole.ORG, "org_legal_form_context", evidence
 
 
+class OrganizationNgramRule(FSMTransitionRule):
+    """Rule for marking entire n-gram as organization when legal form + UPPERCASE found."""
+    
+    def __init__(self, lexicons: Lexicons, window: int = 3):
+        self.lexicons = lexicons
+        self.window = window
+    
+    def can_apply(self, state: FSMState, token: Token, context: List[Token]) -> bool:
+        # Check if there's a legal form + UPPERCASE pattern in the context window
+        start_idx = max(0, token.pos - self.window)
+        end_idx = min(len(context), token.pos + self.window + 1)
+        
+        has_legal_form = False
+        has_uppercase = False
+        
+        for i in range(start_idx, end_idx):
+            if i < len(context):
+                # Check for legal form
+                if (is_legal_form(context[i].text, self.lexicons) or 
+                    is_legal_form_lang(context[i].text, token.lang, self.lexicons)):
+                    has_legal_form = True
+                
+                # Check for UPPERCASE token
+                if context[i].is_all_caps and len(context[i].text) > 1:
+                    has_uppercase = True
+        
+        return has_legal_form and has_uppercase
+    
+    def apply(self, state: FSMState, token: Token, context: List[Token]) -> Tuple[FSMState, TokenRole, str, List[str]]:
+        evidence = ["org_legal_form_context", "ngram_organization"]
+        window_tokens = []
+        legal_forms_found = []
+        uppercase_tokens = []
+        
+        # Find legal form and UPPERCASE in context window
+        start_idx = max(0, token.pos - self.window)
+        end_idx = min(len(context), token.pos + self.window + 1)
+        
+        for i in range(start_idx, end_idx):
+            if i < len(context):
+                window_tokens.append(context[i].text)
+                # Check both global and language-specific legal forms
+                if (is_legal_form(context[i].text, self.lexicons) or 
+                    is_legal_form_lang(context[i].text, token.lang, self.lexicons)):
+                    legal_forms_found.append(context[i].text)
+                    evidence.append(f"legal_form_{context[i].text}")
+                
+                # Check for UPPERCASE
+                if context[i].is_all_caps and len(context[i].text) > 1:
+                    uppercase_tokens.append(context[i].text)
+                    evidence.append(f"uppercase_{context[i].text}")
+        
+        # Add context window information to evidence
+        evidence.append(f"context_window_{len(window_tokens)}")
+        evidence.append(f"legal_forms_count_{len(legal_forms_found)}")
+        evidence.append(f"uppercase_count_{len(uppercase_tokens)}")
+        
+        return state, TokenRole.ORG, "org_legal_form_context", evidence
+
+
 class StopwordRule(FSMTransitionRule):
     """Rule for detecting stopwords."""
     
@@ -417,6 +477,76 @@ class RussianStopwordInitRule(FSMTransitionRule):
         return state, TokenRole.UNKNOWN, "ru_stopword_conflict", evidence
 
 
+class UkrainianInitPrepositionRule(FSMTransitionRule):
+    """Rule for preventing Ukrainian one/two-letter prepositions from being marked as initials."""
+    
+    def __init__(self, lexicons: Lexicons, strict: bool = True):
+        self.lexicons = lexicons
+        self.strict = strict
+        # Ukrainian one/two-letter prepositions that conflict with initials
+        self.uk_prepositions = {"з", "зі", "у", "в", "і", "й", "та"}
+    
+    def can_apply(self, state: FSMState, token: Token, context: List[Token]) -> bool:
+        if not self.strict or token.lang != "uk":
+            return False
+        
+        # Check if token is a Ukrainian preposition
+        return token.text.lower() in self.uk_prepositions
+    
+    def apply(self, state: FSMState, token: Token, context: List[Token]) -> Tuple[FSMState, TokenRole, str, List[str]]:
+        evidence = ["uk_stopword_conflict"]
+        return state, TokenRole.UNKNOWN, "uk_stopword_conflict", evidence
+
+
+class LegalFormOrgSpanRule(FSMTransitionRule):
+    """Rule for detecting ORG spans: LEGAL_FORM + UPPERCASE_TOKEN{2+} → ORG block."""
+    
+    def __init__(self, lexicons: Lexicons, window: int = 3):
+        self.lexicons = lexicons
+        self.window = window
+    
+    def can_apply(self, state: FSMState, token: Token, context: List[Token]) -> bool:
+        # Check if current token is uppercase and has 2+ characters
+        if not (token.is_all_caps and len(token.text) >= 2):
+            return False
+        
+        # Check if there's a legal form in the context window
+        start_idx = max(0, token.pos - self.window)
+        end_idx = min(len(context), token.pos + self.window + 1)
+        
+        for i in range(start_idx, end_idx):
+            if i < len(context):
+                context_token = context[i]
+                if (is_legal_form(context_token.text, self.lexicons) or 
+                    is_legal_form_lang(context_token.text, token.lang, self.lexicons)):
+                    return True
+        
+        return False
+    
+    def apply(self, state: FSMState, token: Token, context: List[Token]) -> Tuple[FSMState, TokenRole, str, List[str]]:
+        evidence = ["org_acronym_block"]
+        
+        # Find the legal form in context
+        start_idx = max(0, token.pos - self.window)
+        end_idx = min(len(context), token.pos + self.window + 1)
+        
+        legal_form_found = None
+        for i in range(start_idx, end_idx):
+            if i < len(context):
+                context_token = context[i]
+                if (is_legal_form(context_token.text, self.lexicons) or 
+                    is_legal_form_lang(context_token.text, token.lang, self.lexicons)):
+                    legal_form_found = context_token.text
+                    break
+        
+        if legal_form_found:
+            evidence.append(f"legal_form_{legal_form_found}")
+        
+        evidence.append(f"uppercase_token_{token.text}")
+        
+        return FSMState.ORG_EXPECTED, TokenRole.ORG, "org_acronym_block", evidence
+
+
 class DefaultPersonRule(FSMTransitionRule):
     """Default rule for person name tokens."""
     
@@ -511,9 +641,12 @@ class RoleTaggerService:
         # Order matters - higher priority rules first
         self.rules_list = [
             RussianStopwordInitRule(self.lexicons, self.rules.strict_stopwords),
+            UkrainianInitPrepositionRule(self.lexicons, self.rules.strict_stopwords),
             StopwordRule(self.lexicons, self.rules.strict_stopwords),
             PaymentContextRule(self.lexicons, self.rules.strict_stopwords),
             PersonStopwordRule(self.lexicons, self.rules.strict_stopwords, self.rules.org_context_window),
+            LegalFormOrgSpanRule(self.lexicons, self.rules.org_context_window),  # NEW: ORG span detection
+            OrganizationNgramRule(self.lexicons, self.rules.org_context_window),
             OrganizationContextRule(self.lexicons, self.rules.org_context_window),
             InitialDetectionRule(),
             SurnameSuffixRule(self.rules.surname_suffixes),
@@ -701,6 +834,8 @@ class RoleTaggerService:
                 trace_entry["org_legal_form_context"] = True
             if "person_stopword_filtered" in role_tag.reason:
                 trace_entry["person_stopword_filtered"] = True
+            if "uk_stopword_conflict" in role_tag.reason:
+                trace_entry["uk_stopword_conflict"] = True
             
             trace_entries.append(trace_entry)
         

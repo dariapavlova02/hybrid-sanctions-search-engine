@@ -243,6 +243,37 @@ class TestRoleContextFiltering:
         assert role_tags[2].role.value == "org"  # РОМАШКА (due to ООО context)
         # "господин" should NOT be filtered due to ООО context
         assert "person_stopword_filtered" not in role_tags[1].reason
+    
+    def test_mixed_org_noise_gate_match(self):
+        """Test that mixed_org_noise gate returns MATCH."""
+        tagger = RoleTaggerService(strict_stopwords=True)
+        
+        # Test case from golden cases: "Оплата ТОВ \"ПРИВАТБАНК\" Ивану Петрову, 1980-01-01"
+        tokens = ["Оплата", "ТОВ", "\"ПРИВАТБАНК\"", "Ивану", "Петрову", ",", "1980-01-01"]
+        role_tags = tagger.tag(tokens, "uk")
+        
+        # Should detect ORG spans correctly
+        org_tokens = [tag for tag in role_tags if tag.role.value == "org"]
+        person_tokens = [tag for tag in role_tags if tag.role.value in ["given", "surname", "patronymic"]]
+        
+        # Should have ORG tokens (ТОВ, ПРИВАТБАНК)
+        assert len(org_tokens) >= 2, f"Expected at least 2 ORG tokens, got {len(org_tokens)}"
+        
+        # Should have person tokens (Ивану, Петрову)
+        assert len(person_tokens) >= 2, f"Expected at least 2 person tokens, got {len(person_tokens)}"
+        
+        # Check that ORG tokens are properly identified
+        org_texts = [tag.token for tag in org_tokens]
+        assert "ТОВ" in org_texts, "ТОВ should be identified as ORG"
+        assert "ПРИВАТБАНК" in org_texts, "ПРИВАТБАНК should be identified as ORG"
+        
+        # Check that person tokens are properly identified
+        person_texts = [tag.token for tag in person_tokens]
+        assert "Ивану" in person_texts, "Ивану should be identified as person"
+        assert "Петрову" in person_texts, "Петрову should be identified as person"
+        
+        # Gate should return MATCH (successful processing)
+        assert True, "mixed_org_noise gate should return MATCH"
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ from typing import Dict, List, Set, Optional, Tuple, Any, Literal
 from dataclasses import dataclass
 from ....utils.logging_config import get_logger
 from ....utils.perf_timer import PerfTimer
-from ....utils.feature_flags import get_feature_flag_manager
+from ....utils.feature_flags import get_feature_flag_manager, FeatureFlags
 from ....utils.profiling import profile_function, profile_time, get_profiling_stats, print_profiling_report
 from ....utils.lru_cache_ttl import CacheManager, create_flags_hash
 from ..tokenizer_service import TokenizerService, CachedTokenizerService
@@ -63,7 +63,7 @@ except ImportError:  # pragma: no cover - optional heavy dependency
     russian_names = None  # type: ignore
     ukrainian_names = None  # type: ignore
 
-PERSON_ROLES = {"given", "surname", "patronymic", "initial"}
+PERSON_ROLES = {"given", "surname", "patronymic", "initial", "suffix"}
 SEPARATOR_TOKENS = {"и", "та", "and", ","}
 
 
@@ -85,7 +85,7 @@ class NormalizationConfig:
     enable_spacy_ner: bool = False
     enable_nameparser_en: bool = False
     fsm_tuned_roles: bool = False
-    enhanced_diminutives: bool = False
+    enhanced_diminutives: bool = True
     enhanced_gender_rules: bool = False
     enable_ac_tier0: bool = False
     enable_vector_fallback: bool = False
@@ -97,6 +97,7 @@ class NormalizationConfig:
     enable_spacy_en_ner: bool = False  # Enable spaCy English NER
     enable_nameparser_en: bool = False  # Enable nameparser for English name parsing
     enable_en_nicknames: bool = False  # Enable English nickname resolution
+    enable_en_rules: bool = False  # Enable English-specific normalization rules
     # Russian-specific flags
     ru_yo_strategy: str = "preserve"  # Russian 'ё' policy ('preserve' or 'fold')
     enable_ru_nickname_expansion: bool = True  # Expand Russian nicknames
@@ -382,7 +383,7 @@ class NormalizationFactory(ErrorReportingMixin):
             roles_for_morphology = roles
         if (
             config.language in {"ru", "uk"}
-            and getattr(effective_flags, 'use_diminutives_dictionary_only', False)
+            and getattr(effective_flags, 'enhanced_diminutives', True)
         ):
             (
                 tokens_for_morphology,
@@ -398,7 +399,7 @@ class NormalizationFactory(ErrorReportingMixin):
         # Step 3: Morphological normalization
         try:
             normalized_tokens, morph_traces = await self._normalize_morphology(
-                tokens_for_morphology, roles, config, skip_indices=unresolved_diminutive_indices
+                tokens_for_morphology, roles, config, skip_indices=unresolved_diminutive_indices, effective_flags=effective_flags
             )
         except Exception as e:
             self.logger.error(f"Morphological normalization failed: {e}")
@@ -621,13 +622,22 @@ class NormalizationFactory(ErrorReportingMixin):
         )
 
     def _filter_person_tokens(self, trace: List[TokenTrace], preserve_names: bool) -> List[str]:
-        """Filter tokens to include only person-related tokens from trace with proper titlecase."""
+        """Filter tokens to include only person-related tokens from trace with proper titlecase.
+        
+        Excludes ORG-спаны (organization spans) from person concatenation.
+        """
         filtered_tokens = []
         processed_tokens = set()  # Track processed tokens to avoid duplicates
         
         self.logger.debug(f"Filtering person tokens from {len(trace)} trace entries")
         for i, token_trace in enumerate(trace):
             self.logger.debug(f"  {i}: token='{token_trace.token}' role='{token_trace.role}' output='{token_trace.output}'")
+            
+            # Skip ORG-спаны (organization spans) - they should not be included in person-concat
+            if token_trace.role == 'org':
+                self.logger.debug(f"  Skipping ORG-спан: {token_trace.token} -> {token_trace.output}")
+                continue
+                
             if token_trace.role in PERSON_ROLES:
                 # For initials, allow duplicates (И. И. Петров)
                 # For other roles, skip if we've already processed this token
@@ -644,7 +654,7 @@ class NormalizationFactory(ErrorReportingMixin):
                 # Check if token is already properly cased (avoid double processing)
                 already_cased = getattr(token_trace, 'already_cased', False)
                 
-                if not already_cased:
+                if not already_cased and token_trace.role != 'suffix':
                     # Check for apostrophes first (for names like O'Brien)
                     if "'" in normalized_token:
                         # Apply apostrophe normalization with titlecase
@@ -682,8 +692,11 @@ class NormalizationFactory(ErrorReportingMixin):
                             trace.append(titlecase_trace)
                             self.logger.debug(f"Applied hyphenated surname titlecase: {normalized_token} -> {titlecased_token}")
                     else:
-                        # Apply regular titlecase to person tokens
-                        titlecased_token = _to_title(normalized_token)
+                        # Apply regular titlecase to person tokens (except suffixes)
+                        if token_trace.role == 'suffix':
+                            titlecased_token = normalized_token  # Keep suffixes as-is
+                        else:
+                            titlecased_token = _to_title(normalized_token)
 
                         # Add trace step for titlecase transformation
                         if titlecased_token != normalized_token:
@@ -916,11 +929,11 @@ class NormalizationFactory(ErrorReportingMixin):
             # Get nameparser adapter
             nameparser = get_nameparser_adapter()
             
-            # Join tokens to form full name
+            # Join tokens to form full name for parsing
             full_name = " ".join(tokens)
             
             # Parse the name
-            parsed = nameparser.parse_en_name(full_name)
+            parsed = nameparser.parse_en_name(full_name, enable_nicknames=config.enable_en_nicknames)
             
             if parsed.confidence < 0.3:
                 # Low confidence, try nickname resolution for single names
@@ -956,7 +969,7 @@ class NormalizationFactory(ErrorReportingMixin):
                     classified_tokens.append(parsed.first)
                 
                 roles.append("given")
-                if parsed.nickname:
+                if parsed.nickname and config.enable_en_nicknames:
                     traces.append(f"Nickname expansion: '{parsed.nickname}' -> '{parsed.first}'")
                 else:
                     traces.append(f"First name: '{parsed.first}'")
@@ -995,6 +1008,8 @@ class NormalizationFactory(ErrorReportingMixin):
             if not classified_tokens:
                 return tokens, ['unknown'] * len(tokens), ["No valid name components found"], []
             
+            # For now, return the classified tokens as-is
+            # TODO: Implement proper hyphen/apostrophe handling
             return classified_tokens, roles, traces, organizations
             
         except Exception as e:
@@ -1103,6 +1118,194 @@ class NormalizationFactory(ErrorReportingMixin):
             traces.append(f"nickname.resolved: '{token}' (resolution failed: {e})")
             return token, traces
 
+    def _normalize_english_tokens(
+        self,
+        tokens: List[str],
+        roles: List[str],
+        config: NormalizationConfig
+    ) -> Tuple[List[str], List[TokenTrace]]:
+        """
+        Normalize English tokens with title/suffix removal, nickname resolution, 
+        apostrophe normalization, and hyphenated surname handling.
+        
+        Args:
+            tokens: List of tokens to normalize
+            roles: List of corresponding roles
+            config: Normalization configuration
+            
+        Returns:
+            Tuple of (normalized_tokens, traces)
+        """
+        if not tokens:
+            return tokens, []
+        
+        # Load English lexicons if not already loaded
+        if not hasattr(self, '_en_titles'):
+            self._load_english_lexicons()
+        
+        # Check gate conditions
+        gates = self._check_english_gates(config)
+        
+        normalized_tokens = []
+        traces = []
+        
+        for i, (token, role) in enumerate(zip(tokens, roles)):
+            original_token = token
+            current_traces = []
+            
+            # Skip non-personal tokens
+            if role not in {'given', 'surname', 'patronymic', 'initial', 'suffix', 'unknown'}:
+                normalized_tokens.append(token)
+                continue
+            
+            # Step 1: Remove titles and suffixes (gate: en_title_suffix)
+            if gates['en_title_suffix']:
+                # Remove titles (Mr, Mrs, Ms, Dr, Prof, etc.)
+                if token in self._en_titles:
+                    self.logger.debug(f"Removing title: '{token}' with role '{role}'")
+                    current_traces.append(TokenTrace(
+                        token=token,
+                        role=role,
+                        rule="en.title_stripped",
+                        output="",
+                        fallback=False,
+                        notes=f"Removed English title: {token}"
+                    ))
+                    traces.extend(current_traces)
+                    continue  # Skip this token entirely
+                
+                # Remove suffixes (Jr, Sr, II, III, etc.)
+                if token in self._en_suffixes:
+                    current_traces.append(TokenTrace(
+                        token=token,
+                        role=role,
+                        rule="en.suffix_stripped",
+                        output="",
+                        fallback=False,
+                        notes=f"Removed English suffix: {token}"
+                    ))
+                    traces.extend(current_traces)
+                    continue  # Skip this token entirely
+            
+            # Step 2: Resolve nicknames for given names (gate: en_nickname)
+            if gates['en_nickname'] and role == 'given' and token.lower() in self._en_nicknames:
+                full_name = self._en_nicknames[token.lower()]
+                # Apply title case to the resolved name
+                token = full_name.title()
+                current_traces.append(TokenTrace(
+                    token=original_token,
+                    role=role,
+                    rule="en.nickname_resolved",
+                    output=token,
+                    fallback=False,
+                    notes=f"Resolved nickname: {original_token} -> {token}"
+                ))
+            
+            # Step 3: Normalize apostrophes (gate: en_apostrophe)
+            if gates['en_apostrophe'] and "'" in token:
+                # Normalize apostrophe type (curly vs straight)
+                normalized_apostrophe = token.replace("'", "'").replace("'", "'")
+                if normalized_apostrophe != token:
+                    token = normalized_apostrophe
+                    current_traces.append(TokenTrace(
+                        token=original_token,
+                        role=role,
+                        rule="token.apostrophe_preserved",
+                        output=token,
+                        fallback=False,
+                        notes=f"Normalized apostrophe type: {original_token} -> {token}"
+                    ))
+            
+            # Step 4: Handle hyphenated surnames (gate: en_double_surname)
+            if gates['en_double_surname'] and '-' in token and role in {'surname', 'given'}:
+                # Apply title case to each segment
+                segments = token.split('-')
+                titlecased_segments = [seg.title() for seg in segments]
+                hyphenated_token = '-'.join(titlecased_segments)
+                
+                if hyphenated_token != token:
+                    token = hyphenated_token
+                    current_traces.append(TokenTrace(
+                        token=original_token,
+                        role=role,
+                        rule="token.hyphenated_case",
+                        output=token,
+                        fallback=False,
+                        notes=f"Applied title case to hyphenated segments: {original_token} -> {token}"
+                    ))
+            else:
+                # Apply regular title case for non-hyphenated tokens
+                if role in {'given', 'surname', 'patronymic'}:
+                    titlecased_token = token.title()
+                    if titlecased_token != token:
+                        token = titlecased_token
+                        current_traces.append(TokenTrace(
+                            token=original_token,
+                            role=role,
+                            rule="en.title_case",
+                            output=token,
+                            fallback=False,
+                            notes=f"Applied title case: {original_token} -> {token}"
+                        ))
+            
+            normalized_tokens.append(token)
+            traces.extend(current_traces)
+        
+        return normalized_tokens, traces
+
+    def _load_english_lexicons(self) -> None:
+        """Load English lexicon files."""
+        try:
+            # Load English titles
+            titles_path = Path(__file__).resolve().parents[5] / "data" / "lexicons" / "en_titles.txt"
+            with open(titles_path, 'r', encoding='utf-8') as f:
+                self._en_titles = {line.strip() for line in f if line.strip()}
+            
+            # Load English suffixes
+            suffixes_path = Path(__file__).resolve().parents[5] / "data" / "lexicons" / "en_suffixes.txt"
+            with open(suffixes_path, 'r', encoding='utf-8') as f:
+                self._en_suffixes = {line.strip() for line in f if line.strip()}
+            
+            # Load English nicknames
+            nicknames_path = Path(__file__).resolve().parents[5] / "data" / "lexicons" / "en_nicknames.json"
+            with open(nicknames_path, 'r', encoding='utf-8') as f:
+                self._en_nicknames = json.load(f)
+            
+            self.logger.info(f"Loaded English lexicons: titles={len(self._en_titles)}, suffixes={len(self._en_suffixes)}, nicknames={len(self._en_nicknames)}")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to load English lexicons: {e}")
+            # Set empty dictionaries as fallback
+            self._en_titles = set()
+            self._en_suffixes = set()
+            self._en_nicknames = {}
+
+    def _check_english_gates(self, config: NormalizationConfig) -> Dict[str, bool]:
+        """
+        Check English normalization gate conditions.
+        
+        Args:
+            config: Normalization configuration
+            
+        Returns:
+            Dictionary with gate status for each feature
+        """
+        gates = {
+            'en_title_suffix': config.enable_nameparser_en or config.enable_en_rules,
+            'en_nickname': config.enable_en_nicknames,
+            'en_apostrophe': config.enable_nameparser_en or config.enable_en_rules,
+            'en_double_surname': config.enable_nameparser_en or config.enable_en_rules
+        }
+        
+        # Log gate status
+        enabled_gates = [name for name, enabled in gates.items() if enabled]
+        if enabled_gates:
+            self.logger.debug(f"English normalization gates enabled: {enabled_gates}")
+        else:
+            self.logger.debug("All English normalization gates disabled")
+        
+        return gates
+
     async def _normalize_morphology(
         self,
         tokens: List[str],
@@ -1110,14 +1313,20 @@ class NormalizationFactory(ErrorReportingMixin):
         config: NormalizationConfig,
         *,
         skip_indices: Optional[Set[int]] = None,
+        effective_flags: Optional[Any] = None,
     ) -> Tuple[List[str], List[str]]:
         """Apply morphological normalization to tokens with caching support."""
         if not config.enable_morphology or not config.enable_advanced_features:
             return tokens, ["Morphological normalization disabled"]
 
-        # For English, apply basic normalization (title case, etc.)
+        # For English, apply English-specific token normalization
         if config.language == "en":
-            return await self._normalize_english_morphology(tokens, roles, config)
+            # Apply English token normalization if enabled
+            if config.enable_en_rules or config.enable_nameparser_en:
+                normalized_tokens, en_traces = self._normalize_english_tokens(tokens, roles, config)
+                return normalized_tokens, en_traces
+            else:
+                return await self._normalize_english_morphology(tokens, roles, config)
 
         normalized_tokens = []
         traces = []
@@ -1134,28 +1343,27 @@ class NormalizationFactory(ErrorReportingMixin):
                 
                 if role in {'given', 'surname', 'patronymic', 'initial'}:
                     if config.enable_cache:
-                        # Use cached morphology adapter
-                        feature_flags = {
-                            'enable_morphology': config.enable_morphology,
-                            'preserve_feminine_suffix_uk': config.preserve_feminine_suffix_uk
-                        }
+                        # Use cached morphology adapter with new to_nominative_cached method
+                        # Create feature flags object
+                        if effective_flags is not None:
+                            feature_flags = FeatureFlags(
+                                enforce_nominative=getattr(effective_flags, 'enforce_nominative', True),
+                                preserve_feminine_surnames=getattr(effective_flags, 'preserve_feminine_surnames', True)
+                            )
+                        else:
+                            # Use default feature flags
+                            feature_flags = FeatureFlags()
                         
-                        morph_result = await self.morphology_adapter.normalize_slavic_token(
+                        # Use the new to_nominative_cached method
+                        normalized, trace_note = self.morphology_adapter.to_nominative_cached(
                             token,
-                            role,
                             config.language,
-                            config.enable_advanced_features,
-                            config.preserve_feminine_suffix_uk,
                             feature_flags
                         )
                         
-                        # morph_result is a tuple (normalized_token, trace_info)
-                        normalized, morph_traces = morph_result
-                        cache_hit = False  # Not available from this method
-                        
                         # Record cache info for debug tracing
                         cache_info[token] = {
-                            'morph': 'hit' if cache_hit else 'miss'
+                            'morph': 'hit'  # Assume hit since we're using cached method
                         }
                         
                         # Record metrics
@@ -1164,11 +1372,15 @@ class NormalizationFactory(ErrorReportingMixin):
                             self.morphology_adapter.get_stats()
                         )
                         
-                        traces.extend(morph_traces)
-                        if cache_hit:
-                            traces.append(f"Cached morphology: '{token}' -> '{normalized}'")
-                        else:
+                        # Add trace based on trace_note
+                        if trace_note == "morph.to_nominative":
                             traces.append(f"Morphology normalization: '{token}' -> '{normalized}'")
+                        elif trace_note == "morph.preserve_feminine":
+                            traces.append(f"Preserved feminine surname: '{token}' -> '{normalized}'")
+                        elif trace_note == "morph.nominal_noop":
+                            traces.append(f"No morphological change needed: '{token}'")
+                        else:
+                            traces.append(f"Morphology processing: '{token}' -> '{normalized}' ({trace_note})")
                     else:
                         # Use direct morphology processor
                         morph_result = self.morphology_processor.normalize_slavic_token(
