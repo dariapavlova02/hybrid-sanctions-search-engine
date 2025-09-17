@@ -18,6 +18,12 @@ stop: ## Stop container
 test: ## Run tests
 	poetry run python -m pytest tests/ -v
 
+test-micro: ## Run micro-benchmarks
+	poetry run python -m pytest tests/performance/test_micro_benchmarks.py -v -m perf_micro
+
+test-perf: ## Run all performance tests
+	poetry run python -m pytest tests/ -v -m "performance or perf_micro"
+
 clean: ## Clean up containers and images
 	docker-compose down -v
 	docker rmi ai-service:latest || true

@@ -13,7 +13,24 @@ from enum import Enum
 from typing import Dict, List, Optional, Set, Tuple, Any
 from abc import ABC, abstractmethod
 
-from .lexicon_loader import Lexicons, get_lexicons, is_stopword, is_legal_form
+from .lexicon_loader import Lexicons, get_lexicons
+
+
+def is_stopword(token: str, lang: str, lexicons: Lexicons) -> bool:
+    """Check if token is a stopword."""
+    if not lexicons or not lexicons.stopwords:
+        return False
+    
+    lang_stopwords = lexicons.stopwords.get(lang, set())
+    return token.lower() in lang_stopwords
+
+
+def is_legal_form(token: str, lexicons: Lexicons) -> bool:
+    """Check if token is a legal form."""
+    if not lexicons or not lexicons.legal_forms:
+        return False
+    
+    return token.upper() in lexicons.legal_forms
 
 logger = logging.getLogger(__name__)
 
@@ -49,15 +66,19 @@ class Token:
     pos: int
     lang: str = "ru"
     
+    # Pre-compiled patterns for efficiency
+    _initial_pattern = re.compile(r'^[A-Za-zА-ЯЁІЇЄҐ]\.$')
+    _punctuation_pattern = re.compile(r'^[^\w\s]+$')
+    
     @property
     def looks_like_initial(self) -> bool:
         """Check if token looks like an initial (single letter + dot)."""
-        return bool(re.match(r'^[A-Za-zА-ЯЁІЇЄҐ]\.$', self.text))
+        return bool(self._initial_pattern.match(self.text))
     
     @property
     def is_punct(self) -> bool:
         """Check if token is punctuation."""
-        return not any(c.isalnum() for c in self.text)
+        return bool(self._punctuation_pattern.match(self.text))
 
 
 @dataclass
@@ -85,7 +106,19 @@ class RoleRules:
     })
     
     patronymic_suffixes: Set[str] = field(default_factory=lambda: {
-        "ович", "евич", "йович", "івна", "ївна", "овна", "евна", "ична", "ич"
+        # Masculine patronymics
+        "ович", "евич", "йович", "ич",
+        # Feminine patronymics  
+        "івна", "ївна", "овна", "евна", "ична",
+        # Additional patterns for comprehensive coverage
+        "овича", "евича", "йовича", "ича",  # Genitive masculine
+        "івни", "ївни", "овни", "евни", "ични",  # Genitive feminine
+        "овичу", "евичу", "йовичу", "ичу",  # Dative masculine
+        "івні", "ївні", "овні", "евні", "ичні",  # Dative feminine
+        "овичем", "евичем", "йовичем", "ичем",  # Instrumental masculine
+        "івною", "ївною", "овною", "евною", "ичною",  # Instrumental feminine
+        "овиче", "евиче", "йовиче", "иче",  # Vocative masculine
+        "івно", "ївно", "овно", "евно", "ично"  # Vocative feminine
     })
     
     # Context window for organization detection
@@ -179,12 +212,37 @@ class PatronymicSuffixRule(FSMTransitionRule):
         
         # Find matching suffix (check longer suffixes first)
         sorted_suffixes = sorted(self.patronymic_suffixes, key=len, reverse=True)
+        matched_suffix = None
         for suffix in sorted_suffixes:
             if token_lower.endswith(suffix):
                 evidence.append(f"suffix_{suffix}")
+                matched_suffix = suffix
                 break
         
-        return FSMState.DONE, TokenRole.PATRONYMIC, "patronymic_suffix_detected", evidence
+        # Special handling for ambiguous "-ович" endings (Belarusian surnames)
+        if matched_suffix == "ович" and token.is_capitalized:
+            # Check if this might be a surname by looking for adjacent given name
+            has_adjacent_given = False
+            for i, ctx_token in enumerate(context):
+                if (ctx_token.pos == token.pos - 1 or ctx_token.pos == token.pos + 1) and \
+                   ctx_token.is_capitalized and not ctx_token.looks_like_initial:
+                    # Check if adjacent token looks like a given name
+                    if not any(ctx_token.norm.lower().endswith(suffix) for suffix in self.patronymic_suffixes):
+                        has_adjacent_given = True
+                        break
+            
+            if not has_adjacent_given:
+                # No adjacent given name, likely a Belarusian surname
+                evidence.append("ambiguous_ovich_surname")
+                return state, TokenRole.SURNAME, "ambiguous_ovich_surname", evidence
+        
+        # Determine next state based on current state
+        if state == FSMState.START:
+            return FSMState.SURNAME_EXPECTED, TokenRole.PATRONYMIC, "patronymic_detected", evidence
+        elif state == FSMState.GIVEN_EXPECTED:
+            return FSMState.SURNAME_EXPECTED, TokenRole.PATRONYMIC, "patronymic_detected", evidence
+        else:
+            return state, TokenRole.PATRONYMIC, "patronymic_detected", evidence
 
 
 class OrganizationContextRule(FSMTransitionRule):
@@ -235,7 +293,7 @@ class StopwordRule(FSMTransitionRule):
     def can_apply(self, state: FSMState, token: Token, context: List[Token]) -> bool:
         return is_stopword(token.text, token.lang, self.lexicons)
     
-    def apply(self, state: FSMState, token: Token, context: List[Token]) -> Tuple[FSMState, TokenRole, str, List[str]]:
+    def apply(self, state: FSMState, token: Token, context: List[Token]) -> Tuple[FSMState, TokenRole, str, List[str]]:                                                                                             
         evidence = [f"stopword_{token.lang}"]
         
         if self.strict:
@@ -243,6 +301,28 @@ class StopwordRule(FSMTransitionRule):
         else:
             # In non-strict mode, stopwords might still get roles
             return state, TokenRole.UNKNOWN, "stopword_detected", evidence
+
+
+class RussianStopwordInitRule(FSMTransitionRule):
+    """Rule for preventing Russian stopwords from being marked as initials."""
+    
+    def __init__(self, lexicons: Lexicons, strict: bool = True):
+        self.lexicons = lexicons
+        self.strict = strict
+    
+    def can_apply(self, state: FSMState, token: Token, context: List[Token]) -> bool:
+        if not self.strict or token.lang != "ru":
+            return False
+        
+        if not self.lexicons or not self.lexicons.stopwords_init:
+            return False
+        
+        ru_stopwords_init = self.lexicons.stopwords_init.get("ru", set())
+        return token.text.lower() in ru_stopwords_init
+    
+    def apply(self, state: FSMState, token: Token, context: List[Token]) -> Tuple[FSMState, TokenRole, str, List[str]]:
+        evidence = ["ru_stopword_conflict"]
+        return state, TokenRole.UNKNOWN, "ru_stopword_conflict", evidence
 
 
 class DefaultPersonRule(FSMTransitionRule):
@@ -283,15 +363,32 @@ class RoleTaggerService:
         self.rules = rules or RoleRules()
         self.window = window
         
+        # Pre-compile regex patterns for efficiency
+        self._init_patterns()
+        
         # Initialize FSM rules
         self._init_rules()
         
         logger.debug(f"RoleTaggerService initialized with window={window}")
     
+    def _init_patterns(self):
+        """Initialize pre-compiled regex patterns."""
+        # Common patterns used in FSM rules
+        self._initial_pattern = re.compile(r'^[A-Za-zА-ЯЁІЇЄҐ]\.$')
+        self._punctuation_pattern = re.compile(r'^[^\w\s]+$')
+        self._cyrillic_pattern = re.compile(r'[А-Яа-яЁёІіЇїЄєҐґ]')
+        self._latin_pattern = re.compile(r'[A-Za-z]')
+        self._uppercase_pattern = re.compile(r'^[А-ЯA-Z]{2,}$')
+        self._legal_form_pattern = re.compile(
+            r'^(' + '|'.join(re.escape(form) for form in self.lexicons.legal_forms) + r')$',
+            re.IGNORECASE
+        )
+    
     def _init_rules(self):
         """Initialize FSM transition rules."""
         # Order matters - higher priority rules first
         self.rules_list = [
+            RussianStopwordInitRule(self.lexicons, self.rules.strict_stopwords),
             StopwordRule(self.lexicons, self.rules.strict_stopwords),
             OrganizationContextRule(self.lexicons, self.rules.org_context_window),
             InitialDetectionRule(),

@@ -79,36 +79,36 @@ class UnifiedPatternService:
             },
         }
 
-        # Context triggers for high-precision matching
+        # Context triggers for high-precision matching (frozenset for immutability and performance)
         self.context_triggers = {
             "ru": {
-                "payment": ["платеж", "оплата", "перевод", "перечисление", "зачисление"],
-                "contract": ["договор", "контракт", "соглашение", "сделка"],
-                "recipient": ["получатель", "бенефициар", "в пользу", "на имя"],
-                "sender": ["отправитель", "плательщик", "от имени"],
-                "legal": ["ООО", "ЗАО", "ОАО", "ПАО", "ИП", "ФЛ"],
+                "payment": frozenset(["платеж", "оплата", "перевод", "перечисление", "зачисление"]),
+                "contract": frozenset(["договор", "контракт", "соглашение", "сделка"]),
+                "recipient": frozenset(["получатель", "бенефициар", "в пользу", "на имя"]),
+                "sender": frozenset(["отправитель", "плательщик", "от имени"]),
+                "legal": frozenset(["ООО", "ЗАО", "ОАО", "ПАО", "ИП", "ФЛ"]),
             },
             "uk": {
-                "payment": ["платіж", "оплата", "переказ", "перерахування"],
-                "contract": ["договір", "контракт", "угода", "домовленість"],
-                "recipient": ["одержувач", "бенефіціар", "на користь", "на ім'я"],
-                "sender": ["відправник", "платник", "від імені"],
-                "legal": ["ТОВ", "ПАТ", "АТ", "ПрАТ", "ФОП", "ФО"],
+                "payment": frozenset(["платіж", "оплата", "переказ", "перерахування"]),
+                "contract": frozenset(["договір", "контракт", "угода", "домовленість"]),
+                "recipient": frozenset(["одержувач", "бенефіціар", "на користь", "на ім'я"]),
+                "sender": frozenset(["відправник", "платник", "від імені"]),
+                "legal": frozenset(["ТОВ", "ПАТ", "АТ", "ПрАТ", "ФОП", "ФО"]),
             },
             "en": {
-                "payment": ["payment", "transfer", "remittance", "wire", "funds"],
-                "contract": ["contract", "agreement", "deal", "arrangement"],
-                "recipient": ["beneficiary", "payee", "recipient", "to"],
-                "sender": ["payer", "sender", "from"],
-                "legal": ["LLC", "Inc", "Ltd", "Corp", "Co", "LP"],
+                "payment": frozenset(["payment", "transfer", "remittance", "wire", "funds"]),
+                "contract": frozenset(["contract", "agreement", "deal", "arrangement"]),
+                "recipient": frozenset(["beneficiary", "payee", "recipient", "to"]),
+                "sender": frozenset(["payer", "sender", "from"]),
+                "legal": frozenset(["LLC", "Inc", "Ltd", "Corp", "Co", "LP"]),
             },
         }
 
-        # Stop words that should not be patterns by themselves
+        # Stop words that should not be patterns by themselves (frozenset for immutability and performance)
         self.stop_patterns = {
-            "ru": {"для", "или", "его", "этот", "один", "два", "три", "год", "день", "время"},
-            "uk": {"для", "або", "його", "цей", "один", "два", "три", "рік", "день", "час"},
-            "en": {"for", "or", "his", "this", "one", "two", "three", "year", "day", "time"},
+            "ru": frozenset({"для", "или", "его", "этот", "один", "два", "три", "год", "день", "время"}),
+            "uk": frozenset({"для", "або", "його", "цей", "один", "два", "три", "рік", "день", "час"}),
+            "en": frozenset({"for", "or", "his", "this", "one", "two", "three", "year", "day", "time"}),
         }
 
         # Document patterns (high accuracy)

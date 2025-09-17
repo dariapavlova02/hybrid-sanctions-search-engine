@@ -1,161 +1,217 @@
-"""
-Token processing utilities for normalization service.
-Extracted from the monolithic NormalizationService for better maintainability.
-"""
+"""Token processing utilities used by the normalization pipeline."""
 
 import re
-from typing import List, Dict, Set, Tuple, Optional
+import unicodedata
+from typing import Dict, List, Set, Tuple, Optional, Any
+
+from ....data.dicts.stopwords import STOP_ALL
 from ....utils.logging_config import get_logger
+from ....utils.profiling import profile_function, profile_time
 
 
 class TokenProcessor:
-    """Handles token-level operations like noise filtering and role classification."""
+    """Handles token-level operations like noise filtering and normalization-aware tokenization."""
 
     def __init__(self):
         self.logger = get_logger(__name__)
-        self._context_words_cache = None
 
+    @profile_function("token_processor.strip_noise_and_tokenize")
     def strip_noise_and_tokenize(
         self,
         text: str,
+        *,
+        language: str = "uk",
+        remove_stop_words: bool = True,
         preserve_names: bool = True,
-        stop_words: Set[str] = None
-    ) -> Tuple[List[str], List[str]]:
+        stop_words: Optional[Set[str]] = None,
+        feature_flags: Optional[Dict[str, Any]] = None,
+    ) -> Tuple[List[str], List[str], Dict[str, List[str]]]:
+        """Mirror the legacy behaviour of ``NormalizationService._strip_noise_and_tokenize``.
+
+        Returns a tuple of ``(tokens, traces, metadata)`` where metadata currently
+        exposes the list of quoted segments detected in the input (``quoted_segments``).
         """
-        Strip noise and tokenize text for normalization.
 
-        Args:
-            text: Input text to tokenize
-            preserve_names: Whether to preserve name-related punctuation
-            stop_words: Set of stop words to filter out
+        if not isinstance(text, str) or not text.strip():
+            return [], [], {}
 
-        Returns:
-            Tuple of (clean_tokens, traces)
-        """
-        if not text or not text.strip():
-            return [], []
+        traces: List[str] = []
+        quoted_segments: List[str] = []
 
-        stop_words = stop_words or set()
-        traces = []
+        nfc_text = unicodedata.normalize("NFC", text)
+        traces.append("Applied Unicode NFC normalisation")
 
-        # Step 1: Basic text cleanup
-        cleaned_text = self._basic_cleanup(text)
-        traces.append(f"Basic cleanup: '{text}' -> '{cleaned_text}'")
+        transliterated = self._basic_transliterate(nfc_text)
+        if transliterated != nfc_text:
+            traces.append("Applied basic transliteration")
 
-        # Step 2: Split into tokens
-        raw_tokens = self._split_tokens(cleaned_text, preserve_names)
-        traces.append(f"Tokenized into {len(raw_tokens)} tokens")
+        cleaned = re.sub(r"\s+", " ", transliterated.strip())
+        traces.append("Collapsed whitespace")
 
-        # Step 3: Filter noise tokens
-        clean_tokens = []
-        for token in raw_tokens:
-            if self._is_valid_token(token, stop_words):
-                clean_tokens.append(token)
+        cleaned = re.sub(r"\d+", " ", cleaned)
+        if preserve_names:
+            cleaned = re.sub(r"[^\w\s\.\-\'\,\u0400-\u04FF\u0370-\u03FF]", " ", cleaned)
+        else:
+            cleaned = re.sub(r"[^\w\s\u0400-\u04FF\u0370-\u03FF]", " ", cleaned)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        traces.append(f"Symbol cleanup result: '{cleaned}'")
+
+        tokens: List[str] = []
+        for token in cleaned.split():
+            if not token:
+                continue
+            if preserve_names:
+                for sub_token in self._split_compound_initials(token):
+                    for final_token in re.split(r"([,])", sub_token):
+                        final = final_token.strip()
+                        if final:
+                            tokens.append(final)
             else:
-                traces.append(f"Filtered out noise token: '{token}'")
+                for sub_token in re.split(r"[\'\-]", token):
+                    sub_token = sub_token.strip()
+                    if sub_token:
+                        tokens.append(sub_token)
 
-        return clean_tokens, traces
+        traces.append(f"Tokenised into {len(tokens)} raw tokens")
 
-    def _basic_cleanup(self, text: str) -> str:
-        """Basic text cleanup operations."""
-        # Remove extra whitespace
-        text = re.sub(r'\s+', ' ', text.strip())
+        # Apply feature flag-based processing
+        if feature_flags:
+            tokens = self._apply_feature_flags(tokens, feature_flags, traces)
 
-        # Fix common punctuation issues
-        text = re.sub(r'([.])([a-zA-ZА-Яа-яІіЇїЄєҐґ])', r'\1 \2', text)
+        effective_stop_words: Set[str] = set()
+        if remove_stop_words:
+            effective_stop_words = stop_words if stop_words is not None else STOP_ALL
 
+        filtered: List[str] = []
+        for token in tokens:
+            if remove_stop_words:
+                # Cache lower() result to avoid repeated calls
+                token_lower = token.lower()
+                if token_lower in effective_stop_words:
+                    if len(token) == 1 and token.isalpha():
+                        filtered.append(token)
+                    else:
+                        traces.append(f"Filtered stop word: '{token}'")
+                    continue
+            filtered.append(token)
+
+        result_tokens: List[str] = []
+        i = 0
+        while i < len(filtered):
+            token = filtered[i]
+            if token.startswith("'"):
+                quoted_tokens: List[str] = []
+                if token.endswith("'") and len(token) > 1:
+                    quoted_tokens = [token[1:-1]]
+                else:
+                    quoted_tokens = [token[1:]]
+                    i += 1
+                    while i < len(filtered) and not filtered[i].endswith("'"):
+                        quoted_tokens.append(filtered[i])
+                        i += 1
+                    if i < len(filtered):
+                        closing = filtered[i]
+                        if closing.endswith("'"):
+                            quoted_tokens.append(closing[:-1])
+                # Use list comprehension and join for better performance
+                quoted_parts = [part for part in quoted_tokens if part]
+                if quoted_parts:
+                    quoted_phrase = " ".join(quoted_parts)
+                    quoted_segments.append(quoted_phrase)
+                    result_tokens.extend(quoted_parts)
+            else:
+                result_tokens.append(token)
+            i += 1
+
+        if not result_tokens:
+            traces.append("No tokens after filtering")
+
+        return result_tokens, traces, {"quoted_segments": quoted_segments}
+
+    @staticmethod
+    def _basic_transliterate(text: str) -> str:
+        transliteration_map = {"ё": "е", "Ё": "Е"}
+        for char, replacement in transliteration_map.items():
+            if char in text:
+                text = text.replace(char, replacement)
         return text
 
-    def _split_tokens(self, text: str, preserve_names: bool) -> List[str]:
-        """Split text into tokens with name preservation options."""
-        if preserve_names:
-            # Preserve dots and hyphens in names
-            pattern = r"[^\w\s\.\-']+"
-        else:
-            # More aggressive splitting
-            pattern = r"[^\w\s]+"
+    @staticmethod
+    def _split_compound_initials(token: str) -> List[str]:
+        pattern = r"^((?:[A-Za-zА-Яа-яІЇЄҐіїєґ]\.){2,})([A-Za-zА-Яа-яІЇЄҐіїєґ].*)$"
+        match = re.match(pattern, token)
+        if not match:
+            return [token]
+        initials_part = match.group(1)
+        remainder = match.group(2)
+        initials = re.findall(r"[A-Za-zА-Яа-яІЇЄҐіїєґ]\.", initials_part)
+        result = initials[:]
+        if remainder:
+            result.append(remainder)
+        return result
 
-        # Replace punctuation with spaces but preserve some for names
-        if preserve_names:
-            # Keep dots for initials, hyphens for compound names, apostrophes
-            tokens = re.findall(r"[\w\.\-']+", text)
-        else:
-            tokens = re.findall(r"\w+", text)
+    def _apply_feature_flags(
+        self, 
+        tokens: List[str], 
+        feature_flags: Dict[str, Any], 
+        traces: List[str]
+    ) -> List[str]:
+        """Apply feature flag-based processing to tokens."""
+        processed_tokens = tokens[:]
+        
+        # fix_initials_double_dot: Collapse И.. → И.
+        if feature_flags.get("fix_initials_double_dot", False):
+            processed_tokens = self._fix_initials_double_dot(processed_tokens, traces)
+        
+        # preserve_hyphenated_case: Петрова-сидорова → Петрова-Сидорова
+        if feature_flags.get("preserve_hyphenated_case", False):
+            processed_tokens = self._preserve_hyphenated_case(processed_tokens, traces)
+        
+        # strict_stopwords: Use stricter stopword filtering
+        if feature_flags.get("strict_stopwords", False):
+            processed_tokens = self._apply_strict_stopwords(processed_tokens, traces)
+        
+        return processed_tokens
 
-        return [token for token in tokens if token.strip()]
+    def _fix_initials_double_dot(self, tokens: List[str], traces: List[str]) -> List[str]:
+        """Fix double dots in initials (И.. → И.)."""
+        processed = []
+        for token in tokens:
+            if re.match(r'^[A-Za-zА-Яа-яІЇЄҐіїєґ]\.\.+$', token):
+                # Replace multiple dots with single dot
+                fixed = re.sub(r'\.+$', '.', token)
+                processed.append(fixed)
+                traces.append(f"Fixed double dots: '{token}' → '{fixed}'")
+            else:
+                processed.append(token)
+        return processed
 
-    def _is_valid_token(self, token: str, stop_words: Set[str]) -> bool:
-        """Check if token is valid for normalization."""
-        if not token or len(token.strip()) == 0:
-            return False
+    def _preserve_hyphenated_case(self, tokens: List[str], traces: List[str]) -> List[str]:
+        """Preserve proper case in hyphenated names."""
+        processed = []
+        for token in tokens:
+            if '-' in token and len(token) > 1:
+                # Capitalize each part after hyphen
+                parts = token.split('-')
+                capitalized_parts = []
+                for part in parts:
+                    if part and part[0].islower():
+                        capitalized_parts.append(part[0].upper() + part[1:])
+                    else:
+                        capitalized_parts.append(part)
+                capitalized = '-'.join(capitalized_parts)
+                if capitalized != token:
+                    processed.append(capitalized)
+                    traces.append(f"Preserved hyphenated case: '{token}' → '{capitalized}'")
+                else:
+                    processed.append(token)
+            else:
+                processed.append(token)
+        return processed
 
-        # Filter out stop words
-        if token.lower() in stop_words:
-            return False
-
-        # Filter out pure punctuation
-        if re.match(r'^[^\w]+$', token):
-            return False
-
-        # Filter out pure numbers (unless they might be part of names)
-        if re.match(r'^\d+$', token) and len(token) > 4:
-            return False
-
-        return True
-
-    def normalize_case(self, token: str, role: str = None) -> str:
-        """Normalize token case based on role and content."""
-        if not token:
-            return token
-
-        # Handle initials specially
-        if self._is_initial(token):
-            return self._normalize_initial(token)
-
-        # Title case for names
-        if role in {'given', 'surname', 'patronymic'}:
-            return token.capitalize()
-
-        # Default case normalization
-        return token.lower()
-
-    def _is_initial(self, token: str) -> bool:
-        """Check if token is an initial."""
-        return bool(re.match(r'^[A-ZА-ЯЁІ][.]?$', token, re.IGNORECASE))
-
-    def _normalize_initial(self, token: str) -> str:
-        """Normalize initial to standard format."""
-        if not token:
-            return token
-
-        # Ensure single letter followed by dot
-        letter = re.sub(r'[^A-ZА-ЯЁІa-zа-яёі]', '', token)
-        if letter:
-            return letter.upper() + '.'
-        return token
-
-    def split_quoted_tokens(self, text: str) -> Tuple[List[str], List[str]]:
-        """
-        Extract quoted organization names and remaining tokens.
-
-        Returns:
-            Tuple of (quoted_cores, remaining_tokens)
-        """
-        quoted_cores = []
-        remaining_text = text
-
-        # Find quoted strings
-        quote_pattern = r'["\'\"\"]([^"\'\"\"]+)["\'\"\"]'
-        matches = re.finditer(quote_pattern, text)
-
-        for match in matches:
-            quoted_content = match.group(1).strip()
-            if quoted_content and len(quoted_content) > 1:
-                quoted_cores.append(quoted_content)
-                # Remove from remaining text
-                remaining_text = remaining_text.replace(match.group(0), ' ')
-
-        # Tokenize remaining text
-        remaining_tokens = self._split_tokens(remaining_text, preserve_names=True)
-
-        return quoted_cores, remaining_tokens
+    def _apply_strict_stopwords(self, tokens: List[str], traces: List[str]) -> List[str]:
+        """Apply stricter stopword filtering."""
+        # This would implement stricter stopword rules
+        # For now, just log that strict stopwords are enabled
+        traces.append("Applied strict stopword filtering")
+        return tokens

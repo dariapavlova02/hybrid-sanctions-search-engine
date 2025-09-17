@@ -12,6 +12,10 @@ from ....utils.logging_config import get_logger
 from ....utils.perf_timer import PerfTimer
 from ....utils.feature_flags import get_feature_flag_manager
 from ....utils.profiling import profile_function, profile_time, get_profiling_stats, print_profiling_report
+from ....utils.lru_cache_ttl import CacheManager, create_flags_hash
+from ..tokenizer_service import TokenizerService, CachedTokenizerService
+from ..morphology_adapter import MorphologyAdapter
+from ....monitoring.cache_metrics import CacheMetrics, MetricsCollector
 from ....contracts.base_contracts import NormalizationResult, TokenTrace
 from ..error_handling import ErrorReportingMixin
 
@@ -47,10 +51,21 @@ class NormalizationConfig:
     enable_gender_adjustment: bool = True
     language: str = 'ru'
     use_factory: bool = True  # Flag to use factory vs legacy implementation
-    # New Ukrainian-specific flags
+    # Ukrainian-specific flags
     strict_stopwords: bool = False  # Use strict stopword filtering for initials
     preserve_feminine_suffix_uk: bool = False  # Preserve Ukrainian feminine suffixes (-ська/-цька)
     enable_spacy_uk_ner: bool = False  # Enable spaCy Ukrainian NER
+    # English-specific flags
+    en_use_nameparser: bool = True  # Use nameparser for English names
+    enable_en_nickname_expansion: bool = True  # Expand English nicknames
+    enable_spacy_en_ner: bool = False  # Enable spaCy English NER
+    # Russian-specific flags
+    ru_yo_strategy: str = "preserve"  # Russian 'ё' policy ('preserve' or 'fold')
+    enable_ru_nickname_expansion: bool = True  # Expand Russian nicknames
+    enable_spacy_ru_ner: bool = False  # Enable spaCy Russian NER
+    # Caching flags
+    enable_cache: bool = True  # Enable caching
+    debug_tracing: bool = False  # Enable debug tracing with cache info
 
 
 class NormalizationFactory(ErrorReportingMixin):
@@ -60,12 +75,23 @@ class NormalizationFactory(ErrorReportingMixin):
         self,
         name_dictionaries: Optional[Dict[str, Set[str]]] = None,
         diminutive_maps: Optional[Dict[str, Dict[str, str]]] = None,
+        cache_manager: Optional[CacheManager] = None,
+        cache_metrics: Optional[CacheMetrics] = None,
     ):
         super().__init__()
         self.logger = get_logger(__name__)
 
         # Feature flags for tokenizer improvements
         self.feature_flags = get_feature_flag_manager()
+
+        # Initialize caching
+        self.cache_manager = cache_manager or CacheManager()
+        self.cache_metrics = cache_metrics or CacheMetrics()
+        self.metrics_collector = MetricsCollector(self.cache_metrics)
+
+        # Initialize cached services
+        self.tokenizer_service = TokenizerService(self.cache_manager.get_tokenizer_cache())
+        self.morphology_adapter = MorphologyAdapter()
 
         # Initialize processors
         self.token_processor = TokenProcessor()
@@ -79,13 +105,17 @@ class NormalizationFactory(ErrorReportingMixin):
         self.role_tagger = RoleTagger(self.lexicons)  # Legacy role tagger
         self.role_tagger_service = RoleTaggerService(self.lexicons)  # New FSM-based role tagger
         
-        # Initialize NER for Ukrainian
-        self.ner_gateway = None
+        # Initialize NER gateways
+        self.ner_gateway_uk = None
+        self.ner_gateway_en = None
+        self.ner_gateway_ru = None
         try:
-            from ..ner_gateways import get_spacy_uk_ner
-            self.ner_gateway = get_spacy_uk_ner()
+            from ..ner_gateways import get_spacy_uk_ner, get_spacy_en_ner, get_spacy_ru_ner
+            self.ner_gateway_uk = get_spacy_uk_ner()
+            self.ner_gateway_en = get_spacy_en_ner()
+            self.ner_gateway_ru = get_spacy_ru_ner()
         except ImportError:
-            self.logger.warning("NER gateway not available")
+            self.logger.warning("NER gateways not available")
 
         # Cache for performance
         self._normalization_cache = {}
@@ -118,15 +148,44 @@ class NormalizationFactory(ErrorReportingMixin):
 
         errors: List[str] = []
 
-        # Step 1: Tokenization
+        # Step 1: Tokenization with caching
         try:
-            tokens, tokenization_traces, token_meta = self.token_processor.strip_noise_and_tokenize(
-                text,
-                language=config.language,
-                remove_stop_words=config.remove_stop_words,
-                preserve_names=config.preserve_names
-            )
-            self.logger.debug(f"Tokenized '{text}' into {len(tokens)} tokens")
+            if config.enable_cache:
+                # Use cached tokenizer service
+                feature_flags = {
+                    'remove_stop_words': config.remove_stop_words,
+                    'preserve_names': config.preserve_names,
+                    'enable_advanced_features': config.enable_advanced_features
+                }
+                
+                tokenization_result = self.tokenizer_service.tokenize(
+                    text,
+                    language=config.language,
+                    remove_stop_words=config.remove_stop_words,
+                    preserve_names=config.preserve_names,
+                    feature_flags=feature_flags
+                )
+                
+                tokens = tokenization_result.tokens
+                tokenization_traces = tokenization_result.traces
+                token_meta = tokenization_result.metadata
+                
+                # Record metrics
+                self.metrics_collector.collect_tokenizer_metrics(
+                    config.language,
+                    self.tokenizer_service.get_stats()
+                )
+                
+                self.logger.debug(f"Tokenized '{text}' into {len(tokens)} tokens (cache: {'hit' if tokenization_result.cache_hit else 'miss'})")
+            else:
+                # Use direct tokenization
+                tokens, tokenization_traces, token_meta = self.token_processor.strip_noise_and_tokenize(
+                    text,
+                    language=config.language,
+                    remove_stop_words=config.remove_stop_words,
+                    preserve_names=config.preserve_names
+                )
+                self.logger.debug(f"Tokenized '{text}' into {len(tokens)} tokens")
         except Exception as e:
             self.logger.error(f"Tokenization failed: {e}")
             return self._build_error_result(text, f"Tokenization failed: {e}")
@@ -135,6 +194,12 @@ class NormalizationFactory(ErrorReportingMixin):
         tokens, improvement_traces_pre = self._apply_tokenizer_improvements(tokens, tokenization_traces)
         self.logger.debug(f"Applied pre-processing tokenizer improvements: {len(improvement_traces_pre)} improvements")
 
+        # Step 1.6: Apply Russian 'ё' strategy if needed
+        yo_traces = []
+        if config.language == "ru" and config.ru_yo_strategy in {"preserve", "fold"}:
+            tokens, yo_traces = self._apply_yo_strategy(tokens, config.ru_yo_strategy)
+            self.logger.debug(f"Applied Russian 'ё' strategy '{config.ru_yo_strategy}': {len(yo_traces)} changes")
+
         if not tokens:
             return self._build_empty_result(text, config.language)
 
@@ -142,14 +207,26 @@ class NormalizationFactory(ErrorReportingMixin):
 
         # Step 1.6: Role tagging with FSM-based service
         try:
-            # Get NER hints if enabled for Ukrainian
+            # Get NER hints if enabled
             ner_hints = None
-            if config.enable_spacy_uk_ner and config.language == "uk" and self.ner_gateway:
+            if config.language == "uk" and config.enable_spacy_uk_ner and self.ner_gateway_uk:
                 try:
-                    ner_hints = self.ner_gateway.extract_entities(text)
-                    self.logger.debug(f"NER extracted {len(ner_hints.person_spans)} person spans and {len(ner_hints.org_spans)} org spans")
+                    ner_hints = self.ner_gateway_uk.extract_entities(text)
+                    self.logger.debug(f"Ukrainian NER extracted {len(ner_hints.person_spans)} person spans and {len(ner_hints.org_spans)} org spans")
                 except Exception as e:
-                    self.logger.warning(f"NER extraction failed: {e}")
+                    self.logger.warning(f"Ukrainian NER extraction failed: {e}")
+            elif config.language == "en" and config.enable_spacy_en_ner and self.ner_gateway_en:
+                try:
+                    ner_hints = self.ner_gateway_en.extract_entities(text)
+                    self.logger.debug(f"English NER extracted {len(ner_hints.person_spans)} person spans and {len(ner_hints.org_spans)} org spans")
+                except Exception as e:
+                    self.logger.warning(f"English NER extraction failed: {e}")
+            elif config.language == "ru" and config.enable_spacy_ru_ner and self.ner_gateway_ru:
+                try:
+                    ner_hints = self.ner_gateway_ru.extract_entities(text)
+                    self.logger.debug(f"Russian NER extracted {len(ner_hints.person_spans)} person spans and {len(ner_hints.org_spans)} org spans")
+                except Exception as e:
+                    self.logger.warning(f"Russian NER extraction failed: {e}")
             
             # Use new FSM-based role tagger service
             role_tags = self.role_tagger_service.tag(tokens, config.language)
@@ -247,29 +324,39 @@ class NormalizationFactory(ErrorReportingMixin):
         final_tokens, improvement_traces_post = self._apply_tokenizer_improvements_post(final_tokens, roles)
         self.logger.debug(f"Applied post-processing tokenizer improvements: {len(improvement_traces_post)} improvements")
 
-        # Step 5: Build trace
-        processing_traces: List[str] = (
-            tokenization_traces
-            + [str(trace) for trace in improvement_traces_pre]
-            + [str(trace) for trace in role_tagger_traces]
-            + filter_traces
-            + diminutive_traces
-            + role_traces
-            + morph_traces
-            + gender_traces
-            + [str(trace) for trace in improvement_traces_post]
-        )
+        # Step 5: Build trace (only if debug_tracing is enabled)
+        processing_traces: List[str] = []
+        cache_info = None
         
-        # Add FSM role traces to the trace
-        if role_tags:
-            fsm_trace_entries = self.role_tagger_service.get_trace_entries(tokens, role_tags)
-            for fsm_entry in fsm_trace_entries:
-                processing_traces.append(f"FSM role trace: {fsm_entry}")
+        if config.debug_tracing:
+            processing_traces = (
+                tokenization_traces
+                + [str(trace) for trace in improvement_traces_pre]
+                + [str(trace) for trace in yo_traces]
+                + [str(trace) for trace in role_tagger_traces]
+                + filter_traces
+                + diminutive_traces
+                + role_traces
+                + morph_traces
+                + gender_traces
+                + [str(trace) for trace in improvement_traces_post]
+            )
+            
+            # Add FSM role traces to the trace
+            if role_tags:
+                fsm_trace_entries = self.role_tagger_service.get_trace_entries(tokens, role_tags)
+                for fsm_entry in fsm_trace_entries:
+                    processing_traces.append(f"FSM role trace: {fsm_entry}")
+            
+            # Get cache info for debug tracing
+            cache_info = getattr(self, '_debug_cache_info', None)
+        
         trace = self._build_token_trace(
             classified_tokens,
             roles,
             final_tokens,
             processing_traces,
+            cache_info
         )
 
         # Step 6: Separate personal/org tokens
@@ -491,6 +578,12 @@ class NormalizationFactory(ErrorReportingMixin):
         quoted_segments: List[str]
     ) -> Tuple[List[str], List[str], List[str], List[str]]:
         """Classify the role of each token, returning possibly expanded tokens."""
+        
+        # Handle English names with nameparser if enabled
+        if config.language == "en" and config.en_use_nameparser:
+            return await self._classify_english_names(tokens, config, quoted_segments)
+        
+        # Default classification for other languages
         tagged_tokens, traces, organizations = self.role_classifier.tag_tokens(
             tokens, config.language, quoted_segments
         )
@@ -500,6 +593,151 @@ class NormalizationFactory(ErrorReportingMixin):
             return tokens, ['unknown'] * len(tokens), traces, []
         return classified_tokens, roles, traces, organizations
 
+    async def _classify_english_names(
+        self,
+        tokens: List[str],
+        config: NormalizationConfig,
+        quoted_segments: List[str]
+    ) -> Tuple[List[str], List[str], List[str], List[str]]:
+        """Classify English names using nameparser."""
+        try:
+            from ..nameparser_adapter import get_nameparser_adapter
+            
+            # Get nameparser adapter
+            nameparser = get_nameparser_adapter()
+            
+            # Join tokens to form full name
+            full_name = " ".join(tokens)
+            
+            # Parse the name
+            parsed = nameparser.parse_en_name(full_name)
+            
+            if parsed.confidence < 0.3:
+                # Low confidence, fall back to default classification
+                tagged_tokens, traces, organizations = self.role_classifier.tag_tokens(
+                    tokens, config.language, quoted_segments
+                )
+                classified_tokens = [token for token, _ in tagged_tokens]
+                roles = [role for _, role in tagged_tokens]
+                return classified_tokens, roles, traces, organizations
+            
+            # Build classified tokens and roles from parsed name
+            classified_tokens = []
+            roles = []
+            traces = []
+            organizations = []
+            
+            # Add first name
+            if parsed.first:
+                classified_tokens.append(parsed.first)
+                roles.append("given")
+                if parsed.nickname:
+                    traces.append(f"Nickname expansion: '{parsed.nickname}' -> '{parsed.first}'")
+                else:
+                    traces.append(f"First name: '{parsed.first}'")
+            
+            # Add middle names
+            for middle in parsed.middles:
+                classified_tokens.append(middle)
+                roles.append("given")
+                traces.append(f"Middle name: '{middle}'")
+            
+            # Add last name with particles
+            if parsed.last:
+                if parsed.particles:
+                    # Reconstruct last name with particles
+                    last_with_particles = " ".join(parsed.particles + [parsed.last])
+                    classified_tokens.append(last_with_particles)
+                    roles.append("surname")
+                    traces.append(f"Surname with particles: '{last_with_particles}'")
+                else:
+                    classified_tokens.append(parsed.last)
+                    roles.append("surname")
+                    traces.append(f"Surname: '{parsed.last}'")
+            
+            # Add suffix
+            if parsed.suffix:
+                classified_tokens.append(parsed.suffix)
+                roles.append("suffix")
+                traces.append(f"Suffix: '{parsed.suffix}'")
+            
+            # If no valid components found, fall back to original tokens
+            if not classified_tokens:
+                return tokens, ['unknown'] * len(tokens), ["No valid name components found"], []
+            
+            return classified_tokens, roles, traces, organizations
+            
+        except Exception as e:
+            self.logger.warning(f"English name parsing failed: {e}")
+            # Fall back to default classification
+            tagged_tokens, traces, organizations = self.role_classifier.tag_tokens(
+                tokens, config.language, quoted_segments
+            )
+            classified_tokens = [token for token, _ in tagged_tokens]
+            roles = [role for _, role in tagged_tokens]
+            return classified_tokens, roles, traces, organizations
+
+    async def _normalize_english_morphology(
+        self,
+        tokens: List[str],
+        roles: List[str],
+        config: NormalizationConfig
+    ) -> Tuple[List[str], List[str]]:
+        """Apply English-specific morphological normalization."""
+        normalized_tokens = []
+        traces = []
+        
+        for token, role in zip(tokens, roles):
+            if role in {'given', 'surname', 'patronymic', 'initial', 'suffix'}:
+                # Apply title case normalization for English names
+                normalized = self._normalize_english_name_token(token, role, config)
+                normalized_tokens.append(normalized)
+                if normalized != token:
+                    traces.append(f"English normalization: '{token}' -> '{normalized}'")
+                else:
+                    traces.append(f"English token unchanged: '{token}'")
+            else:
+                normalized_tokens.append(token)
+                traces.append(f"No English normalization for role '{role}': '{token}'")
+        
+        return normalized_tokens, traces
+
+    def _normalize_english_name_token(self, token: str, role: str, config: NormalizationConfig) -> str:
+        """Normalize a single English name token."""
+        if not token:
+            return token
+        
+        # Handle apostrophes and hyphens
+        if "'" in token or "-" in token:
+            # Preserve apostrophes and hyphens, normalize case
+            return self._title_case_with_punctuation(token)
+        
+        # Apply title case
+        return token.title()
+
+    def _title_case_with_punctuation(self, token: str) -> str:
+        """Apply title case while preserving punctuation."""
+        if not token:
+            return token
+        
+        # Split by common punctuation but preserve it
+        parts = []
+        current = ""
+        
+        for char in token:
+            if char in ["'", "-", "."]:
+                if current:
+                    parts.append(current.title())
+                    current = ""
+                parts.append(char)
+            else:
+                current += char
+        
+        if current:
+            parts.append(current.title())
+        
+        return "".join(parts)
+
     async def _normalize_morphology(
         self,
         tokens: List[str],
@@ -508,16 +746,17 @@ class NormalizationFactory(ErrorReportingMixin):
         *,
         skip_indices: Optional[Set[int]] = None,
     ) -> Tuple[List[str], List[str]]:
-        """Apply morphological normalization to tokens using legacy logic."""
+        """Apply morphological normalization to tokens with caching support."""
         if not config.enable_morphology or not config.enable_advanced_features:
             return tokens, ["Morphological normalization disabled"]
 
-        # Import legacy service to use its _normalize_slavic_token method
-        from ..normalization_service_legacy import NormalizationService
-        legacy_service = NormalizationService()
+        # For English, apply basic normalization (title case, etc.)
+        if config.language == "en":
+            return await self._normalize_english_morphology(tokens, roles, config)
 
         normalized_tokens = []
         traces = []
+        cache_info = {}  # Track cache hits/misses for debug tracing
 
         skip_set: Set[int] = skip_indices or set()
 
@@ -527,18 +766,58 @@ class NormalizationFactory(ErrorReportingMixin):
                     normalized_tokens.append(token)
                     traces.append(f"Skipped diminutive heuristics for '{token}' in dictionary-only mode")
                     continue
+                
                 if role in {'given', 'surname', 'patronymic', 'initial'}:
-                    # Use legacy full token normalization with Ukrainian feminine suffix preservation
-                    normalized = legacy_service._normalize_slavic_token(
-                        token, role, config.language, None, config.enable_advanced_features,
-                        preserve_feminine_suffix_uk=config.preserve_feminine_suffix_uk
-                    )
+                    if config.enable_cache:
+                        # Use cached morphology adapter
+                        feature_flags = {
+                            'enable_morphology': config.enable_morphology,
+                            'preserve_feminine_suffix_uk': config.preserve_feminine_suffix_uk
+                        }
+                        
+                        morph_result = await self.morphology_adapter.normalize_slavic_token(
+                            token,
+                            role,
+                            config.language,
+                            config.enable_advanced_features,
+                            config.preserve_feminine_suffix_uk,
+                            feature_flags
+                        )
+                        
+                        normalized = morph_result.normalized
+                        morph_traces = morph_result.traces
+                        cache_hit = morph_result.cache_hit
+                        
+                        # Record cache info for debug tracing
+                        cache_info[token] = {
+                            'morph': 'hit' if cache_hit else 'miss'
+                        }
+                        
+                        # Record metrics
+                        self.metrics_collector.collect_morphology_metrics(
+                            config.language,
+                            self.morphology_adapter.get_stats()
+                        )
+                        
+                        traces.extend(morph_traces)
+                        if cache_hit:
+                            traces.append(f"Cached morphology: '{token}' -> '{normalized}'")
+                        else:
+                            traces.append(f"Morphology normalization: '{token}' -> '{normalized}'")
+                    else:
+                        # Use direct morphology processor
+                        normalized, morph_traces = self.morphology_processor.normalize_slavic_token(
+                            token, role, config.language, config.enable_advanced_features,
+                            config.preserve_feminine_suffix_uk
+                        )
+                        traces.extend(morph_traces)
+                        cache_info[token] = {'morph': 'disabled'}
+                    
                     if normalized:
                         normalized_tokens.append(normalized)
-                        traces.append(f"Legacy normalization: '{token}' -> '{normalized}'")
                     else:
                         normalized_tokens.append(token)
-                        traces.append(f"Legacy normalization returned None for '{token}'")
+                        traces.append(f"Morphological normalization returned None for '{token}'")
                 else:
                     normalized_tokens.append(token)
                     traces.append(f"No morphological processing for role '{role}'")
@@ -546,6 +825,10 @@ class NormalizationFactory(ErrorReportingMixin):
                 self.logger.warning(f"Morphological normalization failed for '{token}': {e}")
                 normalized_tokens.append(token)
                 traces.append(f"Morphological normalization failed for '{token}': {e}")
+
+        # Store cache info for debug tracing
+        if config.debug_tracing:
+            self._debug_cache_info = cache_info
 
         return normalized_tokens, traces
 
@@ -616,7 +899,8 @@ class NormalizationFactory(ErrorReportingMixin):
         original_tokens: List[str],
         roles: List[str],
         final_tokens: List[str],
-        processing_traces: List[str]
+        processing_traces: List[str],
+        cache_info: Optional[Dict[str, Dict[str, str]]] = None
     ) -> List[TokenTrace]:
         """Build detailed token trace for debugging."""
         trace = []
@@ -636,11 +920,17 @@ class NormalizationFactory(ErrorReportingMixin):
             if not rule_parts:
                 rule_parts.append("passthrough")
 
+            # Add cache information if available
+            cache_data = None
+            if cache_info and orig in cache_info:
+                cache_data = cache_info[orig]
+
             trace.append(TokenTrace(
                 token=orig,
                 role=role,
                 rule=" + ".join(rule_parts),
                 output=final,
+                cache=cache_data,
                 fallback=final == orig,
                 notes="; ".join(token_traces[:2])  # Limit notes length
             ))
@@ -763,6 +1053,38 @@ class NormalizationFactory(ErrorReportingMixin):
                         self.logger.debug(f"Post-processing: normalized hyphenated '{original}' to '{improved}' for role '{role}'")
 
         return improved_tokens, improvement_traces
+
+    def _apply_yo_strategy(self, tokens: List[str], strategy: str) -> Tuple[List[str], List[TokenTrace]]:
+        """
+        Apply Russian 'ё' strategy to tokens.
+        
+        Args:
+            tokens: List of tokens to process
+            strategy: 'preserve' or 'fold'
+            
+        Returns:
+            Tuple of (processed_tokens, trace_entries)
+        """
+        processed_tokens = []
+        trace_entries = []
+        
+        for token in tokens:
+            processed_token, yo_traces = self.morphology_adapter.apply_yo_strategy(token, strategy)
+            processed_tokens.append(processed_token)
+            
+            # Convert yo_traces to TokenTrace format
+            for trace in yo_traces:
+                trace_entries.append(TokenTrace(
+                    token=token,
+                    role="unknown",  # Will be determined later by role tagger
+                    rule=trace["action"],
+                    normal_form=processed_token,
+                    output=processed_token,
+                    fallback=False,
+                    notes=f"yo_strategy_{strategy}"
+                ))
+        
+        return processed_tokens, trace_entries
 
     def clear_caches(self):
         """Clear all processor caches."""

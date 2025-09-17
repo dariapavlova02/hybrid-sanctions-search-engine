@@ -42,15 +42,17 @@ def _strip_domain_context(text: str, language: str) -> str:
         pass
 
     s = text or ""
+    # Cache lower() result to avoid repeated calls
     low = s.lower()
     for phrase in long_phrases:
         low = low.replace(phrase, " ")
     # Tokenize words (keep apostrophes and hyphens)
     tokens = re.findall(r"[A-Za-zА-Яа-яІіЇїЄєҐґ\'-]+", low)
+    # Use list slicing instead of pop() for better performance
     while tokens and tokens[0] in sw:
-        tokens.pop(0)
+        tokens = tokens[1:]
     while tokens and tokens[-1] in sw:
-        tokens.pop()
+        tokens = tokens[:-1]
     return " ".join(tokens)
 
 
