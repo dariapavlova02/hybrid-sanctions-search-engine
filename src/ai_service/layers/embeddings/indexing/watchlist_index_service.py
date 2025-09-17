@@ -10,12 +10,14 @@ from __future__ import annotations
 import json
 import os
 import pickle
+import time
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
 from ....utils.logging_config import get_logger
+from ....contracts.trace_models import SearchTrace, SearchTraceHit, SearchTraceStep
 from .vector_index_service import CharTfidfVectorIndex, VectorIndexConfig
 from .enhanced_vector_index_service import EnhancedVectorIndex, EnhancedVectorIndexConfig
 
@@ -80,22 +82,152 @@ class WatchlistIndexService:
         self._overlay_docs = {}
         self._overlay_id = None
 
-    def search(self, query: str, top_k: int = 50) -> List[Tuple[str, float]]:
+    def search(self, query: str, top_k: int = 50, trace: Optional[SearchTrace] = None) -> List[Tuple[str, float]]:
         """Search overlay then active; merge unique doc_ids preserving best score."""
-        results: Dict[str, float] = {}
-        # Overlay first
-        if self._overlay is not None:
-            for doc_id, s in self._overlay.search(query, top_k=min(top_k, 200)):
-                results[doc_id] = max(results.get(doc_id, 0.0), float(s))
-        # Active
-        for doc_id, s in self._active.search(query, top_k=min(top_k, 200)):
-            results[doc_id] = max(results.get(doc_id, 0.0), float(s))
-        # Top-k by score
-        items = sorted(results.items(), key=lambda x: x[1], reverse=True)[:top_k]
-        return items
+        # Create dummy trace if none provided
+        if trace is None:
+            trace = SearchTrace(enabled=False)
+        
+        try:
+            # Check if index is ready
+            if not self.ready():
+                trace.note("Watchlist index not ready - empty index")
+                return []
+            
+            results: Dict[str, float] = {}
+            all_hits: List[SearchTraceHit] = []
+            
+            # Overlay search
+            if self._overlay is not None:
+                start_time = time.perf_counter()
+                overlay_results = self._overlay.search(query, top_k=min(top_k, 200))
+                overlay_time = (time.perf_counter() - start_time) * 1000  # Convert to ms
+                
+                # Convert overlay results to SearchTraceHit
+                overlay_hits = []
+                for rank, (doc_id, score) in enumerate(overlay_results, 1):
+                    results[doc_id] = max(results.get(doc_id, 0.0), float(score))
+                    hit = SearchTraceHit(
+                        doc_id=doc_id,
+                        score=float(score),
+                        rank=rank,
+                        source="LEXICAL"
+                    )
+                    overlay_hits.append(hit)
+                    all_hits.append(hit)
+                
+                # Add overlay step to trace
+                trace.add_step(SearchTraceStep(
+                    stage="LEXICAL",
+                    query=query,
+                    topk=min(top_k, 200),
+                    took_ms=overlay_time,
+                    hits=overlay_hits,
+                    meta={
+                        "overlay_id": self._overlay_id,
+                        "active_id": None,
+                        "search_type": "overlay"
+                    }
+                ))
+            else:
+                trace.note("No overlay index available")
+            
+            # Active search
+            start_time = time.perf_counter()
+            active_results = self._active.search(query, top_k=min(top_k, 200))
+            active_time = (time.perf_counter() - start_time) * 1000  # Convert to ms
+            
+            # Convert active results to SearchTraceHit
+            active_hits = []
+            for rank, (doc_id, score) in enumerate(active_results, 1):
+                results[doc_id] = max(results.get(doc_id, 0.0), float(score))
+                hit = SearchTraceHit(
+                    doc_id=doc_id,
+                    score=float(score),
+                    rank=rank,
+                    source="LEXICAL"
+                )
+                active_hits.append(hit)
+                all_hits.append(hit)
+            
+            # Add active step to trace
+            trace.add_step(SearchTraceStep(
+                stage="LEXICAL",
+                query=query,
+                topk=min(top_k, 200),
+                took_ms=active_time,
+                hits=active_hits,
+                meta={
+                    "overlay_id": None,
+                    "active_id": self._active_id,
+                    "search_type": "active"
+                }
+            ))
+            
+            # Merge and rerank results
+            start_time = time.perf_counter()
+            items = sorted(results.items(), key=lambda x: x[1], reverse=True)[:top_k]
+            rerank_time = (time.perf_counter() - start_time) * 1000  # Convert to ms
+            
+            # Convert final results to SearchTraceHit for rerank step
+            rerank_hits = []
+            for rank, (doc_id, score) in enumerate(items, 1):
+                hit = SearchTraceHit(
+                    doc_id=doc_id,
+                    score=score,
+                    rank=rank,
+                    source="RERANK"
+                )
+                rerank_hits.append(hit)
+            
+            # Add rerank step to trace
+            trace.add_step(SearchTraceStep(
+                stage="RERANK",
+                query=query,
+                topk=top_k,
+                took_ms=rerank_time,
+                hits=rerank_hits,
+                meta={
+                    "total_candidates": len(results),
+                    "final_results": len(items),
+                    "merge_strategy": "max_score"
+                }
+            ))
+            
+            trace.note(f"Watchlist search completed: {len(items)} results from {len(results)} candidates")
+            return items
+            
+        except Exception as e:
+            trace.note(f"Watchlist search failed: {str(e)}")
+            self.logger.error(f"Watchlist search failed for query '{query}': {e}")
+            return []
 
-    def get_doc(self, doc_id: str) -> Optional[WatchlistDoc]:
-        return self._overlay_docs.get(doc_id) or self._docs.get(doc_id)
+    def get_doc(self, doc_id: str, trace: Optional[SearchTrace] = None) -> Optional[WatchlistDoc]:
+        """Get document by ID from overlay or active index."""
+        # Create dummy trace if none provided
+        if trace is None:
+            trace = SearchTrace(enabled=False)
+        
+        try:
+            # Check overlay first
+            doc = self._overlay_docs.get(doc_id)
+            if doc is not None:
+                trace.note(f"Document {doc_id} found in overlay index")
+                return doc
+            
+            # Check active index
+            doc = self._docs.get(doc_id)
+            if doc is not None:
+                trace.note(f"Document {doc_id} found in active index")
+                return doc
+            
+            trace.note(f"Document {doc_id} not found in any index")
+            return None
+            
+        except Exception as e:
+            trace.note(f"Failed to get document {doc_id}: {str(e)}")
+            self.logger.error(f"Failed to get document {doc_id}: {e}")
+            return None
 
     # ---- Snapshot I/O ---------------------------------------------------
 
@@ -167,42 +299,76 @@ class WatchlistIndexService:
             idx.faiss_index = None
         return idx
 
-    def reload_snapshot(self, snapshot_dir: str, as_overlay: bool = False) -> Dict:
-        idx = self._load_char_index(snapshot_dir)
-        # Load docs metadata
-        docs_path = os.path.join(snapshot_dir, "docs.json")
-        with open(docs_path, "r", encoding="utf-8") as f:
-            md = json.load(f)
-        if as_overlay:
-            self._overlay = idx
-            self._overlay_docs = {
-                k: WatchlistDoc(
-                    k, v["text"], v.get("entity_type", ""), v.get("metadata", {})
-                )
-                for k, v in md.items()
-            }
-            self._overlay_id = snapshot_dir
-            info = {
-                "overlay_loaded": True,
-                "overlay_count": len(self._overlay_docs),
-                "path": snapshot_dir,
-            }
-        else:
-            self._active = idx
-            self._docs = {
-                k: WatchlistDoc(
-                    k, v["text"], v.get("entity_type", ""), v.get("metadata", {})
-                )
-                for k, v in md.items()
-            }
-            self._active_id = snapshot_dir
-            info = {
-                "active_loaded": True,
-                "active_count": len(self._docs),
-                "path": snapshot_dir,
-            }
-        self.logger.info(f"Watchlist snapshot loaded: {info}")
-        return info
+    def reload_snapshot(self, snapshot_dir: str, as_overlay: bool = False, trace: Optional[SearchTrace] = None) -> Dict:
+        """Reload snapshot from directory."""
+        # Create dummy trace if none provided
+        if trace is None:
+            trace = SearchTrace(enabled=False)
+        
+        try:
+            # Check if snapshot directory exists
+            if not os.path.exists(snapshot_dir):
+                trace.note(f"Snapshot directory not found: {snapshot_dir}")
+                return {"error": f"Snapshot directory not found: {snapshot_dir}"}
+            
+            start_time = time.perf_counter()
+            
+            # Load index
+            idx = self._load_char_index(snapshot_dir)
+            trace.note(f"Index loaded from {snapshot_dir}")
+            
+            # Load docs metadata
+            docs_path = os.path.join(snapshot_dir, "docs.json")
+            if not os.path.exists(docs_path):
+                trace.note(f"Docs metadata file not found: {docs_path}")
+                return {"error": f"Docs metadata file not found: {docs_path}"}
+            
+            with open(docs_path, "r", encoding="utf-8") as f:
+                md = json.load(f)
+            
+            load_time = (time.perf_counter() - start_time) * 1000  # Convert to ms
+            
+            if as_overlay:
+                self._overlay = idx
+                self._overlay_docs = {
+                    k: WatchlistDoc(
+                        k, v["text"], v.get("entity_type", ""), v.get("metadata", {})
+                    )
+                    for k, v in md.items()
+                }
+                self._overlay_id = snapshot_dir
+                info = {
+                    "overlay_loaded": True,
+                    "overlay_count": len(self._overlay_docs),
+                    "path": snapshot_dir,
+                    "load_time_ms": load_time,
+                }
+                trace.note(f"Overlay snapshot loaded: {len(self._overlay_docs)} documents")
+            else:
+                self._active = idx
+                self._docs = {
+                    k: WatchlistDoc(
+                        k, v["text"], v.get("entity_type", ""), v.get("metadata", {})
+                    )
+                    for k, v in md.items()
+                }
+                self._active_id = snapshot_dir
+                info = {
+                    "active_loaded": True,
+                    "active_count": len(self._docs),
+                    "path": snapshot_dir,
+                    "load_time_ms": load_time,
+                }
+                trace.note(f"Active snapshot loaded: {len(self._docs)} documents")
+            
+            self.logger.info(f"Watchlist snapshot loaded: {info}")
+            return info
+            
+        except Exception as e:
+            error_msg = f"Failed to reload snapshot from {snapshot_dir}: {str(e)}"
+            trace.note(error_msg)
+            self.logger.error(error_msg)
+            return {"error": error_msg}
 
     def status(self) -> Dict:
         return {
