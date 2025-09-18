@@ -37,6 +37,7 @@ from ..contracts.base_contracts import (
     ValidationServiceInterface,
     VariantsServiceInterface,
 )
+from ..layers.search.hybrid_search_service import HybridSearchService
 from ..contracts.decision_contracts import (
     DecisionInput,
     DecisionOutput,
@@ -77,12 +78,14 @@ class UnifiedOrchestrator:
         embeddings_service: Optional[EmbeddingsServiceInterface] = None,
         decision_engine: Optional[DecisionEngine] = None,
         metrics_service: Optional[MetricsService] = None,
+        search_service: Optional[HybridSearchService] = None,
         default_feature_flags: Optional[FeatureFlags] = None,
         # Configuration - defaults from SERVICE_CONFIG
         enable_smart_filter: Optional[bool] = None,
         enable_variants: Optional[bool] = None,
         enable_embeddings: Optional[bool] = None,
         enable_decision_engine: Optional[bool] = None,
+        enable_search: Optional[bool] = None,
         allow_smart_filter_skip: Optional[bool] = None,
     ):
         # Validate required services are not None
@@ -107,6 +110,7 @@ class UnifiedOrchestrator:
         self.embeddings_service = embeddings_service
         self.decision_engine = decision_engine
         self.metrics_service = metrics_service
+        self.search_service = search_service
         self.default_feature_flags = default_feature_flags or FeatureFlags()
         
         # Legacy compatibility attributes for old tests
@@ -145,6 +149,10 @@ class UnifiedOrchestrator:
             (enable_decision_engine if enable_decision_engine is not None else SERVICE_CONFIG.enable_decision_engine)
             and decision_engine is not None
         )
+        self.enable_search = (
+            (enable_search if enable_search is not None else SERVICE_CONFIG.enable_search)
+            and search_service is not None
+        )
         self.allow_smart_filter_skip = (
             allow_smart_filter_skip if allow_smart_filter_skip is not None else SERVICE_CONFIG.allow_smart_filter_skip
         )
@@ -153,7 +161,8 @@ class UnifiedOrchestrator:
             f"UnifiedOrchestrator initialized with stages: "
             f"validation=True, smart_filter={self.enable_smart_filter}, "
             f"language=True, unicode=True, normalization=True, signals=True, "
-            f"variants={self.enable_variants}, embeddings={self.enable_embeddings}"
+            f"variants={self.enable_variants}, embeddings={self.enable_embeddings}, "
+            f"search={self.enable_search}"
         )
 
     async def _maybe_await(self, x):

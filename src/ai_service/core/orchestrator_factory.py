@@ -43,6 +43,7 @@ class OrchestratorFactory:
         enable_variants: bool = False,
         enable_embeddings: bool = False,
         enable_decision_engine: bool = False,
+        enable_search: bool = False,
         # Processing behavior
         allow_smart_filter_skip: bool = False,
         # Custom service implementations (for testing/customization)
@@ -55,6 +56,7 @@ class OrchestratorFactory:
         variants_service: Optional = None,
         embeddings_service: Optional = None,
         decision_engine: Optional = None,
+        search_service: Optional = None,
     ) -> UnifiedOrchestrator:
         """
         Create a fully configured UnifiedOrchestrator.
@@ -64,6 +66,7 @@ class OrchestratorFactory:
             enable_variants: Enable variant generation
             enable_embeddings: Enable embedding generation
             enable_decision_engine: Enable automated match/no-match decisions
+            enable_search: Enable hybrid search service
             allow_smart_filter_skip: Allow smart filter to skip expensive processing
             *_service: Custom service implementations (optional)
 
@@ -177,6 +180,19 @@ class OrchestratorFactory:
                     decision_engine = None
                     enable_decision_engine = False
 
+            # Search service - optional
+            if enable_search and search_service is None:
+                try:
+                    from ..config.settings import SEARCH_CONFIG
+                    from ..layers.search.hybrid_search_service import HybridSearchService
+                    search_service = HybridSearchService(SEARCH_CONFIG)
+                    await search_service.initialize()
+                    logger.info("Search service initialized")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize search service: {e}")
+                    search_service = None
+                    enable_search = False
+
             # Metrics service - optional but recommended for production
             metrics_service = None
             try:
@@ -204,12 +220,14 @@ class OrchestratorFactory:
                 embeddings_service=embeddings_service,
                 decision_engine=decision_engine,
                 metrics_service=metrics_service,
+                search_service=search_service,
                 default_feature_flags=FEATURE_FLAGS,
                 # Configuration
                 enable_smart_filter=enable_smart_filter,
                 enable_variants=enable_variants,
                 enable_embeddings=enable_embeddings,
                 enable_decision_engine=enable_decision_engine,
+                enable_search=enable_search,
                 allow_smart_filter_skip=allow_smart_filter_skip,
             )
 
@@ -255,5 +273,6 @@ class OrchestratorFactory:
             enable_variants=True,
             enable_embeddings=True,
             enable_decision_engine=True,    # Enable automated decision making
+            enable_search=True,             # Enable hybrid search service
             allow_smart_filter_skip=False,  # Don't skip processing - always normalize
         )

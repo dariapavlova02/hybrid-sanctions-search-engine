@@ -361,6 +361,15 @@ async def health_check():
     """Service health check"""
     if orchestrator:
         stats = orchestrator.get_processing_stats()
+        
+        # Get search service health if available
+        search_health = {}
+        if hasattr(orchestrator, 'search_service') and orchestrator.search_service:
+            try:
+                search_health = await orchestrator.search_service.health_check()
+            except Exception as e:
+                search_health = {"status": "error", "error": str(e)}
+        
         return {
             "status": "healthy",
             "service": "AI Service",
@@ -376,6 +385,7 @@ async def health_check():
                 ),
                 "cache_hit_rate": stats.get("cache", {}).get("hit_rate", 0) if isinstance(stats.get("cache"), dict) else 0,
                 "services": stats.get("services", {}),
+                "search_service": search_health,
             },
         }
     else:

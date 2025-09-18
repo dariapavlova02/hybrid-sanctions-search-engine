@@ -49,6 +49,7 @@ class ServiceConfig:
     enable_variants: bool = field(default_factory=lambda: os.getenv("ENABLE_VARIANTS", "false").lower() == "true")
     enable_embeddings: bool = field(default_factory=lambda: os.getenv("ENABLE_EMBEDDINGS", "false").lower() == "true")
     enable_decision_engine: bool = field(default_factory=lambda: os.getenv("ENABLE_DECISION_ENGINE", "false").lower() == "true")
+    enable_search: bool = field(default_factory=lambda: os.getenv("ENABLE_SEARCH", "false").lower() == "true")
     enable_metrics: bool = field(default_factory=lambda: os.getenv("ENABLE_METRICS", "true").lower() == "true")
     allow_smart_filter_skip: bool = field(default_factory=lambda: os.getenv("ALLOW_SMART_FILTER_SKIP", "false").lower() == "true")
 
@@ -72,6 +73,7 @@ class ServiceConfig:
             "enable_variants": self.enable_variants,
             "enable_embeddings": self.enable_embeddings,
             "enable_decision_engine": self.enable_decision_engine,
+            "enable_search": self.enable_search,
             "enable_metrics": self.enable_metrics,
             "allow_smart_filter_skip": self.allow_smart_filter_skip,
         }
