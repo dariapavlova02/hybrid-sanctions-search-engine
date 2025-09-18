@@ -349,6 +349,81 @@ class NormalizationConfig(BaseModel):
         }
 
 
+class SearchConfig(BaseModel):
+    """Search layer configuration settings"""
+    
+    model_config = {"validate_assignment": True}
+    
+    # Elasticsearch connection
+    es_hosts: List[str] = Field(default_factory=lambda: os.getenv("ES_HOSTS", "localhost:9200").split(","))
+    es_username: Optional[str] = Field(default_factory=lambda: os.getenv("ES_USERNAME"))
+    es_password: Optional[str] = Field(default_factory=lambda: os.getenv("ES_PASSWORD"))
+    es_api_key: Optional[str] = Field(default_factory=lambda: os.getenv("ES_API_KEY"))
+    es_verify_certs: bool = Field(default_factory=lambda: os.getenv("ES_VERIFY_CERTS", "true").lower() == "true")
+    es_timeout: int = Field(default_factory=lambda: int(os.getenv("ES_TIMEOUT", "30")))
+    
+    # Search settings
+    enable_hybrid_search: bool = Field(default_factory=lambda: os.getenv("ENABLE_HYBRID_SEARCH", "true").lower() == "true")
+    enable_escalation: bool = Field(default_factory=lambda: os.getenv("ENABLE_ESCALATION", "true").lower() == "true")
+    escalation_threshold: float = Field(default_factory=lambda: float(os.getenv("ESCALATION_THRESHOLD", "0.8")))
+    
+    # Fallback settings
+    enable_fallback: bool = Field(default_factory=lambda: os.getenv("ENABLE_FALLBACK", "true").lower() == "true")
+    fallback_threshold: float = Field(default_factory=lambda: float(os.getenv("FALLBACK_THRESHOLD", "0.3")))
+    
+    # Vector search settings
+    vector_dimension: int = Field(default_factory=lambda: int(os.getenv("VECTOR_DIMENSION", "384")))
+    vector_similarity_threshold: float = Field(default_factory=lambda: float(os.getenv("VECTOR_SIMILARITY_THRESHOLD", "0.7")))
+    
+    # Performance settings
+    max_concurrent_requests: int = Field(default_factory=lambda: int(os.getenv("MAX_CONCURRENT_REQUESTS", "10")))
+    request_timeout_ms: int = Field(default_factory=lambda: int(os.getenv("REQUEST_TIMEOUT_MS", "5000")))
+    
+    # Cache settings
+    enable_embedding_cache: bool = Field(default_factory=lambda: os.getenv("ENABLE_EMBEDDING_CACHE", "true").lower() == "true")
+    embedding_cache_size: int = Field(default_factory=lambda: int(os.getenv("EMBEDDING_CACHE_SIZE", "1000")))
+    embedding_cache_ttl_seconds: int = Field(default_factory=lambda: int(os.getenv("EMBEDDING_CACHE_TTL_SECONDS", "3600")))
+    
+    @field_validator('es_hosts')
+    @classmethod
+    def validate_hosts(cls, v: List[str]) -> List[str]:
+        """Validate Elasticsearch hosts"""
+        if not v:
+            raise ValueError("At least one Elasticsearch host must be specified")
+        return v
+    
+    @field_validator('es_timeout')
+    @classmethod
+    def validate_timeout(cls, v: int) -> int:
+        """Validate timeout value"""
+        if v <= 0:
+            raise ValueError("Timeout must be positive")
+        return v
+    
+    def model_dump(self) -> Dict[str, Any]:
+        """Return model as dictionary"""
+        return {
+            "es_hosts": self.es_hosts,
+            "es_username": self.es_username,
+            "es_password": "***" if self.es_password else None,  # Hide password
+            "es_api_key": "***" if self.es_api_key else None,  # Hide API key
+            "es_verify_certs": self.es_verify_certs,
+            "es_timeout": self.es_timeout,
+            "enable_hybrid_search": self.enable_hybrid_search,
+            "enable_escalation": self.enable_escalation,
+            "escalation_threshold": self.escalation_threshold,
+            "enable_fallback": self.enable_fallback,
+            "fallback_threshold": self.fallback_threshold,
+            "vector_dimension": self.vector_dimension,
+            "vector_similarity_threshold": self.vector_similarity_threshold,
+            "max_concurrent_requests": self.max_concurrent_requests,
+            "request_timeout_ms": self.request_timeout_ms,
+            "enable_embedding_cache": self.enable_embedding_cache,
+            "embedding_cache_size": self.embedding_cache_size,
+            "embedding_cache_ttl_seconds": self.embedding_cache_ttl_seconds
+        }
+
+
 class DecisionConfig(BaseModel):
     """Decision engine configuration settings with ENV override support"""
     
@@ -423,5 +498,6 @@ LANGUAGE_CONFIG = LanguageConfig()
 PERFORMANCE_CONFIG = PerformanceConfig()
 EMBEDDING_CONFIG = EmbeddingConfig()
 NORMALIZATION_CONFIG = NormalizationConfig()
+SEARCH_CONFIG = SearchConfig()  # Search layer configuration
 DECISION_CONFIG = DecisionConfig()  # Now supports ENV overrides
     
