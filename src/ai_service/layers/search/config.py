@@ -223,6 +223,13 @@ class HybridSearchConfig(BaseModel):
     vector_fallback_timeout_ms: int = Field(default=3000, ge=100, le=15000, description="Vector fallback search timeout in milliseconds")
     vector_fallback_max_results: int = Field(default=50, ge=5, le=200, description="Maximum results from vector fallback search")
     
+    # Embeddings integration settings
+    enable_embedding_cache: bool = Field(default=True, description="Enable caching for generated query vectors")
+    embedding_cache_size: int = Field(default=1000, ge=100, le=10000, description="Maximum number of cached embeddings")
+    embedding_cache_ttl_seconds: int = Field(default=3600, ge=60, le=86400, description="Embedding cache TTL in seconds")
+    enable_embedding_preprocessing: bool = Field(default=True, description="Enable query preprocessing for embeddings")
+    embedding_batch_size: int = Field(default=1, ge=1, le=32, description="Batch size for embedding generation")
+    
     # Elasticsearch configuration
     elasticsearch: ElasticsearchConfig = Field(default_factory=ElasticsearchConfig)
     

@@ -74,6 +74,10 @@ class HybridSearchService(BaseService, SearchService):
         # Embedding service for vector queries (lazy init)
         self._embedding_service = None
         self._embedding_service_checked = False
+        
+        # Embedding cache
+        self._embedding_cache: Dict[str, Tuple[List[float], datetime]] = {}
+        self._cache_lock = asyncio.Lock()
 
         # Fusion weights/boosts
         self._fusion_weights, self._fusion_boosts = self._load_fusion_weights()
@@ -146,12 +150,24 @@ class HybridSearchService(BaseService, SearchService):
 
     async def _build_query_vector(self, normalized: NormalizationResult, text: str) -> List[float]:
         query_text = normalized.normalized or text
+        processed_text = self._preprocess_query_for_embedding(query_text)
+        
+        # Check cache first
+        cached_vector = await self._get_cached_embedding(processed_text)
+        if cached_vector is not None:
+            self.logger.debug(f"Using cached embedding for: {processed_text[:50]}...")
+            return cached_vector
+        
         service = await self._get_embedding_service()
         if service is not None:
             loop = asyncio.get_running_loop()
 
             def _compute():
-                return service.get_embeddings_optimized([query_text], batch_size=1, use_cache=True)
+                return service.get_embeddings_optimized(
+                    [processed_text], 
+                    batch_size=self.config.embedding_batch_size, 
+                    use_cache=True
+                )
 
             try:
                 result = await loop.run_in_executor(None, _compute)
@@ -164,11 +180,62 @@ class HybridSearchService(BaseService, SearchService):
                     elif len(vector) < dimension:
                         vector.extend([0.0] * (dimension - len(vector)))
                     norm = math.sqrt(sum(v * v for v in vector)) or 1.0
-                    return [v / norm for v in vector]
+                    normalized_vector = [v / norm for v in vector]
+                    
+                    # Cache the result
+                    await self._cache_embedding(processed_text, normalized_vector)
+                    self.logger.debug(f"Generated and cached embedding for: {processed_text[:50]}...")
+                    
+                    return normalized_vector
             except Exception as exc:  # pragma: no cover - depends on embedding runtime
                 self.logger.warning(f"Embedding generation failed: {exc}")
 
-        return self._pseudo_embedding(query_text)
+        # Fallback to pseudo embedding
+        pseudo_vector = self._pseudo_embedding(processed_text)
+        await self._cache_embedding(processed_text, pseudo_vector)
+        return pseudo_vector
+
+    async def _get_cached_embedding(self, text: str) -> Optional[List[float]]:
+        """Get cached embedding if available and not expired."""
+        if not self.config.enable_embedding_cache:
+            return None
+            
+        async with self._cache_lock:
+            if text in self._embedding_cache:
+                vector, timestamp = self._embedding_cache[text]
+                age_seconds = (datetime.now() - timestamp).total_seconds()
+                if age_seconds < self.config.embedding_cache_ttl_seconds:
+                    return vector
+                else:
+                    # Remove expired entry
+                    del self._embedding_cache[text]
+        return None
+
+    async def _cache_embedding(self, text: str, vector: List[float]) -> None:
+        """Cache embedding with TTL."""
+        if not self.config.enable_embedding_cache:
+            return
+            
+        async with self._cache_lock:
+            # Remove oldest entries if cache is full
+            if len(self._embedding_cache) >= self.config.embedding_cache_size:
+                # Remove oldest entry
+                oldest_key = min(self._embedding_cache.keys(), 
+                               key=lambda k: self._embedding_cache[k][1])
+                del self._embedding_cache[oldest_key]
+            
+            self._embedding_cache[text] = (vector, datetime.now())
+
+    def _preprocess_query_for_embedding(self, text: str) -> str:
+        """Preprocess query text for better embedding generation."""
+        if not self.config.enable_embedding_preprocessing:
+            return text
+            
+        # Basic preprocessing: normalize whitespace, remove extra punctuation
+        import re
+        processed = re.sub(r'\s+', ' ', text.strip())
+        processed = re.sub(r'[^\w\s\-\.]', '', processed)
+        return processed
 
     def _ensure_fallback_services(self) -> None:
         """Initialize fallback services with proper error handling."""
@@ -1037,6 +1104,39 @@ class HybridSearchService(BaseService, SearchService):
         
         return health
     
+    async def clear_embedding_cache(self) -> None:
+        """Clear the embedding cache."""
+        async with self._cache_lock:
+            self._embedding_cache.clear()
+        self.logger.info("Embedding cache cleared")
+    
+    async def get_embedding_cache_stats(self) -> Dict[str, Any]:
+        """Get embedding cache statistics."""
+        async with self._cache_lock:
+            cache_size = len(self._embedding_cache)
+            max_size = self.config.embedding_cache_size
+            ttl_seconds = self.config.embedding_cache_ttl_seconds
+            
+            # Calculate cache age statistics
+            now = datetime.now()
+            ages = []
+            for _, (_, timestamp) in self._embedding_cache.items():
+                age = (now - timestamp).total_seconds()
+                ages.append(age)
+            
+            avg_age = sum(ages) / len(ages) if ages else 0
+            max_age = max(ages) if ages else 0
+            
+            return {
+                "cache_size": cache_size,
+                "max_size": max_size,
+                "utilization": cache_size / max_size if max_size > 0 else 0,
+                "ttl_seconds": ttl_seconds,
+                "avg_age_seconds": avg_age,
+                "max_age_seconds": max_age,
+                "cache_enabled": self.config.enable_embedding_cache
+            }
+    
     def _update_metrics(self, success: bool, processing_time_ms: float, result_count: int, avg_score: float = 0.0) -> None:
         """Update search metrics."""
         if success:
@@ -1154,6 +1254,9 @@ class HybridSearchService(BaseService, SearchService):
             if self.config.enable_fallback:
                 fallback_health = await self._check_fallback_health()
                 health_status["fallback_services"] = fallback_health
+            
+            # Add embedding cache information
+            health_status["embedding_cache"] = await self.get_embedding_cache_stats()
 
         except Exception as e:
             health_status["status"] = "unhealthy"

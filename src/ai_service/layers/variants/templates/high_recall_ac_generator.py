@@ -114,11 +114,15 @@ class HighRecallACGenerator:
         # Расширенные документные паттерны на основе существующих сервисов
         self.document_patterns = {
             # Паспорта - допуск серии и номера через пробел (AA 123456)
-            # После нормализации все символы в нижнем регистре и латинице
+            # Серия может быть кириллицей или латиницей, после нормализации - латиницей
             "passport": [
-                r"\b[a-z]{2}\s*\d{6,8}\b",  # Базовый формат: aa123456 или aa 123456
-                r"\b[a-z]{2}\s+\d{6,8}\b",  # С пробелом: aa 123456
+                r"\b[a-z]{2}\s*\d{6,8}\b",  # Базовый формат: aa123456 или aa 123456 (нормализованный)
+                r"\b[a-z]{2}\s+\d{6,8}\b",  # С пробелом: aa 123456 (нормализованный)
                 r"\b(?:passport|seriya|series)[:\s]*([a-z]{2}\s*\d{6,8})\b",  # С контекстом (нормализованный)
+                # Дополнительные паттерны для исходного текста (до нормализации)
+                r"\b[A-ZА-Я]{2}\s*\d{6,8}\b",  # Исходный формат: AA123456 или АА123456
+                r"\b[A-ZА-Я]{2}\s+\d{6,8}\b",  # С пробелом: AA 123456 или АА 123456
+                r"\b(?:паспорт|passport|серия|series)[:\s]*([A-ZА-Я]{2}\s*\d{6,8})\b",  # С контекстом (исходный)
             ],
             
             # ИНН РФ - 10 и 12 цифр (после нормализации)
@@ -145,27 +149,27 @@ class HighRecallACGenerator:
                 r"\b\d{2}\s*\d{2}\s*\d{2}\s*\d{2}\b",  # Форматированный ЕДРПОУ
             ],
             
-            # IBAN - допускай пробелы каждые 4 символа
+            # IBAN - допускай пробелы каждые 4 символа (после нормализации)
             "iban": [
-                r"\b(?:IBAN[:\s]*)?([A-Z]{2}\s*\d{2}(?:\s*[A-Z0-9]){11,30})\b",  # Базовый IBAN с пробелами
-                r"\b(?:IBAN[:\s]*)?([A-Z]{2}\s*\d{2}\s*[A-Z0-9]{4}\s*[A-Z0-9]{4}\s*[A-Z0-9]{4}\s*[A-Z0-9]{4}\s*[A-Z0-9]{4}\s*[A-Z0-9]{4}\s*[A-Z0-9]{4})\b",  # Украинский IBAN с пробелами
-                r"\bUA\d{2}\s*\d{4}\s*\d{4}\s*\d{4}\s*\d{4}\s*\d{4}\s*\d{4}\s*\d{4}\b",  # Украинский IBAN
-                r"\b(?:IBAN[:\s]*)?([A-Z]{2}\d{2}[A-Z0-9]{15,32})\b",  # IBAN без пробелов
+                r"\b(?:iban[:\s]*)?([a-z]{2}\s*\d{2}(?:\s*[a-z0-9]){11,30})\b",  # Базовый IBAN с пробелами
+                r"\b(?:iban[:\s]*)?([a-z]{2}\s*\d{2}\s*[a-z0-9]{4}\s*[a-z0-9]{4}\s*[a-z0-9]{4}\s*[a-z0-9]{4}\s*[a-z0-9]{4}\s*[a-z0-9]{4}\s*[a-z0-9]{4})\b",  # Украинский IBAN с пробелами
+                r"\bua\d{2}\s*\d{4}\s*\d{4}\s*\d{4}\s*\d{4}\s*\d{4}\s*\d{4}\s*\d{4}\b",  # Украинский IBAN
+                r"\b(?:iban[:\s]*)?([a-z]{2}\d{2}[a-z0-9]{15,32})\b",  # IBAN без пробелов
             ],
             
-            # Дополнительные документные паттерны
+            # Дополнительные документные паттерны (после нормализации)
             "ogrn": [
-                r"\b(?:ОГРН|огрн|ogrn|основной\s+государственный\s+регистрационный\s+номер)[:\s]*(\d{13})\b",
-                r"\b\d{13}\b(?=.*(?:ОГРН|огрн|ogrn))",
+                r"\b(?:ogrn|osnovnoy\s+gosudarstvennyy\s+registratsionnyy\s+nomer)[:\s]*(\d{13})\b",
+                r"\b\d{13}\b(?=.*(?:ogrn|osnovnoy))",
             ],
             
             "ogrnip": [
-                r"\b(?:ОГРНИП|огрнип|ogrnip|основной\s+государственный\s+регистрационный\s+номер\s+индивидуального\s+предпринимателя)[:\s]*(\d{15})\b",
-                r"\b\d{15}\b(?=.*(?:ОГРНИП|огрнип|ogrnip))",
+                r"\b(?:ogrnip|osnovnoy\s+gosudarstvennyy\s+registratsionnyy\s+nomer\s+individualnogo\s+predprinimatelya)[:\s]*(\d{15})\b",
+                r"\b\d{15}\b(?=.*(?:ogrnip|osnovnoy))",
             ],
             
             "swift_bic": [
-                r"\b(?:SWIFT|BIC|SWIFT/BIC|МФО|MFO)[:\s]*([A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?)\b",
+                r"\b(?:swift|bic|swift/bic|mfo)[:\s]*([a-z]{4}[a-z]{2}[a-z0-9]{2}(?:[a-z0-9]{3})?)\b",
             ],
         }
 
@@ -306,9 +310,23 @@ class HighRecallACGenerator:
 
         for doc_type, regexes in self.document_patterns.items():
             for regex in regexes:
+                # Ищем в исходном тексте (для кириллических серий паспортов)
+                for match in re.finditer(regex, text):
+                    doc_number = match.group().strip()
+                    patterns.append(
+                        RecallOptimizedPattern(
+                            pattern=doc_number,
+                            pattern_type=f"document_{doc_type}",
+                            recall_tier=0,
+                            precision_hint=0.99,
+                            variants=[],
+                            language="universal",
+                        )
+                    )
+                
+                # Ищем в нормализованном тексте (для латинских серий и других документов)
                 for match in re.finditer(regex, normalized_text):
                     doc_number = match.group().strip()
-
                     patterns.append(
                         RecallOptimizedPattern(
                             pattern=doc_number,
