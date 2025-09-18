@@ -20,6 +20,7 @@ from ...utils.logging_config import get_logger
 from .contracts import Candidate, SearchOpts, ElasticsearchAdapter, SearchMode
 from .config import HybridSearchConfig
 from .elasticsearch_client import ElasticsearchClientFactory
+from .elasticsearch_index_manager import ElasticsearchIndexManager
 
 
 def retry_elasticsearch(max_retries: int = 3, delay: float = 1.0, backoff: float = 2.0):
@@ -65,6 +66,7 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
         self.logger = get_logger(__name__)
         self._client_factory = client_factory or ElasticsearchClientFactory(config)
         self._client: Optional[AsyncElasticsearch] = None
+        self._index_manager: Optional[ElasticsearchIndexManager] = None
         self._latency_stats = {
             "total_requests": 0,
             "avg_latency_ms": 0.0,
@@ -96,6 +98,7 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
                 return self._client
             try:
                 self._client = await self._client_factory.get_client()
+                self._index_manager = ElasticsearchIndexManager(self.config, self._client)
                 self._connected = True
                 self._last_connection_check = datetime.now()
                 self.logger.debug("Elasticsearch AC adapter connected")
@@ -118,68 +121,14 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
         try:
             client = await self._ensure_connection()
             
-            # Check if index exists
-            try:
-                await client.indices.get(index=self.AC_PATTERNS_INDEX)
-                self._ac_patterns_initialized = True
-                return
-            except ElasticsearchException:
-                # Index doesn't exist, create it
-                pass
-            
-            # Create index with mapping
-            mapping = {
-                "mappings": {
-                    "properties": {
-                        "pattern": {
-                            "type": "keyword",
-                            "fields": {
-                                "edge_ngram": {
-                                    "type": "text",
-                                    "analyzer": "edge_ngram_analyzer"
-                                }
-                            }
-                        },
-                        "tier": {
-                            "type": "integer"
-                        },
-                        "meta": {
-                            "type": "object",
-                            "properties": {
-                                "pattern_type": {"type": "keyword"},
-                                "language": {"type": "keyword"},
-                                "confidence": {"type": "float"},
-                                "boost_score": {"type": "float"},
-                                "context_required": {"type": "boolean"},
-                                "min_match_length": {"type": "integer"},
-                                "reason": {"type": "keyword"}
-                            }
-                        }
-                    }
-                },
-                "settings": {
-                    "analysis": {
-                        "analyzer": {
-                            "edge_ngram_analyzer": {
-                                "tokenizer": "edge_ngram_tokenizer",
-                                "filter": ["lowercase"]
-                            }
-                        },
-                        "tokenizer": {
-                            "edge_ngram_tokenizer": {
-                                "type": "edge_ngram",
-                                "min_gram": 2,
-                                "max_gram": 20,
-                                "token_chars": ["letter", "digit"]
-                            }
-                        }
-                    }
-                }
-            }
-            
-            await client.indices.create(index=self.AC_PATTERNS_INDEX, body=mapping)
-            self._ac_patterns_initialized = True
-            self.logger.info(f"Created AC patterns index: {self.AC_PATTERNS_INDEX}")
+            if self._index_manager:
+                success = await self._index_manager.create_ac_patterns_index()
+                if success:
+                    self._ac_patterns_initialized = True
+                else:
+                    raise RuntimeError("Failed to create AC patterns index")
+            else:
+                raise RuntimeError("Index manager not initialized")
             
         except Exception as exc:
             self.logger.error(f"Failed to create AC patterns index: {exc}")
@@ -509,6 +458,12 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
         try:
             health = await self._client_factory.health_check()
             health["connected"] = health.get("status") == "healthy"
+            
+            # Add index health information
+            if self._index_manager:
+                index_health = await self._index_manager.get_index_health()
+                health["indices"] = index_health["indices"]
+            
             health.update(
                 {
                     "adapter": "elasticsearch_ac",
@@ -548,6 +503,7 @@ class ElasticsearchVectorAdapter(ElasticsearchAdapter):
         self.logger = get_logger(__name__)
         self._client_factory = client_factory or ElasticsearchClientFactory(config)
         self._client: Optional[AsyncElasticsearch] = None
+        self._index_manager: Optional[ElasticsearchIndexManager] = None
         self._latency_stats = {
             "total_requests": 0,
             "avg_latency_ms": 0.0,
@@ -578,6 +534,7 @@ class ElasticsearchVectorAdapter(ElasticsearchAdapter):
                 return self._client
             try:
                 self._client = await self._client_factory.get_client()
+                self._index_manager = ElasticsearchIndexManager(self.config, self._client)
                 self._connected = True
                 self._last_connection_check = datetime.now()
                 self.logger.debug("Elasticsearch Vector adapter connected")
@@ -600,81 +557,14 @@ class ElasticsearchVectorAdapter(ElasticsearchAdapter):
         try:
             client = await self._ensure_connection()
             
-            # Check if index exists
-            try:
-                await client.indices.get(index=self.VECTOR_INDEX)
-                self._vector_index_initialized = True
-                return
-            except ElasticsearchException:
-                # Index doesn't exist, create it
-                pass
-            
-            # Create index with mapping for dense vectors and BM25
-            vector_dim = self.config.vector_search.vector_dimension
-            mapping = {
-                "mappings": {
-                    "properties": {
-                        "text": {
-                            "type": "text",
-                            "analyzer": "standard",
-                            "fields": {
-                                "keyword": {
-                                    "type": "keyword"
-                                },
-                                "bm25": {
-                                    "type": "rank_feature"
-                                }
-                            }
-                        },
-                        "normalized_text": {
-                            "type": "text",
-                            "analyzer": "standard",
-                            "fields": {
-                                "keyword": {
-                                    "type": "keyword"
-                                }
-                            }
-                        },
-                        "dense_vector": {
-                            "type": "dense_vector",
-                            "dims": vector_dim,
-                            "index": True,
-                            "similarity": "cosine"
-                        },
-                        "entity_type": {
-                            "type": "keyword"
-                        },
-                        "metadata": {
-                            "type": "object",
-                            "properties": {
-                                "country": {"type": "keyword"},
-                                "dob": {"type": "date"},
-                                "gender": {"type": "keyword"},
-                                "doc_id": {"type": "keyword"},
-                                "entity_id": {"type": "keyword"}
-                            }
-                        },
-                        "dob_anchor": {
-                            "type": "date"
-                        },
-                        "id_anchor": {
-                            "type": "keyword"
-                        }
-                    }
-                },
-                "settings": {
-                    "number_of_shards": 1,
-                    "number_of_replicas": 0,
-                    "index": {
-                        "knn": True,
-                        "knn.algo_param.ef_search": self.config.vector_search.ef_search
-                    }
-                }
-            }
-            
-            await client.indices.create(index=self.VECTOR_INDEX, body=mapping)
-            self._vector_index_initialized = True
-            self.logger.info(f"Created vector index: {self.VECTOR_INDEX} with {vector_dim}D dense vectors")
+            if self._index_manager:
+                success = await self._index_manager.create_vector_index()
+                if success:
+                    self._vector_index_initialized = True
+                else:
+                    raise RuntimeError("Failed to create vector index")
+            else:
+                raise RuntimeError("Index manager not initialized")
             
         except Exception as exc:
             self.logger.error(f"Failed to create vector index: {exc}")
@@ -1001,6 +891,12 @@ class ElasticsearchVectorAdapter(ElasticsearchAdapter):
         try:
             health = await self._client_factory.health_check()
             health["connected"] = health.get("status") == "healthy"
+            
+            # Add index health information
+            if self._index_manager:
+                index_health = await self._index_manager.get_index_health()
+                health["indices"] = index_health["indices"]
+            
             health.update(
                 {
                     "adapter": "elasticsearch_vector",
