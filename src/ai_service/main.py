@@ -723,6 +723,54 @@ async def reset_statistics(token: str = Depends(verify_admin_token)):
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
+@app.post("/reload-config")
+async def reload_configuration(token: str = Depends(verify_admin_token)):
+    """Reload configuration - Admin only"""
+    if not orchestrator:
+        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+
+    try:
+        # Reload search service configuration if available
+        if hasattr(orchestrator, 'search_service') and orchestrator.search_service:
+            if hasattr(orchestrator.search_service, 'config') and hasattr(orchestrator.search_service.config, '_reload_configuration'):
+                orchestrator.search_service.config._reload_configuration()
+                logger.info("Search service configuration reloaded")
+        
+        return {"message": "Configuration reloaded successfully"}
+    except Exception as e:
+        logger.error(f"Error reloading configuration: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@app.get("/config-status")
+async def get_configuration_status(token: str = Depends(verify_admin_token)):
+    """Get configuration status - Admin only"""
+    if not orchestrator:
+        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+
+    try:
+        status = {
+            "search_service": {
+                "enabled": hasattr(orchestrator, 'search_service') and orchestrator.search_service is not None,
+                "hot_reload": False,
+                "reload_stats": {}
+            }
+        }
+        
+        # Get search service configuration status
+        if hasattr(orchestrator, 'search_service') and orchestrator.search_service:
+            if hasattr(orchestrator.search_service, 'config'):
+                config = orchestrator.search_service.config
+                if hasattr(config, 'get_reload_stats'):
+                    status["search_service"]["hot_reload"] = True
+                    status["search_service"]["reload_stats"] = config.get_reload_stats()
+        
+        return status
+    except Exception as e:
+        logger.error(f"Error getting configuration status: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
 @app.get("/languages")
 async def get_supported_languages():
     """Get list of supported languages"""

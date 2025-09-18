@@ -95,6 +95,17 @@ class HybridSearchService(BaseService, SearchService):
                 client_factory=self._client_factory,
             )
 
+            # Start hot-reloading if supported
+            if hasattr(self.config, 'start_hot_reload'):
+                try:
+                    # Watch for changes in environment variables
+                    from pathlib import Path
+                    watch_paths = [Path(".env"), Path("config/settings.py")]
+                    asyncio.create_task(self.config.start_hot_reload(watch_paths))
+                    self.logger.info("Hot-reloading enabled for search configuration")
+                except Exception as e:
+                    self.logger.warning(f"Failed to enable hot-reloading: {e}")
+
             self._initialized = True
             self.logger.info("Hybrid search service initialized successfully")
 
@@ -1396,3 +1407,42 @@ class HybridSearchService(BaseService, SearchService):
         doc_id_lower = doc_id.lower()
         
         return doc_id_lower in query_lower or query_lower in doc_id_lower
+    
+    async def update_configuration(self, new_config: HybridSearchConfig) -> None:
+        """Update search service configuration."""
+        self.logger.info("Updating search service configuration...")
+        
+        try:
+            # Update configuration
+            old_config = self.config
+            self.config = new_config
+            
+            # Reinitialize adapters with new configuration
+            if self._client_factory:
+                self._client_factory = ElasticsearchClientFactory(self.config)
+                self._ac_adapter = ElasticsearchACAdapter(
+                    self.config,
+                    client_factory=self._client_factory,
+                )
+                self._vector_adapter = ElasticsearchVectorAdapter(
+                    self.config,
+                    client_factory=self._client_factory,
+                )
+            
+            # Update fallback services if needed
+            self._ensure_fallback_services()
+            
+            # Clear embedding cache if cache settings changed
+            if (old_config.enable_embedding_cache != new_config.enable_embedding_cache or
+                old_config.embedding_cache_size != new_config.embedding_cache_size or
+                old_config.embedding_cache_ttl_seconds != new_config.embedding_cache_ttl_seconds):
+                await self.clear_embedding_cache()
+                self.logger.info("Embedding cache cleared due to configuration changes")
+            
+            self.logger.info("Search service configuration updated successfully")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to update search service configuration: {e}")
+            # Revert to old configuration
+            self.config = old_config
+            raise

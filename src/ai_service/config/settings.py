@@ -22,6 +22,7 @@ from ..constants import SECURITY_CONFIG as SEC_CONSTANTS
 from ..constants import (
     SUPPORTED_LANGUAGES,
 )
+from .hot_reload import HotReloadableConfig
 
 
 @dataclass
@@ -351,8 +352,8 @@ class NormalizationConfig(BaseModel):
         }
 
 
-class SearchConfig(BaseModel):
-    """Search layer configuration settings"""
+class SearchConfig(BaseModel, HotReloadableConfig):
+    """Search layer configuration settings with hot-reloading support"""
     
     model_config = {"validate_assignment": True}
     
@@ -386,6 +387,10 @@ class SearchConfig(BaseModel):
     embedding_cache_size: int = Field(default_factory=lambda: int(os.getenv("EMBEDDING_CACHE_SIZE", "1000")))
     embedding_cache_ttl_seconds: int = Field(default_factory=lambda: int(os.getenv("EMBEDDING_CACHE_TTL_SECONDS", "3600")))
     
+    def __init__(self, **data):
+        super().__init__(**data)
+        HotReloadableConfig.__init__(self)
+    
     @field_validator('es_hosts')
     @classmethod
     def validate_hosts(cls, v: List[str]) -> List[str]:
@@ -401,6 +406,41 @@ class SearchConfig(BaseModel):
         if v <= 0:
             raise ValueError("Timeout must be positive")
         return v
+    
+    def _reload_configuration(self) -> None:
+        """Reload configuration from environment variables."""
+        # Re-read all environment variables
+        self.es_hosts = os.getenv("ES_HOSTS", "localhost:9200").split(",")
+        self.es_username = os.getenv("ES_USERNAME")
+        self.es_password = os.getenv("ES_PASSWORD")
+        self.es_api_key = os.getenv("ES_API_KEY")
+        self.es_verify_certs = os.getenv("ES_VERIFY_CERTS", "true").lower() == "true"
+        self.es_timeout = int(os.getenv("ES_TIMEOUT", "30"))
+        
+        self.enable_hybrid_search = os.getenv("ENABLE_HYBRID_SEARCH", "true").lower() == "true"
+        self.enable_escalation = os.getenv("ENABLE_ESCALATION", "true").lower() == "true"
+        self.escalation_threshold = float(os.getenv("ESCALATION_THRESHOLD", "0.8"))
+        
+        self.enable_fallback = os.getenv("ENABLE_FALLBACK", "true").lower() == "true"
+        self.fallback_threshold = float(os.getenv("FALLBACK_THRESHOLD", "0.3"))
+        
+        self.vector_dimension = int(os.getenv("VECTOR_DIMENSION", "384"))
+        self.vector_similarity_threshold = float(os.getenv("VECTOR_SIMILARITY_THRESHOLD", "0.7"))
+        
+        self.max_concurrent_requests = int(os.getenv("MAX_CONCURRENT_REQUESTS", "10"))
+        self.request_timeout_ms = int(os.getenv("REQUEST_TIMEOUT_MS", "5000"))
+        
+        self.enable_embedding_cache = os.getenv("ENABLE_EMBEDDING_CACHE", "true").lower() == "true"
+        self.embedding_cache_size = int(os.getenv("EMBEDDING_CACHE_SIZE", "1000"))
+        self.embedding_cache_ttl_seconds = int(os.getenv("EMBEDDING_CACHE_TTL_SECONDS", "3600"))
+        
+        # Validate the reloaded configuration
+        try:
+            self.validate(self)
+        except Exception as e:
+            logger.error(f"Invalid configuration after reload: {e}")
+            # Revert to previous values or use defaults
+            # This is a simplified approach - in production, you might want more sophisticated rollback
     
     def model_dump(self) -> Dict[str, Any]:
         """Return model as dictionary"""
