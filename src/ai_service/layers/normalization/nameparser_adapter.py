@@ -32,6 +32,7 @@ class ParsedName:
     suffix: str
     nickname: str
     particles: List[str]
+    title: str
     full_name: str
     confidence: float = 0.0
 
@@ -77,7 +78,7 @@ class NameparserAdapter:
         except Exception as e:
             logger.error(f"Failed to load lexicons: {e}")
 
-    def parse_en_name(self, text: str) -> ParsedName:
+    def parse_en_name(self, text: str, enable_nicknames: bool = True, filter_titles_suffixes: bool = True) -> ParsedName:
         """
         Parse an English name using nameparser with graceful fallback.
 
@@ -90,28 +91,39 @@ class NameparserAdapter:
         if not text or not text.strip():
             return ParsedName(
                 first="", middles=[], last="", suffix="", 
-                nickname="", particles=[], full_name="", confidence=0.0
+                nickname="", particles=[], title="", full_name="", confidence=0.0
             )
 
         # Graceful fallback if nameparser is not available
         if not NAMEPARSER_AVAILABLE or HumanName is None:
             logger.warning("nameparser not available, using fallback parsing")
-            return self._fallback_parse_en_name(text.strip())
+            return self._fallback_parse_en_name(text.strip(), enable_nicknames, filter_titles_suffixes)
 
         try:
             # Parse with nameparser
             parsed = HumanName(text.strip())
-            
-            # Extract components
-            first_raw = parsed.first or ""
-            middles_raw = [m for m in parsed.middle.split() if m] if parsed.middle else []
-            last_raw = parsed.last or ""
+
+            # Special handling for Irish/Scottish surnames with apostrophes
+            # If only one component and it looks like a surname, treat it as surname
+            components_count = len([x for x in [parsed.first, parsed.middle, parsed.last] if x])
+            if components_count == 1 and self._is_irish_scottish_surname(parsed.first):
+                # Move from first to last name
+                first_raw = ""
+                last_raw = parsed.first
+                middles_raw = []
+            else:
+                # Extract components normally
+                first_raw = parsed.first or ""
+                middles_raw = [m for m in parsed.middle.split() if m] if parsed.middle else []
+                last_raw = parsed.last or ""
+
             suffix_raw = parsed.suffix or ""
+            title_raw = parsed.title or ""
             
             # Detect nickname (simple heuristic: if first name is common nickname)
             nickname = ""
             first = first_raw
-            if first_raw and first_raw.lower() in self.nicknames:
+            if enable_nicknames and first_raw and first_raw.lower() in self.nicknames:
                 nickname = first_raw
                 first = self.nicknames[first_raw.lower()]
             
@@ -119,7 +131,8 @@ class NameparserAdapter:
             first = first.title()
             middles = [m.title() for m in middles_raw]
             last = last_raw.title()
-            suffix = suffix_raw.title()
+            suffix = suffix_raw  # Keep suffixes as-is (no titlecase)
+            title = title_raw  # Keep titles as-is (no titlecase)
             
             # Extract particles from last name
             particles = self._extract_particles(last)
@@ -134,6 +147,7 @@ class NameparserAdapter:
                 suffix=suffix,
                 nickname=nickname,
                 particles=particles,
+                title=title,
                 full_name=text.strip(),
                 confidence=confidence
             )
@@ -142,8 +156,36 @@ class NameparserAdapter:
             logger.warning(f"Failed to parse name '{text}': {e}")
             return ParsedName(
                 first="", middles=[], last="", suffix="", 
-                nickname="", particles=[], full_name=text.strip(), confidence=0.0
+                nickname="", particles=[], title="", full_name=text.strip(), confidence=0.0
             )
+
+    def _is_irish_scottish_surname(self, name: str) -> bool:
+        """
+        Check if a name looks like an Irish or Scottish surname.
+
+        Common patterns:
+        - O' prefix (Irish): O'Connor, O'Brien, O'Neil
+        - Mc/Mac prefix (Scottish/Irish): McDonald, MacLeod, McGrath
+        - D' prefix (French/Irish): D'Artagnan, D'Angelo
+        """
+        if not name:
+            return False
+
+        name_lower = name.lower()
+
+        # Irish O' surnames
+        if name_lower.startswith("o'") and len(name) > 2:
+            return True
+
+        # Scottish/Irish Mc/Mac surnames
+        if (name_lower.startswith("mc") or name_lower.startswith("mac")) and len(name) > 2:
+            return True
+
+        # French/Irish D' surnames
+        if name_lower.startswith("d'") and len(name) > 2:
+            return True
+
+        return False
 
     def _extract_particles(self, last_name: str) -> List[str]:
         """
@@ -272,7 +314,7 @@ class NameparserAdapter:
         
         return " ".join(parts)
 
-    def _fallback_parse_en_name(self, text: str) -> ParsedName:
+    def _fallback_parse_en_name(self, text: str, enable_nicknames: bool = True, filter_titles_suffixes: bool = True) -> ParsedName:
         """
         Fallback parsing when nameparser is not available.
         
@@ -285,22 +327,54 @@ class NameparserAdapter:
         if not text:
             return ParsedName(
                 first="", middles=[], last="", suffix="", 
-                nickname="", particles=[], full_name="", confidence=0.0
+                nickname="", particles=[], title="", full_name="", confidence=0.0
             )
         
-        # Simple fallback: split by spaces and assume first is given, last is surname
+        # Handle common titles and suffixes
+        title = ""
+        suffix = ""
+        
+        # Common titles
+        titles = ["Dr.", "Mr.", "Mrs.", "Ms.", "Prof.", "Rev.", "Sir", "Lady"]
+        # Common suffixes
+        suffixes = ["Jr.", "Sr.", "III", "IV", "V", "Ph.D.", "M.D.", "Esq."]
+        # Middle initials (single letter followed by period)
+        initials = []
+        
         parts = text.strip().split()
+        
+        # Check for title at beginning (only if filtering is enabled)
+        if filter_titles_suffixes and parts and parts[0] in titles:
+            title = parts[0]
+            parts = parts[1:]
+        
+        # Check for suffix at end (only if filtering is enabled)
+        if filter_titles_suffixes and parts and parts[-1] in suffixes:
+            suffix = parts[-1]
+            parts = parts[:-1]
+        
+        # Check for middle initials (only if filtering is enabled)
+        if filter_titles_suffixes:
+            # Remove single-letter middle names (initials)
+            filtered_parts = []
+            for part in parts:
+                if len(part) == 2 and part[1] == '.' and part[0].isalpha():
+                    # This is a middle initial, skip it
+                    initials.append(part)
+                else:
+                    filtered_parts.append(part)
+            parts = filtered_parts
         
         if len(parts) == 0:
             return ParsedName(
-                first="", middles=[], last="", suffix="", 
-                nickname="", particles=[], full_name=text, confidence=0.0
+                first="", middles=[], last="", suffix=suffix, 
+                nickname="", particles=[], title=title, full_name=text, confidence=0.0
             )
         elif len(parts) == 1:
             # Single name - assume it's a surname
             return ParsedName(
-                first="", middles=[], last=parts[0].title(), suffix="", 
-                nickname="", particles=[], full_name=text, confidence=0.3
+                first="", middles=[], last=parts[0].title(), suffix=suffix, 
+                nickname="", particles=[], title=title, full_name=text, confidence=0.3
             )
         else:
             # Multiple parts - first is given, last is surname, middle are middle names
@@ -308,9 +382,15 @@ class NameparserAdapter:
             last = parts[-1].title()
             middles = [part.title() for part in parts[1:-1]]
             
+            # Check for nickname expansion (only if enabled)
+            nickname = ""
+            if enable_nicknames and first.lower() in self.nicknames:
+                nickname = first
+                first = self.nicknames[first.lower()]
+            
             return ParsedName(
-                first=first, middles=middles, last=last, suffix="", 
-                nickname="", particles=[], full_name=text, confidence=0.5
+                first=first, middles=middles, last=last, suffix=suffix, 
+                nickname=nickname, particles=[], title=title, full_name=text, confidence=0.5
             )
 
 

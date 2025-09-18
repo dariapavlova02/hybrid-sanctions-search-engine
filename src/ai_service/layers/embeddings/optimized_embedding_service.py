@@ -111,6 +111,7 @@ class OptimizedEmbeddingService(EmbeddingService):
             if not self.enable_gpu:
                 return False
 
+            # Lazy import of torch for GPU checking
             import torch
             return torch.cuda.is_available()
         except ImportError:

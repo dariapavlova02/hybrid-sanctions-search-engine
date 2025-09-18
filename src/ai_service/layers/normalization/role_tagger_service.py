@@ -71,6 +71,7 @@ class TokenRole(Enum):
     PATRONYMIC = "patronymic"
     INITIAL = "initial"
     ORG = "org"
+    OTHER = "other"
     UNKNOWN = "unknown"
 
 
@@ -144,7 +145,6 @@ class RoleRules:
     org_context_window: int = 3
     
     # Feature flags
-    strict_stopwords: bool = False
     prefer_surname_first: bool = False
 
 
@@ -547,6 +547,18 @@ class LegalFormOrgSpanRule(FSMTransitionRule):
         return FSMState.ORG_EXPECTED, TokenRole.ORG, "org_acronym_block", evidence
 
 
+class SingleCharNumberRule(FSMTransitionRule):
+    """Rule for handling single characters and numbers as 'other' role."""
+    
+    def can_apply(self, state: FSMState, token: Token, context: List[Token]) -> bool:
+        # Handle single characters and numbers
+        return len(token.text) == 1 and (token.text.isdigit() or token.text.isalpha())
+    
+    def apply(self, state: FSMState, token: Token, context: List[Token]) -> Tuple[FSMState, TokenRole, str, List[str]]:
+        evidence = ["single_char_or_number"]
+        return state, TokenRole.OTHER, "single_char_number", evidence
+
+
 class DefaultPersonRule(FSMTransitionRule):
     """Default rule for person name tokens."""
     
@@ -584,7 +596,7 @@ class DefaultPersonRule(FSMTransitionRule):
 class RoleTaggerService:
     """FSM-based role tagger service with detailed tracing."""
     
-    def __init__(self, stopwords=None, org_legal_forms=None, lang='auto', strict_stopwords=False):
+    def __init__(self, stopwords=None, org_legal_forms=None, lang='auto'):
         """
         Initialize role tagger service.
         
@@ -592,7 +604,6 @@ class RoleTaggerService:
             stopwords: Dict[str, Set[str]] - language -> set of stopwords
             org_legal_forms: Set[str] - set of legal forms for organization detection
             lang: str - language code ('ru', 'uk', 'en', 'auto')
-            strict_stopwords: bool - whether to use strict stopword filtering (default: False)
         """
         # Load default lexicons if not provided
         self.lexicons = get_lexicons()
@@ -608,9 +619,8 @@ class RoleTaggerService:
                 raise TypeError(f"org_legal_forms must be Set[str], got {type(org_legal_forms)}")
             self.lexicons.legal_forms.update(org_legal_forms)
         
-        # Initialize rules with strict_stopwords setting
+        # Initialize rules
         self.rules = RoleRules()
-        self.rules.strict_stopwords = strict_stopwords
         
         # Set context window for organization detection
         self.window = 3
@@ -640,17 +650,18 @@ class RoleTaggerService:
         """Initialize FSM transition rules."""
         # Order matters - higher priority rules first
         self.rules_list = [
-            RussianStopwordInitRule(self.lexicons, self.rules.strict_stopwords),
-            UkrainianInitPrepositionRule(self.lexicons, self.rules.strict_stopwords),
-            StopwordRule(self.lexicons, self.rules.strict_stopwords),
-            PaymentContextRule(self.lexicons, self.rules.strict_stopwords),
-            PersonStopwordRule(self.lexicons, self.rules.strict_stopwords, self.rules.org_context_window),
+            RussianStopwordInitRule(self.lexicons, False),
+            UkrainianInitPrepositionRule(self.lexicons, False),
+            StopwordRule(self.lexicons, False),
+            PaymentContextRule(self.lexicons, False),
+            PersonStopwordRule(self.lexicons, False, self.rules.org_context_window),
             LegalFormOrgSpanRule(self.lexicons, self.rules.org_context_window),  # NEW: ORG span detection
             OrganizationNgramRule(self.lexicons, self.rules.org_context_window),
             OrganizationContextRule(self.lexicons, self.rules.org_context_window),
             InitialDetectionRule(),
             SurnameSuffixRule(self.rules.surname_suffixes),
             PatronymicSuffixRule(self.rules.patronymic_suffixes),
+            SingleCharNumberRule(),  # Handle single characters and numbers as 'other'
             DefaultPersonRule(),
         ]
     

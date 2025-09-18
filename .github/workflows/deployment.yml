@@ -1,0 +1,641 @@
+name: Deployment & Monitoring
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'src/ai_service/**'
+      - 'templates/**'
+      - 'scripts/deployment/**'
+      - 'scripts/monitoring/**'
+      - 'monitoring/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      skip_tests:
+        description: 'Skip pre-deployment tests'
+        required: false
+        default: false
+        type: boolean
+      force_deploy:
+        description: 'Force deployment even if health checks fail'
+        required: false
+        default: false
+        type: boolean
+  workflow_run:
+    workflows: ["Main CI Pipeline", "Quality Gates"]
+    types: [completed]
+
+env:
+  PYTHON_VERSION: '3.12'
+  ELASTICSEARCH_VERSION: '8.11.0'
+  ES_URL: 'http://localhost:9200'
+  ES_AUTH: ''
+  ES_VERIFY_SSL: 'false'
+
+jobs:
+  # ========================================
+  # PRE-DEPLOYMENT VALIDATION
+  # ========================================
+  pre_deployment_validation:
+    name: Pre-Deployment Validation
+    runs-on: ubuntu-latest
+    if: github.event.inputs.skip_tests != 'true'
+
+    services:
+      elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+        env:
+          discovery.type: single-node
+          xpack.security.enabled: false
+          "ES_JAVA_OPTS": "-Xms512m -Xmx512m"
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd "curl -f http://localhost:9200/_cluster/health || exit 1"
+          --health-interval 30s
+          --health-timeout 10s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .[all,test]
+
+    - name: Wait for Elasticsearch
+      run: |
+        until curl -f http://localhost:9200/_cluster/health; do
+          echo "Waiting for Elasticsearch..."
+          sleep 5
+        done
+        echo "Elasticsearch is ready!"
+
+    - name: Create artifacts directory
+      run: mkdir -p artifacts/pre-deployment
+
+    - name: Run smoke tests
+      run: |
+        pytest -q tests/smoke/ \
+          --maxfail=5 \
+          --junitxml=artifacts/pre-deployment/smoke-results.xml \
+          --tb=short
+
+    - name: Run critical path tests
+      run: |
+        pytest -q tests/integration/ -m "critical_path" \
+          --maxfail=3 \
+          --junitxml=artifacts/pre-deployment/critical-path-results.xml \
+          --tb=short || true
+
+    - name: Validate deployment readiness
+      run: |
+        echo "=== Deployment Readiness Validation ===" | tee artifacts/pre-deployment/readiness.txt
+
+        # Check smoke test results
+        if [ -f artifacts/pre-deployment/smoke-results.xml ]; then
+          smoke_failed=$(grep -o 'failures="[0-9]*"' artifacts/pre-deployment/smoke-results.xml | grep -o '[0-9]*' | head -1 || echo "0")
+          smoke_errors=$(grep -o 'errors="[0-9]*"' artifacts/pre-deployment/smoke-results.xml | grep -o '[0-9]*' | head -1 || echo "0")
+
+          if [ "$smoke_failed" -eq 0 ] && [ "$smoke_errors" -eq 0 ]; then
+            echo "✅ Smoke tests PASSED" | tee -a artifacts/pre-deployment/readiness.txt
+          else
+            echo "❌ Smoke tests FAILED: $smoke_failed failures, $smoke_errors errors" | tee -a artifacts/pre-deployment/readiness.txt
+            if [ "${{ github.event.inputs.force_deploy }}" != "true" ]; then
+              exit 1
+            fi
+          fi
+        fi
+
+        # Check critical path results
+        if [ -f artifacts/pre-deployment/critical-path-results.xml ]; then
+          critical_failed=$(grep -o 'failures="[0-9]*"' artifacts/pre-deployment/critical-path-results.xml | grep -o '[0-9]*' | head -1 || echo "0")
+
+          if [ "$critical_failed" -eq 0 ]; then
+            echo "✅ Critical path tests PASSED" | tee -a artifacts/pre-deployment/readiness.txt
+          else
+            echo "❌ Critical path tests FAILED: $critical_failed failures" | tee -a artifacts/pre-deployment/readiness.txt
+            if [ "${{ github.event.inputs.force_deploy }}" != "true" ]; then
+              exit 1
+            fi
+          fi
+        fi
+
+        echo "✅ Pre-deployment validation completed!" | tee -a artifacts/pre-deployment/readiness.txt
+
+    - name: Upload pre-deployment artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: pre-deployment-validation-${{ github.run_number }}
+        path: artifacts/pre-deployment/
+        retention-days: 14
+
+  # ========================================
+  # ELASTICSEARCH DEPLOYMENT
+  # ========================================
+  elasticsearch_deployment:
+    name: ElasticSearch Setup & Warmup
+    runs-on: ubuntu-latest
+    needs: [pre_deployment_validation]
+    if: always() && (needs.pre_deployment_validation.result == 'success' || github.event.inputs.force_deploy == 'true')
+
+    services:
+      elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+        env:
+          discovery.type: single-node
+          xpack.security.enabled: false
+          "ES_JAVA_OPTS": "-Xms1g -Xmx1g"
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd "curl -f http://localhost:9200/_cluster/health || exit 1"
+          --health-interval 30s
+          --health-timeout 10s
+          --health-retries 10
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .[all,test]
+        # Install deployment dependencies
+        pip install elasticsearch-dsl requests
+
+    - name: Wait for Elasticsearch
+      run: |
+        echo "Waiting for Elasticsearch to be fully ready..."
+        until curl -f http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=60s; do
+          echo "Still waiting for Elasticsearch..."
+          sleep 10
+        done
+        echo "Elasticsearch cluster is ready!"
+
+    - name: Create artifacts directory
+      run: mkdir -p artifacts/deployment
+
+    - name: Setup Elasticsearch indices and templates
+      env:
+        ELASTICSEARCH_URL: http://localhost:9200
+        ES_INDEX_PREFIX: "ai_service"
+      run: |
+        echo "Setting up Elasticsearch indices and templates..."
+        python scripts/elasticsearch_setup_and_warmup.py \
+          --url $ELASTICSEARCH_URL \
+          --index-prefix $ES_INDEX_PREFIX \
+          --setup-templates \
+          --setup-indices \
+          --output artifacts/deployment/elasticsearch-setup.json
+
+    - name: Load sample data for warmup
+      env:
+        ELASTICSEARCH_URL: http://localhost:9200
+      run: |
+        echo "Loading sample data for system warmup..."
+        python scripts/bulk_loader.py \
+          --url $ELASTICSEARCH_URL \
+          --index ai_service_watchlist \
+          --sample-data tests/fixtures/sample_watchlist.json \
+          --batch-size 100 \
+          --output artifacts/deployment/bulk-load-results.json || true
+
+    - name: Run search system warmup
+      env:
+        ELASTICSEARCH_URL: http://localhost:9200
+        ENABLE_AC_TIER0: "true"
+        ENABLE_VECTOR_FALLBACK: "true"
+      run: |
+        echo "Warming up search system..."
+        python scripts/search_system_warmup.py \
+          --elasticsearch-url $ELASTICSEARCH_URL \
+          --iterations 50 \
+          --output artifacts/deployment/warmup-results.json || true
+
+    - name: Validate Elasticsearch deployment
+      env:
+        ELASTICSEARCH_URL: http://localhost:9200
+      run: |
+        echo "=== Elasticsearch Deployment Validation ===" | tee artifacts/deployment/elasticsearch-validation.txt
+
+        # Check cluster health
+        cluster_status=$(curl -s "$ELASTICSEARCH_URL/_cluster/health" | python -c "
+        import json, sys
+        try:
+            data = json.load(sys.stdin)
+            print(data.get('status', 'unknown'))
+        except:
+            print('unknown')
+        ")
+
+        echo "Cluster Status: $cluster_status" | tee -a artifacts/deployment/elasticsearch-validation.txt
+
+        if [ "$cluster_status" = "green" ] || [ "$cluster_status" = "yellow" ]; then
+          echo "✅ Elasticsearch cluster health PASSED" | tee -a artifacts/deployment/elasticsearch-validation.txt
+        else
+          echo "❌ Elasticsearch cluster health FAILED" | tee -a artifacts/deployment/elasticsearch-validation.txt
+          if [ "${{ github.event.inputs.force_deploy }}" != "true" ]; then
+            exit 1
+          fi
+        fi
+
+        # Check indices
+        indices_count=$(curl -s "$ELASTICSEARCH_URL/_cat/indices?format=json" | python -c "
+        import json, sys
+        try:
+            data = json.load(sys.stdin)
+            print(len([idx for idx in data if 'ai_service' in idx.get('index', '')]))
+        except:
+            print(0)
+        ")
+
+        echo "AI Service Indices: $indices_count" | tee -a artifacts/deployment/elasticsearch-validation.txt
+
+        if [ "$indices_count" -gt 0 ]; then
+          echo "✅ Elasticsearch indices setup PASSED" | tee -a artifacts/deployment/elasticsearch-validation.txt
+        else
+          echo "❌ Elasticsearch indices setup FAILED" | tee -a artifacts/deployment/elasticsearch-validation.txt
+        fi
+
+        echo "✅ Elasticsearch deployment validation completed!" | tee -a artifacts/deployment/elasticsearch-validation.txt
+
+    - name: Upload Elasticsearch deployment artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: elasticsearch-deployment-${{ github.run_number }}
+        path: artifacts/deployment/
+        retention-days: 30
+
+  # ========================================
+  # MONITORING SETUP
+  # ========================================
+  monitoring_setup:
+    name: Monitoring & Observability Setup
+    runs-on: ubuntu-latest
+    needs: [elasticsearch_deployment]
+    if: always() && (needs.elasticsearch_deployment.result == 'success' || github.event.inputs.force_deploy == 'true')
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install monitoring dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+        # Monitoring stack dependencies
+        pip install prometheus_client grafana-api
+
+    - name: Create artifacts directory
+      run: mkdir -p artifacts/monitoring
+
+    - name: Setup Prometheus configuration
+      run: |
+        echo "Setting up Prometheus monitoring configuration..."
+        cp monitoring/prometheus.yml artifacts/monitoring/prometheus.yml
+
+        # Validate Prometheus config
+        if [ -f monitoring/prometheus.yml ]; then
+          echo "✅ Prometheus config found" | tee artifacts/monitoring/setup.txt
+        else
+          echo "❌ Prometheus config missing" | tee artifacts/monitoring/setup.txt
+        fi
+
+    - name: Setup Grafana dashboards
+      run: |
+        echo "Setting up Grafana dashboards..."
+
+        if [ -f monitoring/grafana_dashboard.json ]; then
+          cp monitoring/grafana_dashboard.json artifacts/monitoring/grafana_dashboard.json
+          echo "✅ Grafana dashboard found" | tee -a artifacts/monitoring/setup.txt
+        else
+          echo "❌ Grafana dashboard missing" | tee -a artifacts/monitoring/setup.txt
+        fi
+
+        # Setup datasources
+        if [ -f monitoring/grafana-datasources.yml ]; then
+          cp monitoring/grafana-datasources.yml artifacts/monitoring/grafana-datasources.yml
+          echo "✅ Grafana datasources found" | tee -a artifacts/monitoring/setup.txt
+        else
+          echo "❌ Grafana datasources missing" | tee -a artifacts/monitoring/setup.txt
+        fi
+
+    - name: Setup alerting rules
+      run: |
+        echo "Setting up alerting rules..."
+
+        if [ -f monitoring/prometheus_alerts.yml ]; then
+          cp monitoring/prometheus_alerts.yml artifacts/monitoring/prometheus_alerts.yml
+          echo "✅ Prometheus alerts found" | tee -a artifacts/monitoring/setup.txt
+        else
+          echo "❌ Prometheus alerts missing" | tee -a artifacts/monitoring/setup.txt
+        fi
+
+    - name: Generate monitoring validation report
+      run: |
+        cat > artifacts/monitoring/monitoring-validation.md << 'EOF'
+        # Monitoring & Observability Deployment Report
+
+        **Generated**: $(date)
+        **Branch**: ${{ github.ref_name }}
+        **Commit**: ${{ github.sha }}
+        **Environment**: ${{ github.event.inputs.environment || 'auto' }}
+
+        ## Monitoring Components
+
+        ### Prometheus Metrics Collection
+        - **Config**: prometheus.yml
+        - **Status**: Ready for deployment
+        - **Targets**: AI Service API, Elasticsearch, System metrics
+
+        ### Grafana Dashboards
+        - **Main Dashboard**: grafana_dashboard.json
+        - **Datasources**: grafana-datasources.yml
+        - **Features**: API performance, Search metrics, System health
+
+        ### Alerting Rules
+        - **Config**: prometheus_alerts.yml
+        - **Rules**: SLA violations, Error rate spikes, Memory usage
+        - **Channels**: Slack, Email, PagerDuty
+
+        ## Key Metrics Monitored
+
+        ### API Performance
+        - Request latency (P50, P95, P99)
+        - Request rate (RPS)
+        - Error rate (4xx, 5xx)
+        - Response time distribution
+
+        ### Search System
+        - AC search latency
+        - Vector search latency
+        - Hybrid search success rate
+        - Elasticsearch cluster health
+
+        ### Resource Usage
+        - CPU utilization
+        - Memory usage
+        - Disk I/O
+        - Network throughput
+
+        ### Business Metrics
+        - Normalization success rate
+        - Signal extraction accuracy
+        - Processing throughput
+        - Queue depth
+
+        ## Alerting Thresholds
+
+        ### Critical Alerts
+        - API P95 latency > 100ms
+        - Error rate > 5%
+        - Memory usage > 90%
+        - Elasticsearch cluster red
+
+        ### Warning Alerts
+        - API P95 latency > 50ms
+        - Error rate > 2%
+        - Memory usage > 75%
+        - Search latency > 200ms
+
+        ## Deployment Status
+        EOF
+
+        if [ -f artifacts/monitoring/setup.txt ]; then
+          echo "" >> artifacts/monitoring/monitoring-validation.md
+          echo "### Setup Results" >> artifacts/monitoring/monitoring-validation.md
+          echo '```' >> artifacts/monitoring/monitoring-validation.md
+          cat artifacts/monitoring/setup.txt >> artifacts/monitoring/monitoring-validation.md
+          echo '```' >> artifacts/monitoring/monitoring-validation.md
+        fi
+
+        echo "✅ Monitoring setup completed successfully!" >> artifacts/monitoring/monitoring-validation.md
+
+    - name: Upload monitoring artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: monitoring-setup-${{ github.run_number }}
+        path: |
+          artifacts/monitoring/
+          monitoring/
+        retention-days: 30
+
+  # ========================================
+  # POST-DEPLOYMENT VALIDATION
+  # ========================================
+  post_deployment_validation:
+    name: Post-Deployment Health Checks
+    runs-on: ubuntu-latest
+    needs: [monitoring_setup]
+    if: always()
+
+    services:
+      elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+        env:
+          discovery.type: single-node
+          xpack.security.enabled: false
+          "ES_JAVA_OPTS": "-Xms512m -Xmx512m"
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd "curl -f http://localhost:9200/_cluster/health || exit 1"
+          --health-interval 30s
+          --health-timeout 10s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .[all,test]
+
+    - name: Wait for services
+      run: |
+        until curl -f http://localhost:9200/_cluster/health; do
+          echo "Waiting for Elasticsearch..."
+          sleep 5
+        done
+        echo "All services are ready!"
+
+    - name: Create artifacts directory
+      run: mkdir -p artifacts/post-deployment
+
+    - name: Run end-to-end health checks
+      env:
+        ELASTICSEARCH_URL: http://localhost:9200
+        ENABLE_AC_TIER0: "true"
+        ENABLE_VECTOR_FALLBACK: "true"
+      run: |
+        pytest -q tests/e2e/test_health_check.py \
+          --maxfail=1 \
+          --junitxml=artifacts/post-deployment/health-check-results.xml \
+          --tb=short || true
+
+    - name: Run production readiness tests
+      run: |
+        pytest -q tests/production/ \
+          --maxfail=3 \
+          --junitxml=artifacts/post-deployment/production-readiness-results.xml \
+          --tb=short || true
+
+    - name: Generate deployment summary report
+      if: always()
+      run: |
+        cat > artifacts/post-deployment/deployment-summary.md << 'EOF'
+        # Deployment Summary Report
+
+        **Deployment Time**: $(date)
+        **Branch**: ${{ github.ref_name }}
+        **Commit**: ${{ github.sha }}
+        **Environment**: ${{ github.event.inputs.environment || 'auto' }}
+        **Workflow Run**: ${{ github.run_number }}
+
+        ## Deployment Pipeline Status
+
+        ### Pre-Deployment Validation
+        EOF
+
+        if [ "${{ needs.pre_deployment_validation.result }}" = "success" ]; then
+          echo "✅ **PASSED** - All smoke tests and critical path tests passed" >> artifacts/post-deployment/deployment-summary.md
+        elif [ "${{ github.event.inputs.skip_tests }}" = "true" ]; then
+          echo "⏭️ **SKIPPED** - Pre-deployment validation skipped by user" >> artifacts/post-deployment/deployment-summary.md
+        else
+          echo "❌ **FAILED** - Pre-deployment validation failed" >> artifacts/post-deployment/deployment-summary.md
+        fi
+
+        echo "" >> artifacts/post-deployment/deployment-summary.md
+        echo "### Elasticsearch Deployment" >> artifacts/post-deployment/deployment-summary.md
+
+        if [ "${{ needs.elasticsearch_deployment.result }}" = "success" ]; then
+          echo "✅ **PASSED** - Elasticsearch setup, indexing, and warmup completed" >> artifacts/post-deployment/deployment-summary.md
+        else
+          echo "❌ **FAILED** - Elasticsearch deployment encountered issues" >> artifacts/post-deployment/deployment-summary.md
+        fi
+
+        echo "" >> artifacts/post-deployment/deployment-summary.md
+        echo "### Monitoring Setup" >> artifacts/post-deployment/deployment-summary.md
+
+        if [ "${{ needs.monitoring_setup.result }}" = "success" ]; then
+          echo "✅ **PASSED** - Monitoring and observability configured" >> artifacts/post-deployment/deployment-summary.md
+        else
+          echo "❌ **FAILED** - Monitoring setup encountered issues" >> artifacts/post-deployment/deployment-summary.md
+        fi
+
+        echo "" >> artifacts/post-deployment/deployment-summary.md
+        echo "### Post-Deployment Health Checks" >> artifacts/post-deployment/deployment-summary.md
+
+        # Check health check results
+        if [ -f artifacts/post-deployment/health-check-results.xml ]; then
+          health_failed=$(grep -o 'failures="[0-9]*"' artifacts/post-deployment/health-check-results.xml | grep -o '[0-9]*' | head -1 || echo "0")
+          health_errors=$(grep -o 'errors="[0-9]*"' artifacts/post-deployment/health-check-results.xml | grep -o '[0-9]*' | head -1 || echo "0")
+
+          if [ "$health_failed" -eq 0 ] && [ "$health_errors" -eq 0 ]; then
+            echo "✅ **PASSED** - All health checks successful" >> artifacts/post-deployment/deployment-summary.md
+          else
+            echo "❌ **FAILED** - Health checks failed: $health_failed failures, $health_errors errors" >> artifacts/post-deployment/deployment-summary.md
+          fi
+        else
+          echo "❌ **FAILED** - No health check results found" >> artifacts/post-deployment/deployment-summary.md
+        fi
+
+        echo "" >> artifacts/post-deployment/deployment-summary.md
+        echo "## Deployment Artifacts" >> artifacts/post-deployment/deployment-summary.md
+        echo "- Pre-deployment validation: pre-deployment-validation-${{ github.run_number }}" >> artifacts/post-deployment/deployment-summary.md
+        echo "- Elasticsearch setup: elasticsearch-deployment-${{ github.run_number }}" >> artifacts/post-deployment/deployment-summary.md
+        echo "- Monitoring configuration: monitoring-setup-${{ github.run_number }}" >> artifacts/post-deployment/deployment-summary.md
+        echo "- Health check results: post-deployment-validation-${{ github.run_number }}" >> artifacts/post-deployment/deployment-summary.md
+
+        echo "" >> artifacts/post-deployment/deployment-summary.md
+        echo "## Next Steps" >> artifacts/post-deployment/deployment-summary.md
+        echo "1. Verify monitoring dashboards are accessible" >> artifacts/post-deployment/deployment-summary.md
+        echo "2. Run additional smoke tests in target environment" >> artifacts/post-deployment/deployment-summary.md
+        echo "3. Monitor key metrics for 24h after deployment" >> artifacts/post-deployment/deployment-summary.md
+        echo "4. Update runbooks with any deployment-specific notes" >> artifacts/post-deployment/deployment-summary.md
+
+    - name: Validate overall deployment success
+      run: |
+        echo "=== Overall Deployment Validation ===" | tee artifacts/post-deployment/final-validation.txt
+
+        pre_deployment_ok="${{ needs.pre_deployment_validation.result == 'success' || github.event.inputs.skip_tests == 'true' }}"
+        elasticsearch_ok="${{ needs.elasticsearch_deployment.result == 'success' }}"
+        monitoring_ok="${{ needs.monitoring_setup.result == 'success' }}"
+
+        echo "Pre-deployment: $pre_deployment_ok" | tee -a artifacts/post-deployment/final-validation.txt
+        echo "Elasticsearch: $elasticsearch_ok" | tee -a artifacts/post-deployment/final-validation.txt
+        echo "Monitoring: $monitoring_ok" | tee -a artifacts/post-deployment/final-validation.txt
+
+        if [ "$pre_deployment_ok" = "true" ] && [ "$elasticsearch_ok" = "true" ] && [ "$monitoring_ok" = "true" ]; then
+          echo "✅ DEPLOYMENT SUCCESSFUL!" | tee -a artifacts/post-deployment/final-validation.txt
+          echo "All deployment pipeline stages completed successfully." | tee -a artifacts/post-deployment/final-validation.txt
+        else
+          echo "❌ DEPLOYMENT FAILED!" | tee -a artifacts/post-deployment/final-validation.txt
+          echo "One or more deployment stages failed." | tee -a artifacts/post-deployment/final-validation.txt
+          if [ "${{ github.event.inputs.force_deploy }}" != "true" ]; then
+            exit 1
+          else
+            echo "⚠️ Continuing due to force_deploy=true" | tee -a artifacts/post-deployment/final-validation.txt
+          fi
+        fi
+
+    - name: Upload post-deployment artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: post-deployment-validation-${{ github.run_number }}
+        path: artifacts/post-deployment/
+        retention-days: 30
+
+    - name: Comment deployment results on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          if (fs.existsSync('artifacts/post-deployment/deployment-summary.md')) {
+            const summary = fs.readFileSync('artifacts/post-deployment/deployment-summary.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🚀 Deployment Pipeline Results\n\n${summary}`
+            });
+          }

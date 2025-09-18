@@ -7,7 +7,7 @@ through the orchestrator to all processing layers while maintaining traceability
 
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
-from ..config.feature_flags import FeatureFlags
+from ..utils.feature_flags import FeatureFlags
 from ..utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -76,20 +76,20 @@ class FlagPropagator:
             if context.flags.strict_stopwords:
                 context.add_reason("strict_stopwords: enabled strict stopword filtering")
         
-        if hasattr(config, 'fsm_tuned_roles'):
-            config.fsm_tuned_roles = context.flags.fsm_tuned_roles
-            if context.flags.fsm_tuned_roles:
-                context.add_reason("fsm_tuned_roles: enabled FSM tuned role classification")
+        if hasattr(config, "enable_fsm_tuned_roles"):
+            config.enable_fsm_tuned_roles = context.flags.enable_fsm_tuned_roles
+            if context.flags.enable_fsm_tuned_roles:
+                context.add_reason("enable_fsm_tuned_roles: enabled FSM tuned role classification")
         
-        if hasattr(config, 'enhanced_diminutives'):
-            config.enhanced_diminutives = context.flags.enhanced_diminutives
-            if context.flags.enhanced_diminutives:
-                context.add_reason("enhanced_diminutives: enabled enhanced diminutive resolution")
+        if hasattr(config, "enable_enhanced_diminutives"):
+            config.enable_enhanced_diminutives = context.flags.enable_enhanced_diminutives
+            if context.flags.enable_enhanced_diminutives:
+                context.add_reason("enable_enhanced_diminutives: enabled enhanced diminutive resolution")
         
-        if hasattr(config, 'enhanced_gender_rules'):
-            config.enhanced_gender_rules = context.flags.enhanced_gender_rules
-            if context.flags.enhanced_gender_rules:
-                context.add_reason("enhanced_gender_rules: enabled enhanced gender rules")
+        if hasattr(config, "enable_enhanced_gender_rules"):
+            config.enable_enhanced_gender_rules = context.flags.enable_enhanced_gender_rules
+            if context.flags.enable_enhanced_gender_rules:
+                context.add_reason("enable_enhanced_gender_rules: enabled enhanced gender rules")
         
         if hasattr(config, 'enable_ac_tier0'):
             config.enable_ac_tier0 = context.flags.enable_ac_tier0
@@ -149,13 +149,13 @@ class FlagPropagator:
         morph_config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Propagate flags to morphology layer."""
-        if context.flags.enhanced_diminutives:
-            morph_config['enhanced_diminutives'] = True
-            context.add_reason("enhanced_diminutives: enabled enhanced diminutive resolution")
+        if context.flags.enable_enhanced_diminutives:
+            morph_config["enable_enhanced_diminutives"] = True
+            context.add_reason("enable_enhanced_diminutives: enabled enhanced diminutive resolution")
         
-        if context.flags.enhanced_gender_rules:
-            morph_config['enhanced_gender_rules'] = True
-            context.add_reason("enhanced_gender_rules: enabled enhanced gender rules")
+        if context.flags.enable_enhanced_gender_rules:
+            morph_config["enable_enhanced_gender_rules"] = True
+            context.add_reason("enable_enhanced_gender_rules: enabled enhanced gender rules")
         
         return morph_config
     
@@ -165,9 +165,9 @@ class FlagPropagator:
         role_config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Propagate flags to role tagger layer."""
-        if context.flags.fsm_tuned_roles:
-            role_config['fsm_tuned_roles'] = True
-            context.add_reason("fsm_tuned_roles: enabled FSM tuned role classification")
+        if context.flags.enable_fsm_tuned_roles:
+            role_config["enable_fsm_tuned_roles"] = True
+            context.add_reason("enable_fsm_tuned_roles: enabled FSM tuned role classification")
         
         if context.flags.strict_stopwords:
             role_config['strict_stopwords'] = True
@@ -199,9 +199,9 @@ class FlagPropagator:
             'enable_spacy_ner': context.flags.enable_spacy_ner,
             'enable_nameparser_en': context.flags.enable_nameparser_en,
             'strict_stopwords': context.flags.strict_stopwords,
-            'fsm_tuned_roles': context.flags.fsm_tuned_roles,
-            'enhanced_diminutives': context.flags.enhanced_diminutives,
-            'enhanced_gender_rules': context.flags.enhanced_gender_rules,
+            "enable_fsm_tuned_roles": context.flags.enable_fsm_tuned_roles,
+            "enable_enhanced_diminutives": context.flags.enable_enhanced_diminutives,
+            "enable_enhanced_gender_rules": context.flags.enable_enhanced_gender_rules,
             'enable_ac_tier0': context.flags.enable_ac_tier0,
             'enable_vector_fallback': context.flags.enable_vector_fallback,
         }

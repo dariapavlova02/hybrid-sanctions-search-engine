@@ -60,6 +60,8 @@ class HybridSearchService(BaseService, SearchService):
         # Metrics tracking
         self._metrics = SearchMetrics()
         self._request_times: List[float] = []
+        self._ac_request_times: List[float] = []
+        self._vector_request_times: List[float] = []
 
         # Fallback services
         self._fallback_watchlist_service: Optional[WatchlistIndexService] = None
@@ -264,7 +266,8 @@ class HybridSearchService(BaseService, SearchService):
             
             # Update metrics
             processing_time = (time.time() - start_time) * 1000  # Convert to ms
-            self._update_metrics(True, processing_time, len(candidates))
+            avg_score = sum(c.score for c in candidates) / len(candidates) if candidates else 0.0
+            self._update_metrics(True, processing_time, len(candidates), avg_score)
             
             self.logger.info(
                 f"Search completed: {len(candidates)} candidates found in {processing_time:.2f}ms"
@@ -277,8 +280,8 @@ class HybridSearchService(BaseService, SearchService):
             self._update_metrics(False, processing_time, 0)
             
             self.logger.error(f"Search failed: {e}")
-            
-            # TODO: Implement fallback to local indexes
+
+            # Fallback to local indexes when Elasticsearch is unavailable
             return await self._fallback_search(normalized, text, opts, search_trace)
     
     async def _ac_search_only(
@@ -304,9 +307,12 @@ class HybridSearchService(BaseService, SearchService):
                 opts=opts,
                 index_name=self.config.elasticsearch.ac_index
             )
-            
+
             search_time = (time.perf_counter() - start_time) * 1000  # Convert to ms
-            
+
+            # Update AC-specific metrics
+            self._update_ac_metrics(search_time, len(candidates))
+
             # Convert candidates to SearchTraceHit
             ac_hits = []
             for rank, candidate in enumerate(candidates, 1):
@@ -383,7 +389,10 @@ class HybridSearchService(BaseService, SearchService):
             )
             
             search_time = (time.perf_counter() - start_time) * 1000  # Convert to ms
-            
+
+            # Update Vector-specific metrics
+            self._update_vector_metrics(search_time, len(candidates))
+
             # Convert candidates to SearchTraceHit
             vector_hits = []
             for rank, candidate in enumerate(candidates, 1):
@@ -933,7 +942,7 @@ class HybridSearchService(BaseService, SearchService):
 
         return fallback_results
     
-    def _update_metrics(self, success: bool, processing_time_ms: float, result_count: int) -> None:
+    def _update_metrics(self, success: bool, processing_time_ms: float, result_count: int, avg_score: float = 0.0) -> None:
         """Update search metrics."""
         if success:
             self._metrics.successful_requests += 1
@@ -944,15 +953,28 @@ class HybridSearchService(BaseService, SearchService):
         self._request_times.append(processing_time_ms)
         if len(self._request_times) > self.config.metrics_window_size:
             self._request_times.pop(0)
-        
+
         # Calculate average latency
         if self._request_times:
             self._metrics.avg_hybrid_latency_ms = sum(self._request_times) / len(self._request_times)
-            
+
             # Calculate P95 latency
             sorted_times = sorted(self._request_times)
             p95_index = int(len(sorted_times) * 0.95)
             self._metrics.p95_latency_ms = sorted_times[p95_index] if p95_index < len(sorted_times) else sorted_times[-1]
+
+        # Update result quality metrics
+        self._metrics.avg_results_per_request = (
+            (self._metrics.avg_results_per_request * (self._metrics.total_requests - 1) + result_count)
+            / self._metrics.total_requests
+        )
+
+        # Update average score
+        if result_count > 0:
+            self._metrics.avg_score = (
+                (self._metrics.avg_score * (self._metrics.total_requests - 1) + avg_score)
+                / self._metrics.total_requests
+            )
         
         # Update hit rate (simplified calculation)
         if result_count > 0:
@@ -962,8 +984,54 @@ class HybridSearchService(BaseService, SearchService):
             )
         else:
             self._metrics.hybrid_hit_rate = (
-                (self._metrics.hybrid_hit_rate * (self._metrics.total_requests - 1) + 0.0) 
+                (self._metrics.hybrid_hit_rate * (self._metrics.total_requests - 1) + 0.0)
                 / self._metrics.total_requests
+            )
+
+    def _update_ac_metrics(self, processing_time_ms: float, result_count: int) -> None:
+        """Update AC-specific search metrics."""
+        # Update AC latency tracking
+        self._ac_request_times.append(processing_time_ms)
+        if len(self._ac_request_times) > self.config.metrics_window_size:
+            self._ac_request_times.pop(0)
+
+        # Calculate average AC latency
+        if self._ac_request_times:
+            self._metrics.avg_ac_latency_ms = sum(self._ac_request_times) / len(self._ac_request_times)
+
+        # Update AC hit rate
+        if result_count > 0:
+            self._metrics.ac_hit_rate = (
+                (self._metrics.ac_hit_rate * (self._metrics.ac_requests - 1) + 1.0)
+                / self._metrics.ac_requests
+            )
+        else:
+            self._metrics.ac_hit_rate = (
+                (self._metrics.ac_hit_rate * (self._metrics.ac_requests - 1) + 0.0)
+                / self._metrics.ac_requests
+            )
+
+    def _update_vector_metrics(self, processing_time_ms: float, result_count: int) -> None:
+        """Update Vector-specific search metrics."""
+        # Update Vector latency tracking
+        self._vector_request_times.append(processing_time_ms)
+        if len(self._vector_request_times) > self.config.metrics_window_size:
+            self._vector_request_times.pop(0)
+
+        # Calculate average Vector latency
+        if self._vector_request_times:
+            self._metrics.avg_vector_latency_ms = sum(self._vector_request_times) / len(self._vector_request_times)
+
+        # Update Vector hit rate
+        if result_count > 0:
+            self._metrics.vector_hit_rate = (
+                (self._metrics.vector_hit_rate * (self._metrics.vector_requests - 1) + 1.0)
+                / self._metrics.vector_requests
+            )
+        else:
+            self._metrics.vector_hit_rate = (
+                (self._metrics.vector_hit_rate * (self._metrics.vector_requests - 1) + 0.0)
+                / self._metrics.vector_requests
             )
     
     async def health_check(self) -> Dict[str, Any]:
@@ -1000,11 +1068,46 @@ class HybridSearchService(BaseService, SearchService):
     def get_metrics(self) -> SearchMetrics:
         """Get current search metrics."""
         return self._metrics
+
+    def get_comprehensive_metrics(self) -> Dict[str, Any]:
+        """Get comprehensive metrics including adapter-specific stats."""
+        base_metrics = self._metrics.to_dict()
+
+        # Add adapter-specific latency stats
+        comprehensive = {
+            **base_metrics,
+            "adapter_stats": {},
+            "request_counts": {
+                "total": self._metrics.total_requests,
+                "ac_only": self._metrics.ac_requests,
+                "vector_only": self._metrics.vector_requests,
+                "hybrid": self._metrics.hybrid_requests,
+                "escalations": self._metrics.escalation_triggered
+            }
+        }
+
+        # Get AC adapter stats
+        if self._ac_adapter and hasattr(self._ac_adapter, 'get_latency_stats'):
+            try:
+                comprehensive["adapter_stats"]["ac"] = self._ac_adapter.get_latency_stats()
+            except Exception as e:
+                self.logger.warning(f"Failed to get AC adapter stats: {e}")
+
+        # Get Vector adapter stats
+        if self._vector_adapter and hasattr(self._vector_adapter, 'get_latency_stats'):
+            try:
+                comprehensive["adapter_stats"]["vector"] = self._vector_adapter.get_latency_stats()
+            except Exception as e:
+                self.logger.warning(f"Failed to get Vector adapter stats: {e}")
+
+        return comprehensive
     
     def reset_metrics(self) -> None:
         """Reset search metrics."""
         self._metrics = SearchMetrics()
         self._request_times.clear()
+        self._ac_request_times.clear()
+        self._vector_request_times.clear()
         self.logger.info("Search metrics reset")
     
     def get_status(self) -> Dict[str, Any]:

@@ -1,0 +1,669 @@
+# AI Service Usage Analysis Report
+==================================================
+
+## Executive Summary
+- **Total Files Analyzed**: 169
+- **Total Definitions**: 2044
+- **Unused Definitions**: 569 (27.8%)
+- **Classes**: 308 (69 unused)
+- **Functions**: 253 (72 unused)
+- **Methods**: 1483 (428 unused)
+
+## Unused Code Analysis
+
+### Unused Classes
+- **ACHitType** in `src/ai_service/monitoring/prometheus_exporter.py`
+- **ACScore** in `src/ai_service/contracts/search_contracts.py`
+- **ACSearchConfig** in `src/ai_service/layers/search/config.py`
+- **APIError** in `src/ai_service/exceptions.py`
+- **AlertStatus** in `src/ai_service/monitoring/alerting_system.py`
+- **AuthorizationError** in `src/ai_service/exceptions.py`
+- **CacheError** in `src/ai_service/exceptions.py`
+- **CacheMetricsService** in `src/ai_service/monitoring/cache_metrics_service.py`
+- **CacheService** in `src/ai_service/core/cache_service.py`
+- **CompanySignal** in `src/ai_service/layers/smart_filter/company_detector.py`
+- **ComplexityAnalysisRequest** in `src/ai_service/main.py`
+- **ConfidenceLevel** in `src/ai_service/contracts/decision_contracts.py`
+- **ConfidenceScoring** in `src/ai_service/layers/signals/signals_service.py`
+- **DashboardFormat** in `src/ai_service/monitoring/dashboard_integration.py`
+- **DocumentSignal** in `src/ai_service/layers/smart_filter/document_detector.py`
+- **ESErrorType** in `src/ai_service/monitoring/prometheus_exporter.py`
+- **ElasticsearchACAdapterInterface** in `src/ai_service/contracts/search_contracts.py`
+- **ElasticsearchVectorAdapterInterface** in `src/ai_service/contracts/search_contracts.py`
+- **EmbeddingError** in `src/ai_service/exceptions.py`
+- **EmbeddingRequest** in `src/ai_service/main.py`
+- **EnhancedElasticsearchClient** in `src/ai_service/layers/search/enhanced_elasticsearch_client.py`
+- **ErrorSeverity** in `src/ai_service/layers/normalization/error_handling.py`
+- **ExtraSignal** in `src/ai_service/layers/signals/signals_service.py`
+- **FSMState** in `src/ai_service/layers/normalization/role_tagger_service.py`
+- **FSMTransitionRule** in `src/ai_service/layers/normalization/role_tagger_service.py`
+- **FinalACOptimizer** in `src/ai_service/layers/variants/templates/final_ac_optimizer.py`
+- **HighRecallACGenerator** in `src/ai_service/layers/variants/templates/high_recall_ac_generator.py`
+- **LogLevel** in `src/ai_service/utils/enhanced_logging.py`
+- **MatchDecision** in `src/ai_service/contracts/decision_contracts.py`
+- **MatchEvidence** in `src/ai_service/contracts/decision_contracts.py`
+- **ModelType** in `src/ai_service/layers/embeddings/models/model_config.py`
+- **MorphologyError** in `src/ai_service/exceptions.py`
+- **NameAssembler** in `src/ai_service/layers/normalization/name_assembler.py`
+- **NormalizationOptions** in `src/ai_service/main.py`
+- **OptimizedACPatternGenerator** in `src/ai_service/layers/variants/templates/optimized_ac_pattern_generator.py`
+- **PatternError** in `src/ai_service/exceptions.py`
+- **PersonRole** in `src/ai_service/layers/normalization/name_assembler.py`
+- **ProcessBatchRequest** in `src/ai_service/main.py`
+- **ProcessTextRequest** in `src/ai_service/main.py`
+- **ProcessingError** in `src/ai_service/exceptions.py`
+- **ProcessingService** in `src/ai_service/core/base_service.py`
+- **RateLimitError** in `src/ai_service/exceptions.py`
+- **RussianMorphologyResult** in `src/ai_service/layers/normalization/morphology/russian_morphology.py`
+- **ScreeningTier** in `src/ai_service/config/screening_tiers.py`
+- **SearchConfigurationError** in `src/ai_service/exceptions.py`
+- **SearchDataError** in `src/ai_service/exceptions.py`
+- **SearchMetricsCollector** in `src/ai_service/monitoring/prometheus_exporter.py`
+- **SearchServiceInterface** in `src/ai_service/contracts/search_contracts.py`
+- **SearchSimilarRequest** in `src/ai_service/main.py`
+- **SearchType** in `src/ai_service/contracts/search_contracts.py`
+- **ShadowModeResult** in `src/ai_service/validation/shadow_mode_validator.py`
+- **SignalDetectionError** in `src/ai_service/exceptions.py`
+- **SignalService** in `src/ai_service/layers/smart_filter/smart_filter_service.py`
+- **TemplateError** in `src/ai_service/exceptions.py`
+- **TerrorismSignal** in `src/ai_service/layers/smart_filter/terrorism_detector.py`
+- **TextNormalizationRequest** in `src/ai_service/main.py`
+- **ThresholdType** in `src/ai_service/monitoring/alerting_system.py`
+- **TokenWithRole** in `src/ai_service/layers/normalization/name_assembler.py`
+- **TraceCollector** in `src/ai_service/utils/trace.py`
+- **TraceStepType** in `src/ai_service/layers/search/search_trace_validator.py`
+- **UkrainianMorphologyResult** in `src/ai_service/layers/normalization/morphology/ukrainian_morphology.py`
+- **UnicodeError** in `src/ai_service/exceptions.py`
+- **ValidationSeverity** in `src/ai_service/layers/search/search_trace_validator.py`
+- **VariantGenerationError** in `src/ai_service/exceptions.py`
+- **VariantGenerationRequest** in `src/ai_service/main.py`
+- **VectorHit** in `src/ai_service/contracts/search_contracts.py`
+- **VectorSearchConfig** in `src/ai_service/layers/search/config.py`
+- **WordNormalizer** in `src/ai_service/layers/normalization/morphology/word_normalizer.py`
+- **WordType** in `src/ai_service/layers/normalization/morphology/word_normalizer.py`
+
+### Unused Functions
+- **admin_status** in `src/ai_service/main.py`
+- **analyze_complexity** in `src/ai_service/main.py`
+- **async_wrapper** in `src/ai_service/utils/profiling.py`
+- **authentication_exception_handler** in `src/ai_service/main.py`
+- **build_trigger_regex** in `src/ai_service/data/dicts/payment_triggers.py`
+- **cached** in `src/ai_service/layers/normalization/performance_optimizer.py`
+- **clear_global_cache** in `src/ai_service/layers/normalization/morphology_adapter.py`
+- **clear_lexicon_cache** in `src/ai_service/layers/normalization/lexicon_loader.py`
+- **clear_ner_cache** in `src/ai_service/layers/normalization/ner_gateways/spacy_uk.py`
+- **clear_profiling_stats** in `src/ai_service/utils/profiling.py`
+- **clear_spacy_en_ner** in `src/ai_service/layers/normalization/ner_gateways/spacy_en.py`
+- **clear_spacy_ru_ner** in `src/ai_service/layers/normalization/ner_gateways/__init__.py`
+- **configure_alerting_system** in `src/ai_service/monitoring/alerting_system.py`
+- **configure_search_monitoring** in `src/ai_service/layers/search/search_monitoring.py`
+- **create_ac_tier0_trace** in `src/ai_service/contracts/search_contracts.py`
+- **create_deterministic_trace_snapshot** in `src/ai_service/layers/search/search_trace_validator.py`
+- **create_elasticsearch_enhanced_adapter** in `src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py`
+- **create_elasticsearch_watchlist_adapter** in `src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py`
+- **create_error_response** in `src/ai_service/exceptions.py`
+- **create_hybrid_rerank_trace** in `src/ai_service/contracts/search_contracts.py`
+- **create_knn_fallback_trace** in `src/ai_service/contracts/search_contracts.py`
+- **create_logger_with_otel_context** in `src/ai_service/utils/enhanced_logging.py`
+- **create_monitoring_router** in `src/ai_service/monitoring/endpoints.py`
+- **create_prometheus_endpoint** in `src/ai_service/monitoring/endpoints.py`
+- **create_search_integration** in `src/ai_service/core/search_integration.py`
+- **create_text_hash** in `src/ai_service/utils/lru_cache_ttl.py`
+- **decorator** in `src/ai_service/layers/search/search_monitoring.py`
+- **enhanced_log_with_context** in `src/ai_service/utils/enhanced_logging.py`
+- **extract_ascii_tokens** in `src/ai_service/utils/ascii_utils.py`
+- **format_error_response** in `src/ai_service/utils/response_formatter.py`
+- **get_alerts** in `src/ai_service/monitoring/endpoints.py`
+- **get_dashboard_exporter** in `src/ai_service/monitoring/dashboard_integration.py`
+- **get_health** in `src/ai_service/monitoring/endpoints.py`
+- **get_metric** in `src/ai_service/monitoring/endpoints.py`
+- **get_security_logger** in `src/ai_service/utils/enhanced_logging.py`
+- **get_supported_languages** in `src/ai_service/main.py`
+- **get_tier_patterns** in `src/ai_service/layers/variants/templates/lexicon.py`
+- **handle_exception** in `src/ai_service/exceptions.py`
+- **internal_server_exception_handler** in `src/ai_service/main.py`
+- **log_alert_notification** in `src/ai_service/monitoring/alerting_system.py`
+- **log_processing_result** in `src/ai_service/utils/pii_masking.py`
+- **log_processing_start** in `src/ai_service/utils/pii_masking.py`
+- **maybe_to_feminine_nom** in `src/ai_service/layers/normalization/morphology/gender_rules.py`
+- **measure_latency** in `src/ai_service/utils/perf_timer.py`
+- **monitor_memory_usage** in `src/ai_service/utils/performance.py`
+- **monitor_performance** in `src/ai_service/layers/normalization/performance_optimizer.py`
+- **monitor_search_operation** in `src/ai_service/layers/search/search_monitoring.py`
+- **ner_function** in `src/ai_service/layers/normalization/ner_gateways/__init__.py`
+- **normalize_text** in `src/ai_service/main.py`
+- **perf_timer** in `src/ai_service/utils/perf_timer.py`
+- **process_text** in `src/ai_service/main.py`
+- **profile_memory** in `src/ai_service/utils/profiling.py`
+- **prometheus_metrics** in `src/ai_service/monitoring/endpoints.py`
+- **pydantic_validation_exception_handler** in `src/ai_service/main.py`
+- **record_api_request** in `src/ai_service/monitoring/metrics_collector.py`
+- **record_elasticsearch_operation** in `src/ai_service/monitoring/metrics_collector.py`
+- **reset_global_metrics** in `src/ai_service/monitoring/metrics_collector.py`
+- **reset_metric** in `src/ai_service/monitoring/endpoints.py`
+- **reset_statistics** in `src/ai_service/main.py`
+- **root** in `src/ai_service/main.py`
+- **search_metrics** in `src/ai_service/monitoring/endpoints.py`
+- **service_unavailable_exception_handler** in `src/ai_service/main.py`
+- **should_use_factory** in `src/ai_service/utils/feature_flags.py`
+- **slack_alert_notification** in `src/ai_service/monitoring/alerting_system.py`
+- **startup_event** in `src/ai_service/main.py`
+- **time_function** in `src/ai_service/utils/perf_timer.py`
+- **validate_all_test_cases** in `src/ai_service/validation/shadow_mode_validator.py`
+- **validate_ascii_fastpath_equivalence** in `src/ai_service/utils/ascii_utils.py`
+- **validate_feature_improvements** in `src/ai_service/validation/shadow_mode_validator.py`
+- **validation_exception_handler** in `src/ai_service/main.py`
+- **verify_admin_token** in `src/ai_service/main.py`
+- **wrapper** in `src/ai_service/layers/search/search_monitoring.py`
+
+### Unused Methods
+- **AlertingSystem.acknowledge_alert** in `src/ai_service/monitoring/alerting_system.py`
+- **AlertingSystem.evaluate_all_rules** in `src/ai_service/monitoring/alerting_system.py`
+- **AlertingSystem.export_alerts_for_dashboard** in `src/ai_service/monitoring/alerting_system.py`
+- **AlertingSystem.get_active_alerts_summary** in `src/ai_service/monitoring/alerting_system.py`
+- **AlertingSystem.get_alert_history** in `src/ai_service/monitoring/alerting_system.py`
+- **AlertingSystem.get_sla_compliance_report** in `src/ai_service/monitoring/alerting_system.py`
+- **AlertingSystem.is_rule_suppressed** in `src/ai_service/monitoring/alerting_system.py`
+- **AlertingSystem.remove_alert_rule** in `src/ai_service/monitoring/alerting_system.py`
+- **AlertingSystem.remove_notification_callback** in `src/ai_service/monitoring/alerting_system.py`
+- **AlertingSystem.resolve_alert** in `src/ai_service/monitoring/alerting_system.py`
+- **AlertingSystem.start_background_evaluation** in `src/ai_service/monitoring/alerting_system.py`
+- **AlertingSystem.suppress_alert_rule** in `src/ai_service/monitoring/alerting_system.py`
+- **AlertingSystem.unsuppress_alert_rule** in `src/ai_service/monitoring/alerting_system.py`
+- **AlertingSystem.update_alert_rule** in `src/ai_service/monitoring/alerting_system.py`
+- **BaseExtractor.extract** in `src/ai_service/layers/signals/extractors/base_extractor.py`
+- **BaseMorphologyAnalyzer.analyze_word** in `src/ai_service/layers/normalization/morphology/base_morphology.py`
+- **BaseMorphologyAnalyzer.cleanup** in `src/ai_service/layers/normalization/morphology/base_morphology.py`
+- **BaseMorphologyAnalyzer.get_analysis_statistics** in `src/ai_service/layers/normalization/morphology/base_morphology.py`
+- **BaseMorphologyAnalyzer.get_lemma** in `src/ai_service/layers/normalization/morphology/base_morphology.py`
+- **BaseMorphologyAnalyzer.get_pos_tags** in `src/ai_service/layers/normalization/morphology/base_morphology.py`
+- **BaseMorphologyAnalyzer.get_word_forms** in `src/ai_service/layers/normalization/morphology/base_morphology.py`
+- **BaseMorphologyAnalyzer.is_known_word** in `src/ai_service/layers/normalization/morphology/base_morphology.py`
+- **BaseService.is_initialized** in `src/ai_service/core/base_service.py`
+- **BirthdateExtractor.extract** in `src/ai_service/layers/signals/extractors/birthdate_extractor.py`
+- **CacheManager.clear_all** in `src/ai_service/utils/lru_cache_ttl.py`
+- **CacheManager.disable_all** in `src/ai_service/utils/lru_cache_ttl.py`
+- **CacheManager.enable_all** in `src/ai_service/utils/lru_cache_ttl.py`
+- **CacheManager.get_morphology_cache** in `src/ai_service/utils/lru_cache_ttl.py`
+- **CacheManager.get_tokenizer_cache** in `src/ai_service/utils/lru_cache_ttl.py`
+- **CacheManager.purge_all_expired** in `src/ai_service/utils/lru_cache_ttl.py`
+- **CacheMetrics.get_metrics_summary** in `src/ai_service/monitoring/cache_metrics.py`
+- **CacheMetrics.record_cache_eviction** in `src/ai_service/monitoring/cache_metrics.py`
+- **CacheMetrics.record_cache_expiration** in `src/ai_service/monitoring/cache_metrics.py`
+- **CacheMetrics.record_layer_latency** in `src/ai_service/monitoring/cache_metrics.py`
+- **CacheMetrics.record_morphology_cache_hit** in `src/ai_service/monitoring/cache_metrics.py`
+- **CacheMetrics.record_morphology_cache_miss** in `src/ai_service/monitoring/cache_metrics.py`
+- **CacheMetrics.record_normalization_latency** in `src/ai_service/monitoring/cache_metrics.py`
+- **CacheMetrics.record_tokenizer_cache_hit** in `src/ai_service/monitoring/cache_metrics.py`
+- **CacheMetrics.record_tokenizer_cache_miss** in `src/ai_service/monitoring/cache_metrics.py`
+- **CacheMetrics.update_from_cache_stats** in `src/ai_service/monitoring/cache_metrics.py`
+- **CacheMetrics.update_morphology_cache_hit_rate** in `src/ai_service/monitoring/cache_metrics.py`
+- **CacheMetrics.update_morphology_cache_size** in `src/ai_service/monitoring/cache_metrics.py`
+- **CacheMetrics.update_tokenizer_cache_hit_rate** in `src/ai_service/monitoring/cache_metrics.py`
+- **CacheMetrics.update_tokenizer_cache_size** in `src/ai_service/monitoring/cache_metrics.py`
+- **CacheMetricsService.clear_caches** in `src/ai_service/monitoring/cache_metrics_service.py`
+- **CacheMetricsService.get_detailed_metrics** in `src/ai_service/monitoring/cache_metrics_service.py`
+- **CacheService.cleanup_expired** in `src/ai_service/core/cache_service.py`
+- **CacheService.delete** in `src/ai_service/core/cache_service.py`
+- **CacheService.get_keys** in `src/ai_service/core/cache_service.py`
+- **CacheService.get_or_set** in `src/ai_service/core/cache_service.py`
+- **CacheService.resize** in `src/ai_service/core/cache_service.py`
+- **CacheService.set_max_size** in `src/ai_service/core/cache_service.py`
+- **CacheService.touch** in `src/ai_service/core/cache_service.py`
+- **CachedTokenizerService.tokenize** in `src/ai_service/layers/normalization/tokenizer_service.py`
+- **CachedTokenizerService.tokenize_with_classification** in `src/ai_service/layers/normalization/tokenizer_service.py`
+- **CompanyDetector.detect_company_signals** in `src/ai_service/layers/smart_filter/company_detector.py`
+- **CompanyDetector.get_enhanced_company_analysis** in `src/ai_service/layers/smart_filter/company_detector.py`
+- **ConfidenceScorer.calculate_confidence** in `src/ai_service/layers/smart_filter/confidence_scorer.py`
+- **ConfidenceScorer.get_confidence_level** in `src/ai_service/layers/smart_filter/confidence_scorer.py`
+- **ConfidenceScorer.get_detailed_analysis** in `src/ai_service/layers/smart_filter/confidence_scorer.py`
+- **ConfidenceScorer.get_processing_recommendation** in `src/ai_service/layers/smart_filter/confidence_scorer.py`
+- **Config.get_all_config** in `src/ai_service/config/__init__.py`
+- **Config.validate** in `src/ai_service/config/__init__.py`
+- **Counter.inc** in `src/ai_service/monitoring/cache_metrics.py`
+- **DashboardDataExporter.create_custom_dashboard** in `src/ai_service/monitoring/dashboard_integration.py`
+- **DashboardDataExporter.export_dashboard_config** in `src/ai_service/monitoring/dashboard_integration.py`
+- **DashboardDataExporter.get_available_dashboards** in `src/ai_service/monitoring/dashboard_integration.py`
+- **DashboardDataExporter.get_dashboard_data** in `src/ai_service/monitoring/dashboard_integration.py`
+- **DecisionEngine.decide** in `src/ai_service/core/decision_engine.py`
+- **DecisionLogic.analyze** in `src/ai_service/layers/smart_filter/decision_logic.py`
+- **DecisionLogic.get_decision_statistics** in `src/ai_service/layers/smart_filter/decision_logic.py`
+- **DecisionLogic.get_detailed_analysis** in `src/ai_service/layers/smart_filter/decision_logic.py`
+- **DecisionLogic.make_decision** in `src/ai_service/layers/smart_filter/decision_logic.py`
+- **DecisionLogic.update_thresholds** in `src/ai_service/layers/smart_filter/decision_logic.py`
+- **DiminutiveResolver.resolve** in `src/ai_service/layers/normalization/morphology/diminutive_resolver.py`
+- **DocumentDetector.detect_document_signals** in `src/ai_service/layers/smart_filter/document_detector.py`
+- **ElasticsearchACAdapter.get_latency_stats** in `src/ai_service/layers/search/elasticsearch_adapters.py`
+- **ElasticsearchACAdapter.search_ac_patterns** in `src/ai_service/layers/search/elasticsearch_adapters.py`
+- **ElasticsearchAdapter.get_latency_stats** in `src/ai_service/layers/search/contracts.py`
+- **ElasticsearchClientFactory.close** in `src/ai_service/layers/search/elasticsearch_client.py`
+- **ElasticsearchClientFactory.get_client** in `src/ai_service/layers/search/elasticsearch_client.py`
+- **ElasticsearchClientFactory.get_hosts** in `src/ai_service/layers/search/elasticsearch_client.py`
+- **ElasticsearchClientFactory.smoke_test** in `src/ai_service/layers/search/elasticsearch_client.py`
+- **ElasticsearchConfig.normalized_hosts** in `src/ai_service/layers/search/config.py`
+- **ElasticsearchConfig.validate_hosts** in `src/ai_service/layers/search/config.py`
+- **ElasticsearchVectorAdapter.get_latency_stats** in `src/ai_service/layers/search/elasticsearch_adapters.py`
+- **ElasticsearchVectorAdapter.search_vector_fallback** in `src/ai_service/layers/search/elasticsearch_adapters.py`
+- **ElasticsearchWatchlistAdapter.build_from_corpus** in `src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py`
+- **ElasticsearchWatchlistAdapter.clear_overlay** in `src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py`
+- **ElasticsearchWatchlistAdapter.close** in `src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py`
+- **ElasticsearchWatchlistAdapter.get_doc** in `src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py`
+- **ElasticsearchWatchlistAdapter.ready** in `src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py`
+- **ElasticsearchWatchlistAdapter.reload_snapshot** in `src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py`
+- **ElasticsearchWatchlistAdapter.save_snapshot** in `src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py`
+- **ElasticsearchWatchlistAdapter.set_overlay_from_corpus** in `src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py`
+- **EmbeddingModelManager.get_model** in `src/ai_service/layers/embeddings/models/embedding_model_manager.py`
+- **EmbeddingModelManager.get_model_info** in `src/ai_service/layers/embeddings/models/embedding_model_manager.py`
+- **EmbeddingModelManager.list_loaded_models** in `src/ai_service/layers/embeddings/models/embedding_model_manager.py`
+- **EmbeddingModelManager.preload_model** in `src/ai_service/layers/embeddings/models/embedding_model_manager.py`
+- **EmbeddingModelManager.shutdown** in `src/ai_service/layers/embeddings/models/embedding_model_manager.py`
+- **EmbeddingPreprocessor.extract_name_only** in `src/ai_service/services/embedding_preprocessor.py`
+- **EmbeddingPreprocessor.normalize_for_embedding** in `src/ai_service/services/embedding_preprocessor.py`
+- **EmbeddingPreprocessor.normalize_with_attributes** in `src/ai_service/services/embedding_preprocessor.py`
+- **EmbeddingPreprocessor.should_include_attrs** in `src/ai_service/services/embedding_preprocessor.py`
+- **EmbeddingService.clear_preprocessing_cache** in `src/ai_service/layers/embeddings/embedding_service.py`
+- **EmbeddingService.encode_batch** in `src/ai_service/layers/embeddings/embedding_service.py`
+- **EmbeddingService.encode_one** in `src/ai_service/layers/embeddings/embedding_service.py`
+- **EmbeddingService.get_cache_stats** in `src/ai_service/layers/embeddings/embedding_service.py`
+- **EmbeddingService.get_embedding_dimension** in `src/ai_service/layers/embeddings/embedding_service.py`
+- **EmbeddingService.get_model_info** in `src/ai_service/layers/embeddings/embedding_service.py`
+- **EmbeddingService.warmup** in `src/ai_service/layers/embeddings/embedding_service.py`
+- **EnhancedElasticsearchClient.close** in `src/ai_service/layers/search/enhanced_elasticsearch_client.py`
+- **EnhancedElasticsearchClient.enhanced_health_check** in `src/ai_service/layers/search/enhanced_elasticsearch_client.py`
+- **EnhancedElasticsearchClient.execute_with_retry** in `src/ai_service/layers/search/enhanced_elasticsearch_client.py`
+- **EnhancedElasticsearchClient.get_client** in `src/ai_service/layers/search/enhanced_elasticsearch_client.py`
+- **EnhancedElasticsearchClient.get_cluster_stats** in `src/ai_service/layers/search/enhanced_elasticsearch_client.py`
+- **EnhancedElasticsearchClient.get_connection_status** in `src/ai_service/layers/search/enhanced_elasticsearch_client.py`
+- **EnhancedElasticsearchClient.get_hosts** in `src/ai_service/layers/search/enhanced_elasticsearch_client.py`
+- **EnhancedElasticsearchClient.is_healthy** in `src/ai_service/layers/search/enhanced_elasticsearch_client.py`
+- **EnhancedElasticsearchClient.wait_for_healthy** in `src/ai_service/layers/search/enhanced_elasticsearch_client.py`
+- **EnhancedLogger.audit** in `src/ai_service/utils/enhanced_logging.py`
+- **EnhancedLogger.critical** in `src/ai_service/utils/enhanced_logging.py`
+- **EnhancedLogger.log_api_request** in `src/ai_service/utils/enhanced_logging.py`
+- **EnhancedLogger.log_operation_end** in `src/ai_service/utils/enhanced_logging.py`
+- **EnhancedLogger.log_operation_start** in `src/ai_service/utils/enhanced_logging.py`
+- **EnhancedLogger.with_trace_id** in `src/ai_service/utils/enhanced_logging.py`
+- **EnhancedVectorIndex.get_index_statistics** in `src/ai_service/layers/embeddings/indexing/enhanced_vector_index_service.py`
+- **EnhancedVectorIndex.optimize_index** in `src/ai_service/layers/embeddings/indexing/enhanced_vector_index_service.py`
+- **EnhancedVectorIndex.warm_up** in `src/ai_service/layers/embeddings/indexing/enhanced_vector_index_service.py`
+- **EntityTemplate.get_high_confidence_patterns** in `src/ai_service/layers/variants/template_builder.py`
+- **EntityTemplate.get_search_keywords** in `src/ai_service/layers/variants/template_builder.py`
+- **ErrorHandler.clear_errors** in `src/ai_service/layers/normalization/error_handling.py`
+- **ErrorHandler.get_error_summary** in `src/ai_service/layers/normalization/error_handling.py`
+- **ErrorHandler.get_errors_by_severity** in `src/ai_service/layers/normalization/error_handling.py`
+- **ErrorHandler.handle_error** in `src/ai_service/layers/normalization/error_handling.py`
+- **ErrorHandler.has_critical_errors** in `src/ai_service/layers/normalization/error_handling.py`
+- **ErrorHandler.register_recovery_strategy** in `src/ai_service/layers/normalization/error_handling.py`
+- **ErrorReportingMixin.get_error_report** in `src/ai_service/layers/normalization/error_handling.py`
+- **ErrorReportingMixin.safe_execute** in `src/ai_service/layers/normalization/error_handling.py`
+- **ErrorReportingMixin.safe_execute_async** in `src/ai_service/layers/normalization/error_handling.py`
+- **FeatureFlagManager.allow_diminutives_cross_lang** in `src/ai_service/utils/feature_flags.py`
+- **FeatureFlagManager.enforce_nominative** in `src/ai_service/utils/feature_flags.py`
+- **FeatureFlagManager.get_current_config** in `src/ai_service/utils/feature_flags.py`
+- **FeatureFlagManager.get_monitoring_config** in `src/ai_service/utils/feature_flags.py`
+- **FeatureFlagManager.preserve_feminine_surnames** in `src/ai_service/utils/feature_flags.py`
+- **FeatureFlagManager.should_use_factory** in `src/ai_service/utils/feature_flags.py`
+- **FeatureFlagManager.update_flags** in `src/ai_service/utils/feature_flags.py`
+- **FinalACOptimizer.export_for_tier_based_ac** in `src/ai_service/layers/variants/templates/final_ac_optimizer.py`
+- **FinalACOptimizer.generate_optimal_patterns** in `src/ai_service/layers/variants/templates/final_ac_optimizer.py`
+- **FinalACOptimizer.get_optimization_stats** in `src/ai_service/layers/variants/templates/final_ac_optimizer.py`
+- **FlagPropagator.get_effective_flags** in `src/ai_service/utils/flag_propagation.py`
+- **FlagPropagator.log_flag_usage** in `src/ai_service/utils/flag_propagation.py`
+- **GenderProcessor.adjust_surname_gender** in `src/ai_service/layers/normalization/processors/gender_processor.py`
+- **GenderProcessor.infer_gender** in `src/ai_service/layers/normalization/processors/gender_processor.py`
+- **HighRecallACGenerator.export_for_high_recall_ac** in `src/ai_service/layers/variants/templates/high_recall_ac_generator.py`
+- **HighRecallACGenerator.generate_high_recall_patterns** in `src/ai_service/layers/variants/templates/high_recall_ac_generator.py`
+- **HighRecallACGenerator.get_recall_statistics** in `src/ai_service/layers/variants/templates/high_recall_ac_generator.py`
+- **Histogram.observe** in `src/ai_service/monitoring/cache_metrics.py`
+- **HistogramData.add_value** in `src/ai_service/monitoring/metrics_collector.py`
+- **HistogramData.get_percentile** in `src/ai_service/monitoring/metrics_collector.py`
+- **HybridSearchConfig.get_ac_config** in `src/ai_service/layers/search/config.py`
+- **HybridSearchConfig.get_elasticsearch_config** in `src/ai_service/layers/search/config.py`
+- **HybridSearchConfig.get_vector_config** in `src/ai_service/layers/search/config.py`
+- **HybridSearchConfig.validate_default_mode** in `src/ai_service/layers/search/config.py`
+- **HybridSearchService.find_candidates** in `src/ai_service/layers/search/hybrid_search_service.py`
+- **HybridSearchService.get_status** in `src/ai_service/layers/search/hybrid_search_service.py`
+- **IdentifierExtractor.extract** in `src/ai_service/layers/signals/extractors/identifier_extractor.py`
+- **IdentifierExtractor.extract_organization_ids** in `src/ai_service/layers/signals/extractors/identifier_extractor.py`
+- **IdentifierExtractor.extract_person_ids** in `src/ai_service/layers/signals/extractors/identifier_extractor.py`
+- **InputValidator.is_text_suspicious** in `src/ai_service/utils/input_validation.py`
+- **InputValidator.validate_and_sanitize** in `src/ai_service/utils/input_validation.py`
+- **InputValidator.validate_sanctions_input** in `src/ai_service/utils/input_validation.py`
+- **LanguageDetectionResult.is_confident** in `src/ai_service/utils/types.py`
+- **LanguageDetectionResult.is_mixed** in `src/ai_service/utils/types.py`
+- **LanguageDetectionResult.is_unknown** in `src/ai_service/utils/types.py`
+- **LanguageDetectionService.add_language_mapping** in `src/ai_service/layers/language/language_detection_service.py`
+- **LanguageDetectionService.detect_batch** in `src/ai_service/layers/language/language_detection_service.py`
+- **LanguageDetectionService.detect_language_config_driven** in `src/ai_service/layers/language/language_detection_service.py`
+- **LanguageDetectionService.detect_languages_batch** in `src/ai_service/layers/language/language_detection_service.py`
+- **LanguageDetectionService.get_detection_stats** in `src/ai_service/layers/language/language_detection_service.py`
+- **LanguageDetectionService.get_supported_languages** in `src/ai_service/layers/language/language_detection_service.py`
+- **LanguageDetectionService.is_language_supported** in `src/ai_service/layers/language/language_detection_service.py`
+- **LegacyNormalizationAdapter.convert_from_legacy_format** in `src/ai_service/adapters/legacy_normalization_adapter.py`
+- **LegacyNormalizationAdapter.convert_to_legacy_format** in `src/ai_service/adapters/legacy_normalization_adapter.py`
+- **LegacyNormalizationAdapter.normalize_legacy** in `src/ai_service/adapters/legacy_normalization_adapter.py`
+- **LegacyNormalizationAdapter.normalize_legacy_sync** in `src/ai_service/adapters/legacy_normalization_adapter.py`
+- **LegacyNormalizationAdapter.process_batch_legacy** in `src/ai_service/adapters/legacy_normalization_adapter.py`
+- **LegacyNormalizationAdapter.process_text** in `src/ai_service/adapters/legacy_normalization_adapter.py`
+- **LegacyNormalizationAdapter.process_text_sync** in `src/ai_service/adapters/legacy_normalization_adapter.py`
+- **LoggingMixin.log_entry** in `src/ai_service/utils/logging_config.py`
+- **LoggingMixin.log_exit** in `src/ai_service/utils/logging_config.py`
+- **LruTtlCache.delete** in `src/ai_service/utils/lru_cache_ttl.py`
+- **LruTtlCache.disable** in `src/ai_service/utils/lru_cache_ttl.py`
+- **LruTtlCache.enable** in `src/ai_service/utils/lru_cache_ttl.py`
+- **LruTtlCache.purge_expired** in `src/ai_service/utils/lru_cache_ttl.py`
+- **MetricsCollector.add_metric_callback** in `src/ai_service/monitoring/metrics_collector.py`
+- **MetricsCollector.collect_morphology_metrics** in `src/ai_service/monitoring/cache_metrics.py`
+- **MetricsCollector.collect_normalization_metrics** in `src/ai_service/monitoring/cache_metrics.py`
+- **MetricsCollector.collect_tokenizer_metrics** in `src/ai_service/monitoring/cache_metrics.py`
+- **MetricsCollector.decorator** in `src/ai_service/monitoring/metrics_collector.py`
+- **MetricsCollector.decrement** in `src/ai_service/monitoring/metrics_collector.py`
+- **MetricsCollector.export_prometheus_metrics** in `src/ai_service/monitoring/metrics_collector.py`
+- **MetricsCollector.get_all_metrics_summary** in `src/ai_service/monitoring/metrics_collector.py`
+- **MetricsCollector.get_collected_metrics** in `src/ai_service/monitoring/cache_metrics.py`
+- **MetricsCollector.get_error_rate_metrics** in `src/ai_service/monitoring/metrics_collector.py`
+- **MetricsCollector.get_histogram_stats** in `src/ai_service/monitoring/metrics_collector.py`
+- **MetricsCollector.get_metric_stats** in `src/ai_service/monitoring/metrics_collector.py`
+- **MetricsCollector.get_performance_metrics** in `src/ai_service/monitoring/metrics_collector.py`
+- **MetricsCollector.record_counter** in `src/ai_service/monitoring/metrics_collector.py`
+- **MetricsCollector.record_histogram** in `src/ai_service/monitoring/metrics_collector.py`
+- **MetricsCollector.remove_metric_callback** in `src/ai_service/monitoring/metrics_collector.py`
+- **MetricsCollector.start_background_collection** in `src/ai_service/monitoring/metrics_collector.py`
+- **MetricsCollector.time_async_function** in `src/ai_service/monitoring/metrics_collector.py`
+- **MetricsCollector.time_function** in `src/ai_service/monitoring/metrics_collector.py`
+- **MetricsCollector.wrapper** in `src/ai_service/monitoring/metrics_collector.py`
+- **MetricsService.get_metric_summary** in `src/ai_service/monitoring/metrics_service.py`
+- **MetricsService.get_metric_values** in `src/ai_service/monitoring/metrics_service.py`
+- **MetricsService.get_system_health** in `src/ai_service/monitoring/metrics_service.py`
+- **MetricsService.increment_counter** in `src/ai_service/monitoring/metrics_service.py`
+- **MetricsService.record_histogram** in `src/ai_service/monitoring/metrics_service.py`
+- **MetricsService.register_metric** in `src/ai_service/monitoring/metrics_service.py`
+- **MetricsService.resolve_alert** in `src/ai_service/monitoring/metrics_service.py`
+- **MetricsService.set_gauge** in `src/ai_service/monitoring/metrics_service.py`
+- **MetricsService.start_background_tasks** in `src/ai_service/monitoring/metrics_service.py`
+- **MetricsService.stop_background_tasks** in `src/ai_service/monitoring/metrics_service.py`
+- **MetricsService.timer** in `src/ai_service/monitoring/metrics_service.py`
+- **MorphologyAdapter.apply_yo_strategy** in `src/ai_service/layers/normalization/morphology_adapter.py`
+- **MorphologyAdapter.detect_patronymic** in `src/ai_service/layers/normalization/morphology_adapter.py`
+- **MorphologyAdapter.get_cache_stats** in `src/ai_service/layers/normalization/morphology_adapter.py`
+- **MorphologyAdapter.is_uk_available** in `src/ai_service/layers/normalization/morphology_adapter.py`
+- **MorphologyAdapter.normalize_patronymic_to_nominative** in `src/ai_service/layers/normalization/morphology_adapter.py`
+- **MorphologyAdapter.normalize_slavic_token** in `src/ai_service/layers/normalization/morphology_adapter.py`
+- **MorphologyAdapter.parse_priority** in `src/ai_service/layers/normalization/morphology_adapter.py`
+- **MorphologyAdapter.to_nominative_cached** in `src/ai_service/layers/normalization/morphology_adapter.py`
+- **MorphologyAdapter.warmup** in `src/ai_service/layers/normalization/morphology_adapter.py`
+- **MorphologyProcessor.normalize_slavic_token** in `src/ai_service/layers/normalization/processors/morphology_processor.py`
+- **NameAssembler.assemble** in `src/ai_service/layers/normalization/name_assembler.py`
+- **NameDetector.detect_name_signals** in `src/ai_service/layers/smart_filter/name_detector.py`
+- **NameDetector.detect_names** in `src/ai_service/layers/smart_filter/name_detector.py`
+- **NameParser.calculate_similarity** in `src/ai_service/utils/name_utils.py`
+- **NameParser.extract_entities** in `src/ai_service/utils/name_utils.py`
+- **NameParser.find_best_match** in `src/ai_service/utils/name_utils.py`
+- **NameParser.parse_name** in `src/ai_service/utils/name_utils.py`
+- **NameparserAdapter.is_surname_particle** in `src/ai_service/layers/normalization/nameparser_adapter.py`
+- **NameparserAdapter.reconstruct_name** in `src/ai_service/layers/normalization/nameparser_adapter.py`
+- **NormalizationFactory.clear_caches** in `src/ai_service/layers/normalization/processors/normalization_factory.py`
+- **NormalizationFactory.normalize_text** in `src/ai_service/layers/normalization/processors/normalization_factory.py`
+- **NormalizationResult.from_dict** in `src/ai_service/utils/trace.py`
+- **NormalizationResult.from_json** in `src/ai_service/utils/trace.py`
+- **NormalizationResult.to_json** in `src/ai_service/utils/trace.py`
+- **NormalizationService.clear_caches** in `src/ai_service/layers/normalization/normalization_service.py`
+- **NormalizationService.normalize_async** in `src/ai_service/layers/normalization/normalization_service.py`
+- **NormalizationService.normalize_sync** in `src/ai_service/layers/normalization/normalization_service.py`
+- **NormalizationService.validate_identifier** in `src/ai_service/layers/normalization/normalization_service.py`
+- **NormalizationService.warmup_morphology_cache** in `src/ai_service/layers/normalization/normalization_service.py`
+- **NormalizationServiceInterface.normalize_async** in `src/ai_service/contracts/base_contracts.py`
+- **OptimizedACPatternGenerator.export_t0_t1_patterns_for_elasticsearch** in `src/ai_service/layers/variants/templates/optimized_ac_pattern_generator.py`
+- **OptimizedACPatternGenerator.generate_high_precision_patterns** in `src/ai_service/layers/variants/templates/optimized_ac_pattern_generator.py`
+- **OptimizedACPatternGenerator.generate_patterns** in `src/ai_service/layers/variants/templates/optimized_ac_pattern_generator.py`
+- **OptimizedACPatternGenerator.get_pattern_statistics** in `src/ai_service/layers/variants/templates/optimized_ac_pattern_generator.py`
+- **OptimizedACPatternGenerator.optimize_patterns** in `src/ai_service/layers/variants/templates/optimized_ac_pattern_generator.py`
+- **OptimizedEmbeddingService.find_similar_texts** in `src/ai_service/layers/embeddings/optimized_embedding_service.py`
+- **OptimizedEmbeddingService.find_similar_texts_async_optimized** in `src/ai_service/layers/embeddings/optimized_embedding_service.py`
+- **OptimizedEmbeddingService.find_similar_texts_optimized** in `src/ai_service/layers/embeddings/optimized_embedding_service.py`
+- **OptimizedEmbeddingService.get_embeddings** in `src/ai_service/layers/embeddings/optimized_embedding_service.py`
+- **OptimizedEmbeddingService.get_embeddings_async_optimized** in `src/ai_service/layers/embeddings/optimized_embedding_service.py`
+- **OptimizedEmbeddingService.get_performance_metrics** in `src/ai_service/layers/embeddings/optimized_embedding_service.py`
+- **OptimizedEmbeddingService.warm_up_cache** in `src/ai_service/layers/embeddings/optimized_embedding_service.py`
+- **OrchestratorFactory.create_testing_orchestrator** in `src/ai_service/core/orchestrator_factory.py`
+- **OrganizationExtractor.extract** in `src/ai_service/layers/signals/extractors/organization_extractor.py`
+- **PerfTimer.elapsed_ms** in `src/ai_service/utils/perf_timer.py`
+- **PerformanceOptimizer.cache_key** in `src/ai_service/layers/normalization/performance_optimizer.py`
+- **PerformanceOptimizer.clear_all_caches** in `src/ai_service/layers/normalization/performance_optimizer.py`
+- **PerformanceOptimizer.decorator** in `src/ai_service/layers/normalization/performance_optimizer.py`
+- **PerformanceOptimizer.get_cache_stats** in `src/ai_service/layers/normalization/performance_optimizer.py`
+- **PerformanceOptimizer.get_performance_stats** in `src/ai_service/layers/normalization/performance_optimizer.py`
+- **PerformanceOptimizer.memory_pressure_cleanup** in `src/ai_service/layers/normalization/performance_optimizer.py`
+- **PerformanceOptimizer.optimize_for_batch** in `src/ai_service/layers/normalization/performance_optimizer.py`
+- **PerformanceOptimizer.preload_common_patterns** in `src/ai_service/layers/normalization/performance_optimizer.py`
+- **PerformanceOptimizer.wrapper** in `src/ai_service/layers/normalization/performance_optimizer.py`
+- **PerformanceTracker.end_operation** in `src/ai_service/utils/enhanced_logging.py`
+- **PerformanceTracker.get_system_metrics** in `src/ai_service/utils/enhanced_logging.py`
+- **PerformanceTracker.start_operation** in `src/ai_service/utils/enhanced_logging.py`
+- **PerformanceTracker.track_operation** in `src/ai_service/utils/performance.py`
+- **PersonExtractor.extract** in `src/ai_service/layers/signals/extractors/person_extractor.py`
+- **ProcessBatchRequest.validate_texts** in `src/ai_service/main.py`
+- **ProcessTextRequest.validate_text_length** in `src/ai_service/main.py`
+- **ProcessingService.process_text** in `src/ai_service/core/base_service.py`
+- **ProcessingService.reset_processing_stats** in `src/ai_service/core/base_service.py`
+- **ProcessingStage.get_stage_name** in `src/ai_service/contracts/base_contracts.py`
+- **RetryPolicy.calculate_delay** in `src/ai_service/layers/search/enhanced_elasticsearch_client.py`
+- **RoleClassifier.tag_tokens** in `src/ai_service/layers/normalization/processors/role_classifier.py`
+- **RoleTagger.get_organization_count** in `src/ai_service/layers/normalization/role_tagger.py`
+- **RoleTagger.get_organization_spans** in `src/ai_service/layers/normalization/role_tagger.py`
+- **RoleTagger.get_person_candidates** in `src/ai_service/layers/normalization/role_tagger.py`
+- **RoleTagger.get_stopword_count** in `src/ai_service/layers/normalization/role_tagger.py`
+- **RoleTaggerService.get_trace_entries** in `src/ai_service/layers/normalization/role_tagger_service.py`
+- **RussianMorphologyAnalyzer.analyze_word** in `src/ai_service/layers/normalization/morphology/russian_morphology.py`
+- **RussianMorphologyAnalyzer.batch_process_names** in `src/ai_service/layers/normalization/morphology/russian_morphology.py`
+- **RussianMorphologyAnalyzer.get_all_forms** in `src/ai_service/layers/normalization/morphology/russian_morphology.py`
+- **RussianMorphologyAnalyzer.get_analysis_statistics** in `src/ai_service/layers/normalization/morphology/russian_morphology.py`
+- **RussianMorphologyAnalyzer.get_lemma** in `src/ai_service/layers/normalization/morphology/russian_morphology.py`
+- **RussianMorphologyAnalyzer.get_name_complexity** in `src/ai_service/layers/normalization/morphology/russian_morphology.py`
+- **RussianMorphologyAnalyzer.get_pos_tags** in `src/ai_service/layers/normalization/morphology/russian_morphology.py`
+- **RussianMorphologyAnalyzer.get_word_forms** in `src/ai_service/layers/normalization/morphology/russian_morphology.py`
+- **RussianMorphologyAnalyzer.is_russian_name** in `src/ai_service/layers/normalization/morphology/russian_morphology.py`
+- **RussianMorphologyAnalyzer.pick_best_parse** in `src/ai_service/layers/normalization/morphology/russian_morphology.py`
+- **RussianMorphologyAnalyzer.transliterate_russian** in `src/ai_service/layers/normalization/morphology/russian_morphology.py`
+- **ScreeningTiersConfig.get_enabled_tiers** in `src/ai_service/config/screening_tiers.py`
+- **ScreeningTiersConfig.get_risk_level** in `src/ai_service/config/screening_tiers.py`
+- **ScreeningTiersConfig.get_tier_config** in `src/ai_service/config/screening_tiers.py`
+- **ScreeningTiersConfig.should_early_stop** in `src/ai_service/config/screening_tiers.py`
+- **ScreeningTiersConfig.validate_config** in `src/ai_service/config/screening_tiers.py`
+- **SearchIntegration.create_decision_input_with_search** in `src/ai_service/core/search_integration.py`
+- **SearchIntegration.extract_and_search** in `src/ai_service/core/search_integration.py`
+- **SearchIntegration.get_search_metrics** in `src/ai_service/core/search_integration.py`
+- **SearchIntegration.should_enable_search** in `src/ai_service/core/search_integration.py`
+- **SearchPrometheusExporter.get_metrics_content_type** in `src/ai_service/monitoring/prometheus_exporter.py`
+- **SearchPrometheusExporter.record_search_metrics** in `src/ai_service/monitoring/prometheus_exporter.py`
+- **SearchService.find_candidates** in `src/ai_service/layers/search/contracts.py`
+- **SearchServiceInterface.find_candidates** in `src/ai_service/contracts/search_contracts.py`
+- **SearchServiceInterface.search_ac** in `src/ai_service/contracts/search_contracts.py`
+- **SearchServiceInterface.search_vector** in `src/ai_service/contracts/search_contracts.py`
+- **SearchSystemMonitor.export_metrics_prometheus** in `src/ai_service/layers/search/search_monitoring.py`
+- **SearchSystemMonitor.get_metrics_summary** in `src/ai_service/layers/search/search_monitoring.py`
+- **SearchSystemMonitor.get_system_health** in `src/ai_service/layers/search/search_monitoring.py`
+- **SearchSystemMonitor.increment_counter** in `src/ai_service/layers/search/search_monitoring.py`
+- **SearchSystemMonitor.record_elasticsearch_operation** in `src/ai_service/layers/search/search_monitoring.py`
+- **SearchSystemMonitor.record_metric** in `src/ai_service/layers/search/search_monitoring.py`
+- **SearchSystemMonitor.resolve_alert** in `src/ai_service/layers/search/search_monitoring.py`
+- **SearchSystemMonitor.start_background_monitoring** in `src/ai_service/layers/search/search_monitoring.py`
+- **SearchTrace.get_hit_count** in `src/ai_service/contracts/trace_models.py`
+- **SearchTrace.get_stage_steps** in `src/ai_service/contracts/trace_models.py`
+- **SearchTrace.get_total_time_ms** in `src/ai_service/contracts/trace_models.py`
+- **SearchTrace.prepare_for_snapshot** in `src/ai_service/contracts/trace_models.py`
+- **SearchTraceBuilder.add_ac_step** in `src/ai_service/contracts/trace_models.py`
+- **SearchTraceBuilder.add_hybrid_step** in `src/ai_service/contracts/trace_models.py`
+- **SearchTraceBuilder.add_lexical_step** in `src/ai_service/contracts/trace_models.py`
+- **SearchTraceBuilder.add_rerank_step** in `src/ai_service/contracts/trace_models.py`
+- **SearchTraceBuilder.add_semantic_step** in `src/ai_service/contracts/trace_models.py`
+- **SearchTraceBuilder.add_watchlist_step** in `src/ai_service/contracts/trace_models.py`
+- **SearchTraceBuilder.build** in `src/ai_service/contracts/trace_models.py`
+- **ShadowModeValidator.validate_ac_tier0_improvements** in `src/ai_service/validation/shadow_mode_validator.py`
+- **ShadowModeValidator.validate_enhanced_diminutives_improvements** in `src/ai_service/validation/shadow_mode_validator.py`
+- **ShadowModeValidator.validate_enhanced_gender_rules_improvements** in `src/ai_service/validation/shadow_mode_validator.py`
+- **ShadowModeValidator.validate_fsm_tuned_roles_improvements** in `src/ai_service/validation/shadow_mode_validator.py`
+- **ShadowModeValidator.validate_nameparser_improvements** in `src/ai_service/validation/shadow_mode_validator.py`
+- **ShadowModeValidator.validate_ner_improvements** in `src/ai_service/validation/shadow_mode_validator.py`
+- **ShadowModeValidator.validate_strict_stopwords_improvements** in `src/ai_service/validation/shadow_mode_validator.py`
+- **ShadowModeValidator.validate_vector_fallback_improvements** in `src/ai_service/validation/shadow_mode_validator.py`
+- **SignalsService.distance_to_legal_form** in `src/ai_service/layers/signals/signals_service.py`
+- **SignalsService.extract** in `src/ai_service/layers/signals/signals_service.py`
+- **SignalsService.extract_async** in `src/ai_service/layers/signals/signals_service.py`
+- **SignalsService.extract_signals** in `src/ai_service/layers/signals/signals_service.py`
+- **SignalsServiceInterface.extract_signals** in `src/ai_service/contracts/base_contracts.py`
+- **SmartFilterService.analyze_payment_description** in `src/ai_service/layers/smart_filter/smart_filter_service.py`
+- **SmartFilterService.enhanced_pattern_analysis** in `src/ai_service/layers/smart_filter/smart_filter_service.py`
+- **SmartFilterService.get_comprehensive_analysis** in `src/ai_service/layers/smart_filter/smart_filter_service.py`
+- **SmartFilterService.make_smart_decision** in `src/ai_service/layers/smart_filter/smart_filter_service.py`
+- **SmartFilterService.search_aho_corasick** in `src/ai_service/layers/smart_filter/smart_filter_service.py`
+- **SmartFilterService.should_process_text** in `src/ai_service/layers/smart_filter/smart_filter_service.py`
+- **SmartFilterService.should_process_text_async** in `src/ai_service/layers/smart_filter/smart_filter_service.py`
+- **SpacyEnNER.extract_entities** in `src/ai_service/layers/normalization/ner_gateways/spacy_en.py`
+- **SpacyRuNER.extract_entities** in `src/ai_service/layers/normalization/ner_gateways/spacy_ru.py`
+- **SpacyRuNER.get_entity_at_position** in `src/ai_service/layers/normalization/ner_gateways/spacy_ru.py`
+- **SpacyUkNER.extract_entities** in `src/ai_service/layers/normalization/ner_gateways/spacy_uk.py`
+- **SpacyUkNER.get_entity_at_position** in `src/ai_service/layers/normalization/ner_gateways/spacy_uk.py`
+- **SpacyUkNER.is_org_entity** in `src/ai_service/layers/normalization/ner_gateways/spacy_uk.py`
+- **SpacyUkNER.is_person_entity** in `src/ai_service/layers/normalization/ner_gateways/spacy_uk.py`
+- **TemplateBuilder.create_entity_template** in `src/ai_service/layers/variants/template_builder.py`
+- **TerrorismDetector.detect_terrorism_signals** in `src/ai_service/layers/smart_filter/terrorism_detector.py`
+- **TerrorismDetector.get_risk_assessment** in `src/ai_service/layers/smart_filter/terrorism_detector.py`
+- **TextNormalizationRequest.validate_text_content** in `src/ai_service/main.py`
+- **TokenProcessor.strip_noise_and_tokenize** in `src/ai_service/layers/normalization/processors/token_processor.py`
+- **TokenizerService.tokenize** in `src/ai_service/layers/normalization/tokenizer_service.py`
+- **TraceCollector.add_error** in `src/ai_service/utils/trace.py`
+- **TraceCollector.add_token_trace** in `src/ai_service/utils/trace.py`
+- **TraceCollector.create_result** in `src/ai_service/utils/trace.py`
+- **TraceCollector.end_trace** in `src/ai_service/utils/trace.py`
+- **TraceCollector.get_processing_time** in `src/ai_service/utils/trace.py`
+- **TraceCollector.start_trace** in `src/ai_service/utils/trace.py`
+- **TraceManager.set_trace_id** in `src/ai_service/utils/enhanced_logging.py`
+- **UkrainianMorphologyAnalyzer.analyze_word** in `src/ai_service/layers/normalization/morphology/ukrainian_morphology.py`
+- **UkrainianMorphologyAnalyzer.get_analysis_statistics** in `src/ai_service/layers/normalization/morphology/ukrainian_morphology.py`
+- **UkrainianMorphologyAnalyzer.get_lemma** in `src/ai_service/layers/normalization/morphology/ukrainian_morphology.py`
+- **UkrainianMorphologyAnalyzer.get_pos_tags** in `src/ai_service/layers/normalization/morphology/ukrainian_morphology.py`
+- **UkrainianMorphologyAnalyzer.get_word_forms** in `src/ai_service/layers/normalization/morphology/ukrainian_morphology.py`
+- **UkrainianMorphologyAnalyzer.pick_best_parse** in `src/ai_service/layers/normalization/morphology/ukrainian_morphology.py`
+- **UkrainianMorphologyAnalyzer.transliterate_ukrainian** in `src/ai_service/layers/normalization/morphology/ukrainian_morphology.py`
+- **UnicodeService.calculate_similarity** in `src/ai_service/layers/unicode/unicode_service.py`
+- **UnicodeService.detect_encoding_issues** in `src/ai_service/layers/unicode/unicode_service.py`
+- **UnicodeService.get_similarity_score** in `src/ai_service/layers/unicode/unicode_service.py`
+- **UnicodeService.normalize_batch** in `src/ai_service/layers/unicode/unicode_service.py`
+- **UnicodeService.normalize_text** in `src/ai_service/layers/unicode/unicode_service.py`
+- **UnifiedOrchestrator.extract_signals** in `src/ai_service/core/unified_orchestrator.py`
+- **UnifiedOrchestrator.normalize_async** in `src/ai_service/core/unified_orchestrator.py`
+- **UnifiedOrchestrator.update_stats** in `src/ai_service/core/unified_orchestrator.py`
+- **UnifiedPatternService.generate_high_precision_patterns** in `src/ai_service/layers/patterns/unified_pattern_service.py`
+- **UnifiedPatternService.generate_patterns** in `src/ai_service/layers/patterns/unified_pattern_service.py`
+- **UnifiedPatternService.get_pattern_statistics** in `src/ai_service/layers/patterns/unified_pattern_service.py`
+- **UnifiedSpacyGateway.extract_entities** in `src/ai_service/layers/normalization/ner_gateways/unified_spacy_gateway.py`
+- **UnifiedSpacyGateway.get_model_info** in `src/ai_service/layers/normalization/ner_gateways/unified_spacy_gateway.py`
+- **UnifiedSpacyGateway.get_supported_languages** in `src/ai_service/layers/normalization/ner_gateways/unified_spacy_gateway.py`
+- **ValidationReport.has_warnings** in `src/ai_service/layers/search/search_trace_validator.py`
+- **ValidationService.validate_and_sanitize** in `src/ai_service/layers/validation/validation_service.py`
+- **ValidationServiceInterface.validate_and_sanitize** in `src/ai_service/contracts/base_contracts.py`
+- **VariantGenerationService.analyze_names** in `src/ai_service/layers/variants/variant_generation_service.py`
+- **VariantGenerationService.find_best_matches** in `src/ai_service/layers/variants/variant_generation_service.py`
+- **VariantGenerationService.generate_comprehensive_variants** in `src/ai_service/layers/variants/variant_generation_service.py`
+- **VariantGenerationService.generate_keyboard_layout_variants** in `src/ai_service/layers/variants/variant_generation_service.py`
+- **VariantGenerationService.generate_typo_variants** in `src/ai_service/layers/variants/variant_generation_service.py`
+- **VariantGenerationService.generate_variants_batch** in `src/ai_service/layers/variants/variant_generation_service.py`
+- **VariantGenerationService.generate_visual_similarities** in `src/ai_service/layers/variants/variant_generation_service.py`
+- **VariantGenerationService.get_similarity_score** in `src/ai_service/layers/variants/variant_generation_service.py`
+- **VariantGenerationService.get_variant_statistics** in `src/ai_service/layers/variants/variant_generation_service.py`
+- **WatchlistIndexService.build_from_corpus** in `src/ai_service/layers/embeddings/indexing/watchlist_index_service.py`
+- **WatchlistIndexService.clear_overlay** in `src/ai_service/layers/embeddings/indexing/watchlist_index_service.py`
+- **WatchlistIndexService.get_doc** in `src/ai_service/layers/embeddings/indexing/watchlist_index_service.py`
+- **WatchlistIndexService.ready** in `src/ai_service/layers/embeddings/indexing/watchlist_index_service.py`
+- **WatchlistIndexService.reload_snapshot** in `src/ai_service/layers/embeddings/indexing/watchlist_index_service.py`
+- **WatchlistIndexService.save_snapshot** in `src/ai_service/layers/embeddings/indexing/watchlist_index_service.py`
+- **WatchlistIndexService.set_overlay_from_corpus** in `src/ai_service/layers/embeddings/indexing/watchlist_index_service.py`
+- **WordNormalizer.classify_word** in `src/ai_service/layers/normalization/morphology/word_normalizer.py`
+- **WordNormalizer.normalize_name** in `src/ai_service/layers/normalization/morphology/word_normalizer.py`
+- **WordNormalizer.normalize_patronymic** in `src/ai_service/layers/normalization/morphology/word_normalizer.py`
+- **WordNormalizer.normalize_surname** in `src/ai_service/layers/normalization/morphology/word_normalizer.py`
+- **WordNormalizer.normalize_text** in `src/ai_service/layers/normalization/morphology/word_normalizer.py`
+- **WordNormalizer.normalize_word** in `src/ai_service/layers/normalization/morphology/word_normalizer.py`
+
+## Import Analysis
+- **Total Imports**: 1650
+- **Internal Imports**: 757
+- **External Imports**: 893
+
+### Potentially Unused Imports
+- **secrets** from `secrets` in `src/ai_service/main.py`
+- **SECURITY_CONFIG** from `ai_service.config` in `src/ai_service/main.py`
+- **DEPLOYMENT_CONFIG** from `ai_service.config` in `src/ai_service/main.py`
+- **INTEGRATION_CONFIG** from `ai_service.config` in `src/ai_service/main.py`
+- **SERVICE_CONFIG** from `ai_service.config` in `src/ai_service/main.py`
+- **OrchestratorFactory** from `ai_service.core.orchestrator_factory` in `src/ai_service/main.py`
+- **InternalServerError** from `ai_service.exceptions` in `src/ai_service/main.py`
+- **ServiceUnavailableError** from `ai_service.exceptions` in `src/ai_service/main.py`
+- **ValidationAPIError** from `ai_service.exceptions` in `src/ai_service/main.py`
+- **format_processing_result** from `ai_service.utils.response_formatter` in `src/ai_service/main.py`
+- **UnifiedProcessingResult** from `ai_service.contracts.base_contracts` in `src/ai_service/main.py`
+- **spacy** from `spacy` in `src/ai_service/main.py`
+- **FEATURE_FLAGS** from `config` in `src/ai_service/core/orchestrator_factory.py`
+- **SERVICE_CONFIG** from `config` in `src/ai_service/core/orchestrator_factory.py`
+- **DECISION_CONFIG** from `config.settings` in `src/ai_service/core/orchestrator_factory.py`
+- **DecisionConfig** from `config.settings` in `src/ai_service/core/orchestrator_factory.py`
+- **LANGUAGE_CONFIG** from `config` in `src/ai_service/core/unified_orchestrator.py`
+- **SERVICE_CONFIG** from `config` in `src/ai_service/core/unified_orchestrator.py`
+- **VariantsServiceInterface** from `contracts.base_contracts` in `src/ai_service/core/unified_orchestrator.py`
+- **NormalizationServiceInterface** from `contracts.base_contracts` in `src/ai_service/core/unified_orchestrator.py`
+... and 445 more
+
+## File Statistics
+
+### Largest Files (by definitions)
+- `src/ai_service/layers/normalization/role_tagger_service.py`: 71 definitions (19 classes, 4 functions, 48 methods)
+- `src/ai_service/utils/enhanced_logging.py`: 52 definitions (8 classes, 13 functions, 31 methods)
+- `src/ai_service/layers/variants/variant_generation_service.py`: 52 definitions (1 classes, 0 functions, 51 methods)
+- `src/ai_service/monitoring/metrics_collector.py`: 45 definitions (6 classes, 5 functions, 34 methods)
+- `src/ai_service/layers/signals/signals_service.py`: 44 definitions (6 classes, 0 functions, 38 methods)
+- `src/ai_service/layers/normalization/processors/normalization_factory.py`: 40 definitions (2 classes, 1 functions, 37 methods)
+- `src/ai_service/exceptions.py`: 38 definitions (28 classes, 2 functions, 8 methods)
+- `src/ai_service/main.py`: 38 definitions (9 classes, 24 functions, 5 methods)
+- `src/ai_service/contracts/base_contracts.py`: 38 definitions (20 classes, 0 functions, 18 methods)
+- `src/ai_service/monitoring/metrics_service.py`: 38 definitions (7 classes, 0 functions, 31 methods)
+
+### Largest Classes (by method count)
+- **VariantGenerationService**: 51 methods in `src/ai_service/layers/variants/variant_generation_service.py`
+- **SignalsService**: 37 methods in `src/ai_service/layers/signals/signals_service.py`
+- **NormalizationFactory**: 37 methods in `src/ai_service/layers/normalization/processors/normalization_factory.py`
+- **UnifiedOrchestrator**: 31 methods in `src/ai_service/core/unified_orchestrator.py`
+- **HybridSearchService**: 31 methods in `src/ai_service/layers/search/hybrid_search_service.py`
+- **RussianMorphologyAnalyzer**: 29 methods in `src/ai_service/layers/normalization/morphology/russian_morphology.py`
+- **MetricsService**: 28 methods in `src/ai_service/monitoring/metrics_service.py`
+- **MetricsCollector**: 25 methods in `src/ai_service/monitoring/metrics_collector.py`
+- **MorphologyAdapter**: 24 methods in `src/ai_service/layers/normalization/morphology_adapter.py`
+- **AlertingSystem**: 23 methods in `src/ai_service/monitoring/alerting_system.py`
+
+### Most Imported Internal Modules
+- **utils.logging_config**: imported 55 times
+- **__future__**: imported 16 times
+- **config**: imported 15 times
+- **contracts.base_contracts**: imported 11 times
+- **threading**: imported 11 times
+- **exceptions**: imported 8 times
+- **unicodedata**: imported 8 times
+- **utils.feature_flags**: imported 7 times
+- **hashlib**: imported 7 times
+- **spacy**: imported 6 times
+
+## Recommendations
+
+### Code Cleanup Opportunities
+1. **Review unused classes**: Consider removing or documenting why they're kept
+2. **Remove unused functions**: Clean up functions that are no longer called
+3. **Clean up unused methods**: Remove methods that aren't used by their classes
+4. **Verify unused imports**: Remove imports that aren't being used
+
+### Analysis Notes
+- This analysis may have false positives for code used via:
+  - String-based imports (importlib, getattr)
+  - Dynamic method calls
+  - External API endpoints
+  - Configuration-based usage
+- Always verify before removing code!

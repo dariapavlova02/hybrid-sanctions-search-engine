@@ -19,7 +19,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 from src.ai_service.main import app
-from src.ai_service.config.feature_flags import FeatureFlags, from_env_and_file
+from src.ai_service.utils.feature_flags import FeatureFlags
 from src.ai_service.utils.feature_flags import get_feature_flag_manager
 
 
@@ -87,7 +87,7 @@ production:
             mock_path.return_value.__truediv__.return_value = Path(temp_yaml_config)
             
             # Reset global flags to ensure clean state
-            from src.ai_service.config.feature_flags import set_global_flags
+            from src.ai_service.utils.feature_flags import get_feature_flag_manager
             set_global_flags(None)
             
             # Make request without flags
@@ -134,7 +134,7 @@ production:
             mock_path.return_value.__truediv__.return_value = Path(temp_yaml_config)
             
             # Reset global flags
-            from src.ai_service.config.feature_flags import set_global_flags
+            from src.ai_service.utils.feature_flags import get_feature_flag_manager
             set_global_flags(None)
             
             # Make request with partial flags
@@ -431,7 +431,7 @@ production:
                 mock_path.return_value.__truediv__.return_value = Path(temp_yaml_config)
                 
                 # Reset global flags to ensure clean state
-                from src.ai_service.config.feature_flags import set_global_flags
+                from src.ai_service.utils.feature_flags import get_feature_flag_manager
                 set_global_flags(None)
                 
                 # Make request without flags (should use global config)

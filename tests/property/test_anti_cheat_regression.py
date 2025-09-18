@@ -90,7 +90,9 @@ class HybridSearchTester:
             'а': 'a', 'е': 'e', 'ё': 'e', 'и': 'i', 'о': 'o', 'у': 'u', 'ы': 'y', 'э': 'e', 'ю': 'u', 'я': 'ya',
             'А': 'A', 'Е': 'E', 'Ё': 'E', 'И': 'I', 'О': 'O', 'У': 'U', 'Ы': 'Y', 'Э': 'E', 'Ю': 'U', 'Я': 'YA',
             'і': 'i', 'ї': 'i', 'є': 'e', 'ґ': 'g',
-            'І': 'I', 'Ї': 'I', 'Є': 'E', 'Ґ': 'G'
+            'І': 'I', 'Ї': 'I', 'Є': 'E', 'Ґ': 'G',
+            'ß': 'ss', 'ẞ': 'SS',  # German eszett
+            'µ': 'μ', 'Μ': 'Μ'  # Normalize micro sign to Greek mu
         }
         
         for old, new in diacritics_map.items():

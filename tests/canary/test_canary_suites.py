@@ -214,58 +214,64 @@ def org_context_cases(canary_suite):
 
 
 # Параметризованные тесты для каждой категории
-def test_dangerous_surnames(canary_suite, case):
+def test_dangerous_surnames(canary_suite, dangerous_surnames_cases):
     """Тест опасных фамилий (короткие, частые, омонимы)."""
-    result = canary_suite.normalize_text(case.input)
-    violations = canary_suite.check_invariants(result, case.invariants)
-    
-    if violations:
-        pytest.fail(f"Invariant violations for '{case.input}': {violations}")
+    for case in dangerous_surnames_cases:
+        result = canary_suite.normalize_text(case.input)
+        violations = canary_suite.check_invariants(result, case.invariants)
+
+        if violations:
+            pytest.fail(f"Invariant violations for '{case.input}': {violations}")
 
 
-def test_transliteration(canary_suite, case):
+def test_transliteration(canary_suite, transliteration_cases):
     """Тест транслитерации (ru↔uk↔en), смешанные скрипты."""
-    result = canary_suite.normalize_text(case.input)
-    violations = canary_suite.check_invariants(result, case.invariants)
-    
-    if violations:
-        pytest.fail(f"Invariant violations for '{case.input}': {violations}")
+    for case in transliteration_cases:
+        result = canary_suite.normalize_text(case.input)
+        violations = canary_suite.check_invariants(result, case.invariants)
+
+        if violations:
+            pytest.fail(f"Invariant violations for '{case.input}': {violations}")
 
 
-def test_homoglyphs(canary_suite, case):
+def test_homoglyphs(canary_suite, homoglyphs_cases):
     """Тест гомоглифов (латинская a/о/е в кириллице, bidi)."""
-    result = canary_suite.normalize_text(case.input)
-    violations = canary_suite.check_invariants(result, case.invariants)
-    
-    if violations:
-        pytest.fail(f"Invariant violations for '{case.input}': {violations}")
+    for case in homoglyphs_cases:
+        result = canary_suite.normalize_text(case.input)
+        violations = canary_suite.check_invariants(result, case.invariants)
+
+        if violations:
+            pytest.fail(f"Invariant violations for '{case.input}': {violations}")
 
 
-def test_apostrophes(canary_suite, case):
+def test_apostrophes(canary_suite, apostrophes_cases):
     """Тест апострофов (' vs ')."""
-    result = canary_suite.normalize_text(case.input)
-    violations = canary_suite.check_invariants(result, case.invariants)
-    
-    if violations:
-        pytest.fail(f"Invariant violations for '{case.input}': {violations}")
+    for case in apostrophes_cases:
+        result = canary_suite.normalize_text(case.input)
+        violations = canary_suite.check_invariants(result, case.invariants)
+
+        if violations:
+            pytest.fail(f"Invariant violations for '{case.input}': {violations}")
 
 
-def test_hyphenated(canary_suite, case):
+def test_hyphenated(canary_suite, hyphenated_cases):
     """Тест дефисных фамилий (двойные), инициалы с точками."""
-    result = canary_suite.normalize_text(case.input)
-    violations = canary_suite.check_invariants(result, case.invariants)
-    
-    if violations:
-        pytest.fail(f"Invariant violations for '{case.input}': {violations}")
+    for case in hyphenated_cases:
+        result = canary_suite.normalize_text(case.input)
+        violations = canary_suite.check_invariants(result, case.invariants)
+
+        if violations:
+            pytest.fail(f"Invariant violations for '{case.input}': {violations}")
 
 
-def test_org_context(canary_suite, case):
+def test_org_context(canary_suite, org_context_cases):
     """Тест org-контекста (ООО/ТОВ/LLC + CAPS), чтобы не утекало в person."""
-    result = canary_suite.normalize_text(case.input)
-    violations = canary_suite.check_invariants(result, case.invariants)
-    
-    if violations:
-        pytest.fail(f"Invariant violations for '{case.input}': {violations}")
+    for case in org_context_cases:
+        result = canary_suite.normalize_text(case.input)
+        violations = canary_suite.check_invariants(result, case.invariants)
+
+        if violations:
+            pytest.fail(f"Invariant violations for '{case.input}': {violations}")
 
 
 # Тесты производительности

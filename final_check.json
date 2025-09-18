@@ -1,0 +1,5310 @@
+{
+  "unused_code": {
+    "classes": [
+      {
+        "name": "MorphologyError",
+        "file": "src/ai_service/exceptions.py",
+        "type": "class"
+      },
+      {
+        "name": "SearchConfigurationError",
+        "file": "src/ai_service/exceptions.py",
+        "type": "class"
+      },
+      {
+        "name": "RateLimitError",
+        "file": "src/ai_service/exceptions.py",
+        "type": "class"
+      },
+      {
+        "name": "EmbeddingError",
+        "file": "src/ai_service/exceptions.py",
+        "type": "class"
+      },
+      {
+        "name": "SearchDataError",
+        "file": "src/ai_service/exceptions.py",
+        "type": "class"
+      },
+      {
+        "name": "PatternError",
+        "file": "src/ai_service/exceptions.py",
+        "type": "class"
+      },
+      {
+        "name": "ProcessingError",
+        "file": "src/ai_service/exceptions.py",
+        "type": "class"
+      },
+      {
+        "name": "TemplateError",
+        "file": "src/ai_service/exceptions.py",
+        "type": "class"
+      },
+      {
+        "name": "SignalDetectionError",
+        "file": "src/ai_service/exceptions.py",
+        "type": "class"
+      },
+      {
+        "name": "VariantGenerationError",
+        "file": "src/ai_service/exceptions.py",
+        "type": "class"
+      },
+      {
+        "name": "UnicodeError",
+        "file": "src/ai_service/exceptions.py",
+        "type": "class"
+      },
+      {
+        "name": "CacheError",
+        "file": "src/ai_service/exceptions.py",
+        "type": "class"
+      },
+      {
+        "name": "APIError",
+        "file": "src/ai_service/exceptions.py",
+        "type": "class"
+      },
+      {
+        "name": "AuthorizationError",
+        "file": "src/ai_service/exceptions.py",
+        "type": "class"
+      },
+      {
+        "name": "NormalizationOptions",
+        "file": "src/ai_service/main.py",
+        "type": "class"
+      },
+      {
+        "name": "TextNormalizationRequest",
+        "file": "src/ai_service/main.py",
+        "type": "class"
+      },
+      {
+        "name": "ComplexityAnalysisRequest",
+        "file": "src/ai_service/main.py",
+        "type": "class"
+      },
+      {
+        "name": "VariantGenerationRequest",
+        "file": "src/ai_service/main.py",
+        "type": "class"
+      },
+      {
+        "name": "ProcessBatchRequest",
+        "file": "src/ai_service/main.py",
+        "type": "class"
+      },
+      {
+        "name": "ProcessTextRequest",
+        "file": "src/ai_service/main.py",
+        "type": "class"
+      },
+      {
+        "name": "SearchSimilarRequest",
+        "file": "src/ai_service/main.py",
+        "type": "class"
+      },
+      {
+        "name": "EmbeddingRequest",
+        "file": "src/ai_service/main.py",
+        "type": "class"
+      },
+      {
+        "name": "ProcessingService",
+        "file": "src/ai_service/core/base_service.py",
+        "type": "class"
+      },
+      {
+        "name": "ScreeningTier",
+        "file": "src/ai_service/config/screening_tiers.py",
+        "type": "class"
+      },
+      {
+        "name": "SearchServiceInterface",
+        "file": "src/ai_service/contracts/search_contracts.py",
+        "type": "class"
+      },
+      {
+        "name": "SearchType",
+        "file": "src/ai_service/contracts/search_contracts.py",
+        "type": "class"
+      },
+      {
+        "name": "ACScore",
+        "file": "src/ai_service/contracts/search_contracts.py",
+        "type": "class"
+      },
+      {
+        "name": "VectorHit",
+        "file": "src/ai_service/contracts/search_contracts.py",
+        "type": "class"
+      },
+      {
+        "name": "ElasticsearchACAdapterInterface",
+        "file": "src/ai_service/contracts/search_contracts.py",
+        "type": "class"
+      },
+      {
+        "name": "ElasticsearchVectorAdapterInterface",
+        "file": "src/ai_service/contracts/search_contracts.py",
+        "type": "class"
+      },
+      {
+        "name": "ConfidenceLevel",
+        "file": "src/ai_service/contracts/decision_contracts.py",
+        "type": "class"
+      },
+      {
+        "name": "MatchDecision",
+        "file": "src/ai_service/contracts/decision_contracts.py",
+        "type": "class"
+      },
+      {
+        "name": "MatchEvidence",
+        "file": "src/ai_service/contracts/decision_contracts.py",
+        "type": "class"
+      },
+      {
+        "name": "TraceCollector",
+        "file": "src/ai_service/utils/trace.py",
+        "type": "class"
+      },
+      {
+        "name": "LogLevel",
+        "file": "src/ai_service/utils/enhanced_logging.py",
+        "type": "class"
+      },
+      {
+        "name": "ACHitType",
+        "file": "src/ai_service/monitoring/prometheus_exporter.py",
+        "type": "class"
+      },
+      {
+        "name": "ESErrorType",
+        "file": "src/ai_service/monitoring/prometheus_exporter.py",
+        "type": "class"
+      },
+      {
+        "name": "SearchMetricsCollector",
+        "file": "src/ai_service/monitoring/prometheus_exporter.py",
+        "type": "class"
+      },
+      {
+        "name": "DashboardFormat",
+        "file": "src/ai_service/monitoring/dashboard_integration.py",
+        "type": "class"
+      },
+      {
+        "name": "ThresholdType",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "type": "class"
+      },
+      {
+        "name": "AlertStatus",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "type": "class"
+      },
+      {
+        "name": "ShadowModeResult",
+        "file": "src/ai_service/validation/shadow_mode_validator.py",
+        "type": "class"
+      },
+      {
+        "name": "FSMState",
+        "file": "src/ai_service/layers/normalization/role_tagger_service.py",
+        "type": "class"
+      },
+      {
+        "name": "FSMTransitionRule",
+        "file": "src/ai_service/layers/normalization/role_tagger_service.py",
+        "type": "class"
+      },
+      {
+        "name": "ErrorSeverity",
+        "file": "src/ai_service/layers/normalization/error_handling.py",
+        "type": "class"
+      },
+      {
+        "name": "NameAssembler",
+        "file": "src/ai_service/layers/normalization/name_assembler.py",
+        "type": "class"
+      },
+      {
+        "name": "PersonRole",
+        "file": "src/ai_service/layers/normalization/name_assembler.py",
+        "type": "class"
+      },
+      {
+        "name": "TokenWithRole",
+        "file": "src/ai_service/layers/normalization/name_assembler.py",
+        "type": "class"
+      },
+      {
+        "name": "ConfidenceScoring",
+        "file": "src/ai_service/layers/signals/signals_service.py",
+        "type": "class"
+      },
+      {
+        "name": "ExtraSignal",
+        "file": "src/ai_service/layers/signals/signals_service.py",
+        "type": "class"
+      },
+      {
+        "name": "VectorSearchConfig",
+        "file": "src/ai_service/layers/search/config.py",
+        "type": "class"
+      },
+      {
+        "name": "ACSearchConfig",
+        "file": "src/ai_service/layers/search/config.py",
+        "type": "class"
+      },
+      {
+        "name": "EnhancedElasticsearchClient",
+        "file": "src/ai_service/layers/search/enhanced_elasticsearch_client.py",
+        "type": "class"
+      },
+      {
+        "name": "ValidationSeverity",
+        "file": "src/ai_service/layers/search/search_trace_validator.py",
+        "type": "class"
+      },
+      {
+        "name": "TraceStepType",
+        "file": "src/ai_service/layers/search/search_trace_validator.py",
+        "type": "class"
+      },
+      {
+        "name": "DocumentSignal",
+        "file": "src/ai_service/layers/smart_filter/document_detector.py",
+        "type": "class"
+      },
+      {
+        "name": "TerrorismSignal",
+        "file": "src/ai_service/layers/smart_filter/terrorism_detector.py",
+        "type": "class"
+      },
+      {
+        "name": "CompanySignal",
+        "file": "src/ai_service/layers/smart_filter/company_detector.py",
+        "type": "class"
+      },
+      {
+        "name": "SignalService",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_service.py",
+        "type": "class"
+      },
+      {
+        "name": "OptimizedACPatternGenerator",
+        "file": "src/ai_service/layers/variants/templates/optimized_ac_pattern_generator.py",
+        "type": "class"
+      },
+      {
+        "name": "FinalACOptimizer",
+        "file": "src/ai_service/layers/variants/templates/final_ac_optimizer.py",
+        "type": "class"
+      },
+      {
+        "name": "HighRecallACGenerator",
+        "file": "src/ai_service/layers/variants/templates/high_recall_ac_generator.py",
+        "type": "class"
+      },
+      {
+        "name": "ModelType",
+        "file": "src/ai_service/layers/embeddings/models/model_config.py",
+        "type": "class"
+      },
+      {
+        "name": "UkrainianMorphologyResult",
+        "file": "src/ai_service/layers/normalization/morphology/ukrainian_morphology.py",
+        "type": "class"
+      },
+      {
+        "name": "RussianMorphologyResult",
+        "file": "src/ai_service/layers/normalization/morphology/russian_morphology.py",
+        "type": "class"
+      },
+      {
+        "name": "WordType",
+        "file": "src/ai_service/layers/normalization/morphology/word_normalizer.py",
+        "type": "class"
+      },
+      {
+        "name": "WordNormalizer",
+        "file": "src/ai_service/layers/normalization/morphology/word_normalizer.py",
+        "type": "class"
+      }
+    ],
+    "functions": [
+      {
+        "name": "handle_exception",
+        "file": "src/ai_service/exceptions.py",
+        "type": "function"
+      },
+      {
+        "name": "create_error_response",
+        "file": "src/ai_service/exceptions.py",
+        "type": "function"
+      },
+      {
+        "name": "service_unavailable_exception_handler",
+        "file": "src/ai_service/main.py",
+        "type": "function"
+      },
+      {
+        "name": "pydantic_validation_exception_handler",
+        "file": "src/ai_service/main.py",
+        "type": "function"
+      },
+      {
+        "name": "analyze_complexity",
+        "file": "src/ai_service/main.py",
+        "type": "function"
+      },
+      {
+        "name": "startup_event",
+        "file": "src/ai_service/main.py",
+        "type": "function"
+      },
+      {
+        "name": "verify_admin_token",
+        "file": "src/ai_service/main.py",
+        "type": "function"
+      },
+      {
+        "name": "validation_exception_handler",
+        "file": "src/ai_service/main.py",
+        "type": "function"
+      },
+      {
+        "name": "authentication_exception_handler",
+        "file": "src/ai_service/main.py",
+        "type": "function"
+      },
+      {
+        "name": "process_text",
+        "file": "src/ai_service/main.py",
+        "type": "function"
+      },
+      {
+        "name": "root",
+        "file": "src/ai_service/main.py",
+        "type": "function"
+      },
+      {
+        "name": "internal_server_exception_handler",
+        "file": "src/ai_service/main.py",
+        "type": "function"
+      },
+      {
+        "name": "reset_statistics",
+        "file": "src/ai_service/main.py",
+        "type": "function"
+      },
+      {
+        "name": "normalize_text",
+        "file": "src/ai_service/main.py",
+        "type": "function"
+      },
+      {
+        "name": "get_supported_languages",
+        "file": "src/ai_service/main.py",
+        "type": "function"
+      },
+      {
+        "name": "admin_status",
+        "file": "src/ai_service/main.py",
+        "type": "function"
+      },
+      {
+        "name": "create_search_integration",
+        "file": "src/ai_service/core/search_integration.py",
+        "type": "function"
+      },
+      {
+        "name": "create_ac_tier0_trace",
+        "file": "src/ai_service/contracts/search_contracts.py",
+        "type": "function"
+      },
+      {
+        "name": "create_hybrid_rerank_trace",
+        "file": "src/ai_service/contracts/search_contracts.py",
+        "type": "function"
+      },
+      {
+        "name": "create_knn_fallback_trace",
+        "file": "src/ai_service/contracts/search_contracts.py",
+        "type": "function"
+      },
+      {
+        "name": "get_security_logger",
+        "file": "src/ai_service/utils/enhanced_logging.py",
+        "type": "function"
+      },
+      {
+        "name": "enhanced_log_with_context",
+        "file": "src/ai_service/utils/enhanced_logging.py",
+        "type": "function"
+      },
+      {
+        "name": "create_logger_with_otel_context",
+        "file": "src/ai_service/utils/enhanced_logging.py",
+        "type": "function"
+      },
+      {
+        "name": "wrapper",
+        "file": "src/ai_service/layers/search/search_monitoring.py",
+        "type": "function"
+      },
+      {
+        "name": "perf_timer",
+        "file": "src/ai_service/utils/perf_timer.py",
+        "type": "function"
+      },
+      {
+        "name": "time_function",
+        "file": "src/ai_service/utils/perf_timer.py",
+        "type": "function"
+      },
+      {
+        "name": "measure_latency",
+        "file": "src/ai_service/utils/perf_timer.py",
+        "type": "function"
+      },
+      {
+        "name": "should_use_factory",
+        "file": "src/ai_service/utils/feature_flags.py",
+        "type": "function"
+      },
+      {
+        "name": "log_processing_start",
+        "file": "src/ai_service/utils/pii_masking.py",
+        "type": "function"
+      },
+      {
+        "name": "log_processing_result",
+        "file": "src/ai_service/utils/pii_masking.py",
+        "type": "function"
+      },
+      {
+        "name": "decorator",
+        "file": "src/ai_service/layers/search/search_monitoring.py",
+        "type": "function"
+      },
+      {
+        "name": "create_text_hash",
+        "file": "src/ai_service/utils/lru_cache_ttl.py",
+        "type": "function"
+      },
+      {
+        "name": "format_error_response",
+        "file": "src/ai_service/utils/response_formatter.py",
+        "type": "function"
+      },
+      {
+        "name": "monitor_memory_usage",
+        "file": "src/ai_service/utils/performance.py",
+        "type": "function"
+      },
+      {
+        "name": "monitor_performance",
+        "file": "src/ai_service/layers/normalization/performance_optimizer.py",
+        "type": "function"
+      },
+      {
+        "name": "validate_ascii_fastpath_equivalence",
+        "file": "src/ai_service/utils/ascii_utils.py",
+        "type": "function"
+      },
+      {
+        "name": "extract_ascii_tokens",
+        "file": "src/ai_service/utils/ascii_utils.py",
+        "type": "function"
+      },
+      {
+        "name": "async_wrapper",
+        "file": "src/ai_service/utils/profiling.py",
+        "type": "function"
+      },
+      {
+        "name": "clear_profiling_stats",
+        "file": "src/ai_service/utils/profiling.py",
+        "type": "function"
+      },
+      {
+        "name": "profile_memory",
+        "file": "src/ai_service/utils/profiling.py",
+        "type": "function"
+      },
+      {
+        "name": "get_dashboard_exporter",
+        "file": "src/ai_service/monitoring/dashboard_integration.py",
+        "type": "function"
+      },
+      {
+        "name": "record_api_request",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "function"
+      },
+      {
+        "name": "reset_global_metrics",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "function"
+      },
+      {
+        "name": "record_elasticsearch_operation",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "function"
+      },
+      {
+        "name": "configure_alerting_system",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "type": "function"
+      },
+      {
+        "name": "log_alert_notification",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "type": "function"
+      },
+      {
+        "name": "slack_alert_notification",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "type": "function"
+      },
+      {
+        "name": "create_monitoring_router",
+        "file": "src/ai_service/monitoring/endpoints.py",
+        "type": "function"
+      },
+      {
+        "name": "prometheus_metrics",
+        "file": "src/ai_service/monitoring/endpoints.py",
+        "type": "function"
+      },
+      {
+        "name": "reset_metric",
+        "file": "src/ai_service/monitoring/endpoints.py",
+        "type": "function"
+      },
+      {
+        "name": "search_metrics",
+        "file": "src/ai_service/monitoring/endpoints.py",
+        "type": "function"
+      },
+      {
+        "name": "get_health",
+        "file": "src/ai_service/monitoring/endpoints.py",
+        "type": "function"
+      },
+      {
+        "name": "create_prometheus_endpoint",
+        "file": "src/ai_service/monitoring/endpoints.py",
+        "type": "function"
+      },
+      {
+        "name": "get_metric",
+        "file": "src/ai_service/monitoring/endpoints.py",
+        "type": "function"
+      },
+      {
+        "name": "get_alerts",
+        "file": "src/ai_service/monitoring/endpoints.py",
+        "type": "function"
+      },
+      {
+        "name": "validate_all_test_cases",
+        "file": "src/ai_service/validation/shadow_mode_validator.py",
+        "type": "function"
+      },
+      {
+        "name": "validate_feature_improvements",
+        "file": "src/ai_service/validation/shadow_mode_validator.py",
+        "type": "function"
+      },
+      {
+        "name": "clear_lexicon_cache",
+        "file": "src/ai_service/layers/normalization/lexicon_loader.py",
+        "type": "function"
+      },
+      {
+        "name": "clear_global_cache",
+        "file": "src/ai_service/layers/normalization/morphology_adapter.py",
+        "type": "function"
+      },
+      {
+        "name": "cached",
+        "file": "src/ai_service/layers/normalization/performance_optimizer.py",
+        "type": "function"
+      },
+      {
+        "name": "configure_search_monitoring",
+        "file": "src/ai_service/layers/search/search_monitoring.py",
+        "type": "function"
+      },
+      {
+        "name": "monitor_search_operation",
+        "file": "src/ai_service/layers/search/search_monitoring.py",
+        "type": "function"
+      },
+      {
+        "name": "create_deterministic_trace_snapshot",
+        "file": "src/ai_service/layers/search/search_trace_validator.py",
+        "type": "function"
+      },
+      {
+        "name": "get_tier_patterns",
+        "file": "src/ai_service/layers/variants/templates/lexicon.py",
+        "type": "function"
+      },
+      {
+        "name": "create_elasticsearch_watchlist_adapter",
+        "file": "src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py",
+        "type": "function"
+      },
+      {
+        "name": "create_elasticsearch_enhanced_adapter",
+        "file": "src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py",
+        "type": "function"
+      },
+      {
+        "name": "clear_spacy_ru_ner",
+        "file": "src/ai_service/layers/normalization/ner_gateways/__init__.py",
+        "type": "function"
+      },
+      {
+        "name": "clear_spacy_en_ner",
+        "file": "src/ai_service/layers/normalization/ner_gateways/spacy_en.py",
+        "type": "function"
+      },
+      {
+        "name": "clear_ner_cache",
+        "file": "src/ai_service/layers/normalization/ner_gateways/spacy_uk.py",
+        "type": "function"
+      },
+      {
+        "name": "ner_function",
+        "file": "src/ai_service/layers/normalization/ner_gateways/__init__.py",
+        "type": "function"
+      },
+      {
+        "name": "maybe_to_feminine_nom",
+        "file": "src/ai_service/layers/normalization/morphology/gender_rules.py",
+        "type": "function"
+      },
+      {
+        "name": "build_trigger_regex",
+        "file": "src/ai_service/data/dicts/payment_triggers.py",
+        "type": "function"
+      }
+    ],
+    "methods": [
+      {
+        "name": "TextNormalizationRequest.validate_text_content",
+        "file": "src/ai_service/main.py",
+        "type": "method"
+      },
+      {
+        "name": "ProcessTextRequest.validate_text_length",
+        "file": "src/ai_service/main.py",
+        "type": "method"
+      },
+      {
+        "name": "ProcessBatchRequest.validate_texts",
+        "file": "src/ai_service/main.py",
+        "type": "method"
+      },
+      {
+        "name": "OrchestratorFactory.create_testing_orchestrator",
+        "file": "src/ai_service/core/orchestrator_factory.py",
+        "type": "method"
+      },
+      {
+        "name": "UnifiedOrchestrator.extract_signals",
+        "file": "src/ai_service/core/unified_orchestrator.py",
+        "type": "method"
+      },
+      {
+        "name": "UnifiedOrchestrator.normalize_async",
+        "file": "src/ai_service/core/unified_orchestrator.py",
+        "type": "method"
+      },
+      {
+        "name": "UnifiedOrchestrator.update_stats",
+        "file": "src/ai_service/core/unified_orchestrator.py",
+        "type": "method"
+      },
+      {
+        "name": "DecisionEngine.decide",
+        "file": "src/ai_service/core/decision_engine.py",
+        "type": "method"
+      },
+      {
+        "name": "BaseService.is_initialized",
+        "file": "src/ai_service/core/base_service.py",
+        "type": "method"
+      },
+      {
+        "name": "ProcessingService.reset_processing_stats",
+        "file": "src/ai_service/core/base_service.py",
+        "type": "method"
+      },
+      {
+        "name": "ProcessingService.process_text",
+        "file": "src/ai_service/core/base_service.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchIntegration.create_decision_input_with_search",
+        "file": "src/ai_service/core/search_integration.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchIntegration.extract_and_search",
+        "file": "src/ai_service/core/search_integration.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchIntegration.get_search_metrics",
+        "file": "src/ai_service/core/search_integration.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchIntegration.should_enable_search",
+        "file": "src/ai_service/core/search_integration.py",
+        "type": "method"
+      },
+      {
+        "name": "ScreeningTiersConfig.get_tier_config",
+        "file": "src/ai_service/config/screening_tiers.py",
+        "type": "method"
+      },
+      {
+        "name": "ScreeningTiersConfig.validate_config",
+        "file": "src/ai_service/config/screening_tiers.py",
+        "type": "method"
+      },
+      {
+        "name": "ScreeningTiersConfig.get_enabled_tiers",
+        "file": "src/ai_service/config/screening_tiers.py",
+        "type": "method"
+      },
+      {
+        "name": "ScreeningTiersConfig.should_early_stop",
+        "file": "src/ai_service/config/screening_tiers.py",
+        "type": "method"
+      },
+      {
+        "name": "ScreeningTiersConfig.get_risk_level",
+        "file": "src/ai_service/config/screening_tiers.py",
+        "type": "method"
+      },
+      {
+        "name": "Config.get_all_config",
+        "file": "src/ai_service/config/__init__.py",
+        "type": "method"
+      },
+      {
+        "name": "Config.validate",
+        "file": "src/ai_service/config/__init__.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchServiceInterface.find_candidates",
+        "file": "src/ai_service/contracts/search_contracts.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchServiceInterface.search_vector",
+        "file": "src/ai_service/contracts/search_contracts.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchServiceInterface.search_ac",
+        "file": "src/ai_service/contracts/search_contracts.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchTrace.get_total_time_ms",
+        "file": "src/ai_service/contracts/trace_models.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchTrace.prepare_for_snapshot",
+        "file": "src/ai_service/contracts/trace_models.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchTrace.get_stage_steps",
+        "file": "src/ai_service/contracts/trace_models.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchTrace.get_hit_count",
+        "file": "src/ai_service/contracts/trace_models.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchTraceBuilder.add_lexical_step",
+        "file": "src/ai_service/contracts/trace_models.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchTraceBuilder.add_ac_step",
+        "file": "src/ai_service/contracts/trace_models.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchTraceBuilder.add_semantic_step",
+        "file": "src/ai_service/contracts/trace_models.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchTraceBuilder.add_rerank_step",
+        "file": "src/ai_service/contracts/trace_models.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchTraceBuilder.build",
+        "file": "src/ai_service/contracts/trace_models.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchTraceBuilder.add_hybrid_step",
+        "file": "src/ai_service/contracts/trace_models.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchTraceBuilder.add_watchlist_step",
+        "file": "src/ai_service/contracts/trace_models.py",
+        "type": "method"
+      },
+      {
+        "name": "NormalizationResult.to_json",
+        "file": "src/ai_service/utils/trace.py",
+        "type": "method"
+      },
+      {
+        "name": "ProcessingStage.get_stage_name",
+        "file": "src/ai_service/contracts/base_contracts.py",
+        "type": "method"
+      },
+      {
+        "name": "ValidationServiceInterface.validate_and_sanitize",
+        "file": "src/ai_service/contracts/base_contracts.py",
+        "type": "method"
+      },
+      {
+        "name": "NormalizationServiceInterface.normalize_async",
+        "file": "src/ai_service/contracts/base_contracts.py",
+        "type": "method"
+      },
+      {
+        "name": "SignalsServiceInterface.extract_signals",
+        "file": "src/ai_service/contracts/base_contracts.py",
+        "type": "method"
+      },
+      {
+        "name": "NormalizationResult.from_dict",
+        "file": "src/ai_service/utils/trace.py",
+        "type": "method"
+      },
+      {
+        "name": "NormalizationResult.from_json",
+        "file": "src/ai_service/utils/trace.py",
+        "type": "method"
+      },
+      {
+        "name": "TraceCollector.end_trace",
+        "file": "src/ai_service/utils/trace.py",
+        "type": "method"
+      },
+      {
+        "name": "TraceCollector.get_processing_time",
+        "file": "src/ai_service/utils/trace.py",
+        "type": "method"
+      },
+      {
+        "name": "TraceCollector.create_result",
+        "file": "src/ai_service/utils/trace.py",
+        "type": "method"
+      },
+      {
+        "name": "TraceCollector.start_trace",
+        "file": "src/ai_service/utils/trace.py",
+        "type": "method"
+      },
+      {
+        "name": "TraceCollector.reset",
+        "file": "src/ai_service/utils/trace.py",
+        "type": "method"
+      },
+      {
+        "name": "TraceCollector.add_token_trace",
+        "file": "src/ai_service/utils/trace.py",
+        "type": "method"
+      },
+      {
+        "name": "TraceCollector.add_error",
+        "file": "src/ai_service/utils/trace.py",
+        "type": "method"
+      },
+      {
+        "name": "TraceManager.set_trace_id",
+        "file": "src/ai_service/utils/enhanced_logging.py",
+        "type": "method"
+      },
+      {
+        "name": "PerformanceTracker.start_operation",
+        "file": "src/ai_service/utils/enhanced_logging.py",
+        "type": "method"
+      },
+      {
+        "name": "PerformanceTracker.get_system_metrics",
+        "file": "src/ai_service/utils/enhanced_logging.py",
+        "type": "method"
+      },
+      {
+        "name": "PerformanceTracker.end_operation",
+        "file": "src/ai_service/utils/enhanced_logging.py",
+        "type": "method"
+      },
+      {
+        "name": "PerformanceTracker.track_operation",
+        "file": "src/ai_service/utils/performance.py",
+        "type": "method"
+      },
+      {
+        "name": "EnhancedLogger.log_api_request",
+        "file": "src/ai_service/utils/enhanced_logging.py",
+        "type": "method"
+      },
+      {
+        "name": "EnhancedLogger.log_operation_end",
+        "file": "src/ai_service/utils/enhanced_logging.py",
+        "type": "method"
+      },
+      {
+        "name": "EnhancedLogger.log_operation_start",
+        "file": "src/ai_service/utils/enhanced_logging.py",
+        "type": "method"
+      },
+      {
+        "name": "EnhancedLogger.critical",
+        "file": "src/ai_service/utils/enhanced_logging.py",
+        "type": "method"
+      },
+      {
+        "name": "EnhancedLogger.with_trace_id",
+        "file": "src/ai_service/utils/enhanced_logging.py",
+        "type": "method"
+      },
+      {
+        "name": "EnhancedLogger.audit",
+        "file": "src/ai_service/utils/enhanced_logging.py",
+        "type": "method"
+      },
+      {
+        "name": "LoggingMixin.log_exit",
+        "file": "src/ai_service/utils/logging_config.py",
+        "type": "method"
+      },
+      {
+        "name": "LoggingMixin.log_entry",
+        "file": "src/ai_service/utils/logging_config.py",
+        "type": "method"
+      },
+      {
+        "name": "PerfTimer.elapsed_ms",
+        "file": "src/ai_service/utils/perf_timer.py",
+        "type": "method"
+      },
+      {
+        "name": "InputValidator.validate_and_sanitize",
+        "file": "src/ai_service/utils/input_validation.py",
+        "type": "method"
+      },
+      {
+        "name": "InputValidator.is_text_suspicious",
+        "file": "src/ai_service/utils/input_validation.py",
+        "type": "method"
+      },
+      {
+        "name": "InputValidator.validate_sanctions_input",
+        "file": "src/ai_service/utils/input_validation.py",
+        "type": "method"
+      },
+      {
+        "name": "FlagPropagator.log_flag_usage",
+        "file": "src/ai_service/utils/flag_propagation.py",
+        "type": "method"
+      },
+      {
+        "name": "FlagPropagator.get_effective_flags",
+        "file": "src/ai_service/utils/flag_propagation.py",
+        "type": "method"
+      },
+      {
+        "name": "FeatureFlagManager.get_current_config",
+        "file": "src/ai_service/utils/feature_flags.py",
+        "type": "method"
+      },
+      {
+        "name": "FeatureFlagManager.allow_diminutives_cross_lang",
+        "file": "src/ai_service/utils/feature_flags.py",
+        "type": "method"
+      },
+      {
+        "name": "FeatureFlagManager.get_monitoring_config",
+        "file": "src/ai_service/utils/feature_flags.py",
+        "type": "method"
+      },
+      {
+        "name": "FeatureFlagManager.update_flags",
+        "file": "src/ai_service/utils/feature_flags.py",
+        "type": "method"
+      },
+      {
+        "name": "FeatureFlagManager.enforce_nominative",
+        "file": "src/ai_service/utils/feature_flags.py",
+        "type": "method"
+      },
+      {
+        "name": "FeatureFlagManager.preserve_feminine_surnames",
+        "file": "src/ai_service/utils/feature_flags.py",
+        "type": "method"
+      },
+      {
+        "name": "FeatureFlagManager.should_use_factory",
+        "file": "src/ai_service/utils/feature_flags.py",
+        "type": "method"
+      },
+      {
+        "name": "LanguageDetectionResult.is_mixed",
+        "file": "src/ai_service/utils/types.py",
+        "type": "method"
+      },
+      {
+        "name": "LanguageDetectionResult.is_confident",
+        "file": "src/ai_service/utils/types.py",
+        "type": "method"
+      },
+      {
+        "name": "LanguageDetectionResult.is_unknown",
+        "file": "src/ai_service/utils/types.py",
+        "type": "method"
+      },
+      {
+        "name": "NameParser.calculate_similarity",
+        "file": "src/ai_service/utils/name_utils.py",
+        "type": "method"
+      },
+      {
+        "name": "NameParser.extract_entities",
+        "file": "src/ai_service/utils/name_utils.py",
+        "type": "method"
+      },
+      {
+        "name": "NameParser.parse_name",
+        "file": "src/ai_service/utils/name_utils.py",
+        "type": "method"
+      },
+      {
+        "name": "NameParser.find_best_match",
+        "file": "src/ai_service/utils/name_utils.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheMetrics.get_size",
+        "file": "src/ai_service/utils/cache_utils.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheMetrics.get_hit_rate",
+        "file": "src/ai_service/utils/cache_utils.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheMetrics.get_all_metrics",
+        "file": "src/ai_service/utils/cache_utils.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheMetrics.reset",
+        "file": "src/ai_service/utils/cache_utils.py",
+        "type": "method"
+      },
+      {
+        "name": "LruTtlCache.enable",
+        "file": "src/ai_service/utils/lru_cache_ttl.py",
+        "type": "method"
+      },
+      {
+        "name": "LruTtlCache.delete",
+        "file": "src/ai_service/utils/lru_cache_ttl.py",
+        "type": "method"
+      },
+      {
+        "name": "LruTtlCache.purge_expired",
+        "file": "src/ai_service/utils/lru_cache_ttl.py",
+        "type": "method"
+      },
+      {
+        "name": "LruTtlCache.disable",
+        "file": "src/ai_service/utils/lru_cache_ttl.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheManager.clear_all",
+        "file": "src/ai_service/utils/lru_cache_ttl.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheManager.disable_all",
+        "file": "src/ai_service/utils/lru_cache_ttl.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheManager.purge_all_expired",
+        "file": "src/ai_service/utils/lru_cache_ttl.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheManager.get_tokenizer_cache",
+        "file": "src/ai_service/utils/lru_cache_ttl.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheManager.enable_all",
+        "file": "src/ai_service/utils/lru_cache_ttl.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheManager.get_morphology_cache",
+        "file": "src/ai_service/utils/lru_cache_ttl.py",
+        "type": "method"
+      },
+      {
+        "name": "LegacyNormalizationAdapter.normalize_legacy",
+        "file": "src/ai_service/adapters/legacy_normalization_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "LegacyNormalizationAdapter.process_batch_legacy",
+        "file": "src/ai_service/adapters/legacy_normalization_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "LegacyNormalizationAdapter.normalize_legacy_sync",
+        "file": "src/ai_service/adapters/legacy_normalization_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "LegacyNormalizationAdapter.convert_to_legacy_format",
+        "file": "src/ai_service/adapters/legacy_normalization_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "LegacyNormalizationAdapter.process_text_sync",
+        "file": "src/ai_service/adapters/legacy_normalization_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "LegacyNormalizationAdapter.process_text",
+        "file": "src/ai_service/adapters/legacy_normalization_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "LegacyNormalizationAdapter.convert_from_legacy_format",
+        "file": "src/ai_service/adapters/legacy_normalization_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchPrometheusExporter.get_metrics_content_type",
+        "file": "src/ai_service/monitoring/prometheus_exporter.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchPrometheusExporter.record_search_metrics",
+        "file": "src/ai_service/monitoring/prometheus_exporter.py",
+        "type": "method"
+      },
+      {
+        "name": "DashboardDataExporter.get_dashboard_data",
+        "file": "src/ai_service/monitoring/dashboard_integration.py",
+        "type": "method"
+      },
+      {
+        "name": "DashboardDataExporter.create_custom_dashboard",
+        "file": "src/ai_service/monitoring/dashboard_integration.py",
+        "type": "method"
+      },
+      {
+        "name": "DashboardDataExporter.export_dashboard_config",
+        "file": "src/ai_service/monitoring/dashboard_integration.py",
+        "type": "method"
+      },
+      {
+        "name": "DashboardDataExporter.get_available_dashboards",
+        "file": "src/ai_service/monitoring/dashboard_integration.py",
+        "type": "method"
+      },
+      {
+        "name": "HistogramData.add_value",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "method"
+      },
+      {
+        "name": "HistogramData.get_percentile",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.get_metric_stats",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.record_counter",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.time_function",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.remove_metric_callback",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.get_error_rate_metrics",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.time_async_function",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.add_metric_callback",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.decrement",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.record_histogram",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.get_all_metrics_summary",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.start_background_collection",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.get_performance_metrics",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.get_histogram_stats",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.wrapper",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.export_prometheus_metrics",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.decorator",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "type": "method"
+      },
+      {
+        "name": "AlertingSystem.get_alert_history",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "type": "method"
+      },
+      {
+        "name": "AlertingSystem.is_rule_suppressed",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "type": "method"
+      },
+      {
+        "name": "AlertingSystem.unsuppress_alert_rule",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "type": "method"
+      },
+      {
+        "name": "AlertingSystem.get_sla_compliance_report",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "type": "method"
+      },
+      {
+        "name": "AlertingSystem.resolve_alert",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "type": "method"
+      },
+      {
+        "name": "AlertingSystem.remove_alert_rule",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "type": "method"
+      },
+      {
+        "name": "AlertingSystem.get_active_alerts_summary",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "type": "method"
+      },
+      {
+        "name": "AlertingSystem.evaluate_all_rules",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "type": "method"
+      },
+      {
+        "name": "AlertingSystem.remove_notification_callback",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "type": "method"
+      },
+      {
+        "name": "AlertingSystem.export_alerts_for_dashboard",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "type": "method"
+      },
+      {
+        "name": "AlertingSystem.acknowledge_alert",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "type": "method"
+      },
+      {
+        "name": "AlertingSystem.suppress_alert_rule",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "type": "method"
+      },
+      {
+        "name": "AlertingSystem.start_background_evaluation",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "type": "method"
+      },
+      {
+        "name": "AlertingSystem.update_alert_rule",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "type": "method"
+      },
+      {
+        "name": "Counter.inc",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "Histogram.observe",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheMetrics.record_tokenizer_cache_hit",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheMetrics.update_from_cache_stats",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheMetrics.record_cache_eviction",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheMetrics.record_tokenizer_cache_miss",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheMetrics.record_morphology_cache_hit",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheMetrics.update_morphology_cache_size",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheMetrics.update_tokenizer_cache_hit_rate",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheMetrics.update_morphology_cache_hit_rate",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheMetrics.get_metrics_summary",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheMetrics.record_morphology_cache_miss",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheMetrics.update_tokenizer_cache_size",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheMetrics.record_cache_expiration",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheMetrics.record_layer_latency",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "CacheMetrics.record_normalization_latency",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.collect_normalization_metrics",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.get_collected_metrics",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.collect_morphology_metrics",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsCollector.collect_tokenizer_metrics",
+        "file": "src/ai_service/monitoring/cache_metrics.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsService.set_gauge",
+        "file": "src/ai_service/monitoring/metrics_service.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsService.increment_counter",
+        "file": "src/ai_service/monitoring/metrics_service.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsService.timer",
+        "file": "src/ai_service/monitoring/metrics_service.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsService.resolve_alert",
+        "file": "src/ai_service/monitoring/metrics_service.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsService.register_metric",
+        "file": "src/ai_service/monitoring/metrics_service.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsService.get_metric_summary",
+        "file": "src/ai_service/monitoring/metrics_service.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsService.stop_background_tasks",
+        "file": "src/ai_service/monitoring/metrics_service.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsService.record_histogram",
+        "file": "src/ai_service/monitoring/metrics_service.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsService.start_background_tasks",
+        "file": "src/ai_service/monitoring/metrics_service.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsService.get_system_health",
+        "file": "src/ai_service/monitoring/metrics_service.py",
+        "type": "method"
+      },
+      {
+        "name": "MetricsService.get_metric_values",
+        "file": "src/ai_service/monitoring/metrics_service.py",
+        "type": "method"
+      },
+      {
+        "name": "EmbeddingPreprocessor.normalize_for_embedding",
+        "file": "src/ai_service/services/embedding_preprocessor.py",
+        "type": "method"
+      },
+      {
+        "name": "EmbeddingPreprocessor.normalize_with_attributes",
+        "file": "src/ai_service/services/embedding_preprocessor.py",
+        "type": "method"
+      },
+      {
+        "name": "EmbeddingPreprocessor.should_include_attrs",
+        "file": "src/ai_service/services/embedding_preprocessor.py",
+        "type": "method"
+      },
+      {
+        "name": "EmbeddingPreprocessor.extract_name_only",
+        "file": "src/ai_service/services/embedding_preprocessor.py",
+        "type": "method"
+      },
+      {
+        "name": "ShadowModeValidator.validate_nameparser_improvements",
+        "file": "src/ai_service/validation/shadow_mode_validator.py",
+        "type": "method"
+      },
+      {
+        "name": "ShadowModeValidator.validate_ner_improvements",
+        "file": "src/ai_service/validation/shadow_mode_validator.py",
+        "type": "method"
+      },
+      {
+        "name": "ShadowModeValidator.validate_strict_stopwords_improvements",
+        "file": "src/ai_service/validation/shadow_mode_validator.py",
+        "type": "method"
+      },
+      {
+        "name": "ShadowModeValidator.validate_vector_fallback_improvements",
+        "file": "src/ai_service/validation/shadow_mode_validator.py",
+        "type": "method"
+      },
+      {
+        "name": "ShadowModeValidator.validate_fsm_tuned_roles_improvements",
+        "file": "src/ai_service/validation/shadow_mode_validator.py",
+        "type": "method"
+      },
+      {
+        "name": "ShadowModeValidator.validate_enhanced_gender_rules_improvements",
+        "file": "src/ai_service/validation/shadow_mode_validator.py",
+        "type": "method"
+      },
+      {
+        "name": "ShadowModeValidator.validate_enhanced_diminutives_improvements",
+        "file": "src/ai_service/validation/shadow_mode_validator.py",
+        "type": "method"
+      },
+      {
+        "name": "ShadowModeValidator.validate_ac_tier0_improvements",
+        "file": "src/ai_service/validation/shadow_mode_validator.py",
+        "type": "method"
+      },
+      {
+        "name": "EntityTemplate.get_high_confidence_patterns",
+        "file": "src/ai_service/layers/variants/template_builder.py",
+        "type": "method"
+      },
+      {
+        "name": "EntityTemplate.get_search_keywords",
+        "file": "src/ai_service/layers/variants/template_builder.py",
+        "type": "method"
+      },
+      {
+        "name": "TemplateBuilder.create_entity_template",
+        "file": "src/ai_service/layers/variants/template_builder.py",
+        "type": "method"
+      },
+      {
+        "name": "VariantGenerationService.generate_visual_similarities",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py",
+        "type": "method"
+      },
+      {
+        "name": "VariantGenerationService.generate_keyboard_layout_variants",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py",
+        "type": "method"
+      },
+      {
+        "name": "VariantGenerationService.generate_comprehensive_variants",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py",
+        "type": "method"
+      },
+      {
+        "name": "VariantGenerationService.find_best_matches",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py",
+        "type": "method"
+      },
+      {
+        "name": "VariantGenerationService.analyze_names",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py",
+        "type": "method"
+      },
+      {
+        "name": "VariantGenerationService.generate_variants_batch",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py",
+        "type": "method"
+      },
+      {
+        "name": "VariantGenerationService.get_similarity_score",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py",
+        "type": "method"
+      },
+      {
+        "name": "VariantGenerationService.generate_typo_variants",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py",
+        "type": "method"
+      },
+      {
+        "name": "VariantGenerationService.get_variant_statistics",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py",
+        "type": "method"
+      },
+      {
+        "name": "OptimizedEmbeddingService.find_similar_texts_optimized",
+        "file": "src/ai_service/layers/embeddings/optimized_embedding_service.py",
+        "type": "method"
+      },
+      {
+        "name": "OptimizedEmbeddingService.get_embeddings",
+        "file": "src/ai_service/layers/embeddings/optimized_embedding_service.py",
+        "type": "method"
+      },
+      {
+        "name": "OptimizedEmbeddingService.find_similar_texts_async_optimized",
+        "file": "src/ai_service/layers/embeddings/optimized_embedding_service.py",
+        "type": "method"
+      },
+      {
+        "name": "OptimizedEmbeddingService.warm_up_cache",
+        "file": "src/ai_service/layers/embeddings/optimized_embedding_service.py",
+        "type": "method"
+      },
+      {
+        "name": "OptimizedEmbeddingService.find_similar_texts",
+        "file": "src/ai_service/layers/embeddings/optimized_embedding_service.py",
+        "type": "method"
+      },
+      {
+        "name": "OptimizedEmbeddingService.get_performance_metrics",
+        "file": "src/ai_service/layers/embeddings/optimized_embedding_service.py",
+        "type": "method"
+      },
+      {
+        "name": "OptimizedEmbeddingService.get_embeddings_async_optimized",
+        "file": "src/ai_service/layers/embeddings/optimized_embedding_service.py",
+        "type": "method"
+      },
+      {
+        "name": "EmbeddingService.encode_one",
+        "file": "src/ai_service/layers/embeddings/embedding_service.py",
+        "type": "method"
+      },
+      {
+        "name": "EmbeddingService.get_cache_stats",
+        "file": "src/ai_service/layers/embeddings/embedding_service.py",
+        "type": "method"
+      },
+      {
+        "name": "EmbeddingService.get_model_info",
+        "file": "src/ai_service/layers/embeddings/embedding_service.py",
+        "type": "method"
+      },
+      {
+        "name": "EmbeddingService.encode_batch",
+        "file": "src/ai_service/layers/embeddings/embedding_service.py",
+        "type": "method"
+      },
+      {
+        "name": "EmbeddingService.clear_preprocessing_cache",
+        "file": "src/ai_service/layers/embeddings/embedding_service.py",
+        "type": "method"
+      },
+      {
+        "name": "EmbeddingService.get_embedding_dimension",
+        "file": "src/ai_service/layers/embeddings/embedding_service.py",
+        "type": "method"
+      },
+      {
+        "name": "EmbeddingService.warmup",
+        "file": "src/ai_service/layers/embeddings/embedding_service.py",
+        "type": "method"
+      },
+      {
+        "name": "UnifiedPatternService.generate_patterns",
+        "file": "src/ai_service/layers/patterns/unified_pattern_service.py",
+        "type": "method"
+      },
+      {
+        "name": "UnifiedPatternService.get_pattern_statistics",
+        "file": "src/ai_service/layers/patterns/unified_pattern_service.py",
+        "type": "method"
+      },
+      {
+        "name": "UnifiedPatternService.generate_high_precision_patterns",
+        "file": "src/ai_service/layers/patterns/unified_pattern_service.py",
+        "type": "method"
+      },
+      {
+        "name": "UnicodeService.get_similarity_score",
+        "file": "src/ai_service/layers/unicode/unicode_service.py",
+        "type": "method"
+      },
+      {
+        "name": "UnicodeService.normalize_batch",
+        "file": "src/ai_service/layers/unicode/unicode_service.py",
+        "type": "method"
+      },
+      {
+        "name": "UnicodeService.normalize_text",
+        "file": "src/ai_service/layers/unicode/unicode_service.py",
+        "type": "method"
+      },
+      {
+        "name": "UnicodeService.detect_encoding_issues",
+        "file": "src/ai_service/layers/unicode/unicode_service.py",
+        "type": "method"
+      },
+      {
+        "name": "UnicodeService.calculate_similarity",
+        "file": "src/ai_service/layers/unicode/unicode_service.py",
+        "type": "method"
+      },
+      {
+        "name": "RoleTaggerService.get_trace_entries",
+        "file": "src/ai_service/layers/normalization/role_tagger_service.py",
+        "type": "method"
+      },
+      {
+        "name": "NameparserAdapter.is_surname_particle",
+        "file": "src/ai_service/layers/normalization/nameparser_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "NameparserAdapter.reconstruct_name",
+        "file": "src/ai_service/layers/normalization/nameparser_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "RoleTagger.get_person_candidates",
+        "file": "src/ai_service/layers/normalization/role_tagger.py",
+        "type": "method"
+      },
+      {
+        "name": "RoleTagger.get_organization_spans",
+        "file": "src/ai_service/layers/normalization/role_tagger.py",
+        "type": "method"
+      },
+      {
+        "name": "RoleTagger.get_stopword_count",
+        "file": "src/ai_service/layers/normalization/role_tagger.py",
+        "type": "method"
+      },
+      {
+        "name": "RoleTagger.get_organization_count",
+        "file": "src/ai_service/layers/normalization/role_tagger.py",
+        "type": "method"
+      },
+      {
+        "name": "ErrorHandler.clear_errors",
+        "file": "src/ai_service/layers/normalization/error_handling.py",
+        "type": "method"
+      },
+      {
+        "name": "ErrorHandler.get_error_summary",
+        "file": "src/ai_service/layers/normalization/error_handling.py",
+        "type": "method"
+      },
+      {
+        "name": "ErrorHandler.handle_error",
+        "file": "src/ai_service/layers/normalization/error_handling.py",
+        "type": "method"
+      },
+      {
+        "name": "ErrorHandler.get_errors_by_severity",
+        "file": "src/ai_service/layers/normalization/error_handling.py",
+        "type": "method"
+      },
+      {
+        "name": "ErrorHandler.has_critical_errors",
+        "file": "src/ai_service/layers/normalization/error_handling.py",
+        "type": "method"
+      },
+      {
+        "name": "ErrorHandler.register_recovery_strategy",
+        "file": "src/ai_service/layers/normalization/error_handling.py",
+        "type": "method"
+      },
+      {
+        "name": "ErrorReportingMixin.get_error_report",
+        "file": "src/ai_service/layers/normalization/error_handling.py",
+        "type": "method"
+      },
+      {
+        "name": "ErrorReportingMixin.safe_execute_async",
+        "file": "src/ai_service/layers/normalization/error_handling.py",
+        "type": "method"
+      },
+      {
+        "name": "ErrorReportingMixin.safe_execute",
+        "file": "src/ai_service/layers/normalization/error_handling.py",
+        "type": "method"
+      },
+      {
+        "name": "NormalizationService.normalize_sync",
+        "file": "src/ai_service/layers/normalization/normalization_service.py",
+        "type": "method"
+      },
+      {
+        "name": "NormalizationService.clear_caches",
+        "file": "src/ai_service/layers/normalization/normalization_service.py",
+        "type": "method"
+      },
+      {
+        "name": "NormalizationService.warmup_morphology_cache",
+        "file": "src/ai_service/layers/normalization/normalization_service.py",
+        "type": "method"
+      },
+      {
+        "name": "NormalizationService.normalize_async",
+        "file": "src/ai_service/layers/normalization/normalization_service.py",
+        "type": "method"
+      },
+      {
+        "name": "NormalizationService.validate_identifier",
+        "file": "src/ai_service/layers/normalization/normalization_service.py",
+        "type": "method"
+      },
+      {
+        "name": "NameAssembler.assemble",
+        "file": "src/ai_service/layers/normalization/name_assembler.py",
+        "type": "method"
+      },
+      {
+        "name": "MorphologyAdapter.apply_yo_strategy",
+        "file": "src/ai_service/layers/normalization/morphology_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "MorphologyAdapter.parse_priority",
+        "file": "src/ai_service/layers/normalization/morphology_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "MorphologyAdapter.detect_patronymic",
+        "file": "src/ai_service/layers/normalization/morphology_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "MorphologyAdapter.get_cache_stats",
+        "file": "src/ai_service/layers/normalization/morphology_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "MorphologyAdapter.to_nominative_cached",
+        "file": "src/ai_service/layers/normalization/morphology_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "MorphologyAdapter.normalize_patronymic_to_nominative",
+        "file": "src/ai_service/layers/normalization/morphology_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "MorphologyAdapter.normalize_slavic_token",
+        "file": "src/ai_service/layers/normalization/morphology_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "MorphologyAdapter.is_uk_available",
+        "file": "src/ai_service/layers/normalization/morphology_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "MorphologyAdapter.warmup",
+        "file": "src/ai_service/layers/normalization/morphology_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "TokenizerService.tokenize",
+        "file": "src/ai_service/layers/normalization/tokenizer_service.py",
+        "type": "method"
+      },
+      {
+        "name": "CachedTokenizerService.tokenize",
+        "file": "src/ai_service/layers/normalization/tokenizer_service.py",
+        "type": "method"
+      },
+      {
+        "name": "CachedTokenizerService.tokenize_with_classification",
+        "file": "src/ai_service/layers/normalization/tokenizer_service.py",
+        "type": "method"
+      },
+      {
+        "name": "PerformanceOptimizer.get_performance_stats",
+        "file": "src/ai_service/layers/normalization/performance_optimizer.py",
+        "type": "method"
+      },
+      {
+        "name": "PerformanceOptimizer.clear_all_caches",
+        "file": "src/ai_service/layers/normalization/performance_optimizer.py",
+        "type": "method"
+      },
+      {
+        "name": "PerformanceOptimizer.get_cache_stats",
+        "file": "src/ai_service/layers/normalization/performance_optimizer.py",
+        "type": "method"
+      },
+      {
+        "name": "PerformanceOptimizer.preload_common_patterns",
+        "file": "src/ai_service/layers/normalization/performance_optimizer.py",
+        "type": "method"
+      },
+      {
+        "name": "PerformanceOptimizer.cache_key",
+        "file": "src/ai_service/layers/normalization/performance_optimizer.py",
+        "type": "method"
+      },
+      {
+        "name": "PerformanceOptimizer.wrapper",
+        "file": "src/ai_service/layers/normalization/performance_optimizer.py",
+        "type": "method"
+      },
+      {
+        "name": "PerformanceOptimizer.memory_pressure_cleanup",
+        "file": "src/ai_service/layers/normalization/performance_optimizer.py",
+        "type": "method"
+      },
+      {
+        "name": "PerformanceOptimizer.decorator",
+        "file": "src/ai_service/layers/normalization/performance_optimizer.py",
+        "type": "method"
+      },
+      {
+        "name": "PerformanceOptimizer.optimize_for_batch",
+        "file": "src/ai_service/layers/normalization/performance_optimizer.py",
+        "type": "method"
+      },
+      {
+        "name": "SignalsService.extract_signals",
+        "file": "src/ai_service/layers/signals/signals_service.py",
+        "type": "method"
+      },
+      {
+        "name": "SignalsService.distance_to_legal_form",
+        "file": "src/ai_service/layers/signals/signals_service.py",
+        "type": "method"
+      },
+      {
+        "name": "SignalsService.extract_async",
+        "file": "src/ai_service/layers/signals/signals_service.py",
+        "type": "method"
+      },
+      {
+        "name": "SignalsService.extract",
+        "file": "src/ai_service/layers/signals/signals_service.py",
+        "type": "method"
+      },
+      {
+        "name": "LanguageDetectionService.add_language_mapping",
+        "file": "src/ai_service/layers/language/language_detection_service.py",
+        "type": "method"
+      },
+      {
+        "name": "LanguageDetectionService.get_supported_languages",
+        "file": "src/ai_service/layers/language/language_detection_service.py",
+        "type": "method"
+      },
+      {
+        "name": "LanguageDetectionService.get_detection_stats",
+        "file": "src/ai_service/layers/language/language_detection_service.py",
+        "type": "method"
+      },
+      {
+        "name": "LanguageDetectionService.detect_batch",
+        "file": "src/ai_service/layers/language/language_detection_service.py",
+        "type": "method"
+      },
+      {
+        "name": "LanguageDetectionService.detect_language_config_driven",
+        "file": "src/ai_service/layers/language/language_detection_service.py",
+        "type": "method"
+      },
+      {
+        "name": "LanguageDetectionService.is_language_supported",
+        "file": "src/ai_service/layers/language/language_detection_service.py",
+        "type": "method"
+      },
+      {
+        "name": "LanguageDetectionService.detect_languages_batch",
+        "file": "src/ai_service/layers/language/language_detection_service.py",
+        "type": "method"
+      },
+      {
+        "name": "ElasticsearchACAdapter.get_latency_stats",
+        "file": "src/ai_service/layers/search/elasticsearch_adapters.py",
+        "type": "method"
+      },
+      {
+        "name": "ElasticsearchACAdapter.search_ac_patterns",
+        "file": "src/ai_service/layers/search/elasticsearch_adapters.py",
+        "type": "method"
+      },
+      {
+        "name": "ElasticsearchVectorAdapter.search_vector_fallback",
+        "file": "src/ai_service/layers/search/elasticsearch_adapters.py",
+        "type": "method"
+      },
+      {
+        "name": "ElasticsearchVectorAdapter.get_latency_stats",
+        "file": "src/ai_service/layers/search/elasticsearch_adapters.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchSystemMonitor.increment_counter",
+        "file": "src/ai_service/layers/search/search_monitoring.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchSystemMonitor.get_metrics_summary",
+        "file": "src/ai_service/layers/search/search_monitoring.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchSystemMonitor.record_elasticsearch_operation",
+        "file": "src/ai_service/layers/search/search_monitoring.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchSystemMonitor.record_metric",
+        "file": "src/ai_service/layers/search/search_monitoring.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchSystemMonitor.start_background_monitoring",
+        "file": "src/ai_service/layers/search/search_monitoring.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchSystemMonitor.export_metrics_prometheus",
+        "file": "src/ai_service/layers/search/search_monitoring.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchSystemMonitor.resolve_alert",
+        "file": "src/ai_service/layers/search/search_monitoring.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchSystemMonitor.get_system_health",
+        "file": "src/ai_service/layers/search/search_monitoring.py",
+        "type": "method"
+      },
+      {
+        "name": "ElasticsearchConfig.validate_hosts",
+        "file": "src/ai_service/layers/search/config.py",
+        "type": "method"
+      },
+      {
+        "name": "ElasticsearchConfig.normalized_hosts",
+        "file": "src/ai_service/layers/search/config.py",
+        "type": "method"
+      },
+      {
+        "name": "HybridSearchConfig.get_vector_config",
+        "file": "src/ai_service/layers/search/config.py",
+        "type": "method"
+      },
+      {
+        "name": "HybridSearchConfig.get_ac_config",
+        "file": "src/ai_service/layers/search/config.py",
+        "type": "method"
+      },
+      {
+        "name": "HybridSearchConfig.validate_default_mode",
+        "file": "src/ai_service/layers/search/config.py",
+        "type": "method"
+      },
+      {
+        "name": "HybridSearchConfig.get_elasticsearch_config",
+        "file": "src/ai_service/layers/search/config.py",
+        "type": "method"
+      },
+      {
+        "name": "RetryPolicy.calculate_delay",
+        "file": "src/ai_service/layers/search/enhanced_elasticsearch_client.py",
+        "type": "method"
+      },
+      {
+        "name": "EnhancedElasticsearchClient.get_cluster_stats",
+        "file": "src/ai_service/layers/search/enhanced_elasticsearch_client.py",
+        "type": "method"
+      },
+      {
+        "name": "EnhancedElasticsearchClient.get_connection_status",
+        "file": "src/ai_service/layers/search/enhanced_elasticsearch_client.py",
+        "type": "method"
+      },
+      {
+        "name": "EnhancedElasticsearchClient.wait_for_healthy",
+        "file": "src/ai_service/layers/search/enhanced_elasticsearch_client.py",
+        "type": "method"
+      },
+      {
+        "name": "EnhancedElasticsearchClient.get_hosts",
+        "file": "src/ai_service/layers/search/enhanced_elasticsearch_client.py",
+        "type": "method"
+      },
+      {
+        "name": "EnhancedElasticsearchClient.enhanced_health_check",
+        "file": "src/ai_service/layers/search/enhanced_elasticsearch_client.py",
+        "type": "method"
+      },
+      {
+        "name": "EnhancedElasticsearchClient.is_healthy",
+        "file": "src/ai_service/layers/search/enhanced_elasticsearch_client.py",
+        "type": "method"
+      },
+      {
+        "name": "EnhancedElasticsearchClient.get_client",
+        "file": "src/ai_service/layers/search/enhanced_elasticsearch_client.py",
+        "type": "method"
+      },
+      {
+        "name": "EnhancedElasticsearchClient.close",
+        "file": "src/ai_service/layers/search/enhanced_elasticsearch_client.py",
+        "type": "method"
+      },
+      {
+        "name": "EnhancedElasticsearchClient.execute_with_retry",
+        "file": "src/ai_service/layers/search/enhanced_elasticsearch_client.py",
+        "type": "method"
+      },
+      {
+        "name": "ValidationReport.has_warnings",
+        "file": "src/ai_service/layers/search/search_trace_validator.py",
+        "type": "method"
+      },
+      {
+        "name": "SearchService.find_candidates",
+        "file": "src/ai_service/layers/search/contracts.py",
+        "type": "method"
+      },
+      {
+        "name": "ElasticsearchAdapter.get_latency_stats",
+        "file": "src/ai_service/layers/search/contracts.py",
+        "type": "method"
+      },
+      {
+        "name": "ElasticsearchClientFactory.smoke_test",
+        "file": "src/ai_service/layers/search/elasticsearch_client.py",
+        "type": "method"
+      },
+      {
+        "name": "ElasticsearchClientFactory.close",
+        "file": "src/ai_service/layers/search/elasticsearch_client.py",
+        "type": "method"
+      },
+      {
+        "name": "ElasticsearchClientFactory.get_client",
+        "file": "src/ai_service/layers/search/elasticsearch_client.py",
+        "type": "method"
+      },
+      {
+        "name": "ElasticsearchClientFactory.get_hosts",
+        "file": "src/ai_service/layers/search/elasticsearch_client.py",
+        "type": "method"
+      },
+      {
+        "name": "HybridSearchService.get_status",
+        "file": "src/ai_service/layers/search/hybrid_search_service.py",
+        "type": "method"
+      },
+      {
+        "name": "HybridSearchService.find_candidates",
+        "file": "src/ai_service/layers/search/hybrid_search_service.py",
+        "type": "method"
+      },
+      {
+        "name": "ValidationService.validate_and_sanitize",
+        "file": "src/ai_service/layers/validation/validation_service.py",
+        "type": "method"
+      },
+      {
+        "name": "DocumentDetector.detect_document_signals",
+        "file": "src/ai_service/layers/smart_filter/document_detector.py",
+        "type": "method"
+      },
+      {
+        "name": "NameDetector.detect_name_signals",
+        "file": "src/ai_service/layers/smart_filter/name_detector.py",
+        "type": "method"
+      },
+      {
+        "name": "NameDetector.detect_names",
+        "file": "src/ai_service/layers/smart_filter/name_detector.py",
+        "type": "method"
+      },
+      {
+        "name": "TerrorismDetector.detect_terrorism_signals",
+        "file": "src/ai_service/layers/smart_filter/terrorism_detector.py",
+        "type": "method"
+      },
+      {
+        "name": "TerrorismDetector.get_risk_assessment",
+        "file": "src/ai_service/layers/smart_filter/terrorism_detector.py",
+        "type": "method"
+      },
+      {
+        "name": "CompanyDetector.get_enhanced_company_analysis",
+        "file": "src/ai_service/layers/smart_filter/company_detector.py",
+        "type": "method"
+      },
+      {
+        "name": "CompanyDetector.detect_company_signals",
+        "file": "src/ai_service/layers/smart_filter/company_detector.py",
+        "type": "method"
+      },
+      {
+        "name": "SmartFilterService.enhanced_pattern_analysis",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_service.py",
+        "type": "method"
+      },
+      {
+        "name": "SmartFilterService.make_smart_decision",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_service.py",
+        "type": "method"
+      },
+      {
+        "name": "SmartFilterService.get_comprehensive_analysis",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_service.py",
+        "type": "method"
+      },
+      {
+        "name": "SmartFilterService.analyze_payment_description",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_service.py",
+        "type": "method"
+      },
+      {
+        "name": "SmartFilterService.search_aho_corasick",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_service.py",
+        "type": "method"
+      },
+      {
+        "name": "SmartFilterService.should_process_text_async",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_service.py",
+        "type": "method"
+      },
+      {
+        "name": "SmartFilterService.should_process_text",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_service.py",
+        "type": "method"
+      },
+      {
+        "name": "DecisionLogic.get_decision_statistics",
+        "file": "src/ai_service/layers/smart_filter/decision_logic.py",
+        "type": "method"
+      },
+      {
+        "name": "DecisionLogic.analyze",
+        "file": "src/ai_service/layers/smart_filter/decision_logic.py",
+        "type": "method"
+      },
+      {
+        "name": "DecisionLogic.update_thresholds",
+        "file": "src/ai_service/layers/smart_filter/decision_logic.py",
+        "type": "method"
+      },
+      {
+        "name": "DecisionLogic.make_decision",
+        "file": "src/ai_service/layers/smart_filter/decision_logic.py",
+        "type": "method"
+      },
+      {
+        "name": "DecisionLogic.get_detailed_analysis",
+        "file": "src/ai_service/layers/smart_filter/decision_logic.py",
+        "type": "method"
+      },
+      {
+        "name": "ConfidenceScorer.get_confidence_level",
+        "file": "src/ai_service/layers/smart_filter/confidence_scorer.py",
+        "type": "method"
+      },
+      {
+        "name": "ConfidenceScorer.get_processing_recommendation",
+        "file": "src/ai_service/layers/smart_filter/confidence_scorer.py",
+        "type": "method"
+      },
+      {
+        "name": "ConfidenceScorer.calculate_confidence",
+        "file": "src/ai_service/layers/smart_filter/confidence_scorer.py",
+        "type": "method"
+      },
+      {
+        "name": "ConfidenceScorer.get_detailed_analysis",
+        "file": "src/ai_service/layers/smart_filter/confidence_scorer.py",
+        "type": "method"
+      },
+      {
+        "name": "OptimizedACPatternGenerator.generate_patterns",
+        "file": "src/ai_service/layers/variants/templates/optimized_ac_pattern_generator.py",
+        "type": "method"
+      },
+      {
+        "name": "OptimizedACPatternGenerator.export_t0_t1_patterns_for_elasticsearch",
+        "file": "src/ai_service/layers/variants/templates/optimized_ac_pattern_generator.py",
+        "type": "method"
+      },
+      {
+        "name": "OptimizedACPatternGenerator.optimize_patterns",
+        "file": "src/ai_service/layers/variants/templates/optimized_ac_pattern_generator.py",
+        "type": "method"
+      },
+      {
+        "name": "OptimizedACPatternGenerator.get_pattern_statistics",
+        "file": "src/ai_service/layers/variants/templates/optimized_ac_pattern_generator.py",
+        "type": "method"
+      },
+      {
+        "name": "OptimizedACPatternGenerator.generate_high_precision_patterns",
+        "file": "src/ai_service/layers/variants/templates/optimized_ac_pattern_generator.py",
+        "type": "method"
+      },
+      {
+        "name": "FinalACOptimizer.export_for_tier_based_ac",
+        "file": "src/ai_service/layers/variants/templates/final_ac_optimizer.py",
+        "type": "method"
+      },
+      {
+        "name": "FinalACOptimizer.get_optimization_stats",
+        "file": "src/ai_service/layers/variants/templates/final_ac_optimizer.py",
+        "type": "method"
+      },
+      {
+        "name": "FinalACOptimizer.generate_optimal_patterns",
+        "file": "src/ai_service/layers/variants/templates/final_ac_optimizer.py",
+        "type": "method"
+      },
+      {
+        "name": "HighRecallACGenerator.export_for_high_recall_ac",
+        "file": "src/ai_service/layers/variants/templates/high_recall_ac_generator.py",
+        "type": "method"
+      },
+      {
+        "name": "HighRecallACGenerator.generate_high_recall_patterns",
+        "file": "src/ai_service/layers/variants/templates/high_recall_ac_generator.py",
+        "type": "method"
+      },
+      {
+        "name": "HighRecallACGenerator.get_recall_statistics",
+        "file": "src/ai_service/layers/variants/templates/high_recall_ac_generator.py",
+        "type": "method"
+      },
+      {
+        "name": "EmbeddingModelManager.preload_model",
+        "file": "src/ai_service/layers/embeddings/models/embedding_model_manager.py",
+        "type": "method"
+      },
+      {
+        "name": "EmbeddingModelManager.list_loaded_models",
+        "file": "src/ai_service/layers/embeddings/models/embedding_model_manager.py",
+        "type": "method"
+      },
+      {
+        "name": "EmbeddingModelManager.get_model_info",
+        "file": "src/ai_service/layers/embeddings/models/embedding_model_manager.py",
+        "type": "method"
+      },
+      {
+        "name": "EmbeddingModelManager.get_model",
+        "file": "src/ai_service/layers/embeddings/models/embedding_model_manager.py",
+        "type": "method"
+      },
+      {
+        "name": "EmbeddingModelManager.shutdown",
+        "file": "src/ai_service/layers/embeddings/models/embedding_model_manager.py",
+        "type": "method"
+      },
+      {
+        "name": "ElasticsearchWatchlistAdapter.ready",
+        "file": "src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "ElasticsearchWatchlistAdapter.clear_overlay",
+        "file": "src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "ElasticsearchWatchlistAdapter.set_overlay_from_corpus",
+        "file": "src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "ElasticsearchWatchlistAdapter.reload_snapshot",
+        "file": "src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "ElasticsearchWatchlistAdapter.close",
+        "file": "src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "ElasticsearchWatchlistAdapter.build_from_corpus",
+        "file": "src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "ElasticsearchWatchlistAdapter.get_doc",
+        "file": "src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "ElasticsearchWatchlistAdapter.save_snapshot",
+        "file": "src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py",
+        "type": "method"
+      },
+      {
+        "name": "EnhancedVectorIndex.get_index_statistics",
+        "file": "src/ai_service/layers/embeddings/indexing/enhanced_vector_index_service.py",
+        "type": "method"
+      },
+      {
+        "name": "EnhancedVectorIndex.warm_up",
+        "file": "src/ai_service/layers/embeddings/indexing/enhanced_vector_index_service.py",
+        "type": "method"
+      },
+      {
+        "name": "EnhancedVectorIndex.optimize_index",
+        "file": "src/ai_service/layers/embeddings/indexing/enhanced_vector_index_service.py",
+        "type": "method"
+      },
+      {
+        "name": "WatchlistIndexService.ready",
+        "file": "src/ai_service/layers/embeddings/indexing/watchlist_index_service.py",
+        "type": "method"
+      },
+      {
+        "name": "WatchlistIndexService.clear_overlay",
+        "file": "src/ai_service/layers/embeddings/indexing/watchlist_index_service.py",
+        "type": "method"
+      },
+      {
+        "name": "WatchlistIndexService.set_overlay_from_corpus",
+        "file": "src/ai_service/layers/embeddings/indexing/watchlist_index_service.py",
+        "type": "method"
+      },
+      {
+        "name": "WatchlistIndexService.reload_snapshot",
+        "file": "src/ai_service/layers/embeddings/indexing/watchlist_index_service.py",
+        "type": "method"
+      },
+      {
+        "name": "WatchlistIndexService.build_from_corpus",
+        "file": "src/ai_service/layers/embeddings/indexing/watchlist_index_service.py",
+        "type": "method"
+      },
+      {
+        "name": "WatchlistIndexService.get_doc",
+        "file": "src/ai_service/layers/embeddings/indexing/watchlist_index_service.py",
+        "type": "method"
+      },
+      {
+        "name": "WatchlistIndexService.save_snapshot",
+        "file": "src/ai_service/layers/embeddings/indexing/watchlist_index_service.py",
+        "type": "method"
+      },
+      {
+        "name": "SpacyRuNER.get_entity_at_position",
+        "file": "src/ai_service/layers/normalization/ner_gateways/spacy_ru.py",
+        "type": "method"
+      },
+      {
+        "name": "SpacyRuNER.extract_entities",
+        "file": "src/ai_service/layers/normalization/ner_gateways/spacy_ru.py",
+        "type": "method"
+      },
+      {
+        "name": "UnifiedSpacyGateway.extract_entities",
+        "file": "src/ai_service/layers/normalization/ner_gateways/unified_spacy_gateway.py",
+        "type": "method"
+      },
+      {
+        "name": "UnifiedSpacyGateway.get_model_info",
+        "file": "src/ai_service/layers/normalization/ner_gateways/unified_spacy_gateway.py",
+        "type": "method"
+      },
+      {
+        "name": "UnifiedSpacyGateway.get_supported_languages",
+        "file": "src/ai_service/layers/normalization/ner_gateways/unified_spacy_gateway.py",
+        "type": "method"
+      },
+      {
+        "name": "SpacyUkNER.is_person_entity",
+        "file": "src/ai_service/layers/normalization/ner_gateways/spacy_uk.py",
+        "type": "method"
+      },
+      {
+        "name": "SpacyUkNER.get_entity_at_position",
+        "file": "src/ai_service/layers/normalization/ner_gateways/spacy_uk.py",
+        "type": "method"
+      },
+      {
+        "name": "SpacyUkNER.extract_entities",
+        "file": "src/ai_service/layers/normalization/ner_gateways/spacy_uk.py",
+        "type": "method"
+      },
+      {
+        "name": "SpacyUkNER.is_org_entity",
+        "file": "src/ai_service/layers/normalization/ner_gateways/spacy_uk.py",
+        "type": "method"
+      },
+      {
+        "name": "SpacyEnNER.extract_entities",
+        "file": "src/ai_service/layers/normalization/ner_gateways/spacy_en.py",
+        "type": "method"
+      },
+      {
+        "name": "RoleClassifier.tag_tokens",
+        "file": "src/ai_service/layers/normalization/processors/role_classifier.py",
+        "type": "method"
+      },
+      {
+        "name": "MorphologyProcessor.normalize_slavic_token",
+        "file": "src/ai_service/layers/normalization/processors/morphology_processor.py",
+        "type": "method"
+      },
+      {
+        "name": "TokenProcessor.strip_noise_and_tokenize",
+        "file": "src/ai_service/layers/normalization/processors/token_processor.py",
+        "type": "method"
+      },
+      {
+        "name": "GenderProcessor.infer_gender",
+        "file": "src/ai_service/layers/normalization/processors/gender_processor.py",
+        "type": "method"
+      },
+      {
+        "name": "GenderProcessor.adjust_surname_gender",
+        "file": "src/ai_service/layers/normalization/processors/gender_processor.py",
+        "type": "method"
+      },
+      {
+        "name": "NormalizationFactory.clear_caches",
+        "file": "src/ai_service/layers/normalization/processors/normalization_factory.py",
+        "type": "method"
+      },
+      {
+        "name": "NormalizationFactory.normalize_text",
+        "file": "src/ai_service/layers/normalization/processors/normalization_factory.py",
+        "type": "method"
+      },
+      {
+        "name": "UkrainianMorphologyAnalyzer.get_pos_tags",
+        "file": "src/ai_service/layers/normalization/morphology/ukrainian_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "UkrainianMorphologyAnalyzer.transliterate_ukrainian",
+        "file": "src/ai_service/layers/normalization/morphology/ukrainian_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "UkrainianMorphologyAnalyzer.pick_best_parse",
+        "file": "src/ai_service/layers/normalization/morphology/ukrainian_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "UkrainianMorphologyAnalyzer.get_analysis_statistics",
+        "file": "src/ai_service/layers/normalization/morphology/ukrainian_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "UkrainianMorphologyAnalyzer.get_lemma",
+        "file": "src/ai_service/layers/normalization/morphology/ukrainian_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "UkrainianMorphologyAnalyzer.get_word_forms",
+        "file": "src/ai_service/layers/normalization/morphology/ukrainian_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "UkrainianMorphologyAnalyzer.analyze_word",
+        "file": "src/ai_service/layers/normalization/morphology/ukrainian_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "BaseMorphologyAnalyzer.is_known_word",
+        "file": "src/ai_service/layers/normalization/morphology/base_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "BaseMorphologyAnalyzer.get_pos_tags",
+        "file": "src/ai_service/layers/normalization/morphology/base_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "BaseMorphologyAnalyzer.analyze_word",
+        "file": "src/ai_service/layers/normalization/morphology/base_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "BaseMorphologyAnalyzer.get_analysis_statistics",
+        "file": "src/ai_service/layers/normalization/morphology/base_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "BaseMorphologyAnalyzer.get_lemma",
+        "file": "src/ai_service/layers/normalization/morphology/base_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "BaseMorphologyAnalyzer.get_word_forms",
+        "file": "src/ai_service/layers/normalization/morphology/base_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "BaseMorphologyAnalyzer.cleanup",
+        "file": "src/ai_service/layers/normalization/morphology/base_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "DiminutiveResolver.resolve",
+        "file": "src/ai_service/layers/normalization/morphology/diminutive_resolver.py",
+        "type": "method"
+      },
+      {
+        "name": "RussianMorphologyAnalyzer.transliterate_russian",
+        "file": "src/ai_service/layers/normalization/morphology/russian_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "RussianMorphologyAnalyzer.get_pos_tags",
+        "file": "src/ai_service/layers/normalization/morphology/russian_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "RussianMorphologyAnalyzer.batch_process_names",
+        "file": "src/ai_service/layers/normalization/morphology/russian_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "RussianMorphologyAnalyzer.get_name_complexity",
+        "file": "src/ai_service/layers/normalization/morphology/russian_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "RussianMorphologyAnalyzer.is_russian_name",
+        "file": "src/ai_service/layers/normalization/morphology/russian_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "RussianMorphologyAnalyzer.pick_best_parse",
+        "file": "src/ai_service/layers/normalization/morphology/russian_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "RussianMorphologyAnalyzer.get_analysis_statistics",
+        "file": "src/ai_service/layers/normalization/morphology/russian_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "RussianMorphologyAnalyzer.get_all_forms",
+        "file": "src/ai_service/layers/normalization/morphology/russian_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "RussianMorphologyAnalyzer.get_lemma",
+        "file": "src/ai_service/layers/normalization/morphology/russian_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "RussianMorphologyAnalyzer.get_word_forms",
+        "file": "src/ai_service/layers/normalization/morphology/russian_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "RussianMorphologyAnalyzer.analyze_word",
+        "file": "src/ai_service/layers/normalization/morphology/russian_morphology.py",
+        "type": "method"
+      },
+      {
+        "name": "WordNormalizer.classify_word",
+        "file": "src/ai_service/layers/normalization/morphology/word_normalizer.py",
+        "type": "method"
+      },
+      {
+        "name": "WordNormalizer.normalize_text",
+        "file": "src/ai_service/layers/normalization/morphology/word_normalizer.py",
+        "type": "method"
+      },
+      {
+        "name": "WordNormalizer.normalize_surname",
+        "file": "src/ai_service/layers/normalization/morphology/word_normalizer.py",
+        "type": "method"
+      },
+      {
+        "name": "WordNormalizer.normalize_word",
+        "file": "src/ai_service/layers/normalization/morphology/word_normalizer.py",
+        "type": "method"
+      },
+      {
+        "name": "WordNormalizer.normalize_patronymic",
+        "file": "src/ai_service/layers/normalization/morphology/word_normalizer.py",
+        "type": "method"
+      },
+      {
+        "name": "WordNormalizer.normalize_name",
+        "file": "src/ai_service/layers/normalization/morphology/word_normalizer.py",
+        "type": "method"
+      },
+      {
+        "name": "IdentifierExtractor.extract_organization_ids",
+        "file": "src/ai_service/layers/signals/extractors/identifier_extractor.py",
+        "type": "method"
+      },
+      {
+        "name": "IdentifierExtractor.extract_person_ids",
+        "file": "src/ai_service/layers/signals/extractors/identifier_extractor.py",
+        "type": "method"
+      },
+      {
+        "name": "IdentifierExtractor.extract",
+        "file": "src/ai_service/layers/signals/extractors/identifier_extractor.py",
+        "type": "method"
+      },
+      {
+        "name": "BirthdateExtractor.extract",
+        "file": "src/ai_service/layers/signals/extractors/birthdate_extractor.py",
+        "type": "method"
+      },
+      {
+        "name": "PersonExtractor.extract",
+        "file": "src/ai_service/layers/signals/extractors/person_extractor.py",
+        "type": "method"
+      },
+      {
+        "name": "BaseExtractor.extract",
+        "file": "src/ai_service/layers/signals/extractors/base_extractor.py",
+        "type": "method"
+      },
+      {
+        "name": "OrganizationExtractor.extract",
+        "file": "src/ai_service/layers/signals/extractors/organization_extractor.py",
+        "type": "method"
+      }
+    ]
+  },
+  "import_analysis": {
+    "total_imports": 1633,
+    "internal_imports": 752,
+    "external_imports": 881,
+    "unused_imports": [
+      {
+        "name": "secrets",
+        "module": "secrets",
+        "file": "src/ai_service/main.py"
+      },
+      {
+        "name": "SECURITY_CONFIG",
+        "module": "ai_service.config",
+        "file": "src/ai_service/main.py"
+      },
+      {
+        "name": "SERVICE_CONFIG",
+        "module": "ai_service.config",
+        "file": "src/ai_service/main.py"
+      },
+      {
+        "name": "DEPLOYMENT_CONFIG",
+        "module": "ai_service.config",
+        "file": "src/ai_service/main.py"
+      },
+      {
+        "name": "INTEGRATION_CONFIG",
+        "module": "ai_service.config",
+        "file": "src/ai_service/main.py"
+      },
+      {
+        "name": "OrchestratorFactory",
+        "module": "ai_service.core.orchestrator_factory",
+        "file": "src/ai_service/main.py"
+      },
+      {
+        "name": "ValidationAPIError",
+        "module": "ai_service.exceptions",
+        "file": "src/ai_service/main.py"
+      },
+      {
+        "name": "ServiceUnavailableError",
+        "module": "ai_service.exceptions",
+        "file": "src/ai_service/main.py"
+      },
+      {
+        "name": "InternalServerError",
+        "module": "ai_service.exceptions",
+        "file": "src/ai_service/main.py"
+      },
+      {
+        "name": "format_processing_result",
+        "module": "ai_service.utils.response_formatter",
+        "file": "src/ai_service/main.py"
+      },
+      {
+        "name": "UnifiedProcessingResult",
+        "module": "ai_service.contracts.base_contracts",
+        "file": "src/ai_service/main.py"
+      },
+      {
+        "name": "spacy",
+        "module": "spacy",
+        "file": "src/ai_service/main.py"
+      },
+      {
+        "name": "FEATURE_FLAGS",
+        "module": "config",
+        "file": "src/ai_service/core/orchestrator_factory.py"
+      },
+      {
+        "name": "SERVICE_CONFIG",
+        "module": "config",
+        "file": "src/ai_service/core/orchestrator_factory.py"
+      },
+      {
+        "name": "DecisionConfig",
+        "module": "config.settings",
+        "file": "src/ai_service/core/orchestrator_factory.py"
+      },
+      {
+        "name": "DECISION_CONFIG",
+        "module": "config.settings",
+        "file": "src/ai_service/core/orchestrator_factory.py"
+      },
+      {
+        "name": "LANGUAGE_CONFIG",
+        "module": "config",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "SERVICE_CONFIG",
+        "module": "config",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "UnicodeServiceInterface",
+        "module": "contracts.base_contracts",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "ValidationServiceInterface",
+        "module": "contracts.base_contracts",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "EmbeddingsServiceInterface",
+        "module": "contracts.base_contracts",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "ProcessingStage",
+        "module": "contracts.base_contracts",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "NormalizationServiceInterface",
+        "module": "contracts.base_contracts",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "SignalsServiceInterface",
+        "module": "contracts.base_contracts",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "SmartFilterInterface",
+        "module": "contracts.base_contracts",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "LanguageDetectionInterface",
+        "module": "contracts.base_contracts",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "VariantsServiceInterface",
+        "module": "contracts.base_contracts",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "NormalizationResult",
+        "module": "contracts.base_contracts",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "DecisionOutput",
+        "module": "contracts.decision_contracts",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "RiskLevel",
+        "module": "contracts.decision_contracts",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "SearchTraceBuilder",
+        "module": "contracts.trace_models",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "DecisionEngine",
+        "module": "core.decision_engine",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "DecisionConfig",
+        "module": "config.settings",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "InternalServerError",
+        "module": "exceptions",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "MetricsService",
+        "module": "monitoring.metrics_service",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "AlertSeverity",
+        "module": "monitoring.metrics_service",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "MetricType",
+        "module": "monitoring.metrics_service",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "inspect",
+        "module": "inspect",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "hashlib",
+        "module": "hashlib",
+        "file": "src/ai_service/core/unified_orchestrator.py"
+      },
+      {
+        "name": "RiskLevel",
+        "module": "contracts.decision_contracts",
+        "file": "src/ai_service/core/decision_engine.py"
+      },
+      {
+        "name": "SearchTrace",
+        "module": "contracts.trace_models",
+        "file": "src/ai_service/core/decision_engine.py"
+      },
+      {
+        "name": "DecisionConfig",
+        "module": "config.settings",
+        "file": "src/ai_service/core/decision_engine.py"
+      },
+      {
+        "name": "DECISION_CONFIG",
+        "module": "config.settings",
+        "file": "src/ai_service/core/decision_engine.py"
+      },
+      {
+        "name": "MetricsService",
+        "module": "monitoring.metrics_service",
+        "file": "src/ai_service/core/decision_engine.py"
+      },
+      {
+        "name": "MetricType",
+        "module": "monitoring.metrics_service",
+        "file": "src/ai_service/core/decision_engine.py"
+      },
+      {
+        "name": "ABC",
+        "module": "abc",
+        "file": "src/ai_service/core/base_service.py"
+      },
+      {
+        "name": "abstractmethod",
+        "module": "abc",
+        "file": "src/ai_service/core/base_service.py"
+      },
+      {
+        "name": "get_logger",
+        "module": "utils",
+        "file": "src/ai_service/core/base_service.py"
+      },
+      {
+        "name": "LoggingMixin",
+        "module": "utils",
+        "file": "src/ai_service/core/base_service.py"
+      },
+      {
+        "name": "NormalizationResult",
+        "module": "contracts.base_contracts",
+        "file": "src/ai_service/core/search_integration.py"
+      },
+      {
+        "name": "SignalsResult",
+        "module": "contracts.base_contracts",
+        "file": "src/ai_service/core/search_integration.py"
+      },
+      {
+        "name": "SearchMode",
+        "module": "contracts.search_contracts",
+        "file": "src/ai_service/core/search_integration.py"
+      },
+      {
+        "name": "SearchInfo",
+        "module": "contracts.search_contracts",
+        "file": "src/ai_service/core/search_integration.py"
+      },
+      {
+        "name": "ElasticsearchConnectionError",
+        "module": "exceptions",
+        "file": "src/ai_service/core/search_integration.py"
+      },
+      {
+        "name": "SearchServiceError",
+        "module": "exceptions",
+        "file": "src/ai_service/core/search_integration.py"
+      },
+      {
+        "name": "SearchTimeoutError",
+        "module": "exceptions",
+        "file": "src/ai_service/core/search_integration.py"
+      },
+      {
+        "name": "DEFAULT_LANGUAGE",
+        "module": "constants",
+        "file": "src/ai_service/config/settings.py"
+      },
+      {
+        "name": "FALLBACK_LANGUAGE",
+        "module": "constants",
+        "file": "src/ai_service/config/settings.py"
+      },
+      {
+        "name": "DEFAULT_CACHE_TTL",
+        "module": "constants",
+        "file": "src/ai_service/config/settings.py"
+      },
+      {
+        "name": "INTEGRATION_CONFIG",
+        "module": "constants",
+        "file": "src/ai_service/config/settings.py"
+      },
+      {
+        "name": "PERFORMANCE_CONFIG",
+        "module": "constants",
+        "file": "src/ai_service/config/settings.py"
+      },
+      {
+        "name": "DEFAULT_CACHE_SIZE",
+        "module": "constants",
+        "file": "src/ai_service/config/settings.py"
+      },
+      {
+        "name": "SUPPORTED_LANGUAGES",
+        "module": "constants",
+        "file": "src/ai_service/config/settings.py"
+      },
+      {
+        "name": "LOGGING_CONFIG",
+        "module": "constants",
+        "file": "src/ai_service/config/settings.py"
+      },
+      {
+        "name": "SECURITY_CONFIG",
+        "module": "constants",
+        "file": "src/ai_service/config/settings.py"
+      },
+      {
+        "name": "DEFAULT_MAX_INPUT_LENGTH",
+        "module": "constants",
+        "file": "src/ai_service/config/settings.py"
+      },
+      {
+        "name": "NormalizationResult",
+        "module": "base_contracts",
+        "file": "src/ai_service/contracts/search_contracts.py"
+      },
+      {
+        "name": "SearchInfo",
+        "module": "search_contracts",
+        "file": "src/ai_service/contracts/decision_contracts.py"
+      },
+      {
+        "name": "ABC",
+        "module": "abc",
+        "file": "src/ai_service/contracts/base_contracts.py"
+      },
+      {
+        "name": "abstractmethod",
+        "module": "abc",
+        "file": "src/ai_service/contracts/base_contracts.py"
+      },
+      {
+        "name": "SmartFilterResult",
+        "module": "base_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "TokenTrace",
+        "module": "base_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "UnicodeServiceInterface",
+        "module": "base_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "ValidationServiceInterface",
+        "module": "base_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "SignalsPerson",
+        "module": "base_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "EmbeddingsServiceInterface",
+        "module": "base_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "ProcessingStage",
+        "module": "base_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "NormalizationServiceInterface",
+        "module": "base_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "SignalsExtras",
+        "module": "base_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "SignalsServiceInterface",
+        "module": "base_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "SmartFilterInterface",
+        "module": "base_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "LanguageDetectionInterface",
+        "module": "base_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "ProcessingContext",
+        "module": "base_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "UnifiedProcessingResult",
+        "module": "base_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "SignalsResult",
+        "module": "base_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "SignalsOrganization",
+        "module": "base_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "VariantsServiceInterface",
+        "module": "base_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "NormalizationResult",
+        "module": "base_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "SmartFilterInfo",
+        "module": "decision_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "DecisionOutput",
+        "module": "decision_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "SignalsInfo",
+        "module": "decision_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "SimilarityInfo",
+        "module": "decision_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "RiskLevel",
+        "module": "decision_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "DecisionInput",
+        "module": "decision_contracts",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "SearchTrace",
+        "module": "trace_models",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "create_ac_hit",
+        "module": "trace_models",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "create_semantic_hit",
+        "module": "trace_models",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "create_hybrid_hit",
+        "module": "trace_models",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "SearchStage",
+        "module": "trace_models",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "SearchTraceStep",
+        "module": "trace_models",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "create_rerank_hit",
+        "module": "trace_models",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "SearchTraceBuilder",
+        "module": "trace_models",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "create_watchlist_hit",
+        "module": "trace_models",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "create_lexical_hit",
+        "module": "trace_models",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "SearchTraceHit",
+        "module": "trace_models",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "create_search_hit",
+        "module": "trace_models",
+        "file": "src/ai_service/contracts/__init__.py"
+      },
+      {
+        "name": "threading",
+        "module": "threading",
+        "file": "src/ai_service/utils/enhanced_logging.py"
+      },
+      {
+        "name": "contextmanager",
+        "module": "contextlib",
+        "file": "src/ai_service/utils/enhanced_logging.py"
+      },
+      {
+        "name": "traceback",
+        "module": "traceback",
+        "file": "src/ai_service/utils/enhanced_logging.py"
+      },
+      {
+        "name": "psutil",
+        "module": "psutil",
+        "file": "src/ai_service/utils/enhanced_logging.py"
+      },
+      {
+        "name": "trace",
+        "module": "opentelemetry",
+        "file": "src/ai_service/utils/enhanced_logging.py"
+      },
+      {
+        "name": "Status",
+        "module": "opentelemetry.trace",
+        "file": "src/ai_service/utils/enhanced_logging.py"
+      },
+      {
+        "name": "StatusCode",
+        "module": "opentelemetry.trace",
+        "file": "src/ai_service/utils/enhanced_logging.py"
+      },
+      {
+        "name": "yaml",
+        "module": "yaml",
+        "file": "src/ai_service/utils/logging_config.py"
+      },
+      {
+        "name": "contextmanager",
+        "module": "contextlib",
+        "file": "src/ai_service/utils/perf_timer.py"
+      },
+      {
+        "name": "unicodedata",
+        "module": "unicodedata",
+        "file": "src/ai_service/utils/input_validation.py"
+      },
+      {
+        "name": "SERVICE_CONFIG",
+        "module": "config",
+        "file": "src/ai_service/utils/input_validation.py"
+      },
+      {
+        "name": "setup_logging",
+        "module": "logging_config",
+        "file": "src/ai_service/utils/__init__.py"
+      },
+      {
+        "name": "get_logger",
+        "module": "logging_config",
+        "file": "src/ai_service/utils/__init__.py"
+      },
+      {
+        "name": "LoggingMixin",
+        "module": "logging_config",
+        "file": "src/ai_service/utils/__init__.py"
+      },
+      {
+        "name": "NLP_EN",
+        "module": "lazy_imports",
+        "file": "src/ai_service/utils/__init__.py"
+      },
+      {
+        "name": "NAMEPARSER",
+        "module": "lazy_imports",
+        "file": "src/ai_service/utils/__init__.py"
+      },
+      {
+        "name": "NLP_UK",
+        "module": "lazy_imports",
+        "file": "src/ai_service/utils/__init__.py"
+      },
+      {
+        "name": "initialize_lazy_imports",
+        "module": "lazy_imports",
+        "file": "src/ai_service/utils/__init__.py"
+      },
+      {
+        "name": "RAPIDFUZZ",
+        "module": "lazy_imports",
+        "file": "src/ai_service/utils/__init__.py"
+      },
+      {
+        "name": "get_available_modules",
+        "module": "lazy_imports",
+        "file": "src/ai_service/utils/__init__.py"
+      },
+      {
+        "name": "is_available",
+        "module": "lazy_imports",
+        "file": "src/ai_service/utils/__init__.py"
+      },
+      {
+        "name": "NLP_RU",
+        "module": "lazy_imports",
+        "file": "src/ai_service/utils/__init__.py"
+      },
+      {
+        "name": "get_name_parser",
+        "module": "name_utils",
+        "file": "src/ai_service/utils/__init__.py"
+      },
+      {
+        "name": "NameParser",
+        "module": "name_utils",
+        "file": "src/ai_service/utils/__init__.py"
+      },
+      {
+        "name": "FeatureFlags",
+        "module": "utils.feature_flags",
+        "file": "src/ai_service/utils/flag_propagation.py"
+      },
+      {
+        "name": "NLP_EN",
+        "module": "lazy_imports",
+        "file": "src/ai_service/utils/name_utils.py"
+      },
+      {
+        "name": "NAMEPARSER",
+        "module": "lazy_imports",
+        "file": "src/ai_service/utils/name_utils.py"
+      },
+      {
+        "name": "NLP_UK",
+        "module": "lazy_imports",
+        "file": "src/ai_service/utils/name_utils.py"
+      },
+      {
+        "name": "RAPIDFUZZ",
+        "module": "lazy_imports",
+        "file": "src/ai_service/utils/name_utils.py"
+      },
+      {
+        "name": "NLP_RU",
+        "module": "lazy_imports",
+        "file": "src/ai_service/utils/name_utils.py"
+      },
+      {
+        "name": "hashlib",
+        "module": "hashlib",
+        "file": "src/ai_service/utils/pii_masking.py"
+      },
+      {
+        "name": "threading",
+        "module": "threading",
+        "file": "src/ai_service/utils/cache_utils.py"
+      },
+      {
+        "name": "hashlib",
+        "module": "hashlib",
+        "file": "src/ai_service/utils/lru_cache_ttl.py"
+      },
+      {
+        "name": "threading",
+        "module": "threading",
+        "file": "src/ai_service/utils/lru_cache_ttl.py"
+      },
+      {
+        "name": "en_core_web_sm",
+        "module": "en_core_web_sm",
+        "file": "src/ai_service/utils/lazy_imports.py"
+      },
+      {
+        "name": "uk_core_news_sm",
+        "module": "uk_core_news_sm",
+        "file": "src/ai_service/utils/lazy_imports.py"
+      },
+      {
+        "name": "ru_core_news_sm",
+        "module": "ru_core_news_sm",
+        "file": "src/ai_service/utils/lazy_imports.py"
+      },
+      {
+        "name": "UnifiedProcessingResult",
+        "module": "contracts.base_contracts",
+        "file": "src/ai_service/utils/response_formatter.py"
+      },
+      {
+        "name": "RiskLevel",
+        "module": "contracts.decision_contracts",
+        "file": "src/ai_service/utils/response_formatter.py"
+      },
+      {
+        "name": "DecisionOutput",
+        "module": "contracts.decision_contracts",
+        "file": "src/ai_service/utils/response_formatter.py"
+      },
+      {
+        "name": "tracemalloc",
+        "module": "tracemalloc",
+        "file": "src/ai_service/utils/profiling.py"
+      },
+      {
+        "name": "contextmanager",
+        "module": "contextlib",
+        "file": "src/ai_service/utils/profiling.py"
+      },
+      {
+        "name": "threading",
+        "module": "threading",
+        "file": "src/ai_service/utils/profiling.py"
+      },
+      {
+        "name": "statistics",
+        "module": "statistics",
+        "file": "src/ai_service/utils/profiling.py"
+      },
+      {
+        "name": "UnifiedProcessingResult",
+        "module": "contracts.base_contracts",
+        "file": "src/ai_service/adapters/legacy_normalization_adapter.py"
+      },
+      {
+        "name": "NormalizationError",
+        "module": "exceptions",
+        "file": "src/ai_service/adapters/legacy_normalization_adapter.py"
+      },
+      {
+        "name": "LegacyNormalizationAdapter",
+        "module": "legacy_normalization_adapter",
+        "file": "src/ai_service/adapters/__init__.py"
+      },
+      {
+        "name": "COMPANY_TRIGGERS",
+        "module": "ai_service.data.dicts.company_triggers",
+        "file": "src/ai_service/scripts/inspect_normalization.py"
+      },
+      {
+        "name": "argparse",
+        "module": "argparse",
+        "file": "src/ai_service/scripts/inspect_normalization.py"
+      },
+      {
+        "name": "importlib.util",
+        "module": "importlib.util",
+        "file": "src/ai_service/scripts/post_install.py"
+      },
+      {
+        "name": "subprocess",
+        "module": "subprocess",
+        "file": "src/ai_service/scripts/post_install.py"
+      },
+      {
+        "name": "spacy",
+        "module": "spacy",
+        "file": "src/ai_service/scripts/post_install.py"
+      },
+      {
+        "name": "nltk",
+        "module": "nltk",
+        "file": "src/ai_service/scripts/post_install.py"
+      },
+      {
+        "name": "annotations",
+        "module": "__future__",
+        "file": "src/ai_service/eval/threshold_calibration.py"
+      },
+      {
+        "name": "annotations",
+        "module": "__future__",
+        "file": "src/ai_service/eval/cli_calibrate.py"
+      },
+      {
+        "name": "argparse",
+        "module": "argparse",
+        "file": "src/ai_service/eval/cli_calibrate.py"
+      },
+      {
+        "name": "csv",
+        "module": "csv",
+        "file": "src/ai_service/eval/cli_calibrate.py"
+      },
+      {
+        "name": "CONTENT_TYPE_LATEST",
+        "module": "prometheus_client",
+        "file": "src/ai_service/monitoring/prometheus_exporter.py"
+      },
+      {
+        "name": "CounterMetricFamily",
+        "module": "prometheus_client.core",
+        "file": "src/ai_service/monitoring/prometheus_exporter.py"
+      },
+      {
+        "name": "HistogramMetricFamily",
+        "module": "prometheus_client.core",
+        "file": "src/ai_service/monitoring/prometheus_exporter.py"
+      },
+      {
+        "name": "LogCategory",
+        "module": "utils.enhanced_logging",
+        "file": "src/ai_service/monitoring/dashboard_integration.py"
+      },
+      {
+        "name": "Alert",
+        "module": "metrics_service",
+        "file": "src/ai_service/monitoring/__init__.py"
+      },
+      {
+        "name": "AlertSeverity",
+        "module": "metrics_service",
+        "file": "src/ai_service/monitoring/__init__.py"
+      },
+      {
+        "name": "MetricType",
+        "module": "metrics_service",
+        "file": "src/ai_service/monitoring/__init__.py"
+      },
+      {
+        "name": "MetricsService",
+        "module": "metrics_service",
+        "file": "src/ai_service/monitoring/__init__.py"
+      },
+      {
+        "name": "MetricDefinition",
+        "module": "metrics_service",
+        "file": "src/ai_service/monitoring/__init__.py"
+      },
+      {
+        "name": "MetricTimer",
+        "module": "metrics_service",
+        "file": "src/ai_service/monitoring/__init__.py"
+      },
+      {
+        "name": "threading",
+        "module": "threading",
+        "file": "src/ai_service/monitoring/metrics_collector.py"
+      },
+      {
+        "name": "statistics",
+        "module": "statistics",
+        "file": "src/ai_service/monitoring/metrics_collector.py"
+      },
+      {
+        "name": "weakref",
+        "module": "weakref",
+        "file": "src/ai_service/monitoring/metrics_collector.py"
+      },
+      {
+        "name": "LogCategory",
+        "module": "utils.enhanced_logging",
+        "file": "src/ai_service/monitoring/metrics_collector.py"
+      },
+      {
+        "name": "AggregationType",
+        "module": "metrics_collector",
+        "file": "src/ai_service/monitoring/alerting_system.py"
+      },
+      {
+        "name": "LogCategory",
+        "module": "utils.enhanced_logging",
+        "file": "src/ai_service/monitoring/alerting_system.py"
+      },
+      {
+        "name": "CollectorRegistry",
+        "module": "prometheus_client",
+        "file": "src/ai_service/monitoring/cache_metrics.py"
+      },
+      {
+        "name": "MetricsService",
+        "module": "metrics_service",
+        "file": "src/ai_service/monitoring/endpoints.py"
+      },
+      {
+        "name": "Alert",
+        "module": "metrics_service",
+        "file": "src/ai_service/monitoring/endpoints.py"
+      },
+      {
+        "name": "threading",
+        "module": "threading",
+        "file": "src/ai_service/monitoring/metrics_service.py"
+      },
+      {
+        "name": "EmbeddingPreprocessor",
+        "module": "embedding_preprocessor",
+        "file": "src/ai_service/services/__init__.py"
+      },
+      {
+        "name": "LegacyNormalizationAdapter",
+        "module": "adapters.legacy_normalization_adapter",
+        "file": "src/ai_service/services/__init__.py"
+      },
+      {
+        "name": "NormalizationService",
+        "module": "layers.normalization.normalization_service",
+        "file": "src/ai_service/services/__init__.py"
+      },
+      {
+        "name": "UnifiedOrchestrator",
+        "module": "core.unified_orchestrator",
+        "file": "src/ai_service/services/__init__.py"
+      },
+      {
+        "name": "TEMPLATE_CONFIG",
+        "module": "config",
+        "file": "src/ai_service/layers/variants/template_builder.py"
+      },
+      {
+        "name": "hashlib",
+        "module": "hashlib",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py"
+      },
+      {
+        "name": "unicodedata",
+        "module": "unicodedata",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py"
+      },
+      {
+        "name": "get_logger",
+        "module": "utils.logging_config",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py"
+      },
+      {
+        "name": "BaseService",
+        "module": "core.base_service",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py"
+      },
+      {
+        "name": "VARIANT_SCORES",
+        "module": "config",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py"
+      },
+      {
+        "name": "ENGLISH_NAMES",
+        "module": "data.dicts.english_names",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py"
+      },
+      {
+        "name": "ALL_ENGLISH_NAMES",
+        "module": "data.dicts.english_names",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py"
+      },
+      {
+        "name": "RUSSIAN_NAMES",
+        "module": "data.dicts.russian_names",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py"
+      },
+      {
+        "name": "ALL_RUSSIAN_NAMES",
+        "module": "data.dicts.russian_names",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py"
+      },
+      {
+        "name": "ALL_UKRAINIAN_NAMES",
+        "module": "data.dicts.ukrainian_names",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py"
+      },
+      {
+        "name": "UKRAINIAN_NAMES",
+        "module": "data.dicts.ukrainian_names",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py"
+      },
+      {
+        "name": "ALL_ARABIC_NAMES",
+        "module": "data.dicts.arabic_names",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py"
+      },
+      {
+        "name": "ALL_ASIAN_NAMES",
+        "module": "data.dicts.asian_names",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py"
+      },
+      {
+        "name": "ALL_EUROPEAN_NAMES",
+        "module": "data.dicts.european_names",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py"
+      },
+      {
+        "name": "ALL_INDIAN_NAMES",
+        "module": "data.dicts.indian_names",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py"
+      },
+      {
+        "name": "ALL_SCANDINAVIAN_NAMES",
+        "module": "data.dicts.scandinavian_names",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py"
+      },
+      {
+        "name": "translit",
+        "module": "transliterate",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py"
+      },
+      {
+        "name": "EXTRA_DIMINUTIVES_RU",
+        "module": "data.dicts.diminutives_extra",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py"
+      },
+      {
+        "name": "EXTRA_DIMINUTIVES_UK",
+        "module": "data.dicts.diminutives_extra",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py"
+      },
+      {
+        "name": "threading",
+        "module": "threading",
+        "file": "src/ai_service/layers/embeddings/optimized_embedding_service.py"
+      },
+      {
+        "name": "faiss",
+        "module": "faiss",
+        "file": "src/ai_service/layers/embeddings/optimized_embedding_service.py"
+      },
+      {
+        "name": "get_logger",
+        "module": "utils.logging_config",
+        "file": "src/ai_service/layers/embeddings/optimized_embedding_service.py"
+      },
+      {
+        "name": "EmbeddingService",
+        "module": "embedding_service",
+        "file": "src/ai_service/layers/embeddings/optimized_embedding_service.py"
+      },
+      {
+        "name": "ModelConfig",
+        "module": "models.model_config",
+        "file": "src/ai_service/layers/embeddings/optimized_embedding_service.py"
+      },
+      {
+        "name": "torch",
+        "module": "torch",
+        "file": "src/ai_service/layers/embeddings/optimized_embedding_service.py"
+      },
+      {
+        "name": "EmbeddingConfig",
+        "module": "config",
+        "file": "src/ai_service/layers/embeddings/embedding_service.py"
+      },
+      {
+        "name": "BaseService",
+        "module": "core.base_service",
+        "file": "src/ai_service/layers/embeddings/embedding_service.py"
+      },
+      {
+        "name": "get_logger",
+        "module": "utils.logging_config",
+        "file": "src/ai_service/layers/embeddings/embedding_service.py"
+      },
+      {
+        "name": "UnifiedPatternService",
+        "module": "unified_pattern_service",
+        "file": "src/ai_service/layers/patterns/__init__.py"
+      },
+      {
+        "name": "UnifiedPattern",
+        "module": "unified_pattern_service",
+        "file": "src/ai_service/layers/patterns/__init__.py"
+      },
+      {
+        "name": "unicodedata",
+        "module": "unicodedata",
+        "file": "src/ai_service/layers/unicode/unicode_service.py"
+      },
+      {
+        "name": "TokenTrace",
+        "module": "contracts.base_contracts",
+        "file": "src/ai_service/layers/normalization/token_ops.py"
+      },
+      {
+        "name": "ABC",
+        "module": "abc",
+        "file": "src/ai_service/layers/normalization/role_tagger_service.py"
+      },
+      {
+        "name": "abstractmethod",
+        "module": "abc",
+        "file": "src/ai_service/layers/normalization/role_tagger_service.py"
+      },
+      {
+        "name": "Lexicons",
+        "module": "lexicon_loader",
+        "file": "src/ai_service/layers/normalization/role_tagger_service.py"
+      },
+      {
+        "name": "annotations",
+        "module": "__future__",
+        "file": "src/ai_service/layers/normalization/flags.py"
+      },
+      {
+        "name": "FeatureFlags",
+        "module": "ai_service.config.feature_flags",
+        "file": "src/ai_service/layers/normalization/flags.py"
+      },
+      {
+        "name": "ahocorasick",
+        "module": "ahocorasick",
+        "file": "src/ai_service/layers/normalization/role_tagger.py"
+      },
+      {
+        "name": "LEGAL_FORMS",
+        "module": "variants.templates.lexicon",
+        "file": "src/ai_service/layers/normalization/role_tagger.py"
+      },
+      {
+        "name": "traceback",
+        "module": "traceback",
+        "file": "src/ai_service/layers/normalization/error_handling.py"
+      },
+      {
+        "name": "unicodedata",
+        "module": "unicodedata",
+        "file": "src/ai_service/layers/normalization/normalization_service.py"
+      },
+      {
+        "name": "LANGUAGE_CONFIG",
+        "module": "config",
+        "file": "src/ai_service/layers/normalization/normalization_service.py"
+      },
+      {
+        "name": "FeatureFlags",
+        "module": "utils.feature_flags",
+        "file": "src/ai_service/layers/normalization/normalization_service.py"
+      },
+      {
+        "name": "MorphologyAdapter",
+        "module": "morphology_adapter",
+        "file": "src/ai_service/layers/normalization/normalization_service.py"
+      },
+      {
+        "name": "TokenRole",
+        "module": "role_tagger",
+        "file": "src/ai_service/layers/normalization/normalization_service.py"
+      },
+      {
+        "name": "russian_names",
+        "module": "data.dicts",
+        "file": "src/ai_service/layers/normalization/normalization_service.py"
+      },
+      {
+        "name": "ukrainian_names",
+        "module": "data.dicts",
+        "file": "src/ai_service/layers/normalization/normalization_service.py"
+      },
+      {
+        "name": "NICKNAMES_EN",
+        "module": "data.dicts.english_names",
+        "file": "src/ai_service/layers/normalization/normalization_service.py"
+      },
+      {
+        "name": "NormalizationService",
+        "module": "normalization_service_legacy",
+        "file": "src/ai_service/layers/normalization/normalization_service.py"
+      },
+      {
+        "name": "TokenRole",
+        "module": "role_tagger_service",
+        "file": "src/ai_service/layers/normalization/name_assembler.py"
+      },
+      {
+        "name": "annotations",
+        "module": "__future__",
+        "file": "src/ai_service/layers/normalization/morphology_adapter.py"
+      },
+      {
+        "name": "threading",
+        "module": "threading",
+        "file": "src/ai_service/layers/normalization/morphology_adapter.py"
+      },
+      {
+        "name": "unicodedata",
+        "module": "unicodedata",
+        "file": "src/ai_service/layers/normalization/morphology_adapter.py"
+      },
+      {
+        "name": "LruTtlCache",
+        "module": "utils.lru_cache_ttl",
+        "file": "src/ai_service/layers/normalization/morphology_adapter.py"
+      },
+      {
+        "name": "FeatureFlags",
+        "module": "utils.feature_flags",
+        "file": "src/ai_service/layers/normalization/morphology_adapter.py"
+      },
+      {
+        "name": "LruTtlCache",
+        "module": "utils.lru_cache_ttl",
+        "file": "src/ai_service/layers/normalization/tokenizer_service.py"
+      },
+      {
+        "name": "hashlib",
+        "module": "hashlib",
+        "file": "src/ai_service/layers/normalization/performance_optimizer.py"
+      },
+      {
+        "name": "LEGAL_FORM_REGEX",
+        "module": "data.patterns.legal_forms",
+        "file": "src/ai_service/layers/signals/signals_service.py"
+      },
+      {
+        "name": "ORGANIZATION_NAME_REGEX",
+        "module": "data.patterns.legal_forms",
+        "file": "src/ai_service/layers/signals/signals_service.py"
+      },
+      {
+        "name": "QUOTED_CORE_REGEX",
+        "module": "data.patterns.legal_forms",
+        "file": "src/ai_service/layers/signals/signals_service.py"
+      },
+      {
+        "name": "LANGUAGE_CONFIG",
+        "module": "config",
+        "file": "src/ai_service/layers/language/language_detection_service.py"
+      },
+      {
+        "name": "SERVICE_CONFIG",
+        "module": "config",
+        "file": "src/ai_service/layers/language/language_detection_service.py"
+      },
+      {
+        "name": "LanguageDetectionError",
+        "module": "exceptions",
+        "file": "src/ai_service/layers/language/language_detection_service.py"
+      },
+      {
+        "name": "httpx",
+        "module": "httpx",
+        "file": "src/ai_service/layers/search/elasticsearch_adapters.py"
+      },
+      {
+        "name": "SearchOpts",
+        "module": "contracts",
+        "file": "src/ai_service/layers/search/elasticsearch_adapters.py"
+      },
+      {
+        "name": "SearchMode",
+        "module": "contracts",
+        "file": "src/ai_service/layers/search/elasticsearch_adapters.py"
+      },
+      {
+        "name": "ElasticsearchAdapter",
+        "module": "contracts",
+        "file": "src/ai_service/layers/search/elasticsearch_adapters.py"
+      },
+      {
+        "name": "HybridSearchConfig",
+        "module": "config",
+        "file": "src/ai_service/layers/search/elasticsearch_adapters.py"
+      },
+      {
+        "name": "fuzz",
+        "module": "rapidfuzz",
+        "file": "src/ai_service/layers/search/elasticsearch_adapters.py"
+      },
+      {
+        "name": "annotations",
+        "module": "__future__",
+        "file": "src/ai_service/layers/search/search_monitoring.py"
+      },
+      {
+        "name": "threading",
+        "module": "threading",
+        "file": "src/ai_service/layers/search/search_monitoring.py"
+      },
+      {
+        "name": "ValidationReport",
+        "module": "search_trace_validator",
+        "file": "src/ai_service/layers/search/search_monitoring.py"
+      },
+      {
+        "name": "SearchTrace",
+        "module": "contracts.trace_models",
+        "file": "src/ai_service/layers/search/search_monitoring.py"
+      },
+      {
+        "name": "annotations",
+        "module": "__future__",
+        "file": "src/ai_service/layers/search/config.py"
+      },
+      {
+        "name": "yaml",
+        "module": "yaml",
+        "file": "src/ai_service/layers/search/config.py"
+      },
+      {
+        "name": "annotations",
+        "module": "__future__",
+        "file": "src/ai_service/layers/search/enhanced_elasticsearch_client.py"
+      },
+      {
+        "name": "httpx",
+        "module": "httpx",
+        "file": "src/ai_service/layers/search/enhanced_elasticsearch_client.py"
+      },
+      {
+        "name": "HybridSearchConfig",
+        "module": "config",
+        "file": "src/ai_service/layers/search/enhanced_elasticsearch_client.py"
+      },
+      {
+        "name": "ElasticsearchConfig",
+        "module": "config",
+        "file": "src/ai_service/layers/search/enhanced_elasticsearch_client.py"
+      },
+      {
+        "name": "HybridSearchService",
+        "module": "hybrid_search_service",
+        "file": "src/ai_service/layers/search/__init__.py"
+      },
+      {
+        "name": "SearchMode",
+        "module": "contracts",
+        "file": "src/ai_service/layers/search/__init__.py"
+      },
+      {
+        "name": "SearchMetrics",
+        "module": "contracts",
+        "file": "src/ai_service/layers/search/__init__.py"
+      },
+      {
+        "name": "SearchOpts",
+        "module": "contracts",
+        "file": "src/ai_service/layers/search/__init__.py"
+      },
+      {
+        "name": "SearchService",
+        "module": "contracts",
+        "file": "src/ai_service/layers/search/__init__.py"
+      },
+      {
+        "name": "Candidate",
+        "module": "contracts",
+        "file": "src/ai_service/layers/search/__init__.py"
+      },
+      {
+        "name": "HybridSearchConfig",
+        "module": "config",
+        "file": "src/ai_service/layers/search/__init__.py"
+      },
+      {
+        "name": "annotations",
+        "module": "__future__",
+        "file": "src/ai_service/layers/search/search_trace_validator.py"
+      },
+      {
+        "name": "hashlib",
+        "module": "hashlib",
+        "file": "src/ai_service/layers/search/search_trace_validator.py"
+      },
+      {
+        "name": "SearchTrace",
+        "module": "contracts.trace_models",
+        "file": "src/ai_service/layers/search/search_trace_validator.py"
+      },
+      {
+        "name": "ABC",
+        "module": "abc",
+        "file": "src/ai_service/layers/search/contracts.py"
+      },
+      {
+        "name": "abstractmethod",
+        "module": "abc",
+        "file": "src/ai_service/layers/search/contracts.py"
+      },
+      {
+        "name": "NormalizationResult",
+        "module": "contracts.base_contracts",
+        "file": "src/ai_service/layers/search/contracts.py"
+      },
+      {
+        "name": "annotations",
+        "module": "__future__",
+        "file": "src/ai_service/layers/search/elasticsearch_client.py"
+      },
+      {
+        "name": "httpx",
+        "module": "httpx",
+        "file": "src/ai_service/layers/search/elasticsearch_client.py"
+      },
+      {
+        "name": "HybridSearchConfig",
+        "module": "config",
+        "file": "src/ai_service/layers/search/elasticsearch_client.py"
+      },
+      {
+        "name": "ElasticsearchConfig",
+        "module": "config",
+        "file": "src/ai_service/layers/search/elasticsearch_client.py"
+      },
+      {
+        "name": "BaseService",
+        "module": "core.base_service",
+        "file": "src/ai_service/layers/search/hybrid_search_service.py"
+      },
+      {
+        "name": "get_logger",
+        "module": "utils.logging_config",
+        "file": "src/ai_service/layers/search/hybrid_search_service.py"
+      },
+      {
+        "name": "NormalizationResult",
+        "module": "contracts.base_contracts",
+        "file": "src/ai_service/layers/search/hybrid_search_service.py"
+      },
+      {
+        "name": "SearchMode",
+        "module": "contracts",
+        "file": "src/ai_service/layers/search/hybrid_search_service.py"
+      },
+      {
+        "name": "SearchOpts",
+        "module": "contracts",
+        "file": "src/ai_service/layers/search/hybrid_search_service.py"
+      },
+      {
+        "name": "SearchService",
+        "module": "contracts",
+        "file": "src/ai_service/layers/search/hybrid_search_service.py"
+      },
+      {
+        "name": "HybridSearchConfig",
+        "module": "config",
+        "file": "src/ai_service/layers/search/hybrid_search_service.py"
+      },
+      {
+        "name": "fuzz",
+        "module": "rapidfuzz",
+        "file": "src/ai_service/layers/search/hybrid_search_service.py"
+      },
+      {
+        "name": "ValidationService",
+        "module": "validation_service",
+        "file": "src/ai_service/layers/validation/__init__.py"
+      },
+      {
+        "name": "ValidationServiceInterface",
+        "module": "contracts.base_contracts",
+        "file": "src/ai_service/layers/validation/validation_service.py"
+      },
+      {
+        "name": "ENGLISH_NICKNAMES",
+        "module": "data.dicts.english_nicknames",
+        "file": "src/ai_service/layers/smart_filter/name_detector.py"
+      },
+      {
+        "name": "RUSSIAN_DIMINUTIVES",
+        "module": "data.dicts.russian_diminutives",
+        "file": "src/ai_service/layers/smart_filter/name_detector.py"
+      },
+      {
+        "name": "UKRAINIAN_DIMINUTIVES",
+        "module": "data.dicts.ukrainian_diminutives",
+        "file": "src/ai_service/layers/smart_filter/name_detector.py"
+      },
+      {
+        "name": "CompanyDetector",
+        "module": "company_detector",
+        "file": "src/ai_service/layers/smart_filter/__init__.py"
+      },
+      {
+        "name": "ConfidenceScorer",
+        "module": "confidence_scorer",
+        "file": "src/ai_service/layers/smart_filter/__init__.py"
+      },
+      {
+        "name": "NameDetector",
+        "module": "name_detector",
+        "file": "src/ai_service/layers/smart_filter/__init__.py"
+      },
+      {
+        "name": "SmartFilterService",
+        "module": "smart_filter_service",
+        "file": "src/ai_service/layers/smart_filter/__init__.py"
+      },
+      {
+        "name": "COMPANY_KEYWORDS",
+        "module": "data.dicts.smart_filter_patterns",
+        "file": "src/ai_service/layers/smart_filter/company_detector.py"
+      },
+      {
+        "name": "ADDRESS_PATTERNS",
+        "module": "data.dicts.smart_filter_patterns",
+        "file": "src/ai_service/layers/smart_filter/company_detector.py"
+      },
+      {
+        "name": "SIGNAL_WEIGHTS",
+        "module": "data.dicts.smart_filter_patterns",
+        "file": "src/ai_service/layers/smart_filter/company_detector.py"
+      },
+      {
+        "name": "REGISTRATION_PATTERNS",
+        "module": "data.dicts.smart_filter_patterns",
+        "file": "src/ai_service/layers/smart_filter/company_detector.py"
+      },
+      {
+        "name": "COMPANY_PATTERNS",
+        "module": "data.dicts.smart_filter_patterns",
+        "file": "src/ai_service/layers/smart_filter/company_detector.py"
+      },
+      {
+        "name": "SERVICE_CONFIG",
+        "module": "config",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_service.py"
+      },
+      {
+        "name": "EXCLUSION_PATTERNS",
+        "module": "data.dicts.smart_filter_patterns",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_service.py"
+      },
+      {
+        "name": "SERVICE_WORDS",
+        "module": "data.dicts.smart_filter_patterns",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_service.py"
+      },
+      {
+        "name": "DATE_TIME_PATTERNS",
+        "module": "data.dicts.smart_filter_patterns",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_service.py"
+      },
+      {
+        "name": "CONFIDENCE_THRESHOLDS",
+        "module": "data.dicts.smart_filter_patterns",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_service.py"
+      },
+      {
+        "name": "LanguageDetectionError",
+        "module": "exceptions",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_service.py"
+      },
+      {
+        "name": "DecisionType",
+        "module": "decision_logic",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_service.py"
+      },
+      {
+        "name": "RiskLevel",
+        "module": "decision_logic",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_service.py"
+      },
+      {
+        "name": "PAYMENT_TRIGGERS",
+        "module": "data.dicts.payment_triggers",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_service.py"
+      },
+      {
+        "name": "SERVICE_CONFIG",
+        "module": "config",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_adapter.py"
+      },
+      {
+        "name": "SmartFilterInterface",
+        "module": "contracts.base_contracts",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_adapter.py"
+      },
+      {
+        "name": "FilterResult",
+        "module": "smart_filter_service",
+        "file": "src/ai_service/layers/smart_filter/smart_filter_adapter.py"
+      },
+      {
+        "name": "EXCLUSION_PATTERNS",
+        "module": "data.dicts.smart_filter_patterns",
+        "file": "src/ai_service/layers/smart_filter/decision_logic.py"
+      },
+      {
+        "name": "SIGNAL_WEIGHTS",
+        "module": "data.dicts.smart_filter_patterns",
+        "file": "src/ai_service/layers/smart_filter/confidence_scorer.py"
+      },
+      {
+        "name": "CONFIDENCE_THRESHOLDS",
+        "module": "data.dicts.smart_filter_patterns",
+        "file": "src/ai_service/layers/smart_filter/confidence_scorer.py"
+      },
+      {
+        "name": "EmbeddingModelManager",
+        "module": "embedding_model_manager",
+        "file": "src/ai_service/layers/embeddings/models/__init__.py"
+      },
+      {
+        "name": "ModelConfig",
+        "module": "model_config",
+        "file": "src/ai_service/layers/embeddings/models/__init__.py"
+      },
+      {
+        "name": "threading",
+        "module": "threading",
+        "file": "src/ai_service/layers/embeddings/models/embedding_model_manager.py"
+      },
+      {
+        "name": "gc",
+        "module": "gc",
+        "file": "src/ai_service/layers/embeddings/models/embedding_model_manager.py"
+      },
+      {
+        "name": "torch",
+        "module": "torch",
+        "file": "src/ai_service/layers/embeddings/models/embedding_model_manager.py"
+      },
+      {
+        "name": "sentence_transformers",
+        "module": "sentence_transformers",
+        "file": "src/ai_service/layers/embeddings/models/embedding_model_manager.py"
+      },
+      {
+        "name": "ModelConfig",
+        "module": "model_config",
+        "file": "src/ai_service/layers/embeddings/models/embedding_model_manager.py"
+      },
+      {
+        "name": "annotations",
+        "module": "__future__",
+        "file": "src/ai_service/layers/embeddings/indexing/vector_index_service.py"
+      },
+      {
+        "name": "faiss",
+        "module": "faiss",
+        "file": "src/ai_service/layers/embeddings/indexing/vector_index_service.py"
+      },
+      {
+        "name": "annotations",
+        "module": "__future__",
+        "file": "src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py"
+      },
+      {
+        "name": "inspect",
+        "module": "inspect",
+        "file": "src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py"
+      },
+      {
+        "name": "httpx",
+        "module": "httpx",
+        "file": "src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py"
+      },
+      {
+        "name": "VectorIndexConfig",
+        "module": "vector_index_service",
+        "file": "src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py"
+      },
+      {
+        "name": "WatchlistDoc",
+        "module": "watchlist_index_service",
+        "file": "src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py"
+      },
+      {
+        "name": "EnhancedVectorIndexConfig",
+        "module": "enhanced_vector_index_service",
+        "file": "src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py"
+      },
+      {
+        "name": "annotations",
+        "module": "__future__",
+        "file": "src/ai_service/layers/embeddings/indexing/enhanced_vector_index_service.py"
+      },
+      {
+        "name": "threading",
+        "module": "threading",
+        "file": "src/ai_service/layers/embeddings/indexing/enhanced_vector_index_service.py"
+      },
+      {
+        "name": "faiss",
+        "module": "faiss",
+        "file": "src/ai_service/layers/embeddings/indexing/enhanced_vector_index_service.py"
+      },
+      {
+        "name": "TruncatedSVD",
+        "module": "sklearn.decomposition",
+        "file": "src/ai_service/layers/embeddings/indexing/enhanced_vector_index_service.py"
+      },
+      {
+        "name": "TfidfVectorizer",
+        "module": "sklearn.feature_extraction.text",
+        "file": "src/ai_service/layers/embeddings/indexing/enhanced_vector_index_service.py"
+      },
+      {
+        "name": "VectorIndexConfig",
+        "module": "vector_index_service",
+        "file": "src/ai_service/layers/embeddings/indexing/enhanced_vector_index_service.py"
+      },
+      {
+        "name": "CharTfidfVectorIndex",
+        "module": "vector_index_service",
+        "file": "src/ai_service/layers/embeddings/indexing/enhanced_vector_index_service.py"
+      },
+      {
+        "name": "annotations",
+        "module": "__future__",
+        "file": "src/ai_service/layers/embeddings/indexing/watchlist_index_service.py"
+      },
+      {
+        "name": "faiss",
+        "module": "faiss",
+        "file": "src/ai_service/layers/embeddings/indexing/watchlist_index_service.py"
+      },
+      {
+        "name": "spacy",
+        "module": "spacy",
+        "file": "src/ai_service/layers/normalization/ner_gateways/spacy_ru.py"
+      },
+      {
+        "name": "create_russian_gateway",
+        "module": "unified_spacy_gateway",
+        "file": "src/ai_service/layers/normalization/ner_gateways/__init__.py"
+      },
+      {
+        "name": "create_english_gateway",
+        "module": "unified_spacy_gateway",
+        "file": "src/ai_service/layers/normalization/ner_gateways/__init__.py"
+      },
+      {
+        "name": "NERHints",
+        "module": "unified_spacy_gateway",
+        "file": "src/ai_service/layers/normalization/ner_gateways/__init__.py"
+      },
+      {
+        "name": "SupportedLanguage",
+        "module": "unified_spacy_gateway",
+        "file": "src/ai_service/layers/normalization/ner_gateways/__init__.py"
+      },
+      {
+        "name": "UnifiedSpacyGateway",
+        "module": "unified_spacy_gateway",
+        "file": "src/ai_service/layers/normalization/ner_gateways/__init__.py"
+      },
+      {
+        "name": "create_ukrainian_gateway",
+        "module": "unified_spacy_gateway",
+        "file": "src/ai_service/layers/normalization/ner_gateways/__init__.py"
+      },
+      {
+        "name": "NEREntity",
+        "module": "unified_spacy_gateway",
+        "file": "src/ai_service/layers/normalization/ner_gateways/__init__.py"
+      },
+      {
+        "name": "spacy",
+        "module": "spacy",
+        "file": "src/ai_service/layers/normalization/ner_gateways/unified_spacy_gateway.py"
+      },
+      {
+        "name": "spacy",
+        "module": "spacy",
+        "file": "src/ai_service/layers/normalization/ner_gateways/spacy_uk.py"
+      },
+      {
+        "name": "spacy",
+        "module": "spacy",
+        "file": "src/ai_service/layers/normalization/ner_gateways/spacy_en.py"
+      },
+      {
+        "name": "annotations",
+        "module": "__future__",
+        "file": "src/ai_service/layers/normalization/processors/role_classifier.py"
+      },
+      {
+        "name": "profile_time",
+        "module": "utils.profiling",
+        "file": "src/ai_service/layers/normalization/processors/role_classifier.py"
+      },
+      {
+        "name": "annotations",
+        "module": "__future__",
+        "file": "src/ai_service/layers/normalization/processors/morphology_processor.py"
+      },
+      {
+        "name": "profile_time",
+        "module": "utils.profiling",
+        "file": "src/ai_service/layers/normalization/processors/morphology_processor.py"
+      },
+      {
+        "name": "TokenProcessor",
+        "module": "token_processor",
+        "file": "src/ai_service/layers/normalization/processors/__init__.py"
+      },
+      {
+        "name": "RoleClassifier",
+        "module": "role_classifier",
+        "file": "src/ai_service/layers/normalization/processors/__init__.py"
+      },
+      {
+        "name": "MorphologyProcessor",
+        "module": "morphology_processor",
+        "file": "src/ai_service/layers/normalization/processors/__init__.py"
+      },
+      {
+        "name": "GenderProcessor",
+        "module": "gender_processor",
+        "file": "src/ai_service/layers/normalization/processors/__init__.py"
+      },
+      {
+        "name": "unicodedata",
+        "module": "unicodedata",
+        "file": "src/ai_service/layers/normalization/processors/token_processor.py"
+      },
+      {
+        "name": "STOP_ALL",
+        "module": "data.dicts.stopwords",
+        "file": "src/ai_service/layers/normalization/processors/token_processor.py"
+      },
+      {
+        "name": "profile_time",
+        "module": "utils.profiling",
+        "file": "src/ai_service/layers/normalization/processors/token_processor.py"
+      },
+      {
+        "name": "unicodedata",
+        "module": "unicodedata",
+        "file": "src/ai_service/layers/normalization/processors/normalization_factory.py"
+      },
+      {
+        "name": "get_profiling_stats",
+        "module": "utils.profiling",
+        "file": "src/ai_service/layers/normalization/processors/normalization_factory.py"
+      },
+      {
+        "name": "profile_time",
+        "module": "utils.profiling",
+        "file": "src/ai_service/layers/normalization/processors/normalization_factory.py"
+      },
+      {
+        "name": "print_profiling_report",
+        "module": "utils.profiling",
+        "file": "src/ai_service/layers/normalization/processors/normalization_factory.py"
+      },
+      {
+        "name": "create_flags_hash",
+        "module": "utils.lru_cache_ttl",
+        "file": "src/ai_service/layers/normalization/processors/normalization_factory.py"
+      },
+      {
+        "name": "CachedTokenizerService",
+        "module": "tokenizer_service",
+        "file": "src/ai_service/layers/normalization/processors/normalization_factory.py"
+      },
+      {
+        "name": "ErrorReportingMixin",
+        "module": "error_handling",
+        "file": "src/ai_service/layers/normalization/processors/normalization_factory.py"
+      },
+      {
+        "name": "collapse_double_dots_token",
+        "module": "token_ops",
+        "file": "src/ai_service/layers/normalization/processors/normalization_factory.py"
+      },
+      {
+        "name": "russian_names",
+        "module": "data.dicts",
+        "file": "src/ai_service/layers/normalization/processors/normalization_factory.py"
+      },
+      {
+        "name": "ukrainian_names",
+        "module": "data.dicts",
+        "file": "src/ai_service/layers/normalization/processors/normalization_factory.py"
+      },
+      {
+        "name": "BaseMorphologyAnalyzer",
+        "module": "base_morphology",
+        "file": "src/ai_service/layers/normalization/morphology/ukrainian_morphology.py"
+      },
+      {
+        "name": "UKRAINIAN_NAMES",
+        "module": "data.dicts.ukrainian_names",
+        "file": "src/ai_service/layers/normalization/morphology/ukrainian_morphology.py"
+      },
+      {
+        "name": "LEMMATIZATION_BLACKLIST",
+        "module": "data.dicts.lemmatization_blacklist",
+        "file": "src/ai_service/layers/normalization/morphology/ukrainian_morphology.py"
+      },
+      {
+        "name": "ABC",
+        "module": "abc",
+        "file": "src/ai_service/layers/normalization/morphology/base_morphology.py"
+      },
+      {
+        "name": "abstractmethod",
+        "module": "abc",
+        "file": "src/ai_service/layers/normalization/morphology/base_morphology.py"
+      },
+      {
+        "name": "RUSSIAN_NAMES",
+        "module": "data.dicts.russian_names",
+        "file": "src/ai_service/layers/normalization/morphology/gender_rules.py"
+      },
+      {
+        "name": "UKRAINIAN_NAMES",
+        "module": "data.dicts.ukrainian_names",
+        "file": "src/ai_service/layers/normalization/morphology/gender_rules.py"
+      },
+      {
+        "name": "convert_given_name_to_nominative",
+        "module": "gender_rules",
+        "file": "src/ai_service/layers/normalization/morphology/__init__.py"
+      },
+      {
+        "name": "FEMALE_PATRONYMIC_SUFFIXES_RU",
+        "module": "gender_rules",
+        "file": "src/ai_service/layers/normalization/morphology/__init__.py"
+      },
+      {
+        "name": "INVARIABLE_SURNAME_SUFFIXES",
+        "module": "gender_rules",
+        "file": "src/ai_service/layers/normalization/morphology/__init__.py"
+      },
+      {
+        "name": "feminine_nominative_from",
+        "module": "gender_rules",
+        "file": "src/ai_service/layers/normalization/morphology/__init__.py"
+      },
+      {
+        "name": "convert_given_name_to_nominative_uk",
+        "module": "gender_rules",
+        "file": "src/ai_service/layers/normalization/morphology/__init__.py"
+      },
+      {
+        "name": "to_feminine_nominative_uk",
+        "module": "gender_rules",
+        "file": "src/ai_service/layers/normalization/morphology/__init__.py"
+      },
+      {
+        "name": "looks_like_feminine_uk",
+        "module": "gender_rules",
+        "file": "src/ai_service/layers/normalization/morphology/__init__.py"
+      },
+      {
+        "name": "FEMALE_PATRONYMIC_SUFFIXES_UK",
+        "module": "gender_rules",
+        "file": "src/ai_service/layers/normalization/morphology/__init__.py"
+      },
+      {
+        "name": "is_invariable_surname",
+        "module": "gender_rules",
+        "file": "src/ai_service/layers/normalization/morphology/__init__.py"
+      },
+      {
+        "name": "to_feminine_nominative_ru",
+        "module": "gender_rules",
+        "file": "src/ai_service/layers/normalization/morphology/__init__.py"
+      },
+      {
+        "name": "infer_gender_evidence",
+        "module": "gender_rules",
+        "file": "src/ai_service/layers/normalization/morphology/__init__.py"
+      },
+      {
+        "name": "looks_like_feminine_ru",
+        "module": "gender_rules",
+        "file": "src/ai_service/layers/normalization/morphology/__init__.py"
+      },
+      {
+        "name": "get_female_given_names",
+        "module": "gender_rules",
+        "file": "src/ai_service/layers/normalization/morphology/__init__.py"
+      },
+      {
+        "name": "convert_given_name_to_nominative_ru",
+        "module": "gender_rules",
+        "file": "src/ai_service/layers/normalization/morphology/__init__.py"
+      },
+      {
+        "name": "annotations",
+        "module": "__future__",
+        "file": "src/ai_service/layers/normalization/morphology/diminutive_resolver.py"
+      },
+      {
+        "name": "unicodedata",
+        "module": "unicodedata",
+        "file": "src/ai_service/layers/normalization/morphology/diminutive_resolver.py"
+      },
+      {
+        "name": "BaseMorphologyAnalyzer",
+        "module": "base_morphology",
+        "file": "src/ai_service/layers/normalization/morphology/russian_morphology.py"
+      },
+      {
+        "name": "RUSSIAN_NAMES",
+        "module": "data.dicts.russian_names",
+        "file": "src/ai_service/layers/normalization/morphology/russian_morphology.py"
+      },
+      {
+        "name": "LEMMATIZATION_BLACKLIST",
+        "module": "data.dicts.lemmatization_blacklist",
+        "file": "src/ai_service/layers/normalization/morphology/russian_morphology.py"
+      },
+      {
+        "name": "EXTRA_DIMINUTIVES_RU",
+        "module": "data.dicts.diminutives_extra",
+        "file": "src/ai_service/layers/normalization/morphology/word_normalizer.py"
+      },
+      {
+        "name": "EXTRA_DIMINUTIVES_UK",
+        "module": "data.dicts.diminutives_extra",
+        "file": "src/ai_service/layers/normalization/morphology/word_normalizer.py"
+      },
+      {
+        "name": "BaseExtractor",
+        "module": "base_extractor",
+        "file": "src/ai_service/layers/signals/extractors/identifier_extractor.py"
+      },
+      {
+        "name": "BaseExtractor",
+        "module": "base_extractor",
+        "file": "src/ai_service/layers/signals/extractors/birthdate_extractor.py"
+      },
+      {
+        "name": "BaseExtractor",
+        "module": "base_extractor",
+        "file": "src/ai_service/layers/signals/extractors/person_extractor.py"
+      },
+      {
+        "name": "BirthdateExtractor",
+        "module": "birthdate_extractor",
+        "file": "src/ai_service/layers/signals/extractors/__init__.py"
+      },
+      {
+        "name": "IdentifierExtractor",
+        "module": "identifier_extractor",
+        "file": "src/ai_service/layers/signals/extractors/__init__.py"
+      },
+      {
+        "name": "OrganizationExtractor",
+        "module": "organization_extractor",
+        "file": "src/ai_service/layers/signals/extractors/__init__.py"
+      },
+      {
+        "name": "PersonExtractor",
+        "module": "person_extractor",
+        "file": "src/ai_service/layers/signals/extractors/__init__.py"
+      },
+      {
+        "name": "ABC",
+        "module": "abc",
+        "file": "src/ai_service/layers/signals/extractors/base_extractor.py"
+      },
+      {
+        "name": "abstractmethod",
+        "module": "abc",
+        "file": "src/ai_service/layers/signals/extractors/base_extractor.py"
+      },
+      {
+        "name": "BaseExtractor",
+        "module": "base_extractor",
+        "file": "src/ai_service/layers/signals/extractors/organization_extractor.py"
+      },
+      {
+        "name": "ALL_LEGAL_FORMS",
+        "module": "legal_forms",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "extract_legal_forms",
+        "module": "legal_forms",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "get_legal_forms_regex",
+        "module": "legal_forms",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "get_legal_forms_set",
+        "module": "legal_forms",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "QUOTED_CORE_REGEX",
+        "module": "legal_forms",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "is_legal_form",
+        "module": "legal_forms",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "normalize_legal_form",
+        "module": "legal_forms",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "LEGAL_FORMS",
+        "module": "legal_forms",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "LEGAL_FORMS_REGEX",
+        "module": "legal_forms",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "get_legal_form_full_name",
+        "module": "legal_forms",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "ALL_LEGAL_FORMS_REGEX",
+        "module": "legal_forms",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "ORGANIZATION_NAME_REGEX",
+        "module": "legal_forms",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "LEGAL_FORM_REGEX",
+        "module": "legal_forms",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "get_compiled_patterns_cached",
+        "module": "identifiers",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "validate_ein",
+        "module": "identifiers",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "IDENTIFIER_PATTERNS",
+        "module": "identifiers",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "validate_ssn",
+        "module": "identifiers",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "validate_edrpou",
+        "module": "identifiers",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "validate_ogrn",
+        "module": "identifiers",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "validate_swift_bic",
+        "module": "identifiers",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "validate_vat",
+        "module": "identifiers",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "get_validation_function",
+        "module": "identifiers",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "validate_lei",
+        "module": "identifiers",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "validate_inn",
+        "module": "identifiers",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "normalize_identifier",
+        "module": "identifiers",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "extract_identifiers",
+        "module": "identifiers",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "validate_ogrnip",
+        "module": "identifiers",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "validate_iban",
+        "module": "identifiers",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "MONTH_NAMES",
+        "module": "dates",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "extract_dates_near_text",
+        "module": "dates",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "DATE_PATTERNS",
+        "module": "dates",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "is_valid_date",
+        "module": "dates",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "extract_birthdates_from_text",
+        "module": "dates",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "format_date_iso",
+        "module": "dates",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "get_compiled_patterns",
+        "module": "dates",
+        "file": "src/ai_service/data/patterns/__init__.py"
+      },
+      {
+        "name": "NAMES",
+        "module": "arabic_names",
+        "file": "src/ai_service/data/dicts/__init__.py"
+      },
+      {
+        "name": "NAMES",
+        "module": "asian_names",
+        "file": "src/ai_service/data/dicts/__init__.py"
+      },
+      {
+        "name": "ENGLISH_NAMES",
+        "module": "english_names",
+        "file": "src/ai_service/data/dicts/__init__.py"
+      },
+      {
+        "name": "NAMES",
+        "module": "european_names",
+        "file": "src/ai_service/data/dicts/__init__.py"
+      },
+      {
+        "name": "INDIAN_NAMES",
+        "module": "indian_names",
+        "file": "src/ai_service/data/dicts/__init__.py"
+      },
+      {
+        "name": "LEMMATIZATION_BLACKLIST",
+        "module": "lemmatization_blacklist",
+        "file": "src/ai_service/data/dicts/__init__.py"
+      },
+      {
+        "name": "PHONETIC_PATTERNS",
+        "module": "phonetic_patterns",
+        "file": "src/ai_service/data/dicts/__init__.py"
+      },
+      {
+        "name": "REGIONAL_PATTERNS",
+        "module": "regional_patterns",
+        "file": "src/ai_service/data/dicts/__init__.py"
+      },
+      {
+        "name": "RUSSIAN_NAMES",
+        "module": "russian_names",
+        "file": "src/ai_service/data/dicts/__init__.py"
+      },
+      {
+        "name": "SCANDINAVIAN_NAMES",
+        "module": "scandinavian_names",
+        "file": "src/ai_service/data/dicts/__init__.py"
+      },
+      {
+        "name": "UKRAINIAN_NAMES",
+        "module": "ukrainian_names",
+        "file": "src/ai_service/data/dicts/__init__.py"
+      }
+    ],
+    "import_chains": []
+  },
+  "statistics": {
+    "total_files": 167,
+    "total_classes": 306,
+    "total_functions": 253,
+    "total_methods": 1451,
+    "files_by_size": [
+      {
+        "file": "src/ai_service/layers/normalization/role_tagger_service.py",
+        "definitions": 71,
+        "classes": 19,
+        "functions": 4,
+        "methods": 48
+      },
+      {
+        "file": "src/ai_service/utils/enhanced_logging.py",
+        "definitions": 52,
+        "classes": 8,
+        "functions": 13,
+        "methods": 31
+      },
+      {
+        "file": "src/ai_service/layers/variants/variant_generation_service.py",
+        "definitions": 52,
+        "classes": 1,
+        "functions": 0,
+        "methods": 51
+      },
+      {
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "definitions": 45,
+        "classes": 6,
+        "functions": 5,
+        "methods": 34
+      },
+      {
+        "file": "src/ai_service/layers/signals/signals_service.py",
+        "definitions": 44,
+        "classes": 6,
+        "functions": 0,
+        "methods": 38
+      },
+      {
+        "file": "src/ai_service/layers/normalization/processors/normalization_factory.py",
+        "definitions": 40,
+        "classes": 2,
+        "functions": 1,
+        "methods": 37
+      },
+      {
+        "file": "src/ai_service/exceptions.py",
+        "definitions": 38,
+        "classes": 28,
+        "functions": 2,
+        "methods": 8
+      },
+      {
+        "file": "src/ai_service/main.py",
+        "definitions": 38,
+        "classes": 9,
+        "functions": 24,
+        "methods": 5
+      },
+      {
+        "file": "src/ai_service/contracts/base_contracts.py",
+        "definitions": 38,
+        "classes": 20,
+        "functions": 0,
+        "methods": 18
+      },
+      {
+        "file": "src/ai_service/monitoring/metrics_service.py",
+        "definitions": 38,
+        "classes": 7,
+        "functions": 0,
+        "methods": 31
+      }
+    ],
+    "largest_classes": [
+      {
+        "class": "VariantGenerationService",
+        "file": "src/ai_service/layers/variants/variant_generation_service.py",
+        "methods": 51
+      },
+      {
+        "class": "SignalsService",
+        "file": "src/ai_service/layers/signals/signals_service.py",
+        "methods": 37
+      },
+      {
+        "class": "NormalizationFactory",
+        "file": "src/ai_service/layers/normalization/processors/normalization_factory.py",
+        "methods": 37
+      },
+      {
+        "class": "UnifiedOrchestrator",
+        "file": "src/ai_service/core/unified_orchestrator.py",
+        "methods": 31
+      },
+      {
+        "class": "HybridSearchService",
+        "file": "src/ai_service/layers/search/hybrid_search_service.py",
+        "methods": 31
+      },
+      {
+        "class": "RussianMorphologyAnalyzer",
+        "file": "src/ai_service/layers/normalization/morphology/russian_morphology.py",
+        "methods": 29
+      },
+      {
+        "class": "MetricsService",
+        "file": "src/ai_service/monitoring/metrics_service.py",
+        "methods": 28
+      },
+      {
+        "class": "MetricsCollector",
+        "file": "src/ai_service/monitoring/metrics_collector.py",
+        "methods": 25
+      },
+      {
+        "class": "MorphologyAdapter",
+        "file": "src/ai_service/layers/normalization/morphology_adapter.py",
+        "methods": 24
+      },
+      {
+        "class": "AlertingSystem",
+        "file": "src/ai_service/monitoring/alerting_system.py",
+        "methods": 23
+      }
+    ],
+    "most_imported_modules": [
+      {
+        "module": "utils.logging_config",
+        "import_count": 55
+      },
+      {
+        "module": "__future__",
+        "import_count": 16
+      },
+      {
+        "module": "config",
+        "import_count": 15
+      },
+      {
+        "module": "contracts.base_contracts",
+        "import_count": 11
+      },
+      {
+        "module": "threading",
+        "import_count": 11
+      },
+      {
+        "module": "exceptions",
+        "import_count": 8
+      },
+      {
+        "module": "unicodedata",
+        "import_count": 8
+      },
+      {
+        "module": "utils.feature_flags",
+        "import_count": 7
+      },
+      {
+        "module": "spacy",
+        "import_count": 6
+      },
+      {
+        "module": "contracts.trace_models",
+        "import_count": 6
+      }
+    ]
+  }
+}

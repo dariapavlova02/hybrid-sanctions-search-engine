@@ -7,7 +7,7 @@ name = "ai-normalization-service"
 version = "0.0.1"
 description = "Name normalization service"
 readme = "README.md"
-requires-python = ">=3.9,<3.14"
+requires-python = ">=3.11,<3.14"
 dynamic = ["version", "readme"]
 
 [tool.poetry]
@@ -18,36 +18,29 @@ readme = "README.md"
 packages = [{include = "ai_service", from = "src"}]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.14"
+python = ">=3.11,<3.14"
 fastapi = ">=0.116.1"
 uvicorn = {extras = ["standard"], version = ">=0.35.0"}
 pydantic = ">=2.11.7"
 pydantic-settings = ">=2.10.1"
-spacy = ">=3.8.7"
-nltk = ">=3.9.1"
 pyahocorasick = ">=2.2.0"
-rapidfuzz = ">=3.13.0"
-nameparser = ">=1.1.0"
-langdetect = ">=1.0.9"
-unidecode = ">=1.4.0"
-python-levenshtein = ">=0.27.1"
 sentence-transformers = ">=5.1.0"
+scipy = ">=1.14.0"
 numpy = ">=1.24.0,<3.0.0"
 pymorphy3 = ">=2.0.4"
-transliterate = ">=1.10.2"
-requests = ">=2.31.0"
 pymorphy3-dicts-uk = ">=2.4.1.1.1663094765"
 pymorphy3-dicts-ru = ">=2.4.417150.4580142"
 pyyaml = ">=6.0.2"
-isort = ">=6.0.1,<7.0.0"
-black = ">=25.1.0,<26.0.0"
 httpx = "^0.28.1"
+nameparser = ">=1.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = ">=1.1.0"
 pytest-cov = ">=6.0.0"
 httpx = ">=0.27.0"
 pytest-timeout = ">=2.4.0"
+isort = ">=6.0.1,<7.0.0"
+black = ">=25.1.0,<26.0.0"
 pre-commit = ">=4.3.0"
 hypothesis = ">=6.112.0"
 

@@ -1,0 +1,10 @@
+category,language,total_tests,passed_tests,failed_tests,parity_rate,avg_legacy_ms,avg_factory_ms,performance_improvement
+Basic Names,ru,3,3,0,100.0%,2.22,1.15,1.93x
+Morphology,ru,2,0,2,0.0%,1.25,0.59,2.12x
+Context Filtering,ru,2,0,2,0.0%,1.38,0.46,3.00x
+English Processing,en,5,1,4,20.0%,0.21,0.41,0.51x
+Ukrainian Names,uk,4,3,1,75.0%,1.07,0.81,1.32x
+Ukrainian Morphology,uk,2,0,2,0.0%,1.23,1.16,1.06x
+Mixed Languages,mixed,6,3,3,50.0%,1.03,0.35,2.94x
+Behavior Tests,auto,7,7,0,100.0%,0.40,0.30,1.33x
+TOTAL,all,31,18,13,58.1%,1.45,0.78,1.86x

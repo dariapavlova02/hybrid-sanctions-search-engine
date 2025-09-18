@@ -9,7 +9,8 @@ import asyncio
 import time
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
-from ..config.feature_flags import FeatureFlags
+from ..utils.feature_flags import FeatureFlags
+from ..utils.pii_masking import log_validation_error
 from ..layers.normalization.processors.normalization_factory import (
     NormalizationFactory, 
     NormalizationConfig
@@ -136,7 +137,7 @@ class ShadowModeValidator:
             )
             
         except Exception as e:
-            self.logger.error(f"NER validation failed for '{text}': {e}")
+            self.logger.error(log_validation_error(text, e))
             return ValidationResult(
                 flag_name="enable_spacy_ner",
                 accuracy_improvement=0.0,
@@ -191,7 +192,7 @@ class ShadowModeValidator:
             )
             
         except Exception as e:
-            self.logger.error(f"Nameparser validation failed for '{text}': {e}")
+            self.logger.error(log_validation_error(text, e))
             return ValidationResult(
                 flag_name="enable_nameparser_en",
                 accuracy_improvement=0.0,
@@ -246,7 +247,7 @@ class ShadowModeValidator:
             )
             
         except Exception as e:
-            self.logger.error(f"Strict stopwords validation failed for '{text}': {e}")
+            self.logger.error(log_validation_error(text, e))
             return ValidationResult(
                 flag_name="strict_stopwords",
                 accuracy_improvement=0.0,
@@ -262,14 +263,14 @@ class ShadowModeValidator:
         """Validate FSM tuned roles improvements."""
         try:
             # Process with FSM tuned roles flag enabled
-            flags_with = FeatureFlags(fsm_tuned_roles=True)
+            flags_with = FeatureFlags(enable_fsm_tuned_roles=True)
             config_with = NormalizationConfig(debug_tracing=True)
             result_with = await self.normalization_factory.normalize_text(
                 text, config_with, flags_with
             )
             
             # Process without FSM tuned roles flag
-            flags_without = FeatureFlags(fsm_tuned_roles=False)
+            flags_without = FeatureFlags(enable_fsm_tuned_roles=False)
             config_without = NormalizationConfig(debug_tracing=True)
             result_without = await self.normalization_factory.normalize_text(
                 text, config_without, flags_without
@@ -291,7 +292,7 @@ class ShadowModeValidator:
             )
             
             return ValidationResult(
-                flag_name="fsm_tuned_roles",
+                flag_name="enable_fsm_tuned_roles",
                 accuracy_improvement=accuracy_improvement,
                 confidence_improvement=confidence_improvement,
                 performance_impact_ms=performance_impact * 1000,
@@ -301,9 +302,9 @@ class ShadowModeValidator:
             )
             
         except Exception as e:
-            self.logger.error(f"FSM tuned roles validation failed for '{text}': {e}")
+            self.logger.error(log_validation_error(text, e))
             return ValidationResult(
-                flag_name="fsm_tuned_roles",
+                flag_name="enable_fsm_tuned_roles",
                 accuracy_improvement=0.0,
                 confidence_improvement=0.0,
                 performance_impact_ms=0.0,
@@ -317,14 +318,14 @@ class ShadowModeValidator:
         """Validate enhanced diminutives improvements."""
         try:
             # Process with enhanced diminutives flag enabled
-            flags_with = FeatureFlags(enhanced_diminutives=True)
+            flags_with = FeatureFlags(enable_enhanced_diminutives=True)
             config_with = NormalizationConfig(debug_tracing=True)
             result_with = await self.normalization_factory.normalize_text(
                 text, config_with, flags_with
             )
             
             # Process without enhanced diminutives flag
-            flags_without = FeatureFlags(enhanced_diminutives=False)
+            flags_without = FeatureFlags(enable_enhanced_diminutives=False)
             config_without = NormalizationConfig(debug_tracing=True)
             result_without = await self.normalization_factory.normalize_text(
                 text, config_without, flags_without
@@ -346,7 +347,7 @@ class ShadowModeValidator:
             )
             
             return ValidationResult(
-                flag_name="enhanced_diminutives",
+                flag_name="enable_enhanced_diminutives",
                 accuracy_improvement=accuracy_improvement,
                 confidence_improvement=confidence_improvement,
                 performance_impact_ms=performance_impact * 1000,
@@ -356,9 +357,9 @@ class ShadowModeValidator:
             )
             
         except Exception as e:
-            self.logger.error(f"Enhanced diminutives validation failed for '{text}': {e}")
+            self.logger.error(log_validation_error(text, e))
             return ValidationResult(
-                flag_name="enhanced_diminutives",
+                flag_name="enable_enhanced_diminutives",
                 accuracy_improvement=0.0,
                 confidence_improvement=0.0,
                 performance_impact_ms=0.0,
@@ -372,14 +373,14 @@ class ShadowModeValidator:
         """Validate enhanced gender rules improvements."""
         try:
             # Process with enhanced gender rules flag enabled
-            flags_with = FeatureFlags(enhanced_gender_rules=True)
+            flags_with = FeatureFlags(enable_enhanced_gender_rules=True)
             config_with = NormalizationConfig(debug_tracing=True)
             result_with = await self.normalization_factory.normalize_text(
                 text, config_with, flags_with
             )
             
             # Process without enhanced gender rules flag
-            flags_without = FeatureFlags(enhanced_gender_rules=False)
+            flags_without = FeatureFlags(enable_enhanced_gender_rules=False)
             config_without = NormalizationConfig(debug_tracing=True)
             result_without = await self.normalization_factory.normalize_text(
                 text, config_without, flags_without
@@ -401,7 +402,7 @@ class ShadowModeValidator:
             )
             
             return ValidationResult(
-                flag_name="enhanced_gender_rules",
+                flag_name="enable_enhanced_gender_rules",
                 accuracy_improvement=accuracy_improvement,
                 confidence_improvement=confidence_improvement,
                 performance_impact_ms=performance_impact * 1000,
@@ -411,9 +412,9 @@ class ShadowModeValidator:
             )
             
         except Exception as e:
-            self.logger.error(f"Enhanced gender rules validation failed for '{text}': {e}")
+            self.logger.error(log_validation_error(text, e))
             return ValidationResult(
-                flag_name="enhanced_gender_rules",
+                flag_name="enable_enhanced_gender_rules",
                 accuracy_improvement=0.0,
                 confidence_improvement=0.0,
                 performance_impact_ms=0.0,
@@ -466,7 +467,7 @@ class ShadowModeValidator:
             )
             
         except Exception as e:
-            self.logger.error(f"AC tier 0 validation failed for '{text}': {e}")
+            self.logger.error(log_validation_error(text, e))
             return ValidationResult(
                 flag_name="enable_ac_tier0",
                 accuracy_improvement=0.0,
@@ -521,7 +522,7 @@ class ShadowModeValidator:
             )
             
         except Exception as e:
-            self.logger.error(f"Vector fallback validation failed for '{text}': {e}")
+            self.logger.error(log_validation_error(text, e))
             return ValidationResult(
                 flag_name="enable_vector_fallback",
                 accuracy_improvement=0.0,

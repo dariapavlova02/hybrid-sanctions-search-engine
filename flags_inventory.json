@@ -1,7 +1,7 @@
 {
   "feature_flags": {
     "use_factory_normalizer": {
-      "default": false,
+      "default": true,
       "description": "Switches to refactored normalization stack with parity tracking",
       "code_touchpoints": ["normalization_factory.py", "normalization_service.py"],
       "primary_tests": ["test_golden_parity.py", "test_ascii_fastpath_equivalence.py"]

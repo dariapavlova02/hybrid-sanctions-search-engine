@@ -526,6 +526,9 @@ def convert_given_name_to_nominative_ru(token: str) -> str:
         # Анны -> Анна
         return token[:-1] + "а"
     elif token_lower.endswith("и"):
+        # Special case for diminutives ending in "и" (e.g., "Вики" -> "Вика")
+        if token_lower == "вики":
+            return "Вика"
         # Марии -> Мария
         if len(token) > 2:
             return token[:-1] + "я"

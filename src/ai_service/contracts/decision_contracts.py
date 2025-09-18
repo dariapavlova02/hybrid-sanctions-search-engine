@@ -90,6 +90,8 @@ class DecisionOutput:
     score: float  # итоговый 0..1
     reasons: List[str] = field(default_factory=list)
     details: Dict[str, Any] = field(default_factory=dict)  # упаковать используемые признаки
+    review_required: bool = False  # Whether manual review is required
+    required_additional_fields: List[str] = field(default_factory=list)  # Fields required for decision
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
@@ -97,7 +99,9 @@ class DecisionOutput:
             "risk": self.risk.value,
             "score": self.score,
             "reasons": self.reasons,
-            "details": self.details
+            "details": self.details,
+            "review_required": self.review_required,
+            "required_additional_fields": self.required_additional_fields
         }
 
 

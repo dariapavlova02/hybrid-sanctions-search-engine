@@ -13,7 +13,7 @@ from src.ai_service.layers.normalization.processors.normalization_factory import
     NormalizationFactory, 
     NormalizationConfig
 )
-from src.ai_service.config.feature_flags import FeatureFlags
+from src.ai_service.utils.feature_flags import FeatureFlags
 
 
 class TestAcTierIntegration:

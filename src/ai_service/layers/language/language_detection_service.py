@@ -489,22 +489,30 @@ class LanguageDetectionService:
         # Count pattern matches
         uk_matches = sum(len(re.findall(pattern, text, re.IGNORECASE)) for pattern in uk_patterns)
         ru_matches = sum(len(re.findall(pattern, text, re.IGNORECASE)) for pattern in ru_patterns)
-        
+
         # Check for Ukrainian surname suffixes
         words = re.findall(r"\b[А-ЯІЇЄҐ][а-яіїєґА-ЯІЇЄҐ\'-]+\b", text)
         uk_surname_count = sum(1 for w in words if any(w.lower().endswith(suf) for suf in self.uk_surname_suffixes))
-        
-        # Determine language based on patterns
-        if uk_matches > ru_matches or uk_surname_count > 0:
-            confidence = min(0.9, 0.7 + uk_matches * 0.05 + uk_surname_count * 0.1)
-            return "uk", confidence, "cyrillic_patterns_ukrainian"
-        elif ru_matches > uk_matches:
+
+        # Combine scores so explicit Russian cues can outweigh surname heuristics
+        uk_score = uk_matches + uk_surname_count * 1.5
+        ru_score = ru_matches
+
+        if ru_score > uk_score:
             confidence = min(0.9, 0.7 + ru_matches * 0.05)
             return "ru", confidence, "cyrillic_patterns_russian"
-        else:
-            # Default to Russian for ambiguous cases (more conservative)
-            confidence = 0.6
-            return "ru", confidence, "cyrillic_default_russian"
+
+        if uk_score > ru_score:
+            confidence = min(0.9, 0.7 + uk_matches * 0.05 + uk_surname_count * 0.05)
+            return "uk", confidence, "cyrillic_patterns_ukrainian"
+
+        if uk_surname_count > 0:
+            confidence = min(0.9, 0.8 + uk_surname_count * 0.05)
+            return "uk", confidence, "cyrillic_surname_suffix"
+
+        # Default to Russian for ambiguous cases (more conservative)
+        confidence = 0.6
+        return "ru", confidence, "cyrillic_default_russian"
 
     def _fast_pattern_detection(self, text: str) -> Dict[str, Any]:
         """Fast detection by patterns"""
@@ -553,17 +561,11 @@ class LanguageDetectionService:
 
         # If there is Cyrillic in general (without specific characters)
         if cyrillic_chars > 0:
-            # Surname suffix heuristic (strongly favors Ukrainian)
             words = re.findall(r"\b[А-ЯІЇЄҐ][а-яіїєґА-ЯІЇЄҐ\'-]+\b", text)
-            for w in words:
-                lw = w.lower()
-                if any(lw.endswith(suf) for suf in self.uk_surname_suffixes):
-                    confidence = 0.92
-                    return self._create_detection_result(
-                        "uk", confidence, "cyrillic_surname_suffix"
-                    )
+            uk_surname_count = sum(
+                1 for w in words if any(w.lower().endswith(suf) for suf in self.uk_surname_suffixes)
+            )
 
-            # Additional check for Ukrainian words
             uk_patterns = len(
                 re.findall(
                     r"\b(і|в|на|з|по|за|від|до|у|о|а|але|або|якщо|коли|де|як|що|хто|це|той|ця|ці|був|була|були|бути|є|немає)\b",
@@ -579,16 +581,31 @@ class LanguageDetectionService:
                 )
             )
 
-            if uk_patterns > ru_patterns:
-                confidence = min(0.9, 0.7 + uk_patterns * 0.05)
-                return self._create_detection_result(
-                    "uk", confidence, "cyrillic_patterns_ukrainian"
-                )
-            else:
+            if ru_patterns > uk_patterns:
                 confidence = min(0.9, 0.7 + ru_patterns * 0.05)
                 return self._create_detection_result(
                     "ru", confidence, "cyrillic_patterns_russian"
                 )
+
+            if uk_patterns > ru_patterns:
+                confidence = min(0.9, 0.7 + uk_patterns * 0.05 + uk_surname_count * 0.05)
+                return self._create_detection_result(
+                    "uk", confidence, "cyrillic_patterns_ukrainian"
+                )
+
+            if uk_surname_count > 0:
+                confidence = min(0.92, 0.82 + uk_surname_count * 0.05)
+                return self._create_detection_result(
+                    "uk", confidence, "cyrillic_surname_suffix"
+                )
+
+            if ru_patterns > 0:
+                confidence = min(0.9, 0.7 + ru_patterns * 0.05)
+                return self._create_detection_result(
+                    "ru", confidence, "cyrillic_patterns_russian"
+                )
+
+            return self._create_detection_result("ru", 0.6, "cyrillic_default_russian")
 
         # No Cyrillic characters - low confidence
         return self._create_detection_result("en", 0.2, "cyrillic_none")

@@ -3,7 +3,6 @@ Unit tests for UkrainianMorphologyAnalyzer
 """
 
 import pytest
-from ai_service.layers.normalization.morphology.base_morphology import MorphologicalAnalysis
 from unittest.mock import Mock, patch, MagicMock
 
 from src.ai_service.layers.normalization.morphology.ukrainian_morphology import UkrainianMorphologyAnalyzer

@@ -38,7 +38,6 @@ import time
 from typing import List, Union, Optional, Dict, Any
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
 
 from ...config import EmbeddingConfig
 from ...core.base_service import BaseService
@@ -63,11 +62,11 @@ class EmbeddingService(BaseService):
         """
         super().__init__("EmbeddingService")
         self.config = config
-        self._model: SentenceTransformer = None
+        self._model = None  # SentenceTransformer instance, loaded lazily
         self.preprocessor = EmbeddingPreprocessor()
 
         # Add expected attributes for backward compatibility
-        self.model_cache: Dict[str, SentenceTransformer] = {}
+        self.model_cache: Dict[str, Any] = {}  # SentenceTransformer models, loaded lazily
         self.default_model = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
         # Performance optimizations
@@ -106,14 +105,21 @@ class EmbeddingService(BaseService):
             self.logger.error(f"generate_embeddings failed: {e}")
             return []
 
-    def _load_model(self, model_name: Optional[str] = None) -> SentenceTransformer:
+    def _load_model(self, model_name: Optional[str] = None):
         """Lazy load the SentenceTransformer model with caching"""
         model_name = model_name or self.config.model_name
-        
+
         # Check cache first
         if model_name in self.model_cache:
             return self.model_cache[model_name]
-        
+
+        # Lazy import of heavy ML dependencies
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError:
+            self.logger.error("sentence-transformers not installed. Install with: pip install sentence-transformers")
+            raise
+
         # Load new model
         self.logger.info(f"Loading embedding model: {model_name}")
         model = SentenceTransformer(model_name, device=self.config.device)

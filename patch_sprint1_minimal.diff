@@ -1,0 +1,295 @@
+diff --git a/src/ai_service/layers/normalization/morphology_adapter.py b/src/ai_service/layers/normalization/morphology_adapter.py
+@@
+-        # Use the best parse found
+-        if best_parse:
+-            result = self._preserve_case(token, best_parse.nominative)
+-            return result, "morph.to_nominative"
++        # Use the best parse found
++        if best_parse:
++            nominative = best_parse.nominative
++            # Avoid plural fallback for personal names: Марии -> Мария
++            if nominative and 'plur' in best_parse.tag and best_parse.normal:
++                nominative = best_parse.normal
++            if not nominative and best_parse.normal:
++                nominative = best_parse.normal
++            result = self._preserve_case(token, nominative)
++            return result, "morph.to_nominative"
+@@
+-        return token, "morph.nominal_noop"
++        return token, "morph.nominal_noop"
++
++    def _select_best_parse(self, parses: List[MorphParse]) -> Optional[MorphParse]:
++        """Prefer non-plural nominative parses for given/surname tokens."""
++        for parse in parses:
++            if parse.case == "nomn" and parse.nominative and 'plur' not in parse.tag:
++                return parse
++        return self._best_parse(parses)
+
+diff --git a/src/ai_service/layers/normalization/processors/normalization_factory.py b/src/ai_service/layers/normalization/processors/normalization_factory.py
+@@
+-        self.tokenizer_service = TokenizerService(
+-            cache=self.cache_manager.get_tokenizer_cache(),
+-            fix_initials_double_dot=self.feature_flags._flags.fix_initials_double_dot,
+-            preserve_hyphenated_case=self.feature_flags._flags.preserve_hyphenated_case
+-        )
++        self.tokenizer_service = TokenizerService(
++            cache=self.cache_manager.get_tokenizer_cache(),
++            fix_initials_double_dot=self.feature_flags._flags.fix_initials_double_dot,
++            preserve_hyphenated_case=self.feature_flags._flags.preserve_hyphenated_case
++        )
+@@
+-        tokens, improvement_traces_pre = self._apply_tokenizer_improvements(tokens, tokenization_traces, effective_flags)
++        # Refresh tokenizer flags per-request (feature rollout needs request scope)
++        if hasattr(self.tokenizer_service, "fix_initials_double_dot"):
++            self.tokenizer_service.fix_initials_double_dot = getattr(effective_flags, "fix_initials_double_dot", self.tokenizer_service.fix_initials_double_dot)
++            self.tokenizer_service.preserve_hyphenated_case = getattr(effective_flags, "preserve_hyphenated_case", self.tokenizer_service.preserve_hyphenated_case)
++
++        tokens, improvement_traces_pre = self._apply_tokenizer_improvements(tokens, tokenization_traces, effective_flags)
+@@
+-        processing_traces = (
+-            tokenization_traces
+-            + improvement_traces_pre
+-            + [str(trace) for trace in yo_traces]
+-            + [str(trace) for trace in role_tagger_traces]
+-            + filter_traces
+-            + diminutive_traces
+-            + role_traces
+-            + morph_traces
+-            + gender_traces
+-            + [str(trace) for trace in improvement_traces_post]
+-        )
++        processing_traces = (
++            tokenization_traces
++            + [trace.model_dump() if hasattr(trace, "model_dump") else trace for trace in improvement_traces_pre]
++            + [str(trace) for trace in yo_traces]
++            + [str(trace) for trace in role_tagger_traces]
++            + filter_traces
++            + diminutive_traces
++            + role_traces
++            + morph_traces
++            + gender_traces
++            + [trace.model_dump() if hasattr(trace, "model_dump") else trace for trace in improvement_traces_post]
++        )
+@@
+-        if role_tags:
+-            # Rebuild trace with FSM roles
+-            fsm_roles = [tag.role.value for tag in role_tags]
+-            # Use final_tokens to include morphology and gender processing
+-            trace = self._build_token_trace(
+-                classified_tokens,
+-                fsm_roles,
+-                final_tokens,  # Use tokens after full processing pipeline
+-                processing_traces,
+-                cache_info
+-            )
++        original_tokens = classified_tokens
++        roles_for_trace = [tag.role.value for tag in role_tags] if role_tags else roles
++        trace = self._build_token_trace(
++            original_tokens,
++            roles_for_trace,
++            final_tokens,
++            processing_traces,
++            cache_info
++        )
+@@
+-            # Add improvement traces post (like normalize_hyphen_post) to the final trace
+-            for improvement_trace in improvement_traces_post:
+-                trace.append(improvement_trace)
+-                self.logger.debug(f"Added improvement trace: {improvement_trace.rule} - {improvement_trace.token} -> {improvement_trace.output}")
++        # Merge tokenizer improvement traces (pre + post)
++        for improvement_trace in improvement_traces_pre + improvement_traces_post:
++            trace.append(improvement_trace)
++            self.logger.debug(f"Added improvement trace: {improvement_trace.rule} - {improvement_trace.token} -> {improvement_trace.output}")
+@@
+-        for tokenization_trace in tokenization_traces:
+-            if isinstance(tokenization_trace, dict) and tokenization_trace.get('rule') == 'collapse_double_dots':
+-                trace.append(TokenTrace(
+-                    token=tokenization_trace.get('before', ''),
+-                    role='tokenizer',
+-                    rule='collapse_double_dots',
+-                    output=tokenization_trace.get('after', ''),
+-                    fallback=False,
+-                    notes=f"Evidence: {tokenization_trace.get('evidence', '')}",
+-                    is_hyphenated_surname=False
+-                ))
++        for tokenization_trace in tokenization_traces:
++            if isinstance(tokenization_trace, dict) and tokenization_trace.get('rule') == 'collapse_double_dots':
++                trace.append(TokenTrace(
++                    token=tokenization_trace.get('before', ''),
++                    role='tokenizer',
++                    rule='collapse_double_dots',
++                    output=tokenization_trace.get('after', ''),
++                    fallback=False,
++                    notes=f"Evidence: {tokenization_trace.get('evidence', '')}",
++                    is_hyphenated_surname=False
++                ))
+@@
+-            for token in tokens:
+-                if '-' in token and role in ("surname", "given"):
++            for i, (token, role) in enumerate(zip(improved_tokens, roles)):
++                if '-' in token and role in ("surname", "given"):
+@@
+-        if config.language == "en" and config.enable_nameparser_en:
+-            # Skip FSM role tagger for English nameparser mode
+-            role_tags = []
+-            role_tagger_traces = []
+-            org_spans = []
+-            self.logger.debug("FSM role tagger skipped for English nameparser mode")
++        if config.language == "en" and config.enable_nameparser_en:
++            # Skip FSM role tagger for English nameparser mode
++            role_tags = []
++            role_tagger_traces = []
++            org_spans = []
++            self.logger.debug("FSM role tagger skipped for English nameparser mode")
+@@
+-        for token in tokens:
+-            if '-' in token and not token.startswith('-') and not token.endswith('-'):
+-                # Split hyphenated token into parts
+-                parts = token.split('-')
+-                processed_tokens.extend(parts)
+-            elif "'" in token and not token.startswith("'") and not token.endswith("'"):
++        for token in tokens:
++            if '-' in token and not token.startswith('-') and not token.endswith('-') and NAMEPARSER_AVAILABLE:
++                parts = token.split('-')
++                processed_tokens.extend(parts)
++            elif "'" in token and not token.startswith("'") and not token.endswith("'"):
+@@
+-            if gates['en_apostrophe'] and "'" in token:
+-                # Normalize apostrophe type (curly vs straight)
+-                normalized_apostrophe = token.replace("'", "'").replace("'", "'")
+-                if normalized_apostrophe != token:
+-                    token = normalized_apostrophe
++            if gates['en_apostrophe'] and "'" in token:
++                normalized_apostrophe = token.replace("'", "’")
++                if normalized_apostrophe != token:
++                    token = normalized_apostrophe
+@@
+-            normalized_tokens.append(token)
+-            traces.extend(current_traces)
++            normalized_tokens.append(token)
++            traces.extend(current_traces)
+
+diff --git a/src/ai_service/utils/feature_flags.py b/src/ai_service/utils/feature_flags.py
+@@
+-        use_factory_normalizer = os.getenv("AISVC_FLAG_USE_FACTORY_NORMALIZER", "false").lower() == "true"
+-        fix_initials_double_dot = os.getenv("AISVC_FLAG_FIX_INITIALS_DOUBLE_DOT", "false").lower() == "true"
+-        preserve_hyphenated_case = os.getenv("AISVC_FLAG_PRESERVE_HYPHENATED_CASE", "false").lower() == "true"
++        use_factory_normalizer = os.getenv("AISVC_FLAG_USE_FACTORY_NORMALIZER", os.getenv("USE_FACTORY_NORMALIZER", "false")).lower() == "true"
++        fix_initials_double_dot = os.getenv("AISVC_FLAG_FIX_INITIALS_DOUBLE_DOT", os.getenv("FIX_INITIALS_DOUBLE_DOT", "false")).lower() == "true"
++        preserve_hyphenated_case = os.getenv("AISVC_FLAG_PRESERVE_HYPHENATED_CASE", os.getenv("PRESERVE_HYPHENATED_CASE", "false")).lower() == "true"
+@@
+-        enforce_nominative = os.getenv("AISVC_FLAG_ENFORCE_NOMINATIVE", "true").lower() == "true"
++        enforce_nominative = os.getenv("AISVC_FLAG_ENFORCE_NOMINATIVE", os.getenv("ENFORCE_NOMINATIVE", "true")).lower() == "true"
+@@
+-        ascii_fastpath = os.getenv("AISVC_FLAG_ASCII_FASTPATH", "true").lower() == "true"
++        ascii_fastpath = os.getenv("AISVC_FLAG_ASCII_FASTPATH", os.getenv("ASCII_FASTPATH", "true")).lower() == "true"
++
++        require_tin_dob_gate = os.getenv("AISVC_FLAG_REQUIRE_TIN_DOB_GATE", "true").lower() == "true"
+@@
+-            ascii_fastpath=ascii_fastpath,
++            ascii_fastpath=ascii_fastpath,
++            require_tin_dob_gate=require_tin_dob_gate,
+
+diff --git a/src/ai_service/layers/signals/extractors/identifier_extractor.py b/src/ai_service/layers/signals/extractors/identifier_extractor.py
+@@
+-        self._person_id_types = {"inn_ua", "inn_ru", "snils", "ssn", "passport_ua", "passport_rf"}
++        self._person_id_types = {"inn", "inn_ua", "inn_ru", "snils", "ssn", "passport_ua", "passport_rf"}
+@@
+-        self._org_id_types = {
+-            "edrpou",
+-            "inn_ru",
++        self._org_id_types = {
++            "edrpou",
++            "inn",
++            "inn_ru",
+             "ogrn",
+@@
+-                if pattern.type not in id_types:
++                if pattern.type not in id_types:
+                     continue
+
+diff --git a/src/ai_service/core/decision_engine.py b/src/ai_service/core/decision_engine.py
+@@
+-        return DecisionOutput(
+-            risk=risk,
+-            score=score,
+-            reasons=reasons,
+-            details=details
+-        )
++        if self._should_request_additional_fields(safe_input):
++            details.setdefault("required_additional_fields", ["TIN", "DOB"])
++            if "need_additional_fields" not in reasons:
++                reasons.append("need_additional_fields")
++            risk = RiskLevel.MEDIUM
++
++        return DecisionOutput(
++            risk=risk,
++            score=score,
++            reasons=reasons,
++            details=details
++        )
+@@
+     def _safe_similarity(self, similarity: Optional[SimilarityInfo]) -> SimilarityInfo:
+         """Safely extract similarity info with defaults for None values"""
+@@
+         return SimilarityInfo(
+             cos_top=similarity.cos_top,
+             cos_p95=similarity.cos_p95
+         )
++
++    def _should_request_additional_fields(self, inp: DecisionInput) -> bool:
++        if not getattr(self.config, "require_tin_dob_gate", True):
++            return False
++        # Require review when we have a strong name match but lack DOB or TIN matches
++        strong_name = inp.signals.person_confidence >= 0.7
++        missing_dob = not inp.signals.date_match
++        missing_id = not inp.signals.id_match
++        return strong_name and (missing_dob or missing_id)
+
+diff --git a/src/ai_service/utils/response_formatter.py b/src/ai_service/utils/response_formatter.py
+@@
+-    return decision.details
++    details = decision.details.copy()
++    if details.get("required_additional_fields"):
++        details.setdefault("review_required", True)
++    return details
+
+diff --git a/src/ai_service/layers/normalization/normalization_service_legacy.py b/src/ai_service/layers/normalization/normalization_service_legacy.py
++"""Shim for legacy normalization service imports used by parity harness."""
++
++import asyncio
++from .normalization_service import NormalizationService
++from ..adapters.legacy_normalization_adapter import LegacyNormalizationAdapter
++
++
++class NormalizationService:
++    """Backwards-compatible wrapper exposing legacy sync/async APIs."""
++
++    def __init__(self):
++        self._modern = NormalizationService()
++        self._adapter = LegacyNormalizationAdapter(self._modern)
++
++    def normalize(self, text, language="auto", remove_stop_words=True, preserve_names=True, **kwargs):
++        """Synchronous legacy API entry point."""
++        loop = asyncio.new_event_loop()
++        try:
++            return loop.run_until_complete(
++                self._adapter.normalize_legacy(
++                    text=text,
++                    language=language,
++                    remove_stop_words=remove_stop_words,
++                    preserve_names=preserve_names,
++                    **kwargs
++                )
++            )
++        finally:
++            loop.close()
++
++    async def normalize_async(self, *args, **kwargs):
++        return await self._modern.normalize_async(*args, **kwargs)
+
+diff --git a/requirements-dev.txt b/requirements-dev.txt
+@@
+ nameparser>=1.1
++rapidfuzz>=3.5
++hypothesis>=6.112

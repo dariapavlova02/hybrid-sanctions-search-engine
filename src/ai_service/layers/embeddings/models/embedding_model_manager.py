@@ -11,17 +11,38 @@ from typing import Dict, Optional, List, Any, Union
 from concurrent.futures import ThreadPoolExecutor
 import gc
 
-try:
-    import torch
-    TORCH_AVAILABLE = True
-except ImportError:
-    TORCH_AVAILABLE = False
+# Heavy ML dependencies will be imported lazily when needed
+TORCH_AVAILABLE = None  # Will be checked lazily
+SENTENCE_TRANSFORMERS_AVAILABLE = None  # Will be checked lazily
 
-try:
-    from sentence_transformers import SentenceTransformer
-    SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
+def _check_torch_availability():
+    """Check if torch is available, with caching"""
+    global TORCH_AVAILABLE
+    if TORCH_AVAILABLE is None:
+        try:
+            import torch
+            TORCH_AVAILABLE = True
+        except ImportError:
+            TORCH_AVAILABLE = False
+    return TORCH_AVAILABLE
+
+def _check_sentence_transformers_availability():
+    """Check if sentence-transformers is available, with caching"""
+    global SENTENCE_TRANSFORMERS_AVAILABLE
+    if SENTENCE_TRANSFORMERS_AVAILABLE is None:
+        try:
+            import sentence_transformers
+            SENTENCE_TRANSFORMERS_AVAILABLE = True
+        except ImportError:
+            SENTENCE_TRANSFORMERS_AVAILABLE = False
+    return SENTENCE_TRANSFORMERS_AVAILABLE
+
+def _get_torch():
+    """Get torch module with lazy import"""
+    if not _check_torch_availability():
+        raise ImportError("torch not available")
+    import torch
+    return torch
 
 from .model_config import ModelConfig, get_model_config
 
@@ -38,7 +59,7 @@ class EmbeddingModelManager:
     ):
         """
         Initialize model manager
-        
+
         Args:
             max_models: Maximum number of models to keep in memory
             enable_gpu: Enable GPU acceleration if available
@@ -47,7 +68,7 @@ class EmbeddingModelManager:
         """
         self.logger = logging.getLogger(__name__)
         self.max_models = max_models
-        self.enable_gpu = enable_gpu and TORCH_AVAILABLE
+        self.enable_gpu = enable_gpu and _check_torch_availability()
         self.cache_dir = cache_dir
         self.thread_pool_size = thread_pool_size
         
@@ -68,10 +89,11 @@ class EmbeddingModelManager:
         """Detect best available device"""
         if not self.enable_gpu:
             return "cpu"
-        
-        if not TORCH_AVAILABLE:
+
+        if not _check_torch_availability():
             return "cpu"
-        
+
+        torch = _get_torch()
         if torch.cuda.is_available():
             return "cuda"
         elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
@@ -103,16 +125,19 @@ class EmbeddingModelManager:
         """Load model with configuration"""
         if config is None:
             config = get_model_config(model_name)
-        
+
         self.logger.info(f"Loading model: {model_name}")
-        
+
         try:
-            if not SENTENCE_TRANSFORMERS_AVAILABLE:
+            if not _check_sentence_transformers_availability():
                 raise ImportError("sentence-transformers not available")
-            
+
+            # Lazy import of sentence-transformers
+            from sentence_transformers import SentenceTransformer
+
             # Configure device
             device = config.device if config.device != "cpu" else self.device
-            
+
             # Load model
             model = SentenceTransformer(
                 config.model_path or model_name,

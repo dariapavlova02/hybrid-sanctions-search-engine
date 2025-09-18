@@ -16,6 +16,7 @@ class IdentifierExtractor(BaseExtractor):
         # ID type categories
         self._org_id_types = {
             "edrpou",
+            "inn",
             "inn_ru",
             "ogrn",
             "ogrnip",
@@ -27,7 +28,7 @@ class IdentifierExtractor(BaseExtractor):
             "swift_bic",
         }
 
-        self._person_id_types = {"inn_ua", "inn_ru", "snils", "ssn", "passport_ua", "passport_rf"}
+        self._person_id_types = {"inn", "inn_ua", "inn_ru", "snils", "ssn", "passport_ua", "passport_rf"}
 
     def extract_organization_ids(self, text: str) -> List[Dict[str, Any]]:
         """Extract organization identifiers from text."""

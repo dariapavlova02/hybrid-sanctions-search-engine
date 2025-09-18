@@ -2,6 +2,6 @@
 
 from __future__ import annotations
 
-from ai_service.config.feature_flags import FeatureFlags as NormalizationFlags
+from ai_service.utils.feature_flags import FeatureFlags as NormalizationFlags
 
 __all__ = ["NormalizationFlags"]

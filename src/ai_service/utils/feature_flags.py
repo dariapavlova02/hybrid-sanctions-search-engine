@@ -37,33 +37,38 @@ class FeatureFlags:
     debug_tracing: bool = False  # Enable debug tracing
 
     # New feature flags for safe rollout
-    use_factory_normalizer: bool = False
+    use_factory_normalizer: bool = True  # Default to factory implementation
     fix_initials_double_dot: bool = False  # Collapse И.. → И.
     preserve_hyphenated_case: bool = False  # Петрова-сидорова → Петрова-Сидорова
     strict_stopwords: bool = False  # Filter stopwords from tokens
-    enable_ac_tier0: bool = False
-    enable_vector_fallback: bool = False
+    enable_ac_tier0: bool = True
+    enable_vector_fallback: bool = True
     
     # English-specific flags
-    enable_nameparser_en: bool = False  # Enable nameparser for English name parsing
-    enable_en_nicknames: bool = False  # Enable English nickname resolution
-    
+    enable_nameparser_en: bool = True  # Enable nameparser for English name parsing
+    enable_en_nicknames: bool = True  # Enable English nickname resolution
+
+    # Validation and NER flags
+    enable_spacy_ner: bool = False  # Enable spaCy NER processing
+    enable_spacy_uk_ner: bool = False  # Enable spaCy Ukrainian NER
+    enable_spacy_en_ner: bool = False  # Enable spaCy English NER
+    enable_fsm_tuned_roles: bool = False  # Use FSM-tuned role detection
+    enable_enhanced_diminutives: bool = True  # Enhanced diminutive handling
+    enable_enhanced_gender_rules: bool = False  # Enhanced gender rule processing
+    preserve_feminine_suffix_uk: bool = False  # Preserve Ukrainian feminine suffixes
+    en_use_nameparser: bool = True  # Use nameparser for English names
+    enable_en_nickname_expansion: bool = True  # Expand English nicknames
+    filter_titles_suffixes: bool = True  # Filter out titles and suffixes from EN names
+
+    # Business gates
+    require_tin_dob_gate: bool = True  # Require TIN/DOB for strong name matches
+
     # Nominative and gender enforcement flags
     enforce_nominative: bool = True
     preserve_feminine_surnames: bool = True
     
     # ASCII fastpath optimization
-    ascii_fastpath: bool = False
-    
-    # Validation flags (default OFF, for validation only)
-    enable_spacy_ner: bool = False
-    enable_nameparser_en: bool = False
-    strict_stopwords: bool = False
-    fsm_tuned_roles: bool = False
-    enhanced_diminutives: bool = False
-    enhanced_gender_rules: bool = False
-    enable_ac_tier0: bool = False
-    enable_vector_fallback: bool = False
+    enable_ascii_fastpath: bool = True
 
     # Diminutive resolution
     use_diminutives_dictionary_only: bool = False
@@ -85,17 +90,22 @@ class FeatureFlags:
             "strict_stopwords": self.strict_stopwords,
             "enable_ac_tier0": self.enable_ac_tier0,
             "enable_vector_fallback": self.enable_vector_fallback,
+            "enable_nameparser_en": self.enable_nameparser_en,
+            "enable_en_nicknames": self.enable_en_nicknames,
+            "enable_spacy_ner": self.enable_spacy_ner,
+            "enable_spacy_uk_ner": self.enable_spacy_uk_ner,
+            "enable_spacy_en_ner": self.enable_spacy_en_ner,
+            "enable_fsm_tuned_roles": self.enable_fsm_tuned_roles,
+            "enable_enhanced_diminutives": self.enable_enhanced_diminutives,
+            "enable_enhanced_gender_rules": self.enable_enhanced_gender_rules,
+            "preserve_feminine_suffix_uk": self.preserve_feminine_suffix_uk,
+            "en_use_nameparser": self.en_use_nameparser,
+            "enable_en_nickname_expansion": self.enable_en_nickname_expansion,
+            "filter_titles_suffixes": self.filter_titles_suffixes,
+            "require_tin_dob_gate": self.require_tin_dob_gate,
             "enforce_nominative": self.enforce_nominative,
             "preserve_feminine_surnames": self.preserve_feminine_surnames,
-            "ascii_fastpath": self.ascii_fastpath,
-            "enable_spacy_ner": self.enable_spacy_ner,
-            "enable_nameparser_en": self.enable_nameparser_en,
-            "strict_stopwords": self.strict_stopwords,
-            "fsm_tuned_roles": self.fsm_tuned_roles,
-            "enhanced_diminutives": self.enhanced_diminutives,
-            "enhanced_gender_rules": self.enhanced_gender_rules,
-            "enable_ac_tier0": self.enable_ac_tier0,
-            "enable_vector_fallback": self.enable_vector_fallback,
+            "enable_ascii_fastpath": self.enable_ascii_fastpath,
         }
 
 class FeatureFlagManager:
@@ -130,17 +140,20 @@ class FeatureFlagManager:
         enable_dual = os.getenv("ENABLE_DUAL_PROCESSING", "false").lower() == "true"
         log_choice = os.getenv("LOG_IMPLEMENTATION_CHOICE", "true").lower() == "true"
 
-        # New feature flags for safe rollout
+        # New feature flags for safe rollout with legacy ENV key fallback
         use_factory_normalizer = os.getenv("AISVC_FLAG_USE_FACTORY_NORMALIZER", "false").lower() == "true"
-        fix_initials_double_dot = os.getenv("AISVC_FLAG_FIX_INITIALS_DOUBLE_DOT", "false").lower() == "true"
-        preserve_hyphenated_case = os.getenv("AISVC_FLAG_PRESERVE_HYPHENATED_CASE", "false").lower() == "true"
+        fix_initials_double_dot = os.getenv("AISVC_FLAG_FIX_INITIALS_DOUBLE_DOT", os.getenv("FIX_INITIALS_DOUBLE_DOT", "false")).lower() == "true"
+        preserve_hyphenated_case = os.getenv("AISVC_FLAG_PRESERVE_HYPHENATED_CASE", os.getenv("PRESERVE_HYPHENATED_CASE", "false")).lower() == "true"
         strict_stopwords = os.getenv("AISVC_FLAG_STRICT_STOPWORDS", "false").lower() == "true"
-        enable_ac_tier0 = os.getenv("AISVC_FLAG_ENABLE_AC_TIER0", "false").lower() == "true"
-        enable_vector_fallback = os.getenv("AISVC_FLAG_ENABLE_VECTOR_FALLBACK", "false").lower() == "true"
+        enable_ac_tier0 = os.getenv("AISVC_FLAG_ENABLE_AC_TIER0", "true").lower() == "true"
+        enable_vector_fallback = os.getenv("AISVC_FLAG_ENABLE_VECTOR_FALLBACK", "true").lower() == "true"
         
         # Nominative and gender enforcement flags
         enforce_nominative = os.getenv("AISVC_FLAG_ENFORCE_NOMINATIVE", "true").lower() == "true"
         preserve_feminine_surnames = os.getenv("AISVC_FLAG_PRESERVE_FEMININE_SURNAMES", "true").lower() == "true"
+
+        # ASCII fastpath optimization
+        ascii_fastpath = os.getenv("AISVC_FLAG_ASCII_FASTPATH", "true").lower() == "true"
 
         # Use default values for diminutive features
         DIMINUTIVE_FEATURE_DEFAULTS = type('DIMINUTIVE_FEATURE_DEFAULTS', (), {
@@ -189,6 +202,7 @@ class FeatureFlagManager:
             enable_vector_fallback=enable_vector_fallback,
             enforce_nominative=enforce_nominative,
             preserve_feminine_surnames=preserve_feminine_surnames,
+            enable_ascii_fastpath=ascii_fastpath,
             use_diminutives_dictionary_only=use_dim_dict_only,
             diminutives_allow_cross_lang=dim_cross_lang,
             language_overrides=language_overrides,

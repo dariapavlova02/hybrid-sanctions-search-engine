@@ -45,6 +45,10 @@ def format_processing_result(result: UnifiedProcessingResult) -> Dict[str, Any]:
         "decision_reasons": _get_decision_reasons(result.decision),
         "decision_details": _get_decision_details(result.decision),
         
+        # Business gates
+        "review_required": _get_review_required(result.decision),
+        "required_additional_fields": _get_required_additional_fields(result.decision),
+        
         # Raw evidence (for debugging and analysis)
         "smart_filter": _extract_smart_filter_info(result),
         "signals": _extract_signals_summary(result),
@@ -232,5 +236,21 @@ def format_error_response(error_message: str, error_code: str = "processing_erro
             }
         },
         "processing_time": 0.0,
-        "errors": [error_message]
+        "errors": [error_message],
+        "review_required": False,
+        "required_additional_fields": []
     }
+
+
+def _get_review_required(decision: Optional[DecisionOutput]) -> bool:
+    """Extract review_required from decision output."""
+    if not decision:
+        return False
+    return getattr(decision, 'review_required', False)
+
+
+def _get_required_additional_fields(decision: Optional[DecisionOutput]) -> List[str]:
+    """Extract required_additional_fields from decision output."""
+    if not decision:
+        return []
+    return getattr(decision, 'required_additional_fields', [])

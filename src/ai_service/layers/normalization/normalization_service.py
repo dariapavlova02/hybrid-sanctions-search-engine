@@ -87,7 +87,7 @@ class NormalizationService:
             'successful_requests': 0,
             'failed_requests': 0,
             'avg_processing_time': 0.0,
-            'languages_detected': {'ru': 0, 'uk': 0, 'en': 0, 'unknown': 0},
+            'languages_detected': {'ru': 0, 'uk': 0, 'en': 0, 'mixed': 0, 'unknown': 0},
             'implementation_usage': {'factory': 0, 'legacy': 0, 'dual': 0}
         }
 
@@ -163,28 +163,27 @@ class NormalizationService:
         # Build trace entries
         trace_entries = []
         
-        if stopword_count > 0:
-            trace_entries.append({
-                "type": "role",
-                "action": "stopword_filtered",
-                "count": stopword_count
-            })
+        # Note: Remove non-TokenTrace entries from trace to avoid validation errors
+        # Stopword and organization filtering information is already captured in
+        # individual token trace entries via their notes and rules
+        #
+        # if stopword_count > 0:
+        #     trace_entries.append({
+        #         "type": "role",
+        #         "action": "stopword_filtered",
+        #         "count": stopword_count
+        #     })
+        #
+        # for start_idx, end_idx, span_text in org_spans:
+        #     trace_entries.append({
+        #         "type": "role",
+        #         "action": "org_span",
+        #         "form": tokens[start_idx] if start_idx < len(tokens) else "",
+        #         "span": span_text
+        #     })
         
-        for start_idx, end_idx, span_text in org_spans:
-            trace_entries.append({
-                "type": "role",
-                "action": "org_span",
-                "form": tokens[start_idx] if start_idx < len(tokens) else "",
-                "span": span_text
-            })
-        
-        # If strict_stopwords is enabled, filter out stopwords and organizations
-        if feature_flags and feature_flags.strict_stopwords:
-            filtered_tokens = person_candidates
-            filtered_text = " ".join(filtered_tokens)
-        else:
-            # Keep all tokens but mark roles in trace
-            filtered_text = text
+        # Keep all tokens but mark roles in trace
+        filtered_text = text
         
         return filtered_text, trace_entries
 
@@ -199,7 +198,6 @@ class NormalizationService:
         user_id: Optional[str] = None,
         request_context: Optional[Dict] = None,
         # Ukrainian-specific flags
-        strict_stopwords: bool = False,
         preserve_feminine_suffix_uk: bool = False,
         enable_spacy_uk_ner: bool = False,
         # English-specific flags
@@ -224,7 +222,6 @@ class NormalizationService:
             enable_advanced_features: Enable morphology and advanced processing
             user_id: User ID for consistent feature flag rollout
             request_context: Additional context for implementation selection
-            strict_stopwords: Use strict stopword filtering for initials (Ukrainian)
             preserve_feminine_suffix_uk: Preserve Ukrainian feminine suffixes (-ська/-цька)
             enable_spacy_uk_ner: Enable spaCy Ukrainian NER
             en_use_nameparser: Use nameparser for English names
@@ -249,7 +246,14 @@ class NormalizationService:
 
             # Language detection
             detected_language = self._detect_language(text, language)
-            self._stats['languages_detected'][detected_language] += 1
+            # Safe increment for languages_detected stats
+            if detected_language in self._stats['languages_detected']:
+                self._stats['languages_detected'][detected_language] += 1
+            else:
+                # Log unexpected language for monitoring
+                self.logger.warning(f"Unexpected language detected: {detected_language}")
+                self._stats['languages_detected'].setdefault(detected_language, 0)
+                self._stats['languages_detected'][detected_language] += 1
 
             # Use passed feature flags or fall back to global flags
             effective_flags = feature_flags or self.feature_flags._flags
@@ -275,7 +279,7 @@ class NormalizationService:
                 result = await self._dual_process(
                     filtered_text, detected_language, remove_stop_words,
                     preserve_names, enable_advanced_features,
-                    strict_stopwords, preserve_feminine_suffix_uk, enable_spacy_uk_ner,
+                    preserve_feminine_suffix_uk, enable_spacy_uk_ner,
                     en_use_nameparser, enable_en_nickname_expansion, enable_spacy_en_ner,
                     ru_yo_strategy, enable_ru_nickname_expansion, enable_spacy_ru_ner,
                     effective_flags
@@ -285,7 +289,7 @@ class NormalizationService:
                 result = await self._process_with_factory(
                     filtered_text, detected_language, remove_stop_words,
                     preserve_names, enable_advanced_features,
-                    strict_stopwords, preserve_feminine_suffix_uk, enable_spacy_uk_ner,
+                    preserve_feminine_suffix_uk, enable_spacy_uk_ner,
                     en_use_nameparser, enable_en_nickname_expansion, enable_spacy_en_ner,
                     ru_yo_strategy, enable_ru_nickname_expansion, enable_spacy_ru_ner,
                     effective_flags
@@ -345,7 +349,6 @@ class NormalizationService:
         remove_stop_words: bool = True,
         preserve_names: bool = True,
         enable_advanced_features: bool = True,
-        strict_stopwords: bool = False,
         preserve_feminine_suffix_uk: bool = False,
         enable_spacy_uk_ner: bool = False,
     ) -> NormalizationResult:
@@ -370,7 +373,6 @@ class NormalizationService:
                         remove_stop_words=remove_stop_words,
                         preserve_names=preserve_names,
                         enable_advanced_features=enable_advanced_features,
-                        strict_stopwords=strict_stopwords,
                         preserve_feminine_suffix_uk=preserve_feminine_suffix_uk,
                         enable_spacy_uk_ner=enable_spacy_uk_ner,
                     ))
@@ -383,7 +385,6 @@ class NormalizationService:
                     remove_stop_words=remove_stop_words,
                     preserve_names=preserve_names,
                     enable_advanced_features=enable_advanced_features,
-                    strict_stopwords=strict_stopwords,
                     preserve_feminine_suffix_uk=preserve_feminine_suffix_uk,
                     enable_spacy_uk_ner=enable_spacy_uk_ner,
                 ))
@@ -395,7 +396,6 @@ class NormalizationService:
                 remove_stop_words=remove_stop_words,
                 preserve_names=preserve_names,
                 enable_advanced_features=enable_advanced_features,
-                strict_stopwords=strict_stopwords,
                 preserve_feminine_suffix_uk=preserve_feminine_suffix_uk,
                 enable_spacy_uk_ner=enable_spacy_uk_ner,
             ))
@@ -407,7 +407,6 @@ class NormalizationService:
         remove_stop_words: bool = True,
         preserve_names: bool = True,
         enable_advanced_features: bool = True,
-        strict_stopwords: bool = False,
         preserve_feminine_suffix_uk: bool = False,
         enable_spacy_uk_ner: bool = False,
     ) -> NormalizationResult:
@@ -418,7 +417,6 @@ class NormalizationService:
             remove_stop_words=remove_stop_words,
             preserve_names=preserve_names,
             enable_advanced_features=enable_advanced_features,
-            strict_stopwords=strict_stopwords,
             preserve_feminine_suffix_uk=preserve_feminine_suffix_uk,
             enable_spacy_uk_ner=enable_spacy_uk_ner,
         )
@@ -631,7 +629,7 @@ class NormalizationService:
                 with path.open("r", encoding="utf-8") as handle:
                     raw = json.load(handle)
                 maps[lang] = {
-                    unicodedata.normalize("NFKC", key).lower(): unicodedata.normalize("NFKC", value).lower()
+                    unicodedata.normalize("NFC", key).lower(): unicodedata.normalize("NFC", value).lower()
                     for key, value in raw.items()
                 }
             except json.JSONDecodeError as exc:
@@ -644,7 +642,7 @@ class NormalizationService:
             try:
                 from ...data.dicts.english_names import NICKNAMES_EN
                 maps['en'] = {
-                    unicodedata.normalize("NFKC", key).lower(): unicodedata.normalize("NFKC", value).lower()
+                    unicodedata.normalize("NFC", key).lower(): unicodedata.normalize("NFC", value).lower()
                     for key, value in NICKNAMES_EN.items()
                 }
             except ImportError:
@@ -662,7 +660,6 @@ class NormalizationService:
         remove_stop_words: bool,
         preserve_names: bool,
         enable_advanced_features: bool,
-        strict_stopwords: bool = False,
         preserve_feminine_suffix_uk: bool = False,
         enable_spacy_uk_ner: bool = False,
         en_use_nameparser: bool = True,
@@ -679,7 +676,6 @@ class NormalizationService:
             preserve_names=preserve_names,
             enable_advanced_features=enable_advanced_features,
             language=language,
-            strict_stopwords=strict_stopwords,
             preserve_feminine_suffix_uk=preserve_feminine_suffix_uk,
             enable_spacy_uk_ner=enable_spacy_uk_ner,
             en_use_nameparser=en_use_nameparser,
@@ -727,7 +723,6 @@ class NormalizationService:
         remove_stop_words: bool,
         preserve_names: bool,
         enable_advanced_features: bool,
-        strict_stopwords: bool = False,
         preserve_feminine_suffix_uk: bool = False,
         enable_spacy_uk_ner: bool = False,
         en_use_nameparser: bool = True,
@@ -744,7 +739,7 @@ class NormalizationService:
         # Run both implementations concurrently
         factory_task = asyncio.create_task(
             self._process_with_factory(text, language, remove_stop_words, preserve_names, enable_advanced_features,
-                                     strict_stopwords, preserve_feminine_suffix_uk, enable_spacy_uk_ner,
+                                     preserve_feminine_suffix_uk, enable_spacy_uk_ner,
                                      en_use_nameparser, enable_en_nickname_expansion, enable_spacy_en_ner,
                                      ru_yo_strategy, enable_ru_nickname_expansion, enable_spacy_ru_ner, feature_flags)
         )

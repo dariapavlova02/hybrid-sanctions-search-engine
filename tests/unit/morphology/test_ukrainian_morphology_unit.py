@@ -3,7 +3,6 @@ Unit tests for UkrainianMorphologyAnalyzer using pytest fixtures
 """
 
 import pytest
-from ai_service.layers.normalization.morphology.base_morphology import MorphologicalAnalysis
 from unittest.mock import Mock, patch, MagicMock
 
 from src.ai_service.layers.normalization.morphology.ukrainian_morphology import UkrainianMorphologyAnalyzer
@@ -138,18 +137,17 @@ class TestUkrainianMorphologyAnalyzer:
         # Should return normalized lemma in lowercase
         assert result == test_name.lower()
 
-    def test_analyze_word_special_name(self):
-        """Test analyze_word for special name"""
+    def test_is_known_word_special_name(self):
+        """Test is_known_word for special name"""
         test_name = "Петро"
         
-        result = self.analyzer.analyze_word(test_name)
+        result = self.analyzer.is_known_word(test_name)
         
-        # Should return analysis results for special names
-        assert len(result) > 0
-        assert isinstance(result[0], MorphologicalAnalysis)
+        # Should return True for special names
+        assert result is True
 
-    def test_analyze_word_unknown_name(self):
-        """Test analyze_word for unknown name"""
+    def test_is_known_word_unknown_name(self):
+        """Test is_known_word for unknown name"""
         test_name = "Тест"
         
         # Mock pymorphy3 response
@@ -159,11 +157,10 @@ class TestUkrainianMorphologyAnalyzer:
         
         self.mock_pymorphy.parse.return_value = [mock_parse]
         
-        result = self.analyzer.analyze_word(test_name)
+        result = self.analyzer.is_known_word(test_name)
         
-        # Should return analysis results even for unknown names
-        assert len(result) > 0
-        assert isinstance(result[0], MorphologicalAnalysis)
+        # Should return False for unknown names
+        assert result is False
 
     def test_get_gender_special_name(self):
         """Test gender detection for special name"""

@@ -233,22 +233,24 @@ class InputValidator:
                 # Detect mixed scripts or suspicious homoglyph usage
                 has_cyrillic = re.search(r"[А-Яа-яІіЇїЄєҐґ]", text) is not None
                 has_latin = re.search(r"[A-Za-z]", text) is not None
-                
-                # Apply homoglyph replacement - always normalize to Latin for consistency
-                if has_cyrillic or has_latin:
-                    # Replace Cyrillic homoglyphs with Latin equivalents
-                    cyrillic_to_latin = {
-                        "а": "a", "о": "o", "р": "p", "е": "e", "у": "y", 
-                        "х": "x", "с": "c", "к": "k", "м": "m", "н": "h", 
-                        "т": "t", "в": "b"
+
+                # Only apply homoglyph replacement for truly mixed scripts or suspicious patterns
+                # Don't convert legitimate pure Cyrillic text to Latin
+                if has_cyrillic and has_latin:
+                    # Mixed script detected - apply selective homoglyph normalization
+                    # Only replace obviously suspicious characters that might be intentional obfuscation
+                    suspicious_cyrillic_to_latin = {
+                        # Only replace the most common homoglyphs that are often used for spoofing
+                        "а": "a", "о": "o", "р": "p", "е": "e"
                     }
-                    for homoglyph, replacement in cyrillic_to_latin.items():
+                    for homoglyph, replacement in suspicious_cyrillic_to_latin.items():
                         text = text.replace(homoglyph, replacement)
-                    
-                    # Also apply digit-to-letter mappings
+                elif has_latin and not has_cyrillic:
+                    # Pure Latin - only apply digit-to-letter mappings for obvious spoofing
                     digit_mappings = {"0": "o", "1": "l", "3": "e", "5": "s"}
                     for homoglyph, replacement in digit_mappings.items():
                         text = text.replace(homoglyph, replacement)
+                # If has_cyrillic and not has_latin: leave pure Cyrillic text alone
             except Exception:
                 # Best-effort; skip on regex issues
                 pass

@@ -21,7 +21,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 from ..config import SERVICE_CONFIG
-from ..config.feature_flags import FeatureFlags
+from ..utils.feature_flags import FeatureFlags
 from ..contracts.base_contracts import (
     EmbeddingsServiceInterface,
     LanguageDetectionInterface,
@@ -213,7 +213,7 @@ class UnifiedOrchestrator:
 
         if not validation_result.get("should_process", True):
             if self.metrics_service:
-                self.metrics_service.increment_counter('processing.validation.failed')
+                self.metrics_service.record_counter('processing.validation.failed', 1)
             return self._create_early_response(context, "Input validation failed", start_time)
 
         return None  # Continue processing
@@ -249,7 +249,7 @@ class UnifiedOrchestrator:
 
             if not context.should_process and self.allow_smart_filter_skip:
                 if self.metrics_service:
-                    self.metrics_service.increment_counter('processing.smart_filter.skipped')
+                    self.metrics_service.record_counter('processing.smart_filter.skipped', 1)
                 return self._create_filtered_response(
                     context, filter_result, start_time
                 )
@@ -288,7 +288,7 @@ class UnifiedOrchestrator:
         if self.metrics_service:
             self.metrics_service.record_timer('processing.layer.language_detection', time.time() - layer_start)
             self.metrics_service.record_histogram('language_detection.confidence', context.language_confidence)
-            self.metrics_service.increment_counter(f'language_detection.detected.{context.language}')
+            self.metrics_service.record_counter(f'language_detection.detected.{context.language}', 1)
 
     async def _handle_unicode_normalization_layer(
         self, context: ProcessingContext
@@ -367,19 +367,11 @@ class UnifiedOrchestrator:
             from ..utils.flag_propagation import create_flag_context
             flag_context = create_flag_context(feature_flags, "normalization", True)
             
-            # Add flag reasons to trace
-            if hasattr(norm_result, 'trace') and isinstance(norm_result.trace, list):
-                for reason in flag_context.get_reasons():
-                    norm_result.trace.append({"type": "flag_reason", "value": reason, "scope": "normalization"})
+            # Note: Flag reasons are logged separately, not added to trace
+            # as trace should only contain TokenTrace objects
 
-        flag_entry = {"type": "flags", "value": feature_flags.to_dict(), "scope": "request"}
-        trace_payload = getattr(norm_result, 'trace', None)
-        if isinstance(trace_payload, list):
-            trace_payload.append(flag_entry)
-        elif trace_payload is None:
-            norm_result.trace = [flag_entry]
-        else:
-            norm_result.trace = list(trace_payload) + [flag_entry]
+        # Note: Feature flags are logged separately, not added to trace
+        # as trace should only contain TokenTrace objects
 
         if self.metrics_service:
             self.metrics_service.record_timer('processing.layer.normalization', time.time() - layer_start)
@@ -389,7 +381,7 @@ class UnifiedOrchestrator:
 
         if not norm_result.success:
             if self.metrics_service:
-                self.metrics_service.increment_counter('processing.normalization.failed')
+                self.metrics_service.record_counter('processing.normalization.failed', 1)
             errors.extend(norm_result.errors)
 
         return norm_result
@@ -463,7 +455,7 @@ class UnifiedOrchestrator:
             except Exception as e:
                 logger.warning(f"Variant generation failed: {e}")
                 if self.metrics_service:
-                    self.metrics_service.increment_counter('processing.variants.failed')
+                    self.metrics_service.record_counter('processing.variants.failed', 1)
                 errors.append(f"Variants: {str(e)}")
 
         return variants
@@ -502,7 +494,7 @@ class UnifiedOrchestrator:
             except Exception as e:
                 logger.warning(f"Embedding generation failed: {e}")
                 if self.metrics_service:
-                    self.metrics_service.increment_counter('processing.embeddings.failed')
+                    self.metrics_service.record_counter('processing.embeddings.failed', 1)
                 errors.append(f"Embeddings: {str(e)}")
 
         return embeddings
@@ -569,11 +561,11 @@ class UnifiedOrchestrator:
                 if self.metrics_service:
                     self.metrics_service.record_timer('processing.layer.decision', time.time() - layer_start)
                     self.metrics_service.record_histogram('decision.score', decision_result.score)
-                    self.metrics_service.increment_counter(f'decision.result.{decision_result.risk.value.lower()}')
+                    self.metrics_service.record_counter(f'decision.result.{decision_result.risk.value.lower()}', 1)
             except Exception as e:
                 logger.warning(f"Decision engine failed: {e}")
                 if self.metrics_service:
-                    self.metrics_service.increment_counter('processing.decision.failed')
+                    self.metrics_service.record_counter('processing.decision.failed', 1)
                 errors.append(f"Decision engine: {str(e)}")
 
         return decision_result
@@ -653,8 +645,8 @@ class UnifiedOrchestrator:
 
         # Initialize metrics collection
         if self.metrics_service:
-            self.metrics_service.increment_counter('processing.requests.total')
-            self.metrics_service.set_gauge('processing.requests.active', 1)
+            self.metrics_service.record_counter('processing.requests.total', 1)
+            self.metrics_service.record_gauge('processing.requests.active', 1)
 
         try:
             # ================================================================
@@ -735,11 +727,11 @@ class UnifiedOrchestrator:
             # Update final metrics
             if self.metrics_service:
                 self.metrics_service.record_timer('processing.total_time', processing_time)
-                self.metrics_service.set_gauge('processing.requests.active', -1)  # Decrement active requests
+                self.metrics_service.record_gauge('processing.requests.active', -1)  # Decrement active requests
                 if len(errors) == 0:
-                    self.metrics_service.increment_counter('processing.requests.successful')
+                    self.metrics_service.record_counter('processing.requests.successful', 1)
                 else:
-                    self.metrics_service.increment_counter('processing.requests.failed')
+                    self.metrics_service.record_counter('processing.requests.failed', 1)
                     self.metrics_service.record_histogram('processing.error_count', self._safe_len(errors))
 
             # Warn if processing is slow
@@ -748,7 +740,7 @@ class UnifiedOrchestrator:
                     f"Slow processing: {processing_time:.3f}s for text: {text[:50]}..."
                 )
                 if self.metrics_service:
-                    self.metrics_service.increment_counter('processing.slow_requests')
+                    self.metrics_service.record_counter('processing.slow_requests', 1)
 
             # Update legacy stats
             self.update_stats(processing_time, cache_hit=False, error=self._safe_len(errors) > 0)
@@ -785,9 +777,9 @@ class UnifiedOrchestrator:
 
             # Update error metrics
             if self.metrics_service:
-                self.metrics_service.increment_counter('processing.requests.failed')
-                self.metrics_service.increment_counter('processing.exceptions')
-                self.metrics_service.set_gauge('processing.requests.active', -1)  # Decrement active requests
+                self.metrics_service.record_counter('processing.requests.failed', 1)
+                self.metrics_service.record_counter('processing.exceptions', 1)
+                self.metrics_service.record_gauge('processing.requests.active', -1)  # Decrement active requests
                 self.metrics_service.record_timer('processing.total_time', processing_time)
 
             return UnifiedProcessingResult(

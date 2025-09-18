@@ -262,12 +262,17 @@ class RoleClassifier:
                 self._register_org(organizations, seen_organizations, quoted_phrase or base)
                 continue
 
-            tagged.append((base, "unknown"))
+            # Handle single characters and numbers - they should be preserved
+            if len(base) == 1 and (base.isdigit() or base.isalpha()):
+                tagged.append((base, "other"))
+                traces.append(f"Single character/number preserved: '{base}'")
+            else:
+                tagged.append((base, "unknown"))
 
         person_indices = [
             i
             for i, (token, role) in enumerate(tagged)
-            if role in {"unknown", "given", "surname", "patronymic", "initial"}
+            if role in {"unknown", "given", "surname", "patronymic", "initial", "other"}
             and not self._is_context_word(token)
         ]
 
@@ -455,24 +460,9 @@ class RoleClassifier:
         return improved
 
     def _filter_isolated_initials(self, tagged: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
-        if len(tagged) <= 1:
-            return tagged
-
-        filtered: List[Tuple[str, str]] = []
-        for idx, (token, role) in enumerate(tagged):
-            if role != "initial":
-                filtered.append((token, role))
-                continue
-
-            neighbours = []
-            if idx > 0:
-                neighbours.append(tagged[idx - 1][1])
-            if idx < len(tagged) - 1:
-                neighbours.append(tagged[idx + 1][1])
-
-            if any(nbr in {"given", "surname", "patronymic", "initial"} for nbr in neighbours):
-                filtered.append((token, role))
-        return filtered
+        # Don't filter isolated initials to maintain idempotency
+        # All initials should be preserved regardless of context
+        return tagged
 
     # ------------------------------------------------------------------
     # Utility helpers

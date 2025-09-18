@@ -14,8 +14,8 @@ from ai_service.layers.normalization.flags import NormalizationFlags
 from ai_service.layers.normalization.normalization_service import (
     NormalizationService as FactoryService,
 )
-from ai_service.layers.normalization.normalization_service_legacy import (
-    NormalizationService as LegacyService,
+from ai_service.adapters.legacy_normalization_adapter import (
+    LegacyNormalizationAdapter as LegacyService,
 )
 from ai_service.utils.feature_flags import NormalizationImplementation
 

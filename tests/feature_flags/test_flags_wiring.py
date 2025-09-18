@@ -15,7 +15,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from pathlib import Path
 
-from src.ai_service.config.feature_flags import FeatureFlags, from_env_and_file, get_global_flags, set_global_flags
+from src.ai_service.utils.feature_flags import FeatureFlags, from_env_and_file, get_global_flags, set_global_flags
 from src.ai_service.utils.feature_flags import FeatureFlagManager, get_feature_flag_manager
 from src.ai_service.main import app
 from fastapi.testclient import TestClient

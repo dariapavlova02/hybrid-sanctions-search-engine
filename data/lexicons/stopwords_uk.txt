@@ -8,6 +8,8 @@
 по
 за
 до
+# Cross-language safeguard: common Russian preposition often present in mixed texts
+от
 від
 для
 з

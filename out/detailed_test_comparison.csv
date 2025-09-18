@@ -1,0 +1,32 @@
+test_id,language,category,legacy_result,factory_result,expected_result,parity_match,legacy_vs_expected,factory_vs_expected,legacy_ms,factory_ms,performance_improvement,status
+ru_basic_full,ru,Basic Names,Иванов Иван Петрович,Иванов Иван Петрович,Иван Иванов Петрович,TRUE,FALSE,FALSE,7.309,1.233,5.93x,SUCCESS
+ru_feminine_surname,ru,Basic Names,Мария Иванова,Мария Иванова,Мария Иванова,TRUE,TRUE,TRUE,1.64,0.953,1.72x,SUCCESS
+ru_declension_to_nominative,ru,Morphology,Иван Петров,Ивану Петрову,Иван Петров,FALSE,TRUE,FALSE,0.99,0.643,1.54x,FAILED
+ru_diminutive,ru,Morphology,Александр Пушкин,Сашка Пушкин,Александр Пушкин,FALSE,TRUE,FALSE,1.518,0.537,2.83x,FAILED
+ru_initials,ru,Basic Names,Иванов И. И.,Иванов И. И.,Иванов И. И.,TRUE,TRUE,TRUE,1.201,0.277,4.33x,SUCCESS
+ru_hyphenated_surname,ru,Basic Names,Анна Петрова-Сидорова,Анна Петрова-Сидорова,Анна Петрова-Сидорова,TRUE,TRUE,TRUE,4.726,2.317,2.04x,SUCCESS
+ru_apostrophe,ru,Basic Names,Ольга Д'Яченко,Ольга Д'Яченко,Ольга Д'яченко,TRUE,FALSE,FALSE,1.8,0.851,2.12x,SUCCESS
+ru_context_words,ru,Context Filtering,Гражданин Пётр Сергеев,Петр Сергеев,Петр Сергеев,FALSE,FALSE,TRUE,0.988,0.476,2.08x,FAILED
+ru_homoglyph,auto,Basic Names,Pаvlov,Pаvlov,Pavlov,TRUE,FALSE,FALSE,0.593,0.201,2.95x,SUCCESS
+ru_multiple_persons,ru,Basic Names,Иван Петров Иванова,Иван Петров Иванова,Иван Петров | Мария Иванова,TRUE,FALSE,FALSE,0.945,0.646,1.46x,SUCCESS
+uk_declension,uk,Morphology,Олені Петренко,Олені Петренко,Олена Петренко,TRUE,FALSE,FALSE,1.152,0.824,1.40x,FAILED
+uk_feminine_suffix,uk,Basic Names,Наталія Ковальська,Наталія Ковальська,Наталія Ковальська,TRUE,TRUE,TRUE,0.667,0.462,1.44x,SUCCESS
+uk_diminutive,uk,Morphology,Петро Шевченко,Петрик Шевченко,Петро Шевченко,FALSE,TRUE,FALSE,1.3,1.483,0.88x,FAILED
+uk_initials_preposition,uk,Context Filtering,О. Іваненко,Іваненко,О. Іваненко,FALSE,TRUE,FALSE,1.152,0.431,2.67x,FAILED
+uk_ner_gate,uk,Basic Names,Президент України Зеленський,Президент України Зеленський,Володимир Зеленський,TRUE,FALSE,FALSE,1.193,0.51,2.34x,SUCCESS
+en_title_suffix,en,English Processing,John A. Smith,Dr. John A. Smith Jr.,John Smith,FALSE,FALSE,FALSE,0.255,1.597,0.16x,FAILED
+en_nickname,en,English Processing,Gates,Bill Gates,William Gates,FALSE,FALSE,FALSE,0.174,0.118,1.47x,FAILED
+en_middle_name,en,English Processing,Mary Jane Watson,Mary Jane Watson,Mary Watson,TRUE,FALSE,FALSE,0.198,0.114,1.74x,SUCCESS
+en_apostrophe,en,English Processing,Sean,O'Connor , Sean,Sean O'Connor,FALSE,FALSE,FALSE,0.169,0.114,1.48x,FAILED
+en_double_surname,en,English Processing,Emily,Emily Blunt-Krasinski,Emily Blunt-Krasinski,FALSE,FALSE,TRUE,0.145,0.103,1.41x,FAILED
+mixed_org_noise,uk,Complex Cases,Ивану Петрова,Петрову,Іван Петров,FALSE,FALSE,FALSE,1.764,0.62,2.85x,FAILED
+mixed_languages,auto,Complex Cases,John Smith Петренко,John Smith Петренко,John Smith | Олена Петренко,TRUE,FALSE,FALSE,1.025,0.29,3.53x,SUCCESS
+mixed_diacritics,uk,Complex Cases,Café José Іван,Café José Івану,Іван,FALSE,FALSE,FALSE,1.193,0.362,3.29x,FAILED
+mixed_function_words,ru,Complex Cases,,,,TRUE,,,0.192,0.158,1.22x,SUCCESS
+ru_single_surname,ru,Basic Names,Иванов,Иванов,Иванов,TRUE,TRUE,TRUE,0.137,0.098,1.40x,SUCCESS
+uk_passport,uk,Complex Cases,Паспорт Сергій Іванов,Паспорт Іванов,Сергій Іванов,FALSE,FALSE,FALSE,0.57,0.412,1.38x,FAILED
+uk_dob,uk,Basic Names,Іван Петров,Іван Петров,Іван Петров,TRUE,TRUE,TRUE,0.433,0.349,1.24x,SUCCESS
+behavior_idempotent,ru,Behavior Tests,Пётр Сергеев,Петр Сергеев,Петр Сергеев,FALSE,FALSE,TRUE,0.238,0.415,0.57x,SUCCESS
+behavior_unknown_preserve,en,Behavior Tests,John Smith,John Smith,John Smith,TRUE,TRUE,TRUE,0.158,0.134,1.18x,SUCCESS
+behavior_case_policy,ru,Behavior Tests,Иван Петров,Иван Петров,Иван Петров,TRUE,TRUE,TRUE,1.014,0.793,1.28x,SUCCESS
+behavior_empty_input,auto,Behavior Tests,,,,TRUE,,,0.055,0.033,1.67x,SUCCESS

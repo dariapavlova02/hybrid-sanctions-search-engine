@@ -382,6 +382,9 @@ class DecisionConfig(BaseModel):
     thr_high: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_HIGH", "0.85")))
     thr_medium: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_MEDIUM", "0.65")))
     
+    # Business gates
+    require_tin_dob_gate: bool = Field(default_factory=lambda: os.getenv("AI_DECISION__REQUIRE_TIN_DOB_GATE", "true").lower() == "true")
+    
     def model_dump(self) -> Dict[str, Any]:
         """Return model as dictionary"""
         return {
@@ -402,7 +405,8 @@ class DecisionConfig(BaseModel):
             "bonus_multiple_matches": self.bonus_multiple_matches,
             "bonus_high_confidence": self.bonus_high_confidence,
             "thr_high": self.thr_high,
-            "thr_medium": self.thr_medium
+            "thr_medium": self.thr_medium,
+            "require_tin_dob_gate": self.require_tin_dob_gate
         }
 
 

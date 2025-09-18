@@ -6,7 +6,6 @@ development:
     use_factory_normalizer: false
     fix_initials_double_dot: false
     preserve_hyphenated_case: false
-    strict_stopwords: false
     enable_ac_tier0: false
     enable_vector_fallback: false
 
@@ -15,15 +14,14 @@ staging:
     use_factory_normalizer: true
     fix_initials_double_dot: true
     preserve_hyphenated_case: false
-    strict_stopwords: false
     enable_ac_tier0: true
     enable_vector_fallback: false
+    require_tin_dob_gate: true
 
 production:
   feature_flags:
     use_factory_normalizer: false
     fix_initials_double_dot: false
     preserve_hyphenated_case: false
-    strict_stopwords: false
     enable_ac_tier0: false
     enable_vector_fallback: false

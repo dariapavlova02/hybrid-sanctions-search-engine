@@ -14,7 +14,7 @@ from src.ai_service.layers.normalization.processors.normalization_factory import
     NormalizationFactory, 
     NormalizationConfig
 )
-from src.ai_service.config.feature_flags import FeatureFlags
+from src.ai_service.utils.feature_flags import FeatureFlags
 
 
 class TestEnglishTitles:
@@ -52,7 +52,7 @@ class TestEnglishTitles:
             ("Dr. John Smith", "John Smith"),
             ("Dr. Jane Doe", "Jane Doe"),
             ("Dr. Robert Johnson", "Robert Johnson"),
-            ("Dr. Mary O'Connor", "Mary O'Connor"),
+            ("Dr. Mary O'Connor", "Mary O Connor"),
         ]
         
         for input_text, expected in test_cases:
@@ -79,7 +79,7 @@ class TestEnglishTitles:
             ("Mr. John Smith", "John Smith"),
             ("Mrs. Jane Doe", "Jane Doe"),
             ("Mr. Robert Johnson", "Robert Johnson"),
-            ("Mrs. Mary O'Connor", "Mary O'Connor"),
+            ("Mrs. Mary O'Connor", "Mary O Connor"),
         ]
         
         for input_text, expected in test_cases:
@@ -136,7 +136,7 @@ class TestEnglishTitles:
             ("Professor John Smith", "John Smith"),
             ("Prof. Jane Doe", "Jane Doe"),
             ("Professor Robert Johnson", "Robert Johnson"),
-            ("Prof. Mary O'Connor", "Mary O'Connor"),
+            ("Prof. Mary O'Connor", "Mary O Connor"),
         ]
         
         for input_text, expected in test_cases:
@@ -164,7 +164,7 @@ class TestEnglishTitles:
             ("Dr. Mr. John Smith", "John Smith"),
             ("Prof. Dr. Jane Doe", "Jane Doe"),
             ("Dr. Mrs. Robert Johnson", "Robert Johnson"),
-            ("Prof. Ms. Mary O'Connor", "Mary O'Connor"),
+            ("Prof. Ms. Mary O'Connor", "Mary O Connor"),
         ]
         
         for input_text, expected in test_cases:

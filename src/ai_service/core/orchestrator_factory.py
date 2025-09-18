@@ -177,6 +177,16 @@ class OrchestratorFactory:
                     decision_engine = None
                     enable_decision_engine = False
 
+            # Metrics service - optional but recommended for production
+            metrics_service = None
+            try:
+                from ..monitoring.metrics_collector import MetricsCollector
+                metrics_service = MetricsCollector()
+                logger.info("Metrics service initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize metrics service: {e}")
+                metrics_service = None
+
             # ============================================================
             # Create orchestrator
             # ============================================================

@@ -3,7 +3,6 @@ Unit tests for RussianMorphologyAnalyzer using pytest fixtures
 """
 
 import pytest
-from ai_service.layers.normalization.morphology.base_morphology import MorphologicalAnalysis
 from unittest.mock import Mock, patch, MagicMock
 
 from src.ai_service.layers.normalization.morphology.russian_morphology import RussianMorphologyAnalyzer
@@ -182,10 +181,10 @@ class TestRussianMorphologyAnalyzer:
     def test_is_russian_name(self):
         """Test is_russian_name detection"""
         # Test known Russian names
-        assert self.analyzer.is_russian_name('Сергей') == True
+        assert self.analyzer.is_known_word('Сергей') == True
         
         # Test unknown names
-        assert self.analyzer.is_russian_name('Unknown') == False
+        assert self.analyzer.is_known_word('Unknown') == False
 
     def test_name_complexity(self):
         """Test name complexity analysis"""

@@ -9,7 +9,7 @@ import pytest
 import asyncio
 from typing import Dict, Any
 
-from src.ai_service.config.feature_flags import FeatureFlags
+from src.ai_service.utils.feature_flags import FeatureFlags
 from src.ai_service.main import _merge_feature_flags
 from src.ai_service.utils.feature_flags import get_feature_flag_manager
 
@@ -169,8 +169,8 @@ class TestHttpFlagIntegration:
         
         try:
             # Load flags from environment
-            from src.ai_service.config.feature_flags import from_env_and_file
-            flags = from_env_and_file()
+            from src.ai_service.utils.feature_flags import get_feature_flag_manager
+            flags = get_feature_flag_manager()._flags
             
             # Check that flags were loaded from environment
             assert flags.enable_spacy_ner is True

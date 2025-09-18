@@ -1,0 +1,52 @@
+[
+  {
+    "test_name": "test_text_normalization_consistency",
+    "input": "ß",
+    "variation": "upper",
+    "expected": "ss",
+    "actual": "ß",
+    "reason": "Normalization inconsistency: 'ß' vs 'ss' for input='ß', variation='upper'"
+  },
+  {
+    "test_name": "test_normalization_idempotency",
+    "input": "B0aA0_",
+    "expected": "B0aA0_",
+    "actual": "_",
+    "reason": "Normalization not idempotent: '_' != ''"
+  },
+  {
+    "test_name": "test_normalization_preserves_length_property",
+    "input": "0",
+    "expected": "non-empty",
+    "actual": "",
+    "reason": "Normalized text should not be empty for non-empty input"
+  },
+  {
+    "test_name": "test_normalization_preserves_tokens_property",
+    "input": "0",
+    "expected": "at least 1 token",
+    "actual": "0 tokens",
+    "reason": "Should have at least one token for non-empty input"
+  },
+  {
+    "test_name": "test_normalization_preserves_trace_property",
+    "input": "0",
+    "expected": "non-empty trace",
+    "actual": "empty trace",
+    "reason": "Trace should not be empty when debug_tracing is enabled"
+  },
+  {
+    "test_name": "test_russian_normalization_idempotency",
+    "input": "various",
+    "expected": "idempotent",
+    "actual": "not idempotent",
+    "reason": "Function-scoped fixture health check failure"
+  },
+  {
+    "test_name": "test_ukrainian_normalization_idempotency",
+    "input": "various",
+    "expected": "idempotent",
+    "actual": "not idempotent",
+    "reason": "Function-scoped fixture health check failure"
+  }
+]

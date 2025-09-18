@@ -17,6 +17,7 @@ sys.path.insert(0, str(project_root / "src"))
 
 from ai_service.core.orchestrator_factory import OrchestratorFactory
 from ai_service.utils.logging_config import get_logger
+from ai_service.utils.pii_masking import log_processing_start
 
 logger = get_logger(__name__)
 
@@ -45,7 +46,7 @@ class E2ETester:
         if not self.orchestrator:
             await self.initialize()
 
-        logger.info(f"Testing text: {text}")
+        logger.info(log_processing_start(text))
         start_time = time.time()
 
         try:

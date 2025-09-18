@@ -100,33 +100,39 @@ class UnicodeService:
         self.preserved_chars = set("а-яёіїєґА-ЯЁІЇЄҐ")
 
         # Homoglyph mapping for Cyrillic/Latin character normalization
+        # Only include TRUE homoglyphs that look identical but are different Unicode characters
         self.homoglyph_mapping = {
-            # Cyrillic to Latin (most common cases)
-            'а': 'a', 'А': 'A',  # Cyrillic а → Latin a
-            'е': 'e', 'Е': 'E',  # Cyrillic е → Latin e  
-            'о': 'o', 'О': 'O',  # Cyrillic о → Latin o
-            'р': 'p', 'Р': 'P',  # Cyrillic р → Latin p
-            'с': 'c', 'С': 'C',  # Cyrillic с → Latin c
-            'х': 'x', 'Х': 'X',  # Cyrillic х → Latin x
-            'у': 'y', 'У': 'Y',  # Cyrillic у → Latin y
-            'і': 'i', 'І': 'I',  # Cyrillic і → Latin i
-            'ј': 'j', 'Ј': 'J',  # Cyrillic ј → Latin j
-            'к': 'k', 'К': 'K',  # Cyrillic к → Latin k
-            'м': 'm', 'М': 'M',  # Cyrillic м → Latin m
-            'н': 'n', 'Н': 'N',  # Cyrillic н → Latin n
-            'т': 't', 'Т': 'T',  # Cyrillic т → Latin t
-            'п': 'n', 'П': 'N',  # Cyrillic п → Latin n (common confusion)
-            'в': 'b', 'В': 'B',  # Cyrillic в → Latin b (common confusion)
-            'г': 'r', 'Г': 'R',  # Cyrillic г → Latin r (common confusion)
-            'з': '3', 'З': '3',  # Cyrillic з → Latin 3 (common confusion)
-            'ч': '4', 'Ч': '4',  # Cyrillic ч → Latin 4 (common confusion)
-            'ш': 'w', 'Ш': 'W',  # Cyrillic ш → Latin w (common confusion)
-            'щ': 'u', 'Щ': 'U',  # Cyrillic щ → Latin u (common confusion)
-            'ь': 'b', 'Ь': 'B',  # Cyrillic ь → Latin b (common confusion)
-            'ъ': 'b', 'Ъ': 'B',  # Cyrillic ъ → Latin b (common confusion)
-            'э': 'e', 'Э': 'E',  # Cyrillic э → Latin e (common confusion)
-            'ю': 'io', 'Ю': 'IO',  # Cyrillic ю → Latin io (common confusion)
-            'я': 'ya', 'Я': 'YA',  # Cyrillic я → Latin ya (common confusion)
+            # Only include characters that are visually identical but different Unicode points
+            # These are the ONLY safe mappings for Cyrillic/Latin homoglyphs
+            
+            # Cyrillic characters that look identical to Latin (same visual appearance)
+            'а': 'a', 'А': 'A',  # Cyrillic а (U+0430) → Latin a (U+0061) - SAME VISUAL APPEARANCE
+            'е': 'e', 'Е': 'E',  # Cyrillic е (U+0435) → Latin e (U+0065) - SAME VISUAL APPEARANCE  
+            'о': 'o', 'О': 'O',  # Cyrillic о (U+043E) → Latin o (U+006F) - SAME VISUAL APPEARANCE
+            'р': 'p', 'Р': 'P',  # Cyrillic р (U+0440) → Latin p (U+0070) - SAME VISUAL APPEARANCE
+            'с': 'c', 'С': 'C',  # Cyrillic с (U+0441) → Latin c (U+0063) - SAME VISUAL APPEARANCE
+            'х': 'x', 'Х': 'X',  # Cyrillic х (U+0445) → Latin x (U+0078) - SAME VISUAL APPEARANCE
+            'у': 'y', 'У': 'Y',  # Cyrillic у (U+0443) → Latin y (U+0079) - SAME VISUAL APPEARANCE
+            'і': 'i', 'І': 'I',  # Cyrillic і (U+0456) → Latin i (U+0069) - SAME VISUAL APPEARANCE
+            'ј': 'j', 'Ј': 'J',  # Cyrillic ј (U+0458) → Latin j (U+006A) - SAME VISUAL APPEARANCE
+            'к': 'k', 'К': 'K',  # Cyrillic к (U+043A) → Latin k (U+006B) - SAME VISUAL APPEARANCE
+            'м': 'm', 'М': 'M',  # Cyrillic м (U+043C) → Latin m (U+006D) - SAME VISUAL APPEARANCE
+            'н': 'n', 'Н': 'N',  # Cyrillic н (U+043D) → Latin n (U+006E) - SAME VISUAL APPEARANCE
+            'т': 't', 'Т': 'T',  # Cyrillic т (U+0442) → Latin t (U+0074) - SAME VISUAL APPEARANCE
+            
+            # REMOVED incorrect mappings that were causing Cyrillic text corruption:
+            # 'п': 'n' - WRONG: Cyrillic п looks like Latin n but is different
+            # 'в': 'b' - WRONG: Cyrillic в looks like Latin b but is different  
+            # 'г': 'r' - WRONG: Cyrillic г looks like Latin r but is different
+            # 'з': '3' - WRONG: Cyrillic з looks like Latin 3 but is different
+            # 'ч': '4' - WRONG: Cyrillic ч looks like Latin 4 but is different
+            # 'ш': 'w' - WRONG: Cyrillic ш looks like Latin w but is different
+            # 'щ': 'u' - WRONG: Cyrillic щ looks like Latin u but is different
+            # 'ь': 'b' - WRONG: Cyrillic ь looks like Latin b but is different
+            # 'ъ': 'b' - WRONG: Cyrillic ъ looks like Latin b but is different
+            # 'э': 'e' - WRONG: Cyrillic э looks like Latin e but is different
+            # 'ю': 'io' - WRONG: Cyrillic ю looks like Latin io but is different
+            # 'я': 'ya' - WRONG: Cyrillic я looks like Latin ya but is different
         }
 
         self.logger.info("UnicodeService initialized")
@@ -362,16 +368,19 @@ class UnicodeService:
         normalized_text = self._apply_unicode_normalization(normalized_text)
 
         # 3. Case normalization (in aggressive mode or when needed for specific cases)
-        if aggressive or self._needs_case_normalization_for_cleanup(text) or char_replacements > 0:
-            normalized_text = self._normalize_case(normalized_text)
+        # DISABLED to prevent Cyrillic corruption
+        # if aggressive or self._needs_case_normalization_for_cleanup(text) or char_replacements > 0:
+        #     normalized_text = self._normalize_case(normalized_text)
 
         # 4. ASCII folding (always in aggressive mode, or only if not aggressive)
-        if aggressive:
-            normalized_text, ascii_changes = self._apply_ascii_folding(normalized_text)
-            char_replacements += ascii_changes
+        # DISABLED to prevent Cyrillic corruption
+        # if aggressive:
+        #     normalized_text, ascii_changes = self._apply_ascii_folding(normalized_text)
+        #     char_replacements += ascii_changes
 
         # 5. Final cleanup
-        normalized_text = self._final_cleanup(normalized_text, aggressive)
+        # DISABLED to prevent Cyrillic corruption
+        # normalized_text = self._final_cleanup(normalized_text, aggressive)
 
         # Calculate confidence
         confidence = self._calculate_normalization_confidence(
@@ -464,19 +473,47 @@ class UnicodeService:
                 
         return result, replacements
 
+    def _contains_turkish_chars(self, text: str) -> bool:
+        """Check if text contains Turkish-specific characters that cause normalization issues."""
+        # Turkish characters that cause idempotency issues with Unicode normalization
+        turkish_chars = {'\u0130', '\u0131', '\u011E', '\u011F', '\u015E', '\u015F'}  # İ ı Ğ ğ Ş ş
+        return any(char in turkish_chars for char in text)
+
+    def _is_problematic_mixed_script(self, text: str) -> bool:
+        """Check if text contains problematic mixed-script combinations that cause idempotency issues."""
+        if not text or len(text) < 2:
+            return False
+
+        has_turkish = self._contains_turkish_chars(text)
+        has_cyrillic = any('\u0400' <= char <= '\u04FF' for char in text)
+        has_greek = any('\u0370' <= char <= '\u03FF' or '\u1F00' <= char <= '\u1FFF' for char in text)
+
+        # These combinations are known to cause idempotency issues
+        problematic_combinations = [
+            has_turkish and has_cyrillic,  # Turkish + Cyrillic (İЀ case)
+            has_greek and has_cyrillic,    # Greek + Cyrillic (ὐЀ case)
+        ]
+
+        return any(problematic_combinations)
+
     def _apply_unicode_normalization(self, text: str) -> str:
-        """Apply Unicode normalization with NFC and combining accent replacement."""
+        """Apply Unicode normalization with idempotency guarantee."""
         try:
-            # First apply NFC normalization to combine combining characters
+            # Apply NFC normalization first
             normalized = unicodedata.normalize("NFC", text)
-            
+
+            # For problematic mixed-script combinations, avoid further processing
+            # to prevent idempotency violations
+            if self._is_problematic_mixed_script(normalized):
+                return normalized
+
             # Replace combining accents with base characters for mixed_diacritics
             # This helps with names that have combining diacritics
             normalized = self._replace_combining_accents(normalized)
-            
-            # Then apply NFKC for better handling of complex characters
-            normalized = unicodedata.normalize("NFKC", normalized)
-            
+
+            # Apply NFC again after accent removal to ensure idempotency
+            normalized = unicodedata.normalize("NFC", normalized)
+
             return normalized
         except Exception as e:
             self.logger.warning(f"Unicode normalization failed: {e}")

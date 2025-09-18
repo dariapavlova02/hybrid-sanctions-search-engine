@@ -6,8 +6,11 @@ for sanctions data verification
 
 import os
 import sys
+import secrets
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+import time
+from collections import defaultdict
 
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Request, status
@@ -54,7 +57,7 @@ class NormalizationOptions(BaseModel):
 class TextNormalizationRequest(BaseModel):
     """Request model for text normalization"""
 
-    text: str = Field(..., max_length=SERVICE_CONFIG.max_input_length)
+    text: str = Field(..., max_length=SERVICE_CONFIG.max_input_length, min_length=1)
     language: str = "auto"
     remove_stop_words: bool = False  # For names, don't remove stop words
     apply_stemming: bool = False  # For names, don't apply stemming
@@ -62,6 +65,19 @@ class TextNormalizationRequest(BaseModel):
     clean_unicode: bool = True
     preserve_names: bool = True  # Preserve names and surnames
     options: Optional[NormalizationOptions] = None
+
+    @validator('text')
+    def validate_text_content(cls, v):
+        """Additional text validation for security"""
+        if not v.strip():
+            raise ValueError("Text cannot be empty")
+
+        # Check for excessive special characters (potential attack)
+        special_char_count = sum(1 for c in v if not c.isalnum() and not c.isspace())
+        if special_char_count > len(v) * 0.5:  # More than 50% special chars
+            raise ValueError("Text contains too many special characters")
+
+        return v
 
 
 class VariantGenerationRequest(BaseModel):
@@ -148,6 +164,42 @@ if INTEGRATION_CONFIG.cors_enabled:
         allow_headers=["*"],
     )
 
+# Rate limiting for DoS protection
+class RateLimitingMiddleware:
+    """Simple in-memory rate limiting middleware for DoS protection"""
+
+    def __init__(self, max_requests: int = 100, window_seconds: int = 60):
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+        self.requests = defaultdict(list)
+
+    async def __call__(self, request: Request, call_next):
+        client_ip = request.client.host if request.client else "unknown"
+        current_time = time.time()
+
+        # Clean old requests
+        self.requests[client_ip] = [
+            req_time for req_time in self.requests[client_ip]
+            if current_time - req_time < self.window_seconds
+        ]
+
+        # Check rate limit
+        if len(self.requests[client_ip]) >= self.max_requests:
+            logger.warning(f"Rate limit exceeded for IP: {client_ip}")
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too Many Requests - Rate limit exceeded"}
+            )
+
+        # Add current request
+        self.requests[client_ip].append(current_time)
+
+        response = await call_next(request)
+        return response
+
+# Add rate limiting middleware
+app.middleware("http")(RateLimitingMiddleware(max_requests=1000, window_seconds=60))
+
 # Initialize orchestrator
 orchestrator = None
 
@@ -218,10 +270,10 @@ def _merge_feature_flags(request_flags: Optional[FeatureFlags]) -> FeatureFlags:
         # New validation flags
         enable_spacy_ner=request_flags.enable_spacy_ner,
         enable_nameparser_en=request_flags.enable_nameparser_en,
-        fsm_tuned_roles=request_flags.fsm_tuned_roles,
-        enhanced_diminutives=request_flags.enhanced_diminutives,
-        enhanced_gender_rules=request_flags.enhanced_gender_rules,
-        ascii_fastpath=request_flags.ascii_fastpath,
+        enable_fsm_tuned_roles=request_flags.enable_fsm_tuned_roles,
+        enable_enhanced_diminutives=request_flags.enable_enhanced_diminutives,
+        enable_enhanced_gender_rules=request_flags.enable_enhanced_gender_rules,
+        enable_ascii_fastpath=request_flags.enable_ascii_fastpath,
         # Keep other global flags
         normalization_implementation=global_flags.normalization_implementation,
         factory_rollout_percentage=global_flags.factory_rollout_percentage,
@@ -254,13 +306,20 @@ def verify_admin_token(
     """
     expected_token = SECURITY_CONFIG.admin_api_key
 
+    # Enhanced token validation
     if not expected_token or expected_token == "your-secure-api-key-here":
         logger.warning("Admin API key not configured properly")
         raise AuthenticationError("Admin API key not configured")
 
-    if credentials.credentials != expected_token:
+    # Check minimum token length and complexity
+    if len(expected_token) < 32:
+        logger.warning("Admin API key is too short (minimum 32 characters)")
+        raise AuthenticationError("Admin API key not configured properly")
+
+    # Use constant-time comparison to prevent timing attacks
+    if not secrets.compare_digest(credentials.credentials, expected_token):
         logger.warning(
-            f"Invalid admin API key attempt: {credentials.credentials[:10]}..."
+            f"Invalid admin API key attempt from: {credentials.credentials[:8]}***"
         )
         raise AuthenticationError("Invalid API key")
 
@@ -451,13 +510,8 @@ async def process_text(request: ProcessTextRequest):
             feature_flags=merged_flags,
         )
 
-        # Add feature flags to trace
-        if result.trace:
-            result.trace.append({
-                "type": "flags",
-                "value": merged_flags.to_dict(),
-                "scope": "request"
-            })
+        # Note: Feature flags are logged separately, not added to trace
+        # as trace should only contain TokenTrace objects
 
         # Convert to ProcessResponse model
         return ProcessResponse(
@@ -521,13 +575,8 @@ async def normalize_text(request: TextNormalizationRequest):
             feature_flags=merged_flags,
         )
         
-        # Add feature flags to trace
-        if result.trace:
-            result.trace.append({
-                "type": "flags",
-                "value": merged_flags.to_dict(),
-                "scope": "request"
-            })
+        # Note: Feature flags are logged separately, not added to trace
+        # as trace should only contain TokenTrace objects
         
         # Debug logging
         logger.info(f"Result: success={result.success}, tokens={result.tokens}, language={result.language}")
@@ -739,7 +788,7 @@ async def root():
 @app.get("/admin/status")
 async def admin_status(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
     """Admin status endpoint with authentication"""
-    if not credentials or credentials.credentials != SECURITY_CONFIG.admin_api_key:
+    if not credentials or not secrets.compare_digest(credentials.credentials, SECURITY_CONFIG.admin_api_key):
         raise HTTPException(status_code=401, detail="Invalid admin token")
     
     # Get orchestrator statistics

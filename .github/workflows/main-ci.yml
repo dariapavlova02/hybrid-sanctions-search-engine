@@ -1,0 +1,397 @@
+name: Main CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Daily canary run at 6:00 UTC
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+env:
+  PYTHONHASHSEED: 0  # Ensure deterministic test results
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  # ========================================
+  # MAIN TEST & COVERAGE JOB
+  # ========================================
+  test:
+    name: Tests & Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Install dependencies
+      run: |
+        poetry install
+
+    - name: Install spaCy models (optional)
+      run: |
+        poetry run python -m spacy download ru_core_news_sm || true
+        poetry run python -m spacy download uk_core_news_sm || true
+        poetry run python -m spacy download en_core_web_sm || true
+
+    - name: Run unit tests
+      run: |
+        poetry run pytest tests/unit/ -v --tb=short \
+          --maxfail=10 \
+          --strict-markers \
+          --strict-config
+
+    - name: Run integration tests
+      run: |
+        poetry run pytest tests/integration/ -v --tb=short \
+          --maxfail=5
+
+    - name: Generate coverage report
+      run: |
+        poetry run pytest tests/ \
+          --cov=src/ai_service \
+          --cov-report=xml \
+          --cov-report=term-missing \
+          --cov-report=html \
+          --cov-fail-under=70
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+
+    - name: Upload coverage artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: coverage-reports-${{ github.run_number }}
+        path: |
+          coverage.xml
+          htmlcov/
+        retention-days: 14
+
+  # ========================================
+  # SECURITY SCANNING JOB
+  # ========================================
+  security:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Install dependencies
+      run: |
+        poetry install
+
+    - name: Create artifacts directory
+      run: mkdir -p artifacts/security
+
+    - name: Run Bandit security linter
+      run: |
+        poetry add --group dev bandit[toml]
+        poetry run bandit -r src/ -f json -o artifacts/security/bandit-report.json
+        poetry run bandit -r src/ -f txt | tee artifacts/security/bandit-output.txt
+
+    - name: Run Safety dependency vulnerability check
+      run: |
+        poetry add --group dev safety
+        poetry run safety check --json > artifacts/security/safety-report.json
+        poetry run safety check | tee artifacts/security/safety-output.txt
+
+    - name: Run pip-audit for additional vulnerability checks
+      run: |
+        pip install pip-audit
+        pip-audit --requirement requirements.txt --format=json --output=artifacts/security/pip-audit-report.json || true
+        pip-audit --requirement requirements.txt | tee artifacts/security/pip-audit-output.txt || true
+
+    - name: Run Semgrep SAST analysis
+      uses: semgrep/semgrep-action@v1
+      with:
+        config: >-
+          p/security-audit
+          p/secrets
+          p/python
+          p/django
+      env:
+        SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+      continue-on-error: true
+
+    - name: Security gate validation
+      run: |
+        echo "=== Security Gate Validation ===" | tee artifacts/security/gate-results.txt
+
+        # Check Bandit results
+        if [ -f artifacts/security/bandit-report.json ]; then
+          high_issues=$(python -c "
+          import json
+          try:
+              with open('artifacts/security/bandit-report.json') as f:
+                  data = json.load(f)
+              high_count = sum(1 for r in data.get('results', []) if r.get('issue_severity') == 'HIGH')
+              print(high_count)
+          except:
+              print(0)
+          ")
+
+          echo "Bandit high-severity issues: $high_issues" | tee -a artifacts/security/gate-results.txt
+
+          if [ "$high_issues" -gt 5 ]; then
+            echo "❌ FAILED: $high_issues high-severity issues (threshold: 5)" | tee -a artifacts/security/gate-results.txt
+            exit 1
+          else
+            echo "✅ PASSED: Bandit security gate ($high_issues/5 high-severity issues)" | tee -a artifacts/security/gate-results.txt
+          fi
+        fi
+
+        # Check Safety results
+        if [ -f artifacts/security/safety-report.json ]; then
+          safety_issues=$(python -c "
+          import json
+          try:
+              with open('artifacts/security/safety-report.json') as f:
+                  data = json.load(f)
+              vuln_count = len(data)
+              print(vuln_count)
+          except:
+              print(0)
+          ")
+
+          echo "Safety vulnerabilities: $safety_issues" | tee -a artifacts/security/gate-results.txt
+
+          if [ "$safety_issues" -gt 0 ]; then
+            echo "❌ FAILED: $safety_issues known vulnerabilities found" | tee -a artifacts/security/gate-results.txt
+            exit 1
+          else
+            echo "✅ PASSED: Safety vulnerability check (0 vulnerabilities)" | tee -a artifacts/security/gate-results.txt
+          fi
+        fi
+
+        echo "✅ All security gates passed!" | tee -a artifacts/security/gate-results.txt
+
+    - name: Generate security summary
+      if: always()
+      run: |
+        cat > artifacts/security/security-summary.md << 'EOF'
+        # Security Analysis Summary
+
+        **Generated**: $(date)
+        **Branch**: ${{ github.ref_name }}
+        **Commit**: ${{ github.sha }}
+
+        ## Tools Used
+        - **Bandit**: Python security linter
+        - **Safety**: Known vulnerability database
+        - **pip-audit**: PyPI advisory database
+        - **Semgrep**: Static analysis security tool
+
+        ## Results
+
+        ### Bandit Security Linter
+        EOF
+
+        if [ -f artifacts/security/bandit-output.txt ]; then
+          echo "```" >> artifacts/security/security-summary.md
+          head -20 artifacts/security/bandit-output.txt >> artifacts/security/security-summary.md
+          echo "```" >> artifacts/security/security-summary.md
+        fi
+
+        echo "" >> artifacts/security/security-summary.md
+        echo "### Safety Vulnerability Check" >> artifacts/security/security-summary.md
+
+        if [ -f artifacts/security/safety-output.txt ]; then
+          echo "```" >> artifacts/security/security-summary.md
+          head -20 artifacts/security/safety-output.txt >> artifacts/security/security-summary.md
+          echo "```" >> artifacts/security/security-summary.md
+        fi
+
+        echo "" >> artifacts/security/security-summary.md
+        echo "### Security Gate Results" >> artifacts/security/security-summary.md
+
+        if [ -f artifacts/security/gate-results.txt ]; then
+          echo "```" >> artifacts/security/security-summary.md
+          cat artifacts/security/gate-results.txt >> artifacts/security/security-summary.md
+          echo "```" >> artifacts/security/security-summary.md
+        fi
+
+    - name: Upload security artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-reports-${{ github.run_number }}
+        path: artifacts/security/
+        retention-days: 30
+
+    - name: Comment security results on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          if (fs.existsSync('artifacts/security/security-summary.md')) {
+            const summary = fs.readFileSync('artifacts/security/security-summary.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🔒 Security Analysis Results\n\n${summary}`
+            });
+          }
+
+  # ========================================
+  # CANARY TESTING JOB (scheduled only)
+  # ========================================
+  canary:
+    name: Canary Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Install dependencies
+      run: |
+        poetry install
+
+    - name: Install spaCy models
+      run: |
+        poetry run python -m spacy download ru_core_news_sm || true
+        poetry run python -m spacy download uk_core_news_sm || true
+        poetry run python -m spacy download en_core_web_sm || true
+
+    - name: Create artifacts directory
+      run: mkdir -p artifacts/canary
+
+    - name: Run canary tests
+      run: |
+        poetry run pytest tests/canary/ -q \
+          -k "not slow" \
+          --strict-perf \
+          --junitxml=artifacts/canary/canary-results.xml \
+          --tb=short
+
+    - name: Generate canary report
+      if: always()
+      run: |
+        cat > artifacts/canary/canary-report.md << 'EOF'
+        # Canary Test Report
+
+        **Generated**: $(date)
+        **Branch**: ${{ github.ref_name }}
+        **Commit**: ${{ github.sha }}
+        **Workflow Run**: ${{ github.run_number }}
+
+        ## Performance Thresholds
+        - P95 < 10ms (strict performance mode)
+        - Average response time < 5ms
+        - Memory usage < 100MB per request
+
+        ## Test Results
+        EOF
+
+        if [ -f artifacts/canary/canary-results.xml ]; then
+          echo "### JUnit Results Summary" >> artifacts/canary/canary-report.md
+
+          total_tests=$(grep -o 'tests="[0-9]*"' artifacts/canary/canary-results.xml | grep -o '[0-9]*' | head -1 || echo "0")
+          failed_tests=$(grep -o 'failures="[0-9]*"' artifacts/canary/canary-results.xml | grep -o '[0-9]*' | head -1 || echo "0")
+          error_tests=$(grep -o 'errors="[0-9]*"' artifacts/canary/canary-results.xml | grep -o '[0-9]*' | head -1 || echo "0")
+          skipped_tests=$(grep -o 'skipped="[0-9]*"' artifacts/canary/canary-results.xml | grep -o '[0-9]*' | head -1 || echo "0")
+          passed_tests=$((total_tests - failed_tests - error_tests - skipped_tests))
+
+          echo "- **Total Tests**: $total_tests" >> artifacts/canary/canary-report.md
+          echo "- **Passed**: $passed_tests ✅" >> artifacts/canary/canary-report.md
+          echo "- **Failed**: $failed_tests ❌" >> artifacts/canary/canary-report.md
+          echo "- **Errors**: $error_tests ⚠️" >> artifacts/canary/canary-report.md
+          echo "- **Skipped**: $skipped_tests ⏭️" >> artifacts/canary/canary-report.md
+
+          if [ "$failed_tests" -gt 0 ] || [ "$error_tests" -gt 0 ]; then
+            echo "" >> artifacts/canary/canary-report.md
+            echo "### ❌ Test Failures Detected" >> artifacts/canary/canary-report.md
+            echo "Canary tests have failed. This indicates potential performance regression or system issues." >> artifacts/canary/canary-report.md
+          else
+            echo "" >> artifacts/canary/canary-report.md
+            echo "### ✅ All Tests Passed" >> artifacts/canary/canary-report.md
+            echo "System performance is within acceptable thresholds." >> artifacts/canary/canary-report.md
+          fi
+        else
+          echo "### ❌ No test results found" >> artifacts/canary/canary-report.md
+          echo "Canary tests may have failed to execute properly." >> artifacts/canary/canary-report.md
+        fi
+
+    - name: Upload canary artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: canary-reports-${{ github.run_number }}
+        path: artifacts/canary/
+        retention-days: 30
+
+    - name: Canary gate validation
+      run: |
+        if [ -f artifacts/canary/canary-results.xml ]; then
+          failed_tests=$(grep -o 'failures="[0-9]*"' artifacts/canary/canary-results.xml | grep -o '[0-9]*' | head -1 || echo "0")
+          error_tests=$(grep -o 'errors="[0-9]*"' artifacts/canary/canary-results.xml | grep -o '[0-9]*' | head -1 || echo "0")
+
+          if [ "$failed_tests" -gt 0 ] || [ "$error_tests" -gt 0 ]; then
+            echo "❌ Canary tests failed: $failed_tests failures, $error_tests errors"
+            exit 1
+          else
+            echo "✅ All canary tests passed successfully"
+          fi
+        else
+          echo "❌ No canary test results found"
+          exit 1
+        fi

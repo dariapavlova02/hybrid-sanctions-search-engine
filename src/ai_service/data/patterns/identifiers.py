@@ -311,55 +311,115 @@ def get_validation_function(identifier_type: str):
 
 
 def validate_inn(value: str) -> bool:
-    """Validate INN checksum"""
+    """Validate INN checksum using Russian/Ukrainian algorithms"""
     if not value or not value.isdigit():
         return False
-    
+
     if len(value) not in [10, 12]:
         return False
-    
-    # Basic length validation for now
-    # TODO: Implement actual checksum validation
-    return True
+
+    # INN checksum validation
+    if len(value) == 10:
+        # 10-digit INN (legal entities)
+        check_weights = [2, 4, 10, 3, 5, 9, 4, 6, 8]
+        check_sum = sum(int(value[i]) * check_weights[i] for i in range(9))
+        check_digit = check_sum % 11
+        if check_digit > 9:
+            check_digit = check_digit % 10
+        return int(value[9]) == check_digit
+
+    elif len(value) == 12:
+        # 12-digit INN (individual entrepreneurs)
+        # First check digit
+        check_weights_1 = [7, 2, 4, 10, 3, 5, 9, 4, 6, 8]
+        check_sum_1 = sum(int(value[i]) * check_weights_1[i] for i in range(10))
+        check_digit_1 = check_sum_1 % 11
+        if check_digit_1 > 9:
+            check_digit_1 = check_digit_1 % 10
+
+        # Second check digit
+        check_weights_2 = [3, 7, 2, 4, 10, 3, 5, 9, 4, 6, 8]
+        check_sum_2 = sum(int(value[i]) * check_weights_2[i] for i in range(11))
+        check_digit_2 = check_sum_2 % 11
+        if check_digit_2 > 9:
+            check_digit_2 = check_digit_2 % 10
+
+        return (int(value[10]) == check_digit_1 and
+                int(value[11]) == check_digit_2)
+
+    return False
 
 
 def validate_edrpou(value: str) -> bool:
-    """Validate EDRPOU"""
+    """Validate EDRPOU checksum using Ukrainian algorithm"""
     if not value or not value.isdigit():
         return False
-    
+
     if len(value) not in [6, 8]:
         return False
-    
-    # Basic length validation for now
-    # TODO: Implement actual checksum validation
-    return True
+
+    # EDRPOU checksum validation
+    if len(value) == 8:
+        # 8-digit EDRPOU with check digit
+        check_weights = [1, 2, 3, 4, 5, 6, 7]
+        check_sum = sum(int(value[i]) * check_weights[i] for i in range(7))
+        check_digit = check_sum % 11
+
+        if check_digit > 9:
+            # If result > 9, use alternative weights
+            alt_weights = [3, 4, 5, 6, 7, 8, 9]
+            check_sum = sum(int(value[i]) * alt_weights[i] for i in range(7))
+            check_digit = check_sum % 11
+            if check_digit > 9:
+                check_digit = 0
+
+        return int(value[7]) == check_digit
+
+    elif len(value) == 6:
+        # 6-digit EDRPOU (no check digit, only length validation)
+        return True
+
+    return False
 
 
 def validate_ogrn(value: str) -> bool:
-    """Validate OGRN"""
+    """Validate OGRN checksum using Russian algorithm"""
     if not value or not value.isdigit():
         return False
-    
+
     if len(value) != 13:
         return False
-    
-    # Basic length validation for now
-    # TODO: Implement actual checksum validation
-    return True
+
+    # OGRN checksum validation for 13-digit numbers
+    # Take first 12 digits, divide by 11, remainder should match 13th digit
+    first_12 = int(value[:12])
+    check_digit = first_12 % 11
+
+    # If remainder is 10, check digit should be 0
+    if check_digit == 10:
+        check_digit = 0
+
+    return int(value[12]) == check_digit
 
 
 def validate_ogrnip(value: str) -> bool:
-    """Validate OGRNIP"""
+    """Validate OGRNIP checksum using Russian algorithm"""
     if not value or not value.isdigit():
         return False
-    
+
     if len(value) != 15:
         return False
-    
-    # Basic length validation for now
-    # TODO: Implement actual checksum validation
-    return True
+
+    # OGRNIP checksum validation for 15-digit numbers
+    # Take first 14 digits, divide by 13, remainder should match 15th digit
+    first_14 = int(value[:14])
+    check_digit = first_14 % 13
+
+    # If remainder is 10, 11, or 12, check digit should be 0
+    if check_digit >= 10:
+        check_digit = check_digit % 10
+
+    return int(value[14]) == check_digit
 
 
 def validate_vat(value: str) -> bool:

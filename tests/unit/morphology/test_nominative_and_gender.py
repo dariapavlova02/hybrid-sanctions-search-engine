@@ -8,7 +8,7 @@ nominative case while preserving feminine surname endings when appropriate.
 import pytest
 from unittest.mock import Mock, patch
 
-from src.ai_service.layers.normalization.morphology.morphology_adapter import (
+from src.ai_service.layers.normalization.morphology_adapter import (
     MorphologyAdapter,
     MorphParse,
 )

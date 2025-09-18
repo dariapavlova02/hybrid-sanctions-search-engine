@@ -24,6 +24,7 @@ class TokenizationResult:
     processing_time: float
     cache_hit: bool = False
     success: bool = True
+    token_traces: List[Any] = None  # TokenTrace objects for proper integration
 
 
 class TokenizerService:
@@ -115,7 +116,8 @@ class TokenizerService:
                     traces=cached_result['traces'],
                     metadata=cached_result['metadata'],
                     processing_time=processing_time,
-                    cache_hit=True
+                    cache_hit=True,
+                    token_traces=cached_result.get('token_traces', [])
                 )
         
         # Cache miss - perform tokenization
@@ -132,7 +134,7 @@ class TokenizerService:
         )
         
         # Apply post-processing rules
-        tokens, post_traces = self._apply_post_processing_rules(tokens)
+        tokens, post_traces, token_traces = self._apply_post_processing_rules(tokens)
         traces.extend(post_traces)
         
         processing_time = time.perf_counter() - start_time
@@ -144,7 +146,8 @@ class TokenizerService:
             traces=traces,
             metadata=metadata,
             processing_time=processing_time,
-            cache_hit=False
+            cache_hit=False,
+            token_traces=token_traces
         )
         
         # Cache the result
@@ -152,7 +155,8 @@ class TokenizerService:
             cache_value = {
                 'tokens': tokens,
                 'traces': traces,
-                'metadata': metadata
+                'metadata': metadata,
+                'token_traces': token_traces
             }
             self.cache.set(cache_key, cache_value)
         
@@ -203,7 +207,7 @@ class TokenizerService:
         self._cache_misses = 0
         self._total_processing_time = 0.0
     
-    def _apply_post_processing_rules(self, tokens: List[str]) -> Tuple[List[str], List[str]]:
+    def _apply_post_processing_rules(self, tokens: List[str]) -> Tuple[List[str], List[str], List[Any]]:
         """
         Apply post-processing rules to tokens.
         
@@ -214,6 +218,7 @@ class TokenizerService:
             Tuple of (processed_tokens, traces)
         """
         processed_tokens = []
+        token_traces = []  # List of TokenTrace objects
         traces = []
         
         for token in tokens:
@@ -224,6 +229,19 @@ class TokenizerService:
             if self.fix_initials_double_dot:
                 processed_token = self.collapse_double_dots(processed_token)
                 if processed_token != original_token:
+                    # Create TokenTrace object for proper integration
+                    from ...contracts.base_contracts import TokenTrace
+                    token_trace = TokenTrace(
+                        token=original_token,
+                        role="tokenizer",
+                        rule="collapse_double_dots",
+                        output=processed_token,
+                        fallback=False,
+                        notes=f"Evidence: initials"
+                    )
+                    token_traces.append(token_trace)
+                    
+                    # Also add to legacy traces for backward compatibility
                     trace_entry = {
                         "rule": "collapse_double_dots",
                         "before": original_token,
@@ -235,6 +253,18 @@ class TokenizerService:
             # Rule 2: Preserve hyphenated names (add has_hyphen flag to metadata)
             if self.preserve_hyphenated_case:
                 if self._has_hyphen(token):
+                    # Create TokenTrace object for hyphen preservation
+                    from ...contracts.base_contracts import TokenTrace
+                    token_trace = TokenTrace(
+                        token=processed_token,
+                        role="tokenizer",
+                        rule="preserve_hyphenated_name",
+                        output=processed_token,
+                        fallback=False,
+                        notes=f"has_hyphen: True"
+                    )
+                    token_traces.append(token_trace)
+                    
                     traces.append({
                         "type": "tokenize",
                         "action": "preserve_hyphenated_name",
@@ -244,7 +274,7 @@ class TokenizerService:
             
             processed_tokens.append(processed_token)
         
-        return processed_tokens, traces
+        return processed_tokens, traces, token_traces
     
     def collapse_double_dots(self, token: str) -> str:
         """

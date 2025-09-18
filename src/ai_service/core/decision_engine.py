@@ -71,6 +71,9 @@ class DecisionEngine:
         # Extract details with used features and weights
         details = self._extract_details(safe_input, score)
         
+        # Apply business gates (TIN/DOB requirement)
+        review_required, required_fields = self._should_request_additional_fields(safe_input, risk, score)
+        
         # Log decision details at DEBUG level
         self.logger.debug(
             f"Decision made: risk={risk.value}, score={score:.3f}, "
@@ -78,7 +81,8 @@ class DecisionEngine:
             f"person_conf={signals.person_confidence:.3f}, "
             f"org_conf={signals.org_confidence:.3f}, "
             f"similarity={similarity.cos_top}, "
-            f"date_match={signals.date_match}, id_match={signals.id_match}"
+            f"date_match={signals.date_match}, id_match={signals.id_match}, "
+            f"review_required={review_required}, required_fields={required_fields}"
         )
         
         # Record metrics if available
@@ -93,7 +97,9 @@ class DecisionEngine:
             risk=risk,
             score=score,
             reasons=reasons,
-            details=details
+            details=details,
+            review_required=review_required,
+            required_additional_fields=required_fields
         )
     
     def _calculate_weighted_score(self, inp: DecisionInput) -> float:
@@ -413,3 +419,65 @@ class DecisionEngine:
                 "decision_evidence_matches",
                 labels={"match_type": "id_match"}
             )
+    
+    def _should_request_additional_fields(self, inp: DecisionInput, risk: RiskLevel, score: float) -> tuple[bool, List[str]]:
+        """
+        Determine if additional fields (TIN/DOB) are required for decision.
+        
+        Business rule:
+        - If strong name match but missing TIN/DOB → mark REVIEW and request fields
+        - Exception: if sanction record has neither TIN nor DOB → allow reject by full name
+        
+        Args:
+            inp: Decision input with signals
+            risk: Current risk level
+            score: Current decision score
+            
+        Returns:
+            Tuple of (review_required, required_fields)
+        """
+        # Check if TIN/DOB gate is enabled
+        if not getattr(self.config, 'require_tin_dob_gate', True):
+            return False, []
+        
+        # Only apply to high-risk decisions (strong matches)
+        if risk != RiskLevel.HIGH:
+            return False, []
+        
+        # Check if we have strong name match indicators
+        has_strong_name_match = (
+            inp.signals.person_confidence >= 0.8 or 
+            inp.signals.org_confidence >= 0.8 or
+            (inp.similarity.cos_top and inp.similarity.cos_top >= 0.8)
+        )
+        
+        if not has_strong_name_match:
+            return False, []
+        
+        # Check if we have TIN/DOB evidence
+        has_tin = inp.signals.id_match or 'inn' in inp.signals.evidence.get('extracted_ids', [])
+        has_dob = inp.signals.date_match or 'dob' in inp.signals.evidence.get('extracted_dates', [])
+        
+        # If we have both TIN and DOB, no additional fields needed
+        if has_tin and has_dob:
+            return False, []
+        
+        # Check if sanction record lacks both TIN and DOB (exception case)
+        sanction_has_no_identifiers = (
+            'sanction_record' in inp.signals.evidence and
+            not inp.signals.evidence.get('sanction_record', {}).get('has_tin', False) and
+            not inp.signals.evidence.get('sanction_record', {}).get('has_dob', False)
+        )
+        
+        if sanction_has_no_identifiers:
+            # Allow reject by full name - no additional fields required
+            return False, []
+        
+        # Request missing fields
+        required_fields = []
+        if not has_tin:
+            required_fields.append('TIN')
+        if not has_dob:
+            required_fields.append('DOB')
+        
+        return True, required_fields

@@ -65,7 +65,6 @@ def test_golden_cases_legacy(normalization_service: NormalizationService, case: 
     )
 
 
-@pytest.mark.xfail(reason="Factory implementation not yet aligned with golden cases", strict=False)
 @pytest.mark.asyncio
 @pytest.mark.parametrize("case", GOLDEN_CASES, ids=[case["id"] for case in GOLDEN_CASES])
 async def test_golden_cases_factory(case: dict) -> None:
@@ -79,7 +78,6 @@ async def test_golden_cases_factory(case: dict) -> None:
         remove_stop_words=True,
         preserve_names=True,
         enable_advanced_features=True,
-        use_factory=True,
     )
 
     assert result.normalized == expected, (

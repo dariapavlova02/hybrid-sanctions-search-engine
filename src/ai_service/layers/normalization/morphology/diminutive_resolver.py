@@ -36,7 +36,7 @@ class DiminutiveResolver:
             self._logger.debug("Unsupported diminutive language requested: %s", lang)
             return None
 
-        normalized_token = unicodedata.normalize("NFKC", token).lower()
+        normalized_token = unicodedata.normalize("NFC", token).lower()
         return self._resolve_cached(normalized_token, lang, allow_cross_lang)
 
     def _resolve_internal(self, token: str, lang: str, allow_cross_lang: bool) -> Optional[str]:
@@ -86,8 +86,8 @@ class DiminutiveResolver:
 
         normalized: Dict[str, str] = {}
         for key, value in raw.items():
-            norm_key = unicodedata.normalize("NFKC", key).lower()
-            norm_value = unicodedata.normalize("NFKC", value).lower()
+            norm_key = unicodedata.normalize("NFC", key).lower()
+            norm_value = unicodedata.normalize("NFC", value).lower()
             normalized[norm_key] = norm_value
         return normalized
 

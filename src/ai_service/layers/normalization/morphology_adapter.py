@@ -17,6 +17,7 @@ from ...utils.logging_config import get_logger
 
 if TYPE_CHECKING:
     from ...utils.lru_cache_ttl import LruTtlCache
+    from ...utils.feature_flags import FeatureFlags
 
 
 @dataclass(frozen=True)
@@ -82,7 +83,7 @@ class MorphologyAdapter:
         if not token or not token.strip() or lang not in {"ru", "uk"}:
             return []
             
-        normalized = unicodedata.normalize("NFKC", token)
+        normalized = unicodedata.normalize("NFC", token)
         return self._parse_cached(normalized, lang)
 
     def to_nominative(self, token: str, lang: str) -> str:
@@ -99,8 +100,50 @@ class MorphologyAdapter:
         if not token or not token.strip() or lang not in {"ru", "uk"}:
             return token
             
-        normalized = unicodedata.normalize("NFKC", token)
+        normalized = unicodedata.normalize("NFC", token)
         return self._to_nominative_cached(normalized, lang)
+
+    def to_nominative_cached(self, token: str, lang: str, flags: 'FeatureFlags') -> Tuple[str, str]:
+        """
+        Convert token to nominative case with caching and feature flags support.
+        
+        Args:
+            token: Token to convert
+            lang: Language code ('ru' or 'uk')
+            flags: Feature flags object
+            
+        Returns:
+            Tuple of (nominative_form, trace_note)
+        """
+        if not token or not token.strip() or lang not in {"ru", "uk"}:
+            return token, "morph.nominal_noop"
+        
+        # Create cache key with flags
+        cache_key = (
+            lang, 
+            token.lower(), 
+            getattr(flags, 'enforce_nominative', True),
+            getattr(flags, 'preserve_feminine_surnames', True)
+        )
+        
+        # Check cache first
+        if hasattr(self, '_to_nominative_cached_with_flags'):
+            cached_result = self._to_nominative_cached_with_flags.get(cache_key)
+            if cached_result is not None:
+                return cached_result
+        
+        # Process token
+        normalized = unicodedata.normalize("NFC", token)
+        result, trace_note = self._to_nominative_uncached_with_flags(
+            normalized, lang, flags
+        )
+        
+        # Cache result
+        if not hasattr(self, '_to_nominative_cached_with_flags'):
+            self._to_nominative_cached_with_flags = {}
+        self._to_nominative_cached_with_flags[cache_key] = (result, trace_note)
+        
+        return result, trace_note
 
     def detect_gender(self, token: str, lang: str) -> str:
         """
@@ -116,7 +159,7 @@ class MorphologyAdapter:
         if not token or not token.strip() or lang not in {"ru", "uk"}:
             return "unknown"
             
-        normalized = unicodedata.normalize("NFKC", token)
+        normalized = unicodedata.normalize("NFC", token)
         return self._detect_gender_cached(normalized, lang)
 
     def apply_yo_strategy(self, token: str, strategy: str) -> Tuple[str, List[Dict[str, Any]]]:
@@ -546,6 +589,111 @@ class MorphologyAdapter:
                 return self._preserve_case(token, parse.normal)
         
         return token
+
+    def _is_mixed_script(self, token: str) -> bool:
+        """Check if token contains characters from multiple scripts."""
+        if not token or len(token) < 2:
+            return False
+
+        scripts = set()
+        for char in token:
+            if ord(char) < 128:  # ASCII
+                scripts.add('Latin')
+            elif '\u0400' <= char <= '\u04FF':  # Cyrillic
+                scripts.add('Cyrillic')
+            elif '\u0100' <= char <= '\u017F':  # Latin Extended-A (includes Turkish İ)
+                scripts.add('Latin')
+            elif char.isalpha():  # Other alphabetic scripts
+                scripts.add('Other')
+
+        return len(scripts) > 1
+
+    def _to_nominative_uncached_with_flags(self, token: str, lang: str, flags: 'FeatureFlags') -> Tuple[str, str]:
+        """Uncached nominative conversion with feature flags support."""
+        # Check if nominative enforcement is disabled
+        if not getattr(flags, 'enforce_nominative', True):
+            return token, "morph.nominal_noop"
+
+        # Skip morphology for mixed-script tokens to ensure idempotency
+        # Mixed-script tokens (e.g., Turkish İ + Cyrillic) confuse morphological analysis
+        if self._is_mixed_script(token):
+            return token, "morph.nominal_noop"
+
+        parses = self._parse_uncached(token, lang)
+        if not parses:
+            return token, "morph.nominal_noop"
+        
+        # Check for feminine surname preservation
+        preserve_feminine = getattr(flags, 'preserve_feminine_surnames', True)
+        if preserve_feminine:
+            # Check if this is already a nominative feminine form that should be preserved
+            # Only preserve if it's singular nominative, not plural
+            for parse in parses:
+                if parse.case == "nomn" and parse.gender == "femn":
+                    # Check if it's singular by looking at the tag
+                    if 'plur' not in parse.tag:
+                        # This is already nominative feminine singular, preserve it
+                        return token, "morph.preserve_feminine"
+        
+        # Look for explicit nominative case first
+        # If preservation is disabled, prefer masculine forms
+        if not preserve_feminine:
+            # Look for masculine forms first (any case)
+            for parse in parses:
+                if parse.gender == "masc" and parse.nominative:
+                    result = self._preserve_case(token, parse.nominative)
+                    return result, "morph.to_nominative"
+        
+        # Look for best nominative form
+        # Priority: 1) Non-plural nominative case, 2) Any nominative case, 3) Any parse with nominative form, 4) Normal form fallback
+        best_parse = None
+        
+        # Prefer non-plural nominative case first
+        for parse in parses:
+            if parse.case == "nomn" and parse.nominative and 'plur' not in parse.tag:
+                best_parse = parse
+                break
+
+        # Second priority: any nominative case (but skip plural for names)
+        if not best_parse:
+            for parse in parses:
+                if parse.case == "nomn" and parse.nominative and 'plur' not in parse.tag:
+                    best_parse = parse
+                    break
+
+        # Third priority: any parse with nominative form (prefer non-plural, prefer feminine for names)
+        if not best_parse:
+            # First try to find feminine forms (for names)
+            for parse in parses:
+                if parse.nominative and 'plur' not in parse.tag and parse.gender == "femn":
+                    best_parse = parse
+                    break
+            # If no feminine found, try any non-plural
+            if not best_parse:
+                for parse in parses:
+                    if parse.nominative and 'plur' not in parse.tag:
+                        best_parse = parse
+                        break
+
+        # Fourth priority: any parse with nominative form
+        if not best_parse:
+            for parse in parses:
+                if parse.nominative:
+                    best_parse = parse
+                    break
+
+        # Use the best parse found
+        if best_parse:
+            result = self._preserve_case(token, best_parse.nominative)
+            return result, "morph.to_nominative"
+        
+        # Fallback to normal form if no nominative found
+        for parse in parses:
+            if parse.normal:
+                result = self._preserve_case(token, parse.normal)
+                return result, "morph.to_nominative"
+        
+        return token, "morph.nominal_noop"
 
     def _detect_gender_uncached(self, token: str, lang: str) -> str:
         """Uncached gender detection."""
