@@ -29,6 +29,10 @@ class HighRecallACGenerator:
     """
 
     def __init__(self):
+        # Инициализируем UnicodeService для нормализации
+        from ...unicode.unicode_service import UnicodeService
+        self.unicode_service = UnicodeService()
+        
         # Stop words that should NEVER be patterns
         self.absolute_stop_words = {
             "ru": {
@@ -127,7 +131,78 @@ class HighRecallACGenerator:
             "transliteration": self._generate_translit_variants,
             "spacing": self._generate_spacing_variants,
             "hyphenation": self._generate_hyphen_variants,
+            "name_expansions": self._generate_name_expansions,
         }
+        
+        # Кэш для словарей диминутивов/никнеймов
+        self._diminutives_cache = {}
+        self._nicknames_cache = {}
+
+    def normalize_for_ac(self, text: str) -> str:
+        """
+        Универсальная нормализация для Aho-Corasick с использованием готового UnicodeService.
+        
+        Args:
+            text: Входная строка для нормализации
+            
+        Returns:
+            Нормализованная строка для использования в AC
+        """
+        if not text:
+            return ""
+        
+        # Используем готовый UnicodeService с агрессивной нормализацией
+        result = self.unicode_service.normalize_text(
+            text, 
+            aggressive=True,  # Агрессивная нормализация
+            normalize_homoglyphs=False  # Не используем встроенную де-гомоглифизацию
+        )
+        
+        # Применяем casefold для унификации регистра
+        normalized = result["normalized"].casefold()
+        
+        # Дополнительная NFKC нормализация после casefold для акцентов
+        import unicodedata
+        normalized = unicodedata.normalize('NFKC', normalized)
+        
+        # Принудительная де-гомоглифизация кириллицы в латиницу для AC
+        # (AC должен работать с латинскими символами для универсальности)
+        cyrillic_to_latin = {
+            'а': 'a', 'А': 'A', 'б': 'b', 'Б': 'B', 'в': 'v', 'В': 'V',
+            'г': 'g', 'Г': 'G', 'д': 'd', 'Д': 'D', 'е': 'e', 'Е': 'E',
+            'ё': 'e', 'Ё': 'E', 'ж': 'zh', 'Ж': 'ZH', 'з': 'z', 'З': 'Z',
+            'и': 'i', 'И': 'I', 'й': 'y', 'Й': 'Y', 'к': 'k', 'К': 'K',
+            'л': 'l', 'Л': 'L', 'м': 'm', 'М': 'M', 'н': 'n', 'Н': 'N',
+            'о': 'o', 'О': 'O', 'п': 'p', 'П': 'P', 'р': 'r', 'Р': 'R',
+            'с': 's', 'С': 'S', 'т': 't', 'Т': 'T', 'у': 'u', 'У': 'U',
+            'ф': 'f', 'Ф': 'F', 'х': 'h', 'Х': 'H', 'ц': 'ts', 'Ц': 'TS',
+            'ч': 'ch', 'Ч': 'CH', 'ш': 'sh', 'Ш': 'SH', 'щ': 'sch', 'Щ': 'SCH',
+            'ъ': '', 'Ъ': '', 'ы': 'y', 'Ы': 'Y', 'ь': '', 'Ь': '',
+            'э': 'e', 'Э': 'E', 'ю': 'u', 'Ю': 'U', 'я': 'ya', 'Я': 'YA',
+            # Украинские символы
+            'і': 'i', 'І': 'I', 'ї': 'i', 'Ї': 'I', 'є': 'e', 'Є': 'E',
+            'ґ': 'g', 'Ґ': 'G',
+        }
+        
+        for cyrillic, latin in cyrillic_to_latin.items():
+            normalized = normalized.replace(cyrillic, latin)
+        
+        # Дополнительная нормализация для AC
+        # Заменяем двойные кавычки на одинарные для унификации
+        normalized = normalized.replace('"', "'")
+        
+        # Заменяем оставшиеся дефисы
+        hyphen_variants = ['‐', '–', '—', '―', '‒', '‑', '‗', '⁃', '⁻', '₋']
+        for variant in hyphen_variants:
+            normalized = normalized.replace(variant, '-')
+        
+        # Коллапс кратных пробелов
+        normalized = re.sub(r'\s+', ' ', normalized)
+        
+        # Обрезка крайних пробелов
+        normalized = normalized.strip()
+        
+        return normalized
 
     def generate_high_recall_patterns(
         self, text: str, language: str = "auto", entity_metadata: Dict = None
@@ -136,24 +211,28 @@ class HighRecallACGenerator:
         Генерация паттернов с максимальным Recall
         Стратегия: захватываем ВСЁ подозрительное, фильтруем потом
         """
+        # Определяем язык до нормализации
         if language == "auto":
             language = self._detect_language(text)
+        
+        # Нормализуем входной текст для AC
+        normalized_text = self.normalize_for_ac(text)
 
         patterns = []
         entity_metadata = entity_metadata or {}
 
         # TIER 0: Exact documents (100% automatic hit)
-        patterns.extend(self._extract_documents_comprehensive(text))
+        patterns.extend(self._extract_documents_comprehensive(normalized_text))
 
         # TIER 1: High Recall - all names and companies
-        patterns.extend(self._extract_all_names_aggressive(text, language))
-        patterns.extend(self._extract_all_companies_aggressive(text, language))
+        patterns.extend(self._extract_all_names_aggressive(normalized_text, language))
+        patterns.extend(self._extract_all_companies_aggressive(normalized_text, language))
 
         # TIER 2: Medium Recall - name parts, initials, abbreviations
-        patterns.extend(self._extract_name_parts_and_initials(text, language))
+        patterns.extend(self._extract_name_parts_and_initials(normalized_text, language))
 
         # TIER 3: Broad Recall - suspicious sequences
-        patterns.extend(self._extract_suspicious_sequences(text, language))
+        patterns.extend(self._extract_suspicious_sequences(normalized_text, language))
 
         # Generate automatic variants for all patterns
         patterns_with_variants = self._generate_comprehensive_variants(
@@ -195,42 +274,26 @@ class HighRecallACGenerator:
         """Агрессивное извлечение ВСЕХ возможных имен - Tier 1"""
         patterns = []
 
-        if language in ["ru", "uk"]:
-            # All word sequences with capital letters (2-4 words)
-            name_patterns = [
-                r"\b[А-ЯІЇЄҐ][а-яіїєґ\']{1,}\s+[А-ЯІЇЄҐ][а-яіїєґ\']{1,}\b",  # 2 words
-                r"\b[А-ЯІЇЄҐ][а-яіїєґ\']{1,}\s+[А-ЯІЇЄҐ][а-яіїєґ\']{1,}\s+[А-ЯІЇЄҐ][а-яіїєґ\']{1,}\b",  # 3 words
-                r"\b[А-ЯІЇЄҐ][а-яіїєґ\']{1,}\s+[А-ЯІЇЄҐ][а-яіїєґ\']{1,}\s+[А-ЯІЇЄҐ][а-яіїєґ\']{1,}\s+[А-ЯІЇЄҐ][а-яіїєґ\']{1,}\b",  # 4 words
-            ]
+        # После нормализации все тексты в нижнем регистре и латинице
+        # Используем универсальные паттерны для нормализованного текста
+        name_patterns = [
+            r"\b[a-z\']{2,}\s+[a-z\']{2,}\b",  # 2 words
+            r"\b[a-z\']{2,}\s+[a-z\']{2,}\s+[a-z\']{2,}\b",  # 3 words
+            r"\b[a-z\']{2,}\s+[a-z\']{2,}\s+[a-z\']{2,}\s+[a-z\']{2,}\b",  # 4 words
+        ]
 
-            # Structured forms
-            structured_patterns = [
-                r"\b[А-ЯІЇЄҐ][а-яіїєґ\']{2,}\s+[А-ЯІЇЄҐ]\.\s*[А-ЯІЇЄҐ]\.\b",  # Last F.M.
-                r"\b[А-ЯІЇЄҐ]\.\s*[А-ЯІЇЄҐ]\.\s+[А-ЯІЇЄҐ][а-яіїєґ\']{2,}\b",  # F.M. Last
-                r"\b[А-ЯІЇЄҐ][а-яіїєґ\']{2,}\s+[А-ЯІЇЄҐ]\.\b",  # Last F.
-                r"\b[А-ЯІЇЄҐ]\.\s+[А-ЯІЇЄҐ][а-яіїєґ\']{2,}\b",  # F. Last
-            ]
+        # Structured forms (после нормализации)
+        structured_patterns = [
+            r"\b[a-z\']{2,}\s+[a-z]\.\s*[a-z]\.\b",  # Last F.M.
+            r"\b[a-z]\.\s*[a-z]\.\s+[a-z\']{2,}\b",  # F.M. Last
+            r"\b[a-z\']{2,}\s+[a-z]\.\b",  # Last F.
+            r"\b[a-z]\.\s+[a-z\']{2,}\b",  # F. Last
+        ]
 
-            # Even single words if long enough (could be surnames)
-            single_word_patterns = [
-                r"\b[А-ЯІЇЄҐ][а-яіїєґ\']{3,15}\b"  # Single words 4-15 characters
-            ]
-
-        else:  # English
-            name_patterns = [
-                r"\b[A-Z][a-z\']{1,}\s+[A-Z][a-z\']{1,}\b",
-                r"\b[A-Z][a-z\']{1,}\s+[A-Z][a-z\']{1,}\s+[A-Z][a-z\']{1,}\b",
-                r"\b[A-Z][a-z\']{1,}\s+[A-Z][a-z\']{1,}\s+[A-Z][a-z\']{1,}\s+[A-Z][a-z\']{1,}\b",
-            ]
-
-            structured_patterns = [
-                r"\b[A-Z][a-z\']{2,}\s+[A-Z]\.\s*[A-Z]\.\b",
-                r"\b[A-Z]\.\s*[A-Z]\.\s+[A-Z][a-z\']{2,}\b",
-                r"\b[A-Z][a-z\']{2,}\s+[A-Z]\.\b",
-                r"\b[A-Z]\.\s+[A-Z][a-z\']{2,}\b",
-            ]
-
-            single_word_patterns = [r"\b[A-Z][a-z\']{3,15}\b"]
+        # Even single words if long enough (could be surnames)
+        single_word_patterns = [
+            r"\b[a-z\']{3,15}\b"  # Single words 4-15 characters
+        ]
 
         # Extract full names
         for pattern in name_patterns:
@@ -340,27 +403,32 @@ class HighRecallACGenerator:
     def _extract_name_parts_and_initials(
         self, text: str, language: str
     ) -> List[RecallOptimizedPattern]:
-        """Извлечение частей имен и инициалов - Tier 2"""
+        """Извлечение частей имен и инициалов - Tier 2, используя существующие паттерны"""
         patterns = []
 
-        # Initials separately
-        if language in ["ru", "uk"]:
-            initial_pattern = r"\b[А-ЯІЇЄҐ]\.[А-ЯІЇЄҐ]?\."
-        else:
-            initial_pattern = r"\b[A-Z]\.[A-Z]?\."
+        # После нормализации все тексты в нижнем регистре и латинице
+        # Универсальные паттерны для нормализованного текста
+        initial_patterns = [
+            r"\b[a-z]\.\s*[a-z]\.\s*[a-z\']{2,}\b",  # i.i.surname
+            r"\b[a-z\']{2,}\s+[a-z]\.\s*[a-z]\.\b",  # surname i.i.
+            r"\b[a-z]\.\s*[a-z]\.\b",  # i.i.
+            r"\b[a-z]\s+[a-z]\b",  # i i (без точек)
+            r"\b[a-z]{2,}\b",  # ii (слитно)
+        ]
 
-        for match in re.finditer(initial_pattern, text):
-            initials = match.group().strip()
-            patterns.append(
-                RecallOptimizedPattern(
-                    pattern=initials,
-                    pattern_type="initials_only",
-                    recall_tier=2,
-                    precision_hint=0.2,  # Very many FP
-                    variants=[],
-                    language=language,
+        for pattern_str in initial_patterns:
+            for match in re.finditer(pattern_str, text):
+                initials = match.group().strip()
+                patterns.append(
+                    RecallOptimizedPattern(
+                        pattern=initials,
+                        pattern_type="initials_pattern",
+                        recall_tier=2,
+                        precision_hint=0.2,  # Very many FP
+                        variants=[],
+                        language=language,
+                    )
                 )
-            )
 
         return patterns
 
@@ -458,6 +526,10 @@ class HighRecallACGenerator:
         enriched_patterns = []
 
         for pattern in patterns:
+            # Нормализуем основной паттерн
+            normalized_pattern = self.normalize_for_ac(pattern.pattern)
+            pattern.pattern = normalized_pattern
+            
             # Base pattern
             enriched_patterns.append(pattern)
 
@@ -475,8 +547,10 @@ class HighRecallACGenerator:
                     generator_func,
                 ) in self.name_variants_generators.items():
                     try:
-                        new_variants = generator_func(pattern.pattern, language)
-                        variants.update(new_variants)
+                        new_variants = generator_func(normalized_pattern, language)
+                        # Нормализуем каждый вариант
+                        normalized_variants = [self.normalize_for_ac(v) for v in new_variants]
+                        variants.update(normalized_variants)
                     except Exception:
                         continue  # If generator broke, skip
 
@@ -488,25 +562,69 @@ class HighRecallACGenerator:
         return enriched_patterns
 
     def _generate_initial_variants(self, name: str, language: str) -> List[str]:
-        """Генерация вариантов с инициалами"""
+        """Генерация вариантов с инициалами используя существующие паттерны системы"""
         variants = []
         words = name.split()
 
         if len(words) >= 2:
-            # First word + initial of second
+            # Базовые варианты: First word + initial of second
             variants.append(f"{words[0]} {words[1][0]}.")
-
             # Initial of first + second word
             variants.append(f"{words[0][0]}. {words[1]}")
 
             if len(words) >= 3:
-                # All initials
-                initials = " ".join([f"{word[0]}." for word in words])
-                variants.append(initials)
+                # Все инициалы с точками (И.И.И.)
+                initials_with_dots = " ".join([f"{word[0]}." for word in words])
+                variants.append(initials_with_dots)
+                
+                # Все инициалы без точек (И И И)
+                initials_no_dots = " ".join([word[0] for word in words])
+                variants.append(initials_no_dots)
+                
+                # Все инициалы с пробелами вокруг точек (И . И . И.)
+                initials_spaced = " . ".join([word[0] for word in words]) + "."
+                variants.append(initials_spaced)
+                
+                # Все инициалы слитно (III, JD)
+                initials_joined = "".join([word[0] for word in words])
+                variants.append(initials_joined)
 
                 # First word + initials of others
                 rest_initials = " ".join([f"{word[0]}." for word in words[1:]])
                 variants.append(f"{words[0]} {rest_initials}")
+                
+                # First word + initials of others без точек
+                rest_initials_no_dots = " ".join([word[0] for word in words[1:]])
+                variants.append(f"{words[0]} {rest_initials_no_dots}")
+
+        # Обработка случаев с запятой (фамилия, имя)
+        if "," in name:
+            parts = [part.strip() for part in name.split(",")]
+            if len(parts) == 2:
+                surname, given_name = parts
+                given_words = given_name.split()
+                
+                if given_words:
+                    # "O'Connor, Sean" -> "O'Connor S."
+                    variants.append(f"{surname} {given_words[0][0]}.")
+                    
+                    # "O'Connor, Sean" -> "S. O'Connor"
+                    variants.append(f"{given_words[0][0]}. {surname}")
+                    
+                    if len(given_words) >= 2:
+                        # "O'Connor, Sean Michael" -> "O'Connor S.M."
+                        initials = " ".join([f"{word[0]}." for word in given_words])
+                        variants.append(f"{surname} {initials}")
+                        
+                        # "O'Connor, Sean Michael" -> "S.M. O'Connor"
+                        variants.append(f"{initials} {surname}")
+                        
+                        # "O'Connor, Sean Michael" -> "O'Connor SM"
+                        initials_no_dots = " ".join([word[0] for word in given_words])
+                        variants.append(f"{surname} {initials_no_dots}")
+                        
+                        # "O'Connor, Sean Michael" -> "SM O'Connor"
+                        variants.append(f"{initials_no_dots} {surname}")
 
         return variants
 
@@ -553,18 +671,215 @@ class HighRecallACGenerator:
         return variants
 
     def _generate_hyphen_variants(self, name: str, language: str) -> List[str]:
-        """Варианты с дефисами"""
+        """Расширенные варианты с дефисами/пробелами для фамилий и компаний"""
         variants = []
 
-        # Replace spaces with hyphens
-        hyphenated = name.replace(" ", "-")
-        if hyphenated != name:
+        # Определяем, содержит ли имя дефисы или пробелы
+        has_hyphen = "-" in name
+        has_space = " " in name
+        
+        if has_hyphen:
+            # Исходная форма с дефисом: "Blunt-Krasinski"
+            variants.append(name)
+            
+            # Форма с пробелом: "Blunt Krasinski"
+            spaced = name.replace("-", " ")
+            variants.append(spaced)
+            
+            # Форма без разделителя: "BluntKrasinski"
+            no_separator = name.replace("-", "")
+            variants.append(no_separator)
+            
+        elif has_space:
+            # Исходная форма с пробелом: "Blunt Krasinski"
+            variants.append(name)
+            
+            # Форма с дефисом: "Blunt-Krasinski"
+            hyphenated = name.replace(" ", "-")
             variants.append(hyphenated)
 
-        # Remove hyphens
-        no_hyphens = name.replace("-", " ").replace("  ", " ")
-        if no_hyphens != name:
-            variants.append(no_hyphens)
+            # Форма без разделителя: "BluntKrasinski"
+            no_separator = name.replace(" ", "")
+            variants.append(no_separator)
+            
+        else:
+            # Если нет разделителей, добавляем их
+            # Форма с пробелом (если имя достаточно длинное)
+            if len(name) >= 6:  # Минимальная длина для разделения
+                # Пытаемся найти естественное место для разделения
+                # Ищем заглавные буквы в середине имени
+                for i in range(1, len(name) - 1):
+                    if name[i].isupper() and name[i-1].islower():
+                        # Разделяем на этом месте
+                        part1 = name[:i]
+                        part2 = name[i:]
+                        
+                        # Форма с пробелом
+                        spaced = f"{part1} {part2}"
+                        variants.append(spaced)
+                        
+                        # Форма с дефисом
+                        hyphenated = f"{part1}-{part2}"
+                        variants.append(hyphenated)
+                        
+                        break
+
+        return variants
+
+    def _generate_name_expansions(self, name: str, language: str) -> List[str]:
+        """Генерация расширений имен: диминутивы/никнеймы и фамильные окончания"""
+        variants = []
+        
+        # Генерация диминутивов/никнеймов
+        diminutive_variants = self._generate_diminutive_expansions(name, language)
+        variants.extend(diminutive_variants)
+        
+        # Генерация фамильных окончаний
+        surname_variants = self._generate_surname_endings(name, language)
+        variants.extend(surname_variants)
+        
+        return variants
+
+    def _generate_diminutive_expansions(self, name: str, language: str) -> List[str]:
+        """Генерация диминутивов/никнеймов используя существующие словари"""
+        variants = []
+        
+        try:
+            # Загружаем словари диминутивов
+            if language in ["ru", "uk"]:
+                # Используем кэш
+                if language not in self._diminutives_cache:
+                    import json
+                    from pathlib import Path
+                    
+                    base_path = Path(__file__).resolve().parents[5]
+                    diminutive_file = base_path / "data" / f"diminutives_{language}.json"
+                    
+                    if diminutive_file.exists():
+                        with open(diminutive_file, 'r', encoding='utf-8') as f:
+                            self._diminutives_cache[language] = json.load(f)
+                    else:
+                        self._diminutives_cache[language] = {}
+                
+                diminutives = self._diminutives_cache[language]
+                name_lower = name.lower()
+                
+                # Прямое соответствие
+                if name_lower in diminutives:
+                    full_name = diminutives[name_lower]
+                    if full_name != name_lower:
+                        variants.append(full_name.title())
+                
+                # Обратное соответствие - ищем диминутивы для данного имени
+                for diminutive, full in diminutives.items():
+                    if full == name_lower and diminutive != name_lower:
+                        variants.append(diminutive.title())
+                
+                # Дополнительный поиск с учетом ё/е
+                if 'ё' in name_lower or 'е' in name_lower:
+                    # Заменяем ё на е и ищем снова
+                    name_with_e = name_lower.replace('ё', 'е')
+                    if name_with_e != name_lower:
+                        if name_with_e in diminutives:
+                            full_name = diminutives[name_with_e]
+                            if full_name != name_with_e:
+                                variants.append(full_name.title())
+                        
+                        for diminutive, full in diminutives.items():
+                            if full == name_with_e and diminutive != name_with_e:
+                                variants.append(diminutive.title())
+            
+            elif language == "en":
+                # Используем кэш для английских никнеймов
+                if "en" not in self._nicknames_cache:
+                    import json
+                    from pathlib import Path
+                    
+                    base_path = Path(__file__).resolve().parents[5]
+                    nicknames_file = base_path / "data" / "lexicons" / "en_nicknames.json"
+                    
+                    if nicknames_file.exists():
+                        with open(nicknames_file, 'r', encoding='utf-8') as f:
+                            self._nicknames_cache["en"] = json.load(f)
+                    else:
+                        self._nicknames_cache["en"] = {}
+                
+                nicknames = self._nicknames_cache["en"]
+                name_lower = name.lower()
+                
+                # Прямое соответствие
+                if name_lower in nicknames:
+                    full_name = nicknames[name_lower]
+                    if full_name != name_lower:
+                        variants.append(full_name.title())
+                
+                # Обратное соответствие - ищем никнеймы для данного имени
+                for nickname, full in nicknames.items():
+                    if full == name_lower and nickname != name_lower:
+                        variants.append(nickname.title())
+        
+        except Exception as e:
+            # Логируем ошибку, но не прерываем выполнение
+            pass
+        
+        return variants
+
+    def _generate_surname_endings(self, name: str, language: str) -> List[str]:
+        """Генерация фамильных окончаний для мужских/женских форм"""
+        variants = []
+        
+        if language not in ["ru", "uk"]:
+            return variants
+        
+        # Паттерны для русских фамилий
+        if language == "ru":
+            # Мужские -> женские
+            if name.endswith("ов"):
+                variants.append(name[:-2] + "ова")
+            elif name.endswith("ев"):
+                variants.append(name[:-2] + "ева")
+            elif name.endswith("ин"):
+                variants.append(name[:-2] + "ина")
+            elif name.endswith("ский"):
+                variants.append(name[:-4] + "ская")
+            elif name.endswith("цкий"):
+                variants.append(name[:-4] + "цкая")
+            
+            # Женские -> мужские
+            elif name.endswith("ова"):
+                variants.append(name[:-3] + "ов")
+            elif name.endswith("ева"):
+                variants.append(name[:-3] + "ев")
+            elif name.endswith("ина"):
+                variants.append(name[:-3] + "ин")
+            elif name.endswith("ская"):
+                variants.append(name[:-4] + "ский")
+            elif name.endswith("цкая"):
+                variants.append(name[:-4] + "цкий")
+        
+        # Паттерны для украинских фамилий
+        elif language == "uk":
+            # Мужские -> женские
+            if name.endswith("енко"):
+                variants.append(name[:-4] + "енко")  # Остается без изменений
+            elif name.endswith("ко"):
+                variants.append(name[:-2] + "ко")  # Остается без изменений
+            elif name.endswith("ський"):
+                variants.append(name[:-5] + "ська")
+            elif name.endswith("цький"):
+                variants.append(name[:-5] + "цька")
+            elif name.endswith("ук"):
+                variants.append(name[:-2] + "ук")  # Остается без изменений
+            elif name.endswith("юк"):
+                variants.append(name[:-2] + "юк")  # Остается без изменений
+            elif name.endswith("чук"):
+                variants.append(name[:-3] + "чук")  # Остается без изменений
+            
+            # Женские -> мужские
+            elif name.endswith("ська"):
+                variants.append(name[:-4] + "ський")
+            elif name.endswith("цька"):
+                variants.append(name[:-4] + "цький")
 
         return variants
 
@@ -630,18 +945,21 @@ class HighRecallACGenerator:
         }
 
         for pattern in patterns:
+            # Нормализуем основной паттерн перед экспортом
+            normalized_pattern = self.normalize_for_ac(pattern.pattern)
+            
             # Add main pattern
             target_tier = f"tier_{pattern.recall_tier}_"
             if pattern.recall_tier == 0:
-                export_tiers["tier_0_exact"].append(pattern.pattern)
+                export_tiers["tier_0_exact"].append(normalized_pattern)
             elif pattern.recall_tier == 1:
-                export_tiers["tier_1_high_recall"].append(pattern.pattern)
+                export_tiers["tier_1_high_recall"].append(normalized_pattern)
             elif pattern.recall_tier == 2:
-                export_tiers["tier_2_medium_recall"].append(pattern.pattern)
+                export_tiers["tier_2_medium_recall"].append(normalized_pattern)
             else:
-                export_tiers["tier_3_broad_recall"].append(pattern.pattern)
+                export_tiers["tier_3_broad_recall"].append(normalized_pattern)
 
-            # Add all variants to same level
+            # Add all variants to same level (нормализация уже применена в _generate_comprehensive_variants)
             for variant in pattern.variants:
                 if pattern.recall_tier == 0:
                     export_tiers["tier_0_exact"].append(variant)

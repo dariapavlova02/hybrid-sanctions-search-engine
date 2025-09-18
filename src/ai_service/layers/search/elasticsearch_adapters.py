@@ -10,14 +10,44 @@ import asyncio
 import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from functools import wraps
 
-import httpx
+from elasticsearch import AsyncElasticsearch
+from elasticsearch.exceptions import ElasticsearchException, ConnectionError, TimeoutError
 
 from ...utils.logging_config import get_logger
 
 from .contracts import Candidate, SearchOpts, ElasticsearchAdapter, SearchMode
 from .config import HybridSearchConfig
 from .elasticsearch_client import ElasticsearchClientFactory
+
+
+def retry_elasticsearch(max_retries: int = 3, delay: float = 1.0, backoff: float = 2.0):
+    """Retry decorator for Elasticsearch operations."""
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            last_exception = None
+            current_delay = delay
+            
+            for attempt in range(max_retries + 1):
+                try:
+                    return await func(*args, **kwargs)
+                except (ConnectionError, TimeoutError) as exc:
+                    last_exception = exc
+                    if attempt < max_retries:
+                        await asyncio.sleep(current_delay)
+                        current_delay *= backoff
+                    else:
+                        raise exc
+                except ElasticsearchException as exc:
+                    # Don't retry on Elasticsearch-specific errors (like index not found)
+                    raise exc
+            
+            if last_exception:
+                raise last_exception
+        return wrapper
+    return decorator
 
 
 class ElasticsearchACAdapter(ElasticsearchAdapter):
@@ -34,7 +64,7 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
         self.config = config
         self.logger = get_logger(__name__)
         self._client_factory = client_factory or ElasticsearchClientFactory(config)
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: Optional[AsyncElasticsearch] = None
         self._latency_stats = {
             "total_requests": 0,
             "avg_latency_ms": 0.0,
@@ -46,7 +76,7 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
         self._connection_lock = asyncio.Lock()
         self._ac_patterns_initialized = False
 
-    async def _ensure_connection(self) -> httpx.AsyncClient:
+    async def _ensure_connection(self) -> AsyncElasticsearch:
         """Ensure Elasticsearch connection is established and cached."""
         if (
             self._client
@@ -89,10 +119,13 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
             client = await self._ensure_connection()
             
             # Check if index exists
-            response = await client.get(f"/{self.AC_PATTERNS_INDEX}")
-            if response.status_code == 200:
+            try:
+                await client.indices.get(index=self.AC_PATTERNS_INDEX)
                 self._ac_patterns_initialized = True
                 return
+            except ElasticsearchException:
+                # Index doesn't exist, create it
+                pass
             
             # Create index with mapping
             mapping = {
@@ -144,8 +177,7 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
                 }
             }
             
-            response = await client.put(f"/{self.AC_PATTERNS_INDEX}", json=mapping)
-            response.raise_for_status()
+            await client.indices.create(index=self.AC_PATTERNS_INDEX, body=mapping)
             self._ac_patterns_initialized = True
             self.logger.info(f"Created AC patterns index: {self.AC_PATTERNS_INDEX}")
             
@@ -350,6 +382,7 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
 
         return candidates
 
+    @retry_elasticsearch(max_retries=3, delay=0.5, backoff=2.0)
     async def search_ac_patterns(
         self,
         query: str,
@@ -377,9 +410,8 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
                 ]
             }
             
-            response = await client.post(f"/{self.AC_PATTERNS_INDEX}/_search", json=pattern_query)
-            response.raise_for_status()
-            payload = await response.json()
+            response = await client.search(index=self.AC_PATTERNS_INDEX, body=pattern_query)
+            payload = response
             
             hits = payload.get("hits", {}).get("hits", [])
             ac_patterns = []
@@ -399,6 +431,7 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
             self.logger.error(f"AC patterns search failed: {exc}")
             return []
 
+    @retry_elasticsearch(max_retries=3, delay=0.5, backoff=2.0)
     async def search(
         self,
         query: Any,
@@ -413,10 +446,8 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
 
         try:
             search_body = self._build_ac_query(query, opts)
-            response = await client.post(f"/{index_name}/_search", json=search_body)
-            response.raise_for_status()
-            payload = await response.json()
-            candidates = self._parse_candidates(payload)
+            response = await client.search(index=index_name, body=search_body)
+            candidates = self._parse_candidates(response)
             
             # Add AC pattern hits if enabled
             if getattr(self.config, 'enable_ac_es', False):
@@ -440,8 +471,16 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
                                 "reason": pattern["meta"].get("reason", "ac_pattern_match")
                             })
                             
+        except ElasticsearchException as exc:
+            self.logger.error(f"Elasticsearch error during AC search: {exc}")
+            self._connected = False
+            candidates = []
+        except (ConnectionError, TimeoutError) as exc:
+            self.logger.error(f"Connection error during AC search: {exc}")
+            self._connected = False
+            candidates = []
         except Exception as exc:
-            self.logger.error(f"AC search failed: {exc}")
+            self.logger.error(f"Unexpected error during AC search: {exc}")
             self._connected = False
             candidates = []
         finally:
@@ -508,7 +547,7 @@ class ElasticsearchVectorAdapter(ElasticsearchAdapter):
         self.config = config
         self.logger = get_logger(__name__)
         self._client_factory = client_factory or ElasticsearchClientFactory(config)
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: Optional[AsyncElasticsearch] = None
         self._latency_stats = {
             "total_requests": 0,
             "avg_latency_ms": 0.0,
@@ -520,7 +559,7 @@ class ElasticsearchVectorAdapter(ElasticsearchAdapter):
         self._connection_lock = asyncio.Lock()
         self._vector_index_initialized = False
 
-    async def _ensure_connection(self) -> httpx.AsyncClient:
+    async def _ensure_connection(self) -> AsyncElasticsearch:
         if (
             self._client
             and self._connected
@@ -562,10 +601,13 @@ class ElasticsearchVectorAdapter(ElasticsearchAdapter):
             client = await self._ensure_connection()
             
             # Check if index exists
-            response = await client.get(f"/{self.VECTOR_INDEX}")
-            if response.status_code == 200:
+            try:
+                await client.indices.get(index=self.VECTOR_INDEX)
                 self._vector_index_initialized = True
                 return
+            except ElasticsearchException:
+                # Index doesn't exist, create it
+                pass
             
             # Create index with mapping for dense vectors and BM25
             vector_dim = self.config.vector_search.vector_dimension
@@ -630,8 +672,7 @@ class ElasticsearchVectorAdapter(ElasticsearchAdapter):
                 }
             }
             
-            response = await client.put(f"/{self.VECTOR_INDEX}", json=mapping)
-            response.raise_for_status()
+            await client.indices.create(index=self.VECTOR_INDEX, body=mapping)
             self._vector_index_initialized = True
             self.logger.info(f"Created vector index: {self.VECTOR_INDEX} with {vector_dim}D dense vectors")
             
@@ -652,6 +693,7 @@ class ElasticsearchVectorAdapter(ElasticsearchAdapter):
             )
         return vector
 
+    @retry_elasticsearch(max_retries=3, delay=0.5, backoff=2.0)
     async def search_vector_fallback(
         self,
         query_vector: List[float],
@@ -669,13 +711,17 @@ class ElasticsearchVectorAdapter(ElasticsearchAdapter):
             # Build hybrid query combining kNN and BM25
             search_body = self._build_vector_fallback_query(query_vector, query_text, opts)
             
-            response = await client.post(f"/{self.VECTOR_INDEX}/_search", json=search_body)
-            response.raise_for_status()
-            payload = await response.json()
-            candidates = self._parse_vector_fallback_candidates(payload, query_text)
+            response = await client.search(index=self.VECTOR_INDEX, body=search_body)
+            candidates = self._parse_vector_fallback_candidates(response, query_text)
             
+        except ElasticsearchException as exc:
+            self.logger.error(f"Elasticsearch error during vector fallback search: {exc}")
+            candidates = []
+        except (ConnectionError, TimeoutError) as exc:
+            self.logger.error(f"Connection error during vector fallback search: {exc}")
+            candidates = []
         except Exception as exc:
-            self.logger.error(f"Vector fallback search failed: {exc}")
+            self.logger.error(f"Unexpected error during vector fallback search: {exc}")
             candidates = []
         finally:
             latency_ms = (time.time() - start_time) * 1000
@@ -902,6 +948,7 @@ class ElasticsearchVectorAdapter(ElasticsearchAdapter):
 
         return candidates
 
+    @retry_elasticsearch(max_retries=3, delay=0.5, backoff=2.0)
     async def search(
         self,
         query: Any,
@@ -914,12 +961,18 @@ class ElasticsearchVectorAdapter(ElasticsearchAdapter):
 
         try:
             body = self._build_vector_query(query_vector, opts)
-            response = await client.post(f"/{index_name}/_search", json=body)
-            response.raise_for_status()
-            payload = await response.json()
-            candidates = self._parse_candidates(payload)
+            response = await client.search(index=index_name, body=body)
+            candidates = self._parse_candidates(response)
+        except ElasticsearchException as exc:
+            self.logger.error(f"Elasticsearch error during vector search: {exc}")
+            self._connected = False
+            candidates = []
+        except (ConnectionError, TimeoutError) as exc:
+            self.logger.error(f"Connection error during vector search: {exc}")
+            self._connected = False
+            candidates = []
         except Exception as exc:
-            self.logger.error(f"Vector search failed: {exc}")
+            self.logger.error(f"Unexpected error during vector search: {exc}")
             self._connected = False
             candidates = []
         finally:

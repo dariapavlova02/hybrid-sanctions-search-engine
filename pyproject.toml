@@ -33,6 +33,7 @@ pymorphy3-dicts-ru = ">=2.4.417150.4580142"
 pyyaml = ">=6.0.2"
 httpx = "^0.28.1"
 nameparser = ">=1.1.0"
+elasticsearch = ">=8.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = ">=1.1.0"
