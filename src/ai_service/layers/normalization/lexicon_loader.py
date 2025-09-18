@@ -72,7 +72,7 @@ def load_lexicons(base_path: Optional[Path] = None) -> Lexicons:
     for lang in ["ru", "uk", "en"]:
         stopwords_person_file = base_path / f"stopwords_person_{lang}.json"
         if stopwords_person_file.exists():
-            stopwords_person[lang] = _load_word_list(stopwords_person_file)
+            stopwords_person[lang] = _load_json_word_list(stopwords_person_file, lang)
         else:
             stopwords_person[lang] = set()
     

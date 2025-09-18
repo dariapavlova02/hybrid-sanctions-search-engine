@@ -44,6 +44,9 @@ class FeatureFlags:
     enable_ac_tier0: bool = True
     enable_vector_fallback: bool = True
     
+    # Morphology flags
+    morphology_custom_rules_first: bool = True  # Apply custom rules before pymorphy3
+    
     # English-specific flags
     enable_nameparser_en: bool = True  # Enable nameparser for English name parsing
     enable_en_nicknames: bool = True  # Enable English nickname resolution

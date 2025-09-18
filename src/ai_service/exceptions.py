@@ -53,18 +53,6 @@ class NormalizationError(AIServiceException):
     pass
 
 
-class VariantGenerationError(AIServiceException):
-    """Variant generation errors"""
-
-    pass
-
-
-class EmbeddingError(AIServiceException):
-    """Embedding generation errors"""
-
-    pass
-
-
 class CacheError(AIServiceException):
     """Cache related errors"""
 
@@ -89,20 +77,8 @@ class SmartFilterError(AIServiceException):
     pass
 
 
-class TemplateError(AIServiceException):
-    """Template building errors"""
-
-    pass
-
-
 class PatternError(AIServiceException):
     """Pattern matching errors"""
-
-    pass
-
-
-class UnicodeError(AIServiceException):
-    """Unicode processing errors"""
 
     pass
 

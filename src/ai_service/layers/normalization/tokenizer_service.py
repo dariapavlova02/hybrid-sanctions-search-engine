@@ -4,9 +4,13 @@ Tokenizer service with caching support.
 
 This service provides tokenization functionality with LRU caching
 for improved performance on repeated patterns.
+
+Enhanced with async support for long text processing.
 """
 
 import time
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 

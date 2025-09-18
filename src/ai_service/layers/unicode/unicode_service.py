@@ -119,20 +119,6 @@ class UnicodeService:
             'м': 'm', 'М': 'M',  # Cyrillic м (U+043C) → Latin m (U+006D) - SAME VISUAL APPEARANCE
             'н': 'n', 'Н': 'N',  # Cyrillic н (U+043D) → Latin n (U+006E) - SAME VISUAL APPEARANCE
             'т': 't', 'Т': 'T',  # Cyrillic т (U+0442) → Latin t (U+0074) - SAME VISUAL APPEARANCE
-            
-            # REMOVED incorrect mappings that were causing Cyrillic text corruption:
-            # 'п': 'n' - WRONG: Cyrillic п looks like Latin n but is different
-            # 'в': 'b' - WRONG: Cyrillic в looks like Latin b but is different  
-            # 'г': 'r' - WRONG: Cyrillic г looks like Latin r but is different
-            # 'з': '3' - WRONG: Cyrillic з looks like Latin 3 but is different
-            # 'ч': '4' - WRONG: Cyrillic ч looks like Latin 4 but is different
-            # 'ш': 'w' - WRONG: Cyrillic ш looks like Latin w but is different
-            # 'щ': 'u' - WRONG: Cyrillic щ looks like Latin u but is different
-            # 'ь': 'b' - WRONG: Cyrillic ь looks like Latin b but is different
-            # 'ъ': 'b' - WRONG: Cyrillic ъ looks like Latin b but is different
-            # 'э': 'e' - WRONG: Cyrillic э looks like Latin e but is different
-            # 'ю': 'io' - WRONG: Cyrillic ю looks like Latin io but is different
-            # 'я': 'ya' - WRONG: Cyrillic я looks like Latin ya but is different
         }
 
         self.logger.info("UnicodeService initialized")

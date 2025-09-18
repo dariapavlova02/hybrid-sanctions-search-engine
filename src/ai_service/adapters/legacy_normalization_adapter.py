@@ -55,6 +55,9 @@ class LegacyNormalizationAdapter:
             "success": result.success,
             "processing_time": result.processing_time,
             "error": result.errors[0] if result.errors else None,
+            "persons": getattr(result, 'persons', []),
+            "persons_core": getattr(result, 'persons_core', []),
+            "organizations_core": getattr(result, 'organizations_core', []),
             "trace": [
                 {
                     "token": trace.token,
@@ -108,6 +111,9 @@ class LegacyNormalizationAdapter:
             token_count=len(legacy_result.get("tokens", [])),
             processing_time=legacy_result.get("processing_time", 0.0),
             success=legacy_result.get("success", True),
+            persons=legacy_result.get("persons", []),
+            persons_core=legacy_result.get("persons_core", []),
+            organizations_core=legacy_result.get("organizations_core", []),
         )
 
     # Legacy API methods

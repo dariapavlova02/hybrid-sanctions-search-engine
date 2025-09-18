@@ -654,7 +654,7 @@ class RoleTaggerService:
             UkrainianInitPrepositionRule(self.lexicons, False),
             StopwordRule(self.lexicons, False),
             PaymentContextRule(self.lexicons, False),
-            PersonStopwordRule(self.lexicons, False, self.rules.org_context_window),
+            PersonStopwordRule(self.lexicons, True, self.rules.org_context_window),
             LegalFormOrgSpanRule(self.lexicons, self.rules.org_context_window),  # NEW: ORG span detection
             OrganizationNgramRule(self.lexicons, self.rules.org_context_window),
             OrganizationContextRule(self.lexicons, self.rules.org_context_window),

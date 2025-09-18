@@ -1,0 +1,1121 @@
+COMPREHENSIVE DEAD CODE ANALYSIS REPORT
+================================================================================
+
+EXECUTIVE SUMMARY:
+  Total definitions found: 3621
+  Unused definitions: 579
+  Percentage unused: 16.0%
+
+REMOVAL SAFETY CATEGORIES:
+  safe_to_remove: 0 definitions
+  probably_safe: 278 definitions
+  review_required: 276 definitions
+  keep_for_api: 25 definitions
+
+DETAILED BREAKDOWN BY SAFETY CATEGORY
+================================================================================
+
+PROBABLY SAFE (278 items):
+------------------------------------------------------------
+
+  src/ai_service/adapters/legacy_normalization_adapter.py:
+    Line   73: function convert_from_legacy_format (public)
+    Line  252: function process_batch_legacy (public)
+    Line  280: function process_text_sync (public)
+
+  src/ai_service/config/screening_tiers.py:
+    Line  237: function get_risk_level (public)
+    Line  248: function should_early_stop (public)
+    Line  258: function validate_config (public)
+
+  src/ai_service/contracts/base_contracts.py:
+    Line  126: function to_json (public)
+    Line  296: function get_stage_name (public)
+
+  src/ai_service/contracts/search_contracts.py:
+    Line  177: function search_ac (public)
+    Line  196: function search_vector (public)
+    Line  437: function create_ac_tier0_trace (public)
+    Line  454: function create_knn_fallback_trace (public)
+    Line  471: function create_hybrid_rerank_trace (public)
+
+  src/ai_service/contracts/trace_models.py:
+    Line   92: function get_stage_steps (public)
+    Line  104: function prepare_for_snapshot (public)
+    Line  177: function add_ac_step (public)
+    Line  190: function add_lexical_step (public)
+    Line  203: function add_semantic_step (public)
+    Line  216: function add_hybrid_step (public)
+    Line  229: function add_rerank_step (public)
+    Line  242: function add_watchlist_step (public)
+
+  src/ai_service/core/base_service.py:
+    Line  119: class    ProcessingService (public)
+    Line  191: function reset_processing_stats (public)
+
+  src/ai_service/core/orchestrator_factory.py:
+    Line  224: function create_testing_orchestrator (public)
+
+  src/ai_service/core/search_integration.py:
+    Line   36: function extract_and_search (public)
+    Line  128: function create_decision_input_with_search (public)
+    Line  152: function should_enable_search (public)
+    Line  171: function get_search_metrics (public)
+    Line  198: function create_search_integration (public)
+
+  src/ai_service/data/dicts/payment_triggers.py:
+    Line 1888: function build_trigger_regex (public)
+
+  src/ai_service/data/patterns/dates.py:
+    Line  198: function is_valid_date (public)
+    Line  207: function format_date_iso (public)
+    Line  212: function extract_dates_near_text (public)
+
+  src/ai_service/exceptions.py:
+    Line  217: function handle_exception (public)
+    Line  247: function create_error_response (public)
+
+  src/ai_service/layers/embeddings/embedding_service.py:
+    Line  392: function clear_preprocessing_cache (public)
+    Line  414: function get_embedding_dimension (public)
+    Line  424: function get_model_info (public)
+
+  src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py:
+    Line  380: function set_overlay_from_corpus (public)
+    Line  391: function clear_overlay (public)
+    Line  571: function close (public)
+    Line  582: function create_elasticsearch_watchlist_adapter (public)
+    Line  594: function create_elasticsearch_enhanced_adapter (public)
+
+  src/ai_service/layers/embeddings/indexing/enhanced_vector_index_service.py:
+    Line  292: function get_index_statistics (public)
+    Line  315: function optimize_index (public)
+    Line  343: function warm_up (public)
+
+  src/ai_service/layers/embeddings/indexing/watchlist_index_service.py:
+    Line   64: function set_overlay_from_corpus (public)
+    Line   80: function clear_overlay (public)
+
+  src/ai_service/layers/embeddings/models/embedding_model_manager.py:
+    Line  199: function preload_model (public)
+    Line  209: function get_model_info (public)
+    Line  225: function list_loaded_models (public)
+
+  src/ai_service/layers/embeddings/optimized_embedding_service.py:
+    Line  554: function warm_up_cache (public)
+    Line  589: function get_embeddings_async_optimized (public)
+    Line  604: function find_similar_texts_async_optimized (public)
+
+  src/ai_service/layers/language/language_detection_service.py:
+    Line  718: function detect_batch (public)
+    Line  722: function get_detection_stats (public)
+    Line  774: function is_language_supported (public)
+    Line  778: function get_supported_languages (public)
+    Line  782: function add_language_mapping (public)
+
+  src/ai_service/layers/normalization/error_handling.py:
+    Line  262: function clear_errors (public)
+    Line  267: function has_critical_errors (public)
+    Line  271: function get_errors_by_severity (public)
+    Line  275: function register_recovery_strategy (public)
+    Line  288: function safe_execute (public)
+    Line  312: function safe_execute_async (public)
+    Line  325: function get_error_report (public)
+
+  src/ai_service/layers/normalization/lexicon_loader.py:
+    Line  204: function clear_lexicon_cache (public)
+
+  src/ai_service/layers/normalization/morphology/base_morphology.py:
+    Line   82: function get_lemma (public)
+    Line   95: function get_pos_tags (public)
+    Line  121: function is_known_word (public)
+
+  src/ai_service/layers/normalization/morphology/gender_rules.py:
+    Line  780: function maybe_to_feminine_nom (public)
+    Line 1061: function _find_declension_rules (private)
+
+  src/ai_service/layers/normalization/morphology/russian_morphology.py:
+    Line   15: class    RussianMorphologyResult (public)
+    Line  166: function get_lemma (public)
+    Line  205: function get_pos_tags (public)
+    Line  297: function _fallback_analysis_dict (private)
+    Line  297: method   RussianMorphologyAnalyzer._fallback_analysis_dict (private)
+    Line  783: function get_name_complexity (public)
+    Line  852: function batch_process_names (public)
+
+  src/ai_service/layers/normalization/morphology/ukrainian_morphology.py:
+    Line   15: class    UkrainianMorphologyResult (public)
+    Line  172: function get_lemma (public)
+    Line  206: function get_pos_tags (public)
+    Line  420: function _fallback_analysis_dict (private)
+    Line  420: method   UkrainianMorphologyAnalyzer._fallback_analysis_dict (private)
+    Line  491: function transliterate_ukrainian (public)
+
+  src/ai_service/layers/normalization/morphology/word_normalizer.py:
+    Line   34: class    WordNormalizer (public)
+
+  src/ai_service/layers/normalization/morphology_adapter.py:
+    Line  167: function apply_yo_strategy (public)
+    Line  207: function detect_patronymic (public)
+    Line  257: function normalize_patronymic_to_nominative (public)
+    Line  474: function is_uk_available (public)
+    Line 1003: function clear_global_cache (public)
+
+  src/ai_service/layers/normalization/name_assembler.py:
+    Line   19: class    PersonRole (public)
+    Line   65: class    NameAssembler (public)
+    Line  104: function assemble (public)
+
+  src/ai_service/layers/normalization/nameparser_adapter.py:
+    Line  269: function is_surname_particle (public)
+    Line  281: function reconstruct_name (public)
+
+  src/ai_service/layers/normalization/ner_gateways/spacy_en.py:
+    Line  113: function clear_spacy_en_ner (public)
+
+  src/ai_service/layers/normalization/ner_gateways/spacy_ru.py:
+    Line  113: function get_entity_at_position (public)
+
+  src/ai_service/layers/normalization/ner_gateways/spacy_uk.py:
+    Line  139: function get_entity_at_position (public)
+    Line  158: function is_person_entity (public)
+    Line  178: function is_org_entity (public)
+    Line  230: function clear_ner_cache (public)
+
+  src/ai_service/layers/normalization/ner_gateways/unified_spacy_gateway.py:
+    Line  235: function get_supported_languages (public)
+    Line  239: function get_model_info (public)
+    Line  258: function create_russian_gateway (public)
+    Line  262: function create_ukrainian_gateway (public)
+    Line  266: function create_english_gateway (public)
+
+  src/ai_service/layers/normalization/normalization_service.py:
+    Line  424: function validate_identifier (public)
+    Line  542: function warmup_morphology_cache (public)
+
+  src/ai_service/layers/normalization/normalization_service_legacy.py:
+    Line  192: function legacy_adapter (public)
+
+  src/ai_service/layers/normalization/performance_optimizer.py:
+    Line  166: function get_performance_stats (public)
+    Line  196: function optimize_for_batch (public)
+    Line  215: function preload_common_patterns (public)
+    Line  227: function clear_all_caches (public)
+    Line  235: function memory_pressure_cleanup (public)
+    Line  308: function monitor_performance (public)
+
+  src/ai_service/layers/normalization/processors/normalization_factory.py:
+    Line 1595: function _reconstruct_text (private)
+    Line 1595: method   NormalizationFactory._reconstruct_text (private)
+    Line 1902: function _apply_diminutive_resolution (private)
+    Line 1902: method   NormalizationFactory._apply_diminutive_resolution (private)
+    Line 2050: function _create_role_tagger_traces (private)
+    Line 2050: method   NormalizationFactory._create_role_tagger_traces (private)
+
+  src/ai_service/layers/normalization/role_tagger.py:
+    Line  344: function _is_punctuation (private)
+    Line  344: method   RoleTagger._is_punctuation (private)
+    Line  348: function _has_cyrillic (private)
+    Line  348: method   RoleTagger._has_cyrillic (private)
+    Line  352: function _has_latin (private)
+    Line  352: method   RoleTagger._has_latin (private)
+
+  src/ai_service/layers/normalization/token_ops.py:
+    Line  242: function _is_valid_name_segment (private)
+    Line  266: function _has_internal_dots (private)
+
+  src/ai_service/layers/normalization/tokenizer_service.py:
+    Line  311: function _looks_like_initial_with_double_dot (private)
+    Line  311: method   TokenizerService._looks_like_initial_with_double_dot (private)
+    Line  326: function _collapse_double_dot (private)
+    Line  326: method   TokenizerService._collapse_double_dot (private)
+    Line  355: class    CachedTokenizerService (public)
+    Line  406: function tokenize_with_classification (public)
+
+  src/ai_service/layers/patterns/unified_pattern_service.py:
+    Line  790: function _remove_duplicate_patterns (private)
+    Line  790: method   UnifiedPatternService._remove_duplicate_patterns (private)
+
+  src/ai_service/layers/search/config.py:
+    Line   42: function validate_hosts (public)
+    Line  229: function validate_default_mode (public)
+    Line  236: function get_elasticsearch_config (public)
+    Line  240: function get_ac_config (public)
+    Line  244: function get_vector_config (public)
+
+  src/ai_service/layers/search/enhanced_elasticsearch_client.py:
+    Line   57: class    EnhancedElasticsearchClient (public)
+
+  src/ai_service/layers/search/hybrid_search_service.py:
+    Line   35: class    HybridSearchService (public)
+    Line 1072: function get_comprehensive_metrics (public)
+    Line 1113: function get_status (public)
+
+  src/ai_service/layers/search/search_monitoring.py:
+    Line  277: function record_elasticsearch_operation (public)
+    Line  530: function export_metrics_prometheus (public)
+    Line  569: function start_background_monitoring (public)
+    Line  614: function configure_search_monitoring (public)
+    Line  630: function monitor_search_operation (public)
+
+  src/ai_service/layers/search/search_trace_validator.py:
+    Line   72: function has_warnings (public)
+    Line  529: function create_deterministic_trace_snapshot (public)
+
+  src/ai_service/layers/signals/signals_service.py:
+    Line   86: class    ExtraSignal (public)
+    Line  608: function _extract_person_ids (private)
+    Line  608: method   SignalsService._extract_person_ids (private)
+    Line 1107: function _extract_persons_from_normalization (private)
+    Line 1107: method   SignalsService._extract_persons_from_normalization (private)
+    Line 1111: function _extract_organizations_from_normalization (private)
+    Line 1111: method   SignalsService._extract_organizations_from_normalization (private)
+    Line 1115: function _extract_organization_ids (private)
+    Line 1115: method   SignalsService._extract_organization_ids (private)
+    Line 1119: function _extract_extras (private)
+    Line 1119: method   SignalsService._extract_extras (private)
+    Line 1170: function _extract_person_tokens (private)
+    Line 1170: method   SignalsService._extract_person_tokens (private)
+    Line 1205: function _extract_organization_tokens (private)
+    Line 1205: method   SignalsService._extract_organization_tokens (private)
+
+  src/ai_service/layers/smart_filter/company_detector.py:
+    Line   26: class    CompanySignal (public)
+
+  src/ai_service/layers/smart_filter/decision_logic.py:
+    Line  176: function analyze (public)
+    Line  191: function _collect_all_signals (private)
+    Line  191: method   DecisionLogic._collect_all_signals (private)
+    Line  607: function get_decision_statistics (public)
+    Line  648: function update_thresholds (public)
+
+  src/ai_service/layers/smart_filter/document_detector.py:
+    Line   20: class    DocumentSignal (public)
+
+  src/ai_service/layers/smart_filter/smart_filter_service.py:
+    Line  275: function analyze_payment_description (public)
+    Line  475: function _clean_service_words (private)
+    Line  475: method   SmartFilterService._clean_service_words (private)
+    Line  533: function make_smart_decision (public)
+    Line  571: function get_comprehensive_analysis (public)
+    Line  815: function enhanced_pattern_analysis (public)
+    Line  907: function should_process_text_async (public)
+    Line  930: class    SignalService (public)
+
+  src/ai_service/layers/unicode/unicode_service.py:
+    Line  396: function normalize_batch (public)
+    Line  677: function _normalize_case (private)
+    Line  677: method   UnicodeService._normalize_case (private)
+    Line  683: function _needs_case_normalization_for_cleanup (private)
+    Line  683: method   UnicodeService._needs_case_normalization_for_cleanup (private)
+    Line  716: function _apply_ascii_folding (private)
+    Line  716: method   UnicodeService._apply_ascii_folding (private)
+    Line  755: function _final_cleanup (private)
+    Line  755: method   UnicodeService._final_cleanup (private)
+    Line  860: function detect_encoding_issues (public)
+
+  src/ai_service/layers/variants/template_builder.py:
+    Line   88: function get_search_keywords (public)
+    Line  106: function get_high_confidence_patterns (public)
+
+  src/ai_service/layers/variants/templates/final_ac_optimizer.py:
+    Line   24: class    FinalACOptimizer (public)
+    Line   74: function generate_optimal_patterns (public)
+    Line  428: function export_for_tier_based_ac (public)
+    Line  456: function get_optimization_stats (public)
+
+  src/ai_service/layers/variants/templates/high_recall_ac_generator.py:
+    Line   25: class    HighRecallACGenerator (public)
+    Line  132: function generate_high_recall_patterns (public)
+    Line  619: function export_for_high_recall_ac (public)
+    Line  661: function get_recall_statistics (public)
+
+  src/ai_service/layers/variants/templates/lexicon.py:
+    Line  120: function get_tier_patterns (public)
+
+  src/ai_service/layers/variants/templates/optimized_ac_pattern_generator.py:
+    Line   32: class    OptimizedACPatternGenerator (public)
+    Line  570: function _generate_advanced_patterns (private)
+    Line  570: method   OptimizedACPatternGenerator._generate_advanced_patterns (private)
+    Line  574: function _generate_phonetic_patterns (private)
+    Line  574: method   OptimizedACPatternGenerator._generate_phonetic_patterns (private)
+    Line  578: function optimize_patterns (public)
+    Line  599: function _remove_duplicates (private)
+    Line  599: method   OptimizedACPatternGenerator._remove_duplicates (private)
+    Line  644: function export_t0_t1_patterns_for_elasticsearch (public)
+
+  src/ai_service/layers/variants/variant_generation_service.py:
+    Line  800: function generate_variants_batch (public)
+    Line  858: function find_best_matches (public)
+    Line 1142: function get_variant_statistics (public)
+    Line 1335: function analyze_names (public)
+    Line 1453: function _apply_transliteration_standard (private)
+    Line 1453: method   VariantGenerationService._apply_transliteration_standard (private)
+    Line 1457: function generate_visual_similarities (public)
+    Line 1461: function generate_typo_variants (public)
+    Line 1465: function _calculate_similarity (private)
+    Line 1465: method   VariantGenerationService._calculate_similarity (private)
+    Line 1499: function generate_keyboard_layout_variants (public)
+    Line 1556: function _get_morphological_variants (private)
+    Line 1556: method   VariantGenerationService._get_morphological_variants (private)
+
+  src/ai_service/main.py:
+    Line   83: class    VariantGenerationRequest (public)
+    Line   92: class    EmbeddingRequest (public)
+
+  src/ai_service/monitoring/alerting_system.py:
+    Line  265: function remove_alert_rule (public)
+    Line  276: function update_alert_rule (public)
+    Line  293: function remove_notification_callback (public)
+    Line  298: function suppress_alert_rule (public)
+    Line  305: function unsuppress_alert_rule (public)
+    Line  399: function acknowledge_alert (public)
+    Line  508: function get_alert_history (public)
+    Line  621: function export_alerts_for_dashboard (public)
+    Line  641: function start_background_evaluation (public)
+    Line  685: function slack_alert_notification (public)
+    Line  728: function configure_alerting_system (public)
+
+  src/ai_service/monitoring/cache_metrics.py:
+    Line  357: function collect_normalization_metrics (public)
+    Line  371: function get_collected_metrics (public)
+
+  src/ai_service/monitoring/dashboard_integration.py:
+    Line  277: function get_dashboard_data (public)
+    Line  612: function export_dashboard_config (public)
+    Line  655: function get_available_dashboards (public)
+    Line  667: function create_custom_dashboard (public)
+    Line  712: function get_dashboard_exporter (public)
+
+  src/ai_service/monitoring/endpoints.py:
+    Line   49: function create_monitoring_router (public)
+    Line   62: function get_health (public)
+    Line  106: function get_metric (public)
+    Line  126: function get_alerts (public)
+    Line  163: function reset_metric (public)
+    Line  261: function create_prometheus_endpoint (public)
+    Line  274: function prometheus_metrics (public)
+
+  src/ai_service/monitoring/metrics_collector.py:
+    Line   87: function get_percentile (public)
+    Line  244: function add_metric_callback (public)
+    Line  248: function remove_metric_callback (public)
+    Line  383: function decrement (public)
+    Line  387: function time_function (public)
+    Line  401: function time_async_function (public)
+    Line  463: function get_all_metrics_summary (public)
+    Line  650: function start_background_collection (public)
+    Line  707: function reset_global_metrics (public)
+    Line  715: function record_api_request (public)
+    Line  762: function record_elasticsearch_operation (public)
+
+  src/ai_service/monitoring/metrics_service.py:
+    Line  177: function set_gauge (public)
+    Line  449: function start_background_tasks (public)
+    Line  455: function stop_background_tasks (public)
+
+  src/ai_service/monitoring/prometheus_exporter.py:
+    Line  246: function record_search_metrics (public)
+    Line  279: function get_metrics_content_type (public)
+    Line  289: class    SearchMetricsCollector (public)
+
+  src/ai_service/services/embedding_preprocessor.py:
+    Line  290: function extract_name_only (public)
+    Line  302: function should_include_attrs (public)
+    Line  311: function normalize_with_attributes (public)
+
+  src/ai_service/utils/trace.py:
+    Line   80: class    TraceCollector (public)
+
+  src/ai_service/validation/shadow_mode_validator.py:
+    Line   41: class    ShadowModeResult (public)
+    Line  641: function validate_feature_improvements (public)
+    Line  646: function validate_all_test_cases (public)
+
+REVIEW REQUIRED (276 items):
+------------------------------------------------------------
+
+  src/ai_service/adapters/legacy_normalization_adapter.py:
+    Line   73: method   LegacyNormalizationAdapter.convert_from_legacy_format (public)
+    Line  252: method   LegacyNormalizationAdapter.process_batch_legacy (public)
+    Line  280: method   LegacyNormalizationAdapter.process_text_sync (public)
+
+  src/ai_service/config/__init__.py:
+    Line   52: method   Config.get_all_config (public)
+    Line   66: method   Config.validate (public)
+
+  src/ai_service/config/screening_tiers.py:
+    Line  237: method   ScreeningTiersConfig.get_risk_level (public)
+    Line  248: method   ScreeningTiersConfig.should_early_stop (public)
+    Line  258: method   ScreeningTiersConfig.validate_config (public)
+
+  src/ai_service/contracts/base_contracts.py:
+    Line  126: method   NormalizationResult.to_json (public)
+    Line  296: method   ProcessingStage.get_stage_name (public)
+
+  src/ai_service/contracts/decision_contracts.py:
+    Line  125: class    MatchEvidence (public)
+
+  src/ai_service/contracts/search_contracts.py:
+    Line  150: class    SearchServiceInterface (public)
+    Line  177: method   SearchServiceInterface.search_ac (public)
+    Line  196: method   SearchServiceInterface.search_vector (public)
+    Line  220: class    ElasticsearchACAdapterInterface (public)
+    Line  233: class    ElasticsearchVectorAdapterInterface (public)
+
+  src/ai_service/contracts/trace_models.py:
+    Line   92: method   SearchTrace.get_stage_steps (public)
+    Line  104: method   SearchTrace.prepare_for_snapshot (public)
+    Line  177: method   SearchTraceBuilder.add_ac_step (public)
+    Line  190: method   SearchTraceBuilder.add_lexical_step (public)
+    Line  203: method   SearchTraceBuilder.add_semantic_step (public)
+    Line  216: method   SearchTraceBuilder.add_hybrid_step (public)
+    Line  229: method   SearchTraceBuilder.add_rerank_step (public)
+    Line  242: method   SearchTraceBuilder.add_watchlist_step (public)
+
+  src/ai_service/core/base_service.py:
+    Line  191: method   ProcessingService.reset_processing_stats (public)
+
+  src/ai_service/core/orchestrator_factory.py:
+    Line  224: method   OrchestratorFactory.create_testing_orchestrator (public)
+
+  src/ai_service/core/search_integration.py:
+    Line   36: method   SearchIntegration.extract_and_search (public)
+    Line  128: method   SearchIntegration.create_decision_input_with_search (public)
+    Line  152: method   SearchIntegration.should_enable_search (public)
+    Line  171: method   SearchIntegration.get_search_metrics (public)
+
+  src/ai_service/exceptions.py:
+    Line   44: class    LanguageDetectionError (public)
+    Line   56: class    VariantGenerationError (public)
+    Line   62: class    EmbeddingError (public)
+    Line   68: class    CacheError (public)
+    Line   80: class    ProcessingError (public)
+    Line   92: class    TemplateError (public)
+    Line   98: class    PatternError (public)
+    Line  104: class    UnicodeError (public)
+    Line  110: class    MorphologyError (public)
+    Line  116: class    SignalDetectionError (public)
+    Line  140: class    SearchConfigurationError (public)
+    Line  146: class    SearchDataError (public)
+    Line  182: class    AuthorizationError (public)
+    Line  196: class    RateLimitError (public)
+
+  src/ai_service/layers/embeddings/embedding_service.py:
+    Line  392: method   EmbeddingService.clear_preprocessing_cache (public)
+    Line  414: method   EmbeddingService.get_embedding_dimension (public)
+    Line  424: method   EmbeddingService.get_model_info (public)
+
+  src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py:
+    Line  380: method   ElasticsearchWatchlistAdapter.set_overlay_from_corpus (public)
+    Line  391: method   ElasticsearchWatchlistAdapter.clear_overlay (public)
+    Line  571: method   ElasticsearchWatchlistAdapter.close (public)
+
+  src/ai_service/layers/embeddings/indexing/enhanced_vector_index_service.py:
+    Line  292: method   EnhancedVectorIndex.get_index_statistics (public)
+    Line  315: method   EnhancedVectorIndex.optimize_index (public)
+    Line  343: method   EnhancedVectorIndex.warm_up (public)
+
+  src/ai_service/layers/embeddings/indexing/watchlist_index_service.py:
+    Line   64: method   WatchlistIndexService.set_overlay_from_corpus (public)
+    Line   80: method   WatchlistIndexService.clear_overlay (public)
+
+  src/ai_service/layers/embeddings/models/embedding_model_manager.py:
+    Line  199: method   EmbeddingModelManager.preload_model (public)
+    Line  209: method   EmbeddingModelManager.get_model_info (public)
+    Line  225: method   EmbeddingModelManager.list_loaded_models (public)
+
+  src/ai_service/layers/embeddings/optimized_embedding_service.py:
+    Line  554: method   OptimizedEmbeddingService.warm_up_cache (public)
+    Line  589: method   OptimizedEmbeddingService.get_embeddings_async_optimized (public)
+    Line  604: method   OptimizedEmbeddingService.find_similar_texts_async_optimized (public)
+
+  src/ai_service/layers/language/language_detection_service.py:
+    Line  718: method   LanguageDetectionService.detect_batch (public)
+    Line  722: method   LanguageDetectionService.get_detection_stats (public)
+    Line  774: method   LanguageDetectionService.is_language_supported (public)
+    Line  778: method   LanguageDetectionService.get_supported_languages (public)
+    Line  782: method   LanguageDetectionService.add_language_mapping (public)
+
+  src/ai_service/layers/normalization/error_handling.py:
+    Line  262: method   ErrorHandler.clear_errors (public)
+    Line  267: method   ErrorHandler.has_critical_errors (public)
+    Line  271: method   ErrorHandler.get_errors_by_severity (public)
+    Line  275: method   ErrorHandler.register_recovery_strategy (public)
+    Line  288: method   ErrorReportingMixin.safe_execute (public)
+    Line  312: method   ErrorReportingMixin.safe_execute_async (public)
+    Line  325: method   ErrorReportingMixin.get_error_report (public)
+
+  src/ai_service/layers/normalization/morphology/base_morphology.py:
+    Line   82: method   BaseMorphologyAnalyzer.get_lemma (public)
+    Line   95: method   BaseMorphologyAnalyzer.get_pos_tags (public)
+    Line  121: method   BaseMorphologyAnalyzer.is_known_word (public)
+
+  src/ai_service/layers/normalization/morphology/russian_morphology.py:
+    Line  166: method   RussianMorphologyAnalyzer.get_lemma (public)
+    Line  205: method   RussianMorphologyAnalyzer.get_pos_tags (public)
+    Line  783: method   RussianMorphologyAnalyzer.get_name_complexity (public)
+    Line  852: method   RussianMorphologyAnalyzer.batch_process_names (public)
+
+  src/ai_service/layers/normalization/morphology/ukrainian_morphology.py:
+    Line  172: method   UkrainianMorphologyAnalyzer.get_lemma (public)
+    Line  206: method   UkrainianMorphologyAnalyzer.get_pos_tags (public)
+    Line  491: method   UkrainianMorphologyAnalyzer.transliterate_ukrainian (public)
+
+  src/ai_service/layers/normalization/morphology_adapter.py:
+    Line  167: method   MorphologyAdapter.apply_yo_strategy (public)
+    Line  207: method   MorphologyAdapter.detect_patronymic (public)
+    Line  257: method   MorphologyAdapter.normalize_patronymic_to_nominative (public)
+    Line  474: method   MorphologyAdapter.is_uk_available (public)
+
+  src/ai_service/layers/normalization/name_assembler.py:
+    Line  104: method   NameAssembler.assemble (public)
+
+  src/ai_service/layers/normalization/nameparser_adapter.py:
+    Line  269: method   NameparserAdapter.is_surname_particle (public)
+    Line  281: method   NameparserAdapter.reconstruct_name (public)
+
+  src/ai_service/layers/normalization/ner_gateways/spacy_ru.py:
+    Line  113: method   SpacyRuNER.get_entity_at_position (public)
+
+  src/ai_service/layers/normalization/ner_gateways/spacy_uk.py:
+    Line  139: method   SpacyUkNER.get_entity_at_position (public)
+    Line  158: method   SpacyUkNER.is_person_entity (public)
+    Line  178: method   SpacyUkNER.is_org_entity (public)
+
+  src/ai_service/layers/normalization/ner_gateways/unified_spacy_gateway.py:
+    Line  235: method   UnifiedSpacyGateway.get_supported_languages (public)
+    Line  239: method   UnifiedSpacyGateway.get_model_info (public)
+
+  src/ai_service/layers/normalization/normalization_service.py:
+    Line  424: method   NormalizationService.validate_identifier (public)
+    Line  542: method   NormalizationService.warmup_morphology_cache (public)
+
+  src/ai_service/layers/normalization/normalization_service_legacy.py:
+    Line  192: method   NormalizationServiceLegacy.legacy_adapter (public)
+
+  src/ai_service/layers/normalization/performance_optimizer.py:
+    Line  166: method   PerformanceOptimizer.get_performance_stats (public)
+    Line  196: method   PerformanceOptimizer.optimize_for_batch (public)
+    Line  215: method   PerformanceOptimizer.preload_common_patterns (public)
+    Line  227: method   PerformanceOptimizer.clear_all_caches (public)
+    Line  235: method   PerformanceOptimizer.memory_pressure_cleanup (public)
+
+  src/ai_service/layers/normalization/tokenizer_service.py:
+    Line  406: method   CachedTokenizerService.tokenize_with_classification (public)
+
+  src/ai_service/layers/search/config.py:
+    Line   42: method   ElasticsearchConfig.validate_hosts (public)
+    Line  229: method   HybridSearchConfig.validate_default_mode (public)
+    Line  236: method   HybridSearchConfig.get_elasticsearch_config (public)
+    Line  240: method   HybridSearchConfig.get_ac_config (public)
+    Line  244: method   HybridSearchConfig.get_vector_config (public)
+
+  src/ai_service/layers/search/elasticsearch_client.py:
+    Line   84: method   ElasticsearchClientFactory.close (public)
+    Line  128: method   ElasticsearchClientFactory.smoke_test (public)
+
+  src/ai_service/layers/search/enhanced_elasticsearch_client.py:
+    Line  405: method   EnhancedElasticsearchClient.wait_for_healthy (public)
+    Line  430: method   EnhancedElasticsearchClient.get_cluster_stats (public)
+    Line  458: method   EnhancedElasticsearchClient.close (public)
+    Line  479: method   EnhancedElasticsearchClient.get_connection_status (public)
+
+  src/ai_service/layers/search/hybrid_search_service.py:
+    Line 1072: method   HybridSearchService.get_comprehensive_metrics (public)
+    Line 1113: method   HybridSearchService.get_status (public)
+
+  src/ai_service/layers/search/search_monitoring.py:
+    Line  277: method   SearchSystemMonitor.record_elasticsearch_operation (public)
+    Line  530: method   SearchSystemMonitor.export_metrics_prometheus (public)
+    Line  569: method   SearchSystemMonitor.start_background_monitoring (public)
+
+  src/ai_service/layers/search/search_trace_validator.py:
+    Line   72: method   ValidationReport.has_warnings (public)
+
+  src/ai_service/layers/smart_filter/decision_logic.py:
+    Line  176: method   DecisionLogic.analyze (public)
+    Line  607: method   DecisionLogic.get_decision_statistics (public)
+    Line  648: method   DecisionLogic.update_thresholds (public)
+
+  src/ai_service/layers/smart_filter/smart_filter_service.py:
+    Line  275: method   SmartFilterService.analyze_payment_description (public)
+    Line  533: method   SmartFilterService.make_smart_decision (public)
+    Line  571: method   SmartFilterService.get_comprehensive_analysis (public)
+    Line  815: method   SmartFilterService.enhanced_pattern_analysis (public)
+    Line  907: method   SmartFilterService.should_process_text_async (public)
+
+  src/ai_service/layers/smart_filter/terrorism_detector.py:
+    Line   20: class    TerrorismSignal (public)
+
+  src/ai_service/layers/unicode/unicode_service.py:
+    Line  396: method   UnicodeService.normalize_batch (public)
+    Line  860: method   UnicodeService.detect_encoding_issues (public)
+
+  src/ai_service/layers/variants/template_builder.py:
+    Line   88: method   EntityTemplate.get_search_keywords (public)
+    Line  106: method   EntityTemplate.get_high_confidence_patterns (public)
+
+  src/ai_service/layers/variants/templates/final_ac_optimizer.py:
+    Line   74: method   FinalACOptimizer.generate_optimal_patterns (public)
+    Line  428: method   FinalACOptimizer.export_for_tier_based_ac (public)
+    Line  456: method   FinalACOptimizer.get_optimization_stats (public)
+
+  src/ai_service/layers/variants/templates/high_recall_ac_generator.py:
+    Line  132: method   HighRecallACGenerator.generate_high_recall_patterns (public)
+    Line  619: method   HighRecallACGenerator.export_for_high_recall_ac (public)
+    Line  661: method   HighRecallACGenerator.get_recall_statistics (public)
+
+  src/ai_service/layers/variants/templates/optimized_ac_pattern_generator.py:
+    Line  578: method   OptimizedACPatternGenerator.optimize_patterns (public)
+    Line  644: method   OptimizedACPatternGenerator.export_t0_t1_patterns_for_elasticsearch (public)
+
+  src/ai_service/layers/variants/variant_generation_service.py:
+    Line  800: method   VariantGenerationService.generate_variants_batch (public)
+    Line  858: method   VariantGenerationService.find_best_matches (public)
+    Line 1142: method   VariantGenerationService.get_variant_statistics (public)
+    Line 1335: method   VariantGenerationService.analyze_names (public)
+    Line 1457: method   VariantGenerationService.generate_visual_similarities (public)
+    Line 1461: method   VariantGenerationService.generate_typo_variants (public)
+    Line 1499: method   VariantGenerationService.generate_keyboard_layout_variants (public)
+
+  src/ai_service/main.py:
+    Line   70: method   TextNormalizationRequest.validate_text_content (public)
+    Line  109: method   ProcessTextRequest.validate_text_length (public)
+    Line  125: method   ProcessBatchRequest.validate_texts (public)
+
+  src/ai_service/monitoring/alerting_system.py:
+    Line  265: method   AlertingSystem.remove_alert_rule (public)
+    Line  276: method   AlertingSystem.update_alert_rule (public)
+    Line  293: method   AlertingSystem.remove_notification_callback (public)
+    Line  298: method   AlertingSystem.suppress_alert_rule (public)
+    Line  305: method   AlertingSystem.unsuppress_alert_rule (public)
+    Line  399: method   AlertingSystem.acknowledge_alert (public)
+    Line  508: method   AlertingSystem.get_alert_history (public)
+    Line  621: method   AlertingSystem.export_alerts_for_dashboard (public)
+    Line  641: method   AlertingSystem.start_background_evaluation (public)
+
+  src/ai_service/monitoring/cache_metrics.py:
+    Line  357: method   MetricsCollector.collect_normalization_metrics (public)
+    Line  371: method   MetricsCollector.get_collected_metrics (public)
+
+  src/ai_service/monitoring/dashboard_integration.py:
+    Line  277: method   DashboardDataExporter.get_dashboard_data (public)
+    Line  612: method   DashboardDataExporter.export_dashboard_config (public)
+    Line  655: method   DashboardDataExporter.get_available_dashboards (public)
+    Line  667: method   DashboardDataExporter.create_custom_dashboard (public)
+
+  src/ai_service/monitoring/metrics_collector.py:
+    Line   87: method   HistogramData.get_percentile (public)
+    Line  244: method   MetricsCollector.add_metric_callback (public)
+    Line  248: method   MetricsCollector.remove_metric_callback (public)
+    Line  383: method   MetricsCollector.decrement (public)
+    Line  387: method   MetricsCollector.time_function (public)
+    Line  401: method   MetricsCollector.time_async_function (public)
+    Line  463: method   MetricsCollector.get_all_metrics_summary (public)
+    Line  650: method   MetricsCollector.start_background_collection (public)
+
+  src/ai_service/monitoring/metrics_service.py:
+    Line  177: method   MetricsService.set_gauge (public)
+    Line  449: method   MetricsService.start_background_tasks (public)
+    Line  455: method   MetricsService.stop_background_tasks (public)
+
+  src/ai_service/monitoring/prometheus_exporter.py:
+    Line  246: method   SearchPrometheusExporter.record_search_metrics (public)
+    Line  279: method   SearchPrometheusExporter.get_metrics_content_type (public)
+
+  src/ai_service/services/embedding_preprocessor.py:
+    Line  290: method   EmbeddingPreprocessor.extract_name_only (public)
+    Line  302: method   EmbeddingPreprocessor.should_include_attrs (public)
+    Line  311: method   EmbeddingPreprocessor.normalize_with_attributes (public)
+
+  src/ai_service/utils/ascii_utils.py:
+    Line   69: function extract_ascii_tokens (public)
+    Line  195: function validate_ascii_fastpath_equivalence (public)
+
+  src/ai_service/utils/cache_utils.py:
+    Line   75: function get_size (public)
+    Line   75: method   CacheMetrics.get_size (public)
+    Line   80: function get_all_metrics (public)
+    Line   80: method   CacheMetrics.get_all_metrics (public)
+    Line   93: function reset (public)
+    Line   93: method   CacheMetrics.reset (public)
+
+  src/ai_service/utils/enhanced_logging.py:
+    Line  107: function set_trace_id (public)
+    Line  107: method   TraceManager.set_trace_id (public)
+    Line  149: function track_operation (public)
+    Line  149: method   PerformanceTracker.track_operation (public)
+    Line  389: function log_api_request (public)
+    Line  389: method   EnhancedLogger.log_api_request (public)
+    Line  460: function with_trace_id (public)
+    Line  460: method   EnhancedLogger.with_trace_id (public)
+    Line  557: function get_security_logger (public)
+    Line  616: function create_logger_with_otel_context (public)
+
+  src/ai_service/utils/feature_flags.py:
+    Line  306: function update_flags (public)
+    Line  306: method   FeatureFlagManager.update_flags (public)
+    Line  312: function get_current_config (public)
+    Line  312: method   FeatureFlagManager.get_current_config (public)
+    Line  332: function allow_diminutives_cross_lang (public)
+    Line  332: method   FeatureFlagManager.allow_diminutives_cross_lang (public)
+
+  src/ai_service/utils/flag_propagation.py:
+    Line   33: function get_reasons (public)
+    Line   33: method   FlagContext.get_reasons (public)
+    Line  216: function log_flag_usage (public)
+    Line  216: method   FlagPropagator.log_flag_usage (public)
+
+  src/ai_service/utils/input_validation.py:
+    Line  273: function validate_sanctions_input (public)
+    Line  273: method   InputValidator.validate_sanctions_input (public)
+    Line  327: function is_text_suspicious (public)
+    Line  327: method   InputValidator.is_text_suspicious (public)
+
+  src/ai_service/utils/lazy_imports.py:
+    Line   83: function initialize_lazy_imports (public)
+    Line  113: function get_available_modules (public)
+
+  src/ai_service/utils/logging_config.py:
+    Line  181: function log_exit (public)
+    Line  181: method   LoggingMixin.log_exit (public)
+
+  src/ai_service/utils/lru_cache_ttl.py:
+    Line  121: function delete (public)
+    Line  121: method   LruTtlCache.delete (public)
+    Line  264: function create_text_hash (public)
+    Line  322: function get_morphology_cache (public)
+    Line  322: method   CacheManager.get_morphology_cache (public)
+    Line  338: function purge_all_expired (public)
+    Line  338: method   CacheManager.purge_all_expired (public)
+    Line  345: function clear_all (public)
+    Line  345: method   CacheManager.clear_all (public)
+    Line  350: function enable_all (public)
+    Line  350: method   CacheManager.enable_all (public)
+    Line  356: function disable_all (public)
+    Line  356: method   CacheManager.disable_all (public)
+
+  src/ai_service/utils/name_utils.py:
+    Line   34: function parse_name (public)
+    Line   34: method   NameParser.parse_name (public)
+    Line  228: function find_best_match (public)
+    Line  228: method   NameParser.find_best_match (public)
+    Line  257: function get_name_parser (public)
+
+  src/ai_service/utils/perf_timer.py:
+    Line   38: function perf_timer (public)
+    Line   61: function time_function (public)
+    Line   81: function measure_latency (public)
+
+  src/ai_service/utils/performance.py:
+    Line   11: function monitor_performance (public)
+    Line   42: function monitor_memory_usage (public)
+    Line   73: function track_operation (public)
+    Line   73: method   PerformanceTracker.track_operation (public)
+
+  src/ai_service/utils/pii_masking.py:
+    Line   90: function log_processing_start (public)
+    Line   95: function log_processing_result (public)
+
+  src/ai_service/utils/profiling.py:
+    Line  181: function profile_memory (public)
+    Line  227: function clear_profiling_stats (public)
+    Line  232: function print_profiling_report (public)
+
+  src/ai_service/utils/response_formatter.py:
+    Line   14: function format_processing_result (public)
+    Line  193: function format_error_response (public)
+
+  src/ai_service/utils/trace.py:
+    Line   53: function to_json (public)
+    Line   53: method   NormalizationResult.to_json (public)
+    Line   70: function from_dict (public)
+    Line   70: method   NormalizationResult.from_dict (public)
+    Line   75: function from_json (public)
+    Line   75: method   NormalizationResult.from_json (public)
+    Line   89: function start_trace (public)
+    Line   89: method   TraceCollector.start_trace (public)
+    Line   93: function end_trace (public)
+    Line   93: method   TraceCollector.end_trace (public)
+    Line   97: function add_token_trace (public)
+    Line   97: method   TraceCollector.add_token_trace (public)
+    Line  121: function add_error (public)
+    Line  121: method   TraceCollector.add_error (public)
+    Line  131: function create_result (public)
+    Line  131: method   TraceCollector.create_result (public)
+    Line  160: function reset (public)
+    Line  160: method   TraceCollector.reset (public)
+
+  src/ai_service/utils/types.py:
+    Line   40: function is_confident (public)
+    Line   40: method   LanguageDetectionResult.is_confident (public)
+    Line   44: function is_mixed (public)
+    Line   44: method   LanguageDetectionResult.is_mixed (public)
+    Line   48: function is_unknown (public)
+    Line   48: method   LanguageDetectionResult.is_unknown (public)
+
+KEEP FOR API (25 items):
+------------------------------------------------------------
+
+  src/ai_service/config/__init__.py:
+    Line   52: function get_all_config (public)
+    Line   66: function validate (public)
+
+  src/ai_service/layers/normalization/ner_gateways/__init__.py:
+    Line   44: function clear_ner_cache (public)
+    Line   52: function clear_spacy_en_ner (public)
+
+  src/ai_service/layers/search/elasticsearch_client.py:
+    Line   84: function close (public)
+    Line  128: function smoke_test (public)
+
+  src/ai_service/layers/search/enhanced_elasticsearch_client.py:
+    Line  405: function wait_for_healthy (public)
+    Line  430: function get_cluster_stats (public)
+    Line  458: function close (public)
+    Line  479: function get_connection_status (public)
+
+  src/ai_service/main.py:
+    Line   70: function validate_text_content (public)
+    Line  109: function validate_text_length (public)
+    Line  125: function validate_texts (public)
+    Line  359: function startup_event (public)
+    Line  666: function analyze_complexity (public)
+    Line  722: function reset_statistics (public)
+    Line  736: function get_supported_languages (public)
+    Line  789: function admin_status (public)
+    Line  831: function authentication_exception_handler (public)
+    Line  840: function validation_exception_handler (public)
+    Line  849: function service_unavailable_exception_handler (public)
+    Line  858: function internal_server_exception_handler (public)
+    Line  867: function validation_exception_handler (public)
+    Line  876: function validation_exception_handler (public)
+    Line  885: function pydantic_validation_exception_handler (public)
+
+PRIORITY FILES DETAILED ANALYSIS
+================================================================================
+
+src/ai_service/exceptions.py:
+----------------------------------------
+  Line   44: class    LanguageDetectionError (public)
+  Line   56: class    VariantGenerationError (public)
+  Line   62: class    EmbeddingError (public)
+  Line   68: class    CacheError (public)
+  Line   80: class    ProcessingError (public)
+  Line   92: class    TemplateError (public)
+  Line   98: class    PatternError (public)
+  Line  104: class    UnicodeError (public)
+  Line  110: class    MorphologyError (public)
+  Line  116: class    SignalDetectionError (public)
+  Line  140: class    SearchConfigurationError (public)
+  Line  146: class    SearchDataError (public)
+  Line  182: class    AuthorizationError (public)
+  Line  196: class    RateLimitError (public)
+  Line  217: function handle_exception (public)
+  Line  247: function create_error_response (public)
+
+src/ai_service/main.py:
+----------------------------------------
+  Line   70: function validate_text_content (public)
+  Line   70: method   TextNormalizationRequest.validate_text_content (public)
+  Line   83: class    VariantGenerationRequest (public)
+  Line   92: class    EmbeddingRequest (public)
+  Line  109: function validate_text_length (public)
+  Line  109: method   ProcessTextRequest.validate_text_length (public)
+  Line  125: function validate_texts (public)
+  Line  125: method   ProcessBatchRequest.validate_texts (public)
+  Line  359: function startup_event (public)
+  Line  666: function analyze_complexity (public)
+  Line  722: function reset_statistics (public)
+  Line  736: function get_supported_languages (public)
+  Line  789: function admin_status (public)
+  Line  831: function authentication_exception_handler (public)
+  Line  840: function validation_exception_handler (public)
+  Line  849: function service_unavailable_exception_handler (public)
+  Line  858: function internal_server_exception_handler (public)
+  Line  867: function validation_exception_handler (public)
+  Line  876: function validation_exception_handler (public)
+  Line  885: function pydantic_validation_exception_handler (public)
+
+MONITORING DIRECTORY:
+----------------------------------------
+
+  src/ai_service/monitoring/alerting_system.py:
+    Line  265: function remove_alert_rule (public)
+    Line  265: method   AlertingSystem.remove_alert_rule (public)
+    Line  276: function update_alert_rule (public)
+    Line  276: method   AlertingSystem.update_alert_rule (public)
+    Line  293: function remove_notification_callback (public)
+    Line  293: method   AlertingSystem.remove_notification_callback (public)
+    Line  298: function suppress_alert_rule (public)
+    Line  298: method   AlertingSystem.suppress_alert_rule (public)
+    Line  305: function unsuppress_alert_rule (public)
+    Line  305: method   AlertingSystem.unsuppress_alert_rule (public)
+    Line  399: function acknowledge_alert (public)
+    Line  399: method   AlertingSystem.acknowledge_alert (public)
+    Line  508: function get_alert_history (public)
+    Line  508: method   AlertingSystem.get_alert_history (public)
+    Line  621: function export_alerts_for_dashboard (public)
+    Line  621: method   AlertingSystem.export_alerts_for_dashboard (public)
+    Line  641: function start_background_evaluation (public)
+    Line  641: method   AlertingSystem.start_background_evaluation (public)
+    Line  685: function slack_alert_notification (public)
+    Line  728: function configure_alerting_system (public)
+
+  src/ai_service/monitoring/cache_metrics.py:
+    Line  357: function collect_normalization_metrics (public)
+    Line  357: method   MetricsCollector.collect_normalization_metrics (public)
+    Line  371: function get_collected_metrics (public)
+    Line  371: method   MetricsCollector.get_collected_metrics (public)
+
+  src/ai_service/monitoring/dashboard_integration.py:
+    Line  277: function get_dashboard_data (public)
+    Line  277: method   DashboardDataExporter.get_dashboard_data (public)
+    Line  612: function export_dashboard_config (public)
+    Line  612: method   DashboardDataExporter.export_dashboard_config (public)
+    Line  655: function get_available_dashboards (public)
+    Line  655: method   DashboardDataExporter.get_available_dashboards (public)
+    Line  667: function create_custom_dashboard (public)
+    Line  667: method   DashboardDataExporter.create_custom_dashboard (public)
+    Line  712: function get_dashboard_exporter (public)
+
+  src/ai_service/monitoring/endpoints.py:
+    Line   49: function create_monitoring_router (public)
+    Line   62: function get_health (public)
+    Line  106: function get_metric (public)
+    Line  126: function get_alerts (public)
+    Line  163: function reset_metric (public)
+    Line  261: function create_prometheus_endpoint (public)
+    Line  274: function prometheus_metrics (public)
+
+  src/ai_service/monitoring/metrics_collector.py:
+    Line   87: function get_percentile (public)
+    Line   87: method   HistogramData.get_percentile (public)
+    Line  244: function add_metric_callback (public)
+    Line  244: method   MetricsCollector.add_metric_callback (public)
+    Line  248: function remove_metric_callback (public)
+    Line  248: method   MetricsCollector.remove_metric_callback (public)
+    Line  383: function decrement (public)
+    Line  383: method   MetricsCollector.decrement (public)
+    Line  387: function time_function (public)
+    Line  387: method   MetricsCollector.time_function (public)
+    Line  401: function time_async_function (public)
+    Line  401: method   MetricsCollector.time_async_function (public)
+    Line  463: function get_all_metrics_summary (public)
+    Line  463: method   MetricsCollector.get_all_metrics_summary (public)
+    Line  650: function start_background_collection (public)
+    Line  650: method   MetricsCollector.start_background_collection (public)
+    Line  707: function reset_global_metrics (public)
+    Line  715: function record_api_request (public)
+    Line  762: function record_elasticsearch_operation (public)
+
+  src/ai_service/monitoring/metrics_service.py:
+    Line  177: function set_gauge (public)
+    Line  177: method   MetricsService.set_gauge (public)
+    Line  449: function start_background_tasks (public)
+    Line  449: method   MetricsService.start_background_tasks (public)
+    Line  455: function stop_background_tasks (public)
+    Line  455: method   MetricsService.stop_background_tasks (public)
+
+  src/ai_service/monitoring/prometheus_exporter.py:
+    Line  246: function record_search_metrics (public)
+    Line  246: method   SearchPrometheusExporter.record_search_metrics (public)
+    Line  279: function get_metrics_content_type (public)
+    Line  279: method   SearchPrometheusExporter.get_metrics_content_type (public)
+    Line  289: class    SearchMetricsCollector (public)
+
+
+COMPLETE FILE SUMMARY
+================================================================================
+File                                                         Count    Types
+--------------------------------------------------------------------------------
+src/ai_service/adapters/legacy_normalization_adapter.py      6        function, method
+src/ai_service/config/__init__.py                            4        function, method
+src/ai_service/config/screening_tiers.py                     6        function, method
+src/ai_service/contracts/base_contracts.py                   4        function, method
+src/ai_service/contracts/decision_contracts.py               1        class
+src/ai_service/contracts/search_contracts.py                 10       class, function, method
+src/ai_service/contracts/trace_models.py                     16       function, method
+src/ai_service/core/base_service.py                          3        class, function, method
+src/ai_service/core/orchestrator_factory.py                  2        function, method
+src/ai_service/core/search_integration.py                    9        function, method
+src/ai_service/data/dicts/payment_triggers.py                1        function
+src/ai_service/data/patterns/dates.py                        3        function
+src/ai_service/exceptions.py                                 16       class, function
+src/ai_service/layers/embeddings/embedding_service.py        6        function, method
+src/ai_service/layers/embeddings/indexing/elasticsearch_watchlist_adapter.py 8        function, method
+src/ai_service/layers/embeddings/indexing/enhanced_vector_index_service.py 6        function, method
+src/ai_service/layers/embeddings/indexing/watchlist_index_service.py 4        function, method
+src/ai_service/layers/embeddings/models/embedding_model_manager.py 6        function, method
+src/ai_service/layers/embeddings/optimized_embedding_service.py 6        function, method
+src/ai_service/layers/language/language_detection_service.py 10       function, method
+src/ai_service/layers/normalization/error_handling.py        14       function, method
+src/ai_service/layers/normalization/lexicon_loader.py        1        function
+src/ai_service/layers/normalization/morphology/base_morphology.py 6        function, method
+src/ai_service/layers/normalization/morphology/gender_rules.py 2        function
+src/ai_service/layers/normalization/morphology/russian_morphology.py 11       class, function, method
+src/ai_service/layers/normalization/morphology/ukrainian_morphology.py 9        class, function, method
+src/ai_service/layers/normalization/morphology/word_normalizer.py 1        class
+src/ai_service/layers/normalization/morphology_adapter.py    9        function, method
+src/ai_service/layers/normalization/name_assembler.py        4        class, function, method
+src/ai_service/layers/normalization/nameparser_adapter.py    4        function, method
+src/ai_service/layers/normalization/ner_gateways/__init__.py 2        function
+src/ai_service/layers/normalization/ner_gateways/spacy_en.py 1        function
+src/ai_service/layers/normalization/ner_gateways/spacy_ru.py 2        function, method
+src/ai_service/layers/normalization/ner_gateways/spacy_uk.py 7        function, method
+src/ai_service/layers/normalization/ner_gateways/unified_spacy_gateway.py 7        function, method
+src/ai_service/layers/normalization/normalization_service.py 4        function, method
+src/ai_service/layers/normalization/normalization_service_legacy.py 2        function, method
+src/ai_service/layers/normalization/performance_optimizer.py 11       function, method
+src/ai_service/layers/normalization/processors/normalization_factory.py 6        function, method
+src/ai_service/layers/normalization/role_tagger.py           6        function, method
+src/ai_service/layers/normalization/token_ops.py             2        function
+src/ai_service/layers/normalization/tokenizer_service.py     7        class, function, method
+src/ai_service/layers/patterns/unified_pattern_service.py    2        function, method
+src/ai_service/layers/search/config.py                       10       function, method
+src/ai_service/layers/search/elasticsearch_client.py         4        function, method
+src/ai_service/layers/search/enhanced_elasticsearch_client.py 9        class, function, method
+src/ai_service/layers/search/hybrid_search_service.py        5        class, function, method
+src/ai_service/layers/search/search_monitoring.py            8        function, method
+src/ai_service/layers/search/search_trace_validator.py       3        function, method
+src/ai_service/layers/signals/signals_service.py             15       class, function, method
+src/ai_service/layers/smart_filter/company_detector.py       1        class
+src/ai_service/layers/smart_filter/decision_logic.py         8        function, method
+src/ai_service/layers/smart_filter/document_detector.py      1        class
+src/ai_service/layers/smart_filter/smart_filter_service.py   13       class, function, method
+src/ai_service/layers/smart_filter/terrorism_detector.py     1        class
+src/ai_service/layers/unicode/unicode_service.py             12       function, method
+src/ai_service/layers/variants/template_builder.py           4        function, method
+src/ai_service/layers/variants/templates/final_ac_optimizer.py 7        class, function, method
+src/ai_service/layers/variants/templates/high_recall_ac_generator.py 7        class, function, method
+src/ai_service/layers/variants/templates/lexicon.py          1        function
+src/ai_service/layers/variants/templates/optimized_ac_pattern_generator.py 11       class, function, method
+src/ai_service/layers/variants/variant_generation_service.py 20       function, method
+src/ai_service/main.py                                       20       class, function, method
+src/ai_service/monitoring/alerting_system.py                 20       function, method
+src/ai_service/monitoring/cache_metrics.py                   4        function, method
+src/ai_service/monitoring/dashboard_integration.py           9        function, method
+src/ai_service/monitoring/endpoints.py                       7        function
+src/ai_service/monitoring/metrics_collector.py               19       function, method
+src/ai_service/monitoring/metrics_service.py                 6        function, method
+src/ai_service/monitoring/prometheus_exporter.py             5        class, function, method
+src/ai_service/services/embedding_preprocessor.py            6        function, method
+src/ai_service/utils/ascii_utils.py                          2        function
+src/ai_service/utils/cache_utils.py                          6        function, method
+src/ai_service/utils/enhanced_logging.py                     10       function, method
+src/ai_service/utils/feature_flags.py                        6        function, method
+src/ai_service/utils/flag_propagation.py                     4        function, method
+src/ai_service/utils/input_validation.py                     4        function, method
+src/ai_service/utils/lazy_imports.py                         2        function
+src/ai_service/utils/logging_config.py                       2        function, method
+src/ai_service/utils/lru_cache_ttl.py                        13       function, method
+src/ai_service/utils/name_utils.py                           5        function, method
+src/ai_service/utils/perf_timer.py                           3        function
+src/ai_service/utils/performance.py                          4        function, method
+src/ai_service/utils/pii_masking.py                          2        function
+src/ai_service/utils/profiling.py                            3        function
+src/ai_service/utils/response_formatter.py                   2        function
+src/ai_service/utils/trace.py                                19       class, function, method
+src/ai_service/utils/types.py                                6        function, method
+src/ai_service/validation/shadow_mode_validator.py           3        class, function

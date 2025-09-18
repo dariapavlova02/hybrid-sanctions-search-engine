@@ -80,22 +80,6 @@ class TextNormalizationRequest(BaseModel):
         return v
 
 
-class VariantGenerationRequest(BaseModel):
-    """Request model for variant generation"""
-
-    text: str = Field(..., max_length=SERVICE_CONFIG.max_input_length)
-    language: str = "en"
-    max_variants: int = 10
-    similarity_threshold: float = 0.8
-
-
-class EmbeddingRequest(BaseModel):
-    """Request model for embedding generation"""
-
-    texts: List[str] = Field(..., max_length=SERVICE_CONFIG.max_input_length)
-    model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
-
-
 class ProcessTextRequest(BaseModel):
     """Request model for text processing"""
 
@@ -324,9 +308,6 @@ def verify_admin_token(
         raise AuthenticationError("Invalid API key")
 
     return credentials.credentials
-
-
-    text: str = Field(..., max_length=SERVICE_CONFIG.max_input_length)
 
 
 def check_spacy_models():

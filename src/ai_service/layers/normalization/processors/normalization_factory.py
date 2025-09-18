@@ -409,7 +409,9 @@ class NormalizationFactory(ErrorReportingMixin):
             
             # Apply yo_strategy again after morphology to ensure consistency
             if config.language == "ru" and config.yo_strategy in {"preserve", "fold"}:
+                self.logger.debug(f"Before yo_strategy post-morphology: {normalized_tokens}")
                 normalized_tokens, yo_traces_post = self._apply_yo_strategy(normalized_tokens, config.yo_strategy)
+                self.logger.debug(f"After yo_strategy post-morphology: {normalized_tokens}")
                 if yo_traces_post:
                     morph_traces.extend([trace.notes for trace in yo_traces_post])
                     self.logger.debug(f"Applied Russian 'ё' strategy '{config.yo_strategy}' post-morphology: {len(yo_traces_post)} changes")
@@ -423,7 +425,7 @@ class NormalizationFactory(ErrorReportingMixin):
         # Step 3.5: Apply diminutives resolution AFTER morphology
         post_morph_diminutive_traces = []
         if (
-            config.language in {"ru", "uk"}
+            config.language in {"ru", "uk", "en"}
             and getattr(effective_flags, "enable_enhanced_diminutives", True)
             and normalized_tokens  # Only if we have successful morphology results
         ):
@@ -563,7 +565,7 @@ class NormalizationFactory(ErrorReportingMixin):
 
         # Ensure trace is a list of TokenTrace objects
         if isinstance(trace, list) and trace and isinstance(trace[0], TokenTrace):
-            filtered_person_tokens = self._filter_person_tokens(trace, config.preserve_names)
+            filtered_person_tokens = self._filter_person_tokens(trace, config.preserve_names, roles)
         else:
             # If trace is not TokenTrace objects, create a simple trace
             filtered_person_tokens = final_tokens
@@ -717,7 +719,7 @@ class NormalizationFactory(ErrorReportingMixin):
             persons=[],
         )
 
-    def _filter_person_tokens(self, trace: List[TokenTrace], preserve_names: bool) -> List[str]:
+    def _filter_person_tokens(self, trace: List[TokenTrace], preserve_names: bool, roles: List[str]) -> List[str]:
         """Filter tokens to include only person-related tokens from trace with proper titlecase.
         
         Excludes ORG-спаны (organization spans) from person concatenation.
@@ -792,8 +794,19 @@ class NormalizationFactory(ErrorReportingMixin):
         # Apply deduplication of consecutive identical person tokens
         deduplicated_tokens = self._deduplicate_consecutive_person_tokens(filtered_tokens, trace)
         
+        # Sort tokens by role: given, surname, patronymic, initial
+        # Create a mapping from token to role for sorting
+        token_to_role = {}
+        for token_trace in trace:
+            if token_trace.role in PERSON_ROLES and token_trace.output in deduplicated_tokens:
+                token_to_role[token_trace.output] = token_trace.role
+        
+        role_order = {'given': 0, 'surname': 1, 'patronymic': 2, 'initial': 3}
+        deduplicated_tokens.sort(key=lambda x: role_order.get(token_to_role.get(x, ''), 999))
+        
         self.logger.debug(f"Filtered person tokens: {filtered_tokens}")
         self.logger.debug(f"Deduplicated person tokens: {deduplicated_tokens}")
+        self.logger.debug(f"Sorted person tokens: {deduplicated_tokens}")
         
         
         return deduplicated_tokens
@@ -1460,18 +1473,22 @@ class NormalizationFactory(ErrorReportingMixin):
                         if effective_flags is not None:
                             feature_flags = FeatureFlags(
                                 enforce_nominative=getattr(effective_flags, 'enforce_nominative', True),
-                                preserve_feminine_surnames=getattr(effective_flags, 'preserve_feminine_surnames', True)
+                                preserve_feminine_surnames=getattr(effective_flags, 'preserve_feminine_surnames', True),
+                                morphology_custom_rules_first=getattr(effective_flags, 'morphology_custom_rules_first', True)
                             )
                         else:
                             # Use default feature flags
                             feature_flags = FeatureFlags()
                         
                         # Use the new to_nominative_cached method
+                        print(f"DEBUG: Processing token '{token}' with role '{role}' and flags morphology_custom_rules_first={feature_flags.morphology_custom_rules_first}")
                         normalized, trace_note = self.morphology_adapter.to_nominative_cached(
                             token,
                             config.language,
-                            feature_flags
+                            feature_flags,
+                            role
                         )
+                        print(f"DEBUG: Result: '{token}' -> '{normalized}' (trace: {trace_note})")
                         
                         # Record cache info for debug tracing
                         cache_info[token] = {
@@ -1581,9 +1598,16 @@ class NormalizationFactory(ErrorReportingMixin):
         personal_tokens = []
         for token, role in zip(tokens, roles):
             if role in {'given', 'surname', 'patronymic', 'initial'}:
-                personal_tokens.append(token)
+                personal_tokens.append((token, role))
 
-        return " ".join(personal_tokens) if personal_tokens else ""
+        # Sort tokens by role: given, surname, patronymic, initial
+        role_order = {'given': 0, 'surname': 1, 'patronymic': 2, 'initial': 3}
+        personal_tokens.sort(key=lambda x: role_order.get(x[1], 999))
+        
+        # Extract just the tokens
+        sorted_tokens = [token for token, role in personal_tokens]
+
+        return " ".join(sorted_tokens) if sorted_tokens else ""
 
     def _build_token_trace(
         self,
@@ -1929,12 +1953,12 @@ class NormalizationFactory(ErrorReportingMixin):
         effective_flags
     ) -> Tuple[List[str], List[str], Set[int]]:
         """
-        Apply diminutives dictionary-only mapping for RU/UK languages.
+        Apply diminutives dictionary-only mapping for RU/UK/EN languages.
         
         Args:
             tokens: List of tokens to process
             roles: List of corresponding roles
-            language: Language code ('ru' or 'uk')
+            language: Language code ('ru', 'uk', or 'en')
             effective_flags: Feature flags object
             
         Returns:
@@ -1949,7 +1973,15 @@ class NormalizationFactory(ErrorReportingMixin):
             self._load_diminutives_dictionaries()
         
         # Get the appropriate dictionary
-        diminutives_dict = self._diminutives_ru if language == "ru" else self._diminutives_uk
+        if language == "ru":
+            diminutives_dict = self._diminutives_ru
+        elif language == "uk":
+            diminutives_dict = self._diminutives_uk
+        elif language == "en":
+            diminutives_dict = self._diminutives_en
+        else:
+            # For unsupported languages, return tokens as-is
+            return tokens, [], set()
         
         allowed_roles = {"given", "nickname", "unknown", "surname"}
         
@@ -2000,14 +2032,20 @@ class NormalizationFactory(ErrorReportingMixin):
             uk_path = Path(__file__).resolve().parents[5] / "data" / "diminutives_uk.json"
             with open(uk_path, 'r', encoding='utf-8') as f:
                 self._diminutives_uk = json.load(f)
+            
+            # Load English nicknames
+            en_path = Path(__file__).resolve().parents[5] / "data" / "lexicons" / "en_nicknames.json"
+            with open(en_path, 'r', encoding='utf-8') as f:
+                self._diminutives_en = json.load(f)
                 
-            self.logger.info(f"Loaded diminutives dictionaries: RU={len(self._diminutives_ru)} entries, UK={len(self._diminutives_uk)} entries")
+            self.logger.info(f"Loaded diminutives dictionaries: RU={len(self._diminutives_ru)} entries, UK={len(self._diminutives_uk)} entries, EN={len(self._diminutives_en)} entries")
             
         except Exception as e:
             self.logger.error(f"Failed to load diminutives dictionaries: {e}")
             # Set empty dictionaries as fallback
             self._diminutives_ru = {}
             self._diminutives_uk = {}
+            self._diminutives_en = {}
 
     def _create_role_tagger_traces(self, role_tags: List) -> List[str]:
         """Create traces for role tagger results."""

@@ -205,7 +205,7 @@ class NormalizationService:
         enable_en_nickname_expansion: bool = True,
         enable_spacy_en_ner: bool = False,
         # Russian-specific flags
-        ru_yo_strategy: str = "preserve",
+        ru_yo_strategy: str = "fold",
         enable_ru_nickname_expansion: bool = True,
         enable_spacy_ru_ner: bool = False,
         # Feature flags for safe rollout
@@ -682,6 +682,7 @@ class NormalizationService:
             enable_en_nickname_expansion=enable_en_nickname_expansion,
             enable_spacy_en_ner=enable_spacy_en_ner,
             ru_yo_strategy=ru_yo_strategy,
+            yo_strategy=ru_yo_strategy,  # Use ru_yo_strategy for yo_strategy
             enable_ru_nickname_expansion=enable_ru_nickname_expansion,
             enable_spacy_ru_ner=enable_spacy_ru_ner,
         )
@@ -792,7 +793,8 @@ class NormalizationService:
             role = trace.role
             if role in {"given", "patronymic", "surname"}:
                 original_output = trace.output
-                nominative = adapter.to_nominative(original_output, lang)
+                # Use the new to_nominative_cached method with feature flags
+                nominative, trace_note = adapter.to_nominative_cached(original_output, lang, self.feature_flags, role)
                 if nominative and nominative != original_output:
                     # Apply titlecase to nominative result
                     titlecased_nominative = self._to_title(nominative)
@@ -880,7 +882,22 @@ class NormalizationService:
                 titlecased_token = self._to_title(token)
                 titlecased_tokens.append(titlecased_token)
             
-            result.normalized = " ".join(titlecased_tokens)
+            # For multiple persons, create separate normalized results
+            if result.persons and len(result.persons) > 1:
+                # Create separate normalized strings for each person
+                person_normalized = []
+                for person in result.persons:
+                    person_tokens_list = person.get("tokens", [])
+                    if person_tokens_list:
+                        # Apply titlecase to person tokens
+                        titlecased_person_tokens = []
+                        for token in person_tokens_list:
+                            titlecased_token = self._to_title(token)
+                            titlecased_person_tokens.append(titlecased_token)
+                        person_normalized.append(" ".join(titlecased_person_tokens))
+                result.normalized = " | ".join(person_normalized)
+            else:
+                result.normalized = " ".join(titlecased_tokens)
             person_tokens = titlecased_tokens  # Update person_tokens for tokens field
 
         organization_tokens = list(result.organizations_core or [])

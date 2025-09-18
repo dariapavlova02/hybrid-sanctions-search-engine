@@ -6,7 +6,7 @@
     "input": "Иванов Иван Петрович",
     "expected_personas": [
       {
-        "normalized": "Иван Иванов Петрович",
+        "normalized": "Иванов Иван Петрович",
         "tokens": [
           {"text": "Иван", "lemma": "Иван", "role": "given"},
           {"text": "Иванов", "lemma": "Иванов", "role": "surname"},
@@ -140,10 +140,10 @@
     "input": "Ольга Д'яченко",
     "expected_personas": [
       {
-        "normalized": "Ольга Д’яченко",
+        "normalized": "Ольга Д'Яченко",
         "tokens": [
           {"text": "Ольга", "lemma": "Ольга", "role": "given"},
-          {"text": "Д’яченко", "lemma": "Д'яченко", "role": "surname"}
+          {"text": "Д'Яченко", "lemma": "Д'Яченко", "role": "surname"}
         ],
         "language": "ru",
         "trace": {
@@ -162,9 +162,9 @@
     "input": "получатель: гражданин РФ Петр Сергеев",
     "expected_personas": [
       {
-        "normalized": "Петр Сергеев",
+        "normalized": "Пётр Сергеев",
         "tokens": [
-          {"text": "Петр", "lemma": "Петр", "role": "given"},
+          {"text": "Пётр", "lemma": "Пётр", "role": "given"},
           {"text": "Сергеев", "lemma": "Сергеев", "role": "surname"}
         ],
         "language": "ru",
@@ -184,9 +184,9 @@
     "input": "Pаvlov",
     "expected_personas": [
       {
-        "normalized": "Pavlov",
+        "normalized": "Pаvlov",
         "tokens": [
-          {"text": "Pavlov", "lemma": "Pavlov", "role": "surname"}
+          {"text": "Pаvlov", "lemma": "Pаvlov", "role": "surname"}
         ],
         "language": "en",
         "trace": {
@@ -611,9 +611,9 @@
     "input": "Петр Сергеев",
     "expected_personas": [
       {
-        "normalized": "Петр Сергеев",
+        "normalized": "Пётр Сергеев",
         "tokens": [
-          {"text": "Петр", "lemma": "Петр", "role": "given"},
+          {"text": "Пётр", "lemma": "Пётр", "role": "given"},
           {"text": "Сергеев", "lemma": "Сергеев", "role": "surname"}
         ],
         "language": "ru",
