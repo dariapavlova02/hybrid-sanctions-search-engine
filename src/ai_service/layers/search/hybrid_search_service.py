@@ -1409,10 +1409,13 @@ class HybridSearchService(BaseService, SearchService):
         return doc_id_lower in query_lower or query_lower in doc_id_lower
     
     async def update_configuration(self, new_config: HybridSearchConfig) -> None:
-        """Update search service configuration."""
+        """Update search service configuration with validation."""
         self.logger.info("Updating search service configuration...")
         
         try:
+            # Validate new configuration before applying
+            self._validate_configuration(new_config)
+            
             # Update configuration
             old_config = self.config
             self.config = new_config
@@ -1446,3 +1449,47 @@ class HybridSearchService(BaseService, SearchService):
             # Revert to old configuration
             self.config = old_config
             raise
+    
+    def _validate_configuration(self, config: HybridSearchConfig) -> None:
+        """Validate configuration before applying."""
+        try:
+            # Use Pydantic validation
+            config.validate(config)
+            
+            # Additional runtime validation
+            if config.es_hosts:
+                # Test host format
+                for host in config.es_hosts:
+                    if ':' not in host:
+                        raise ValueError(f"Invalid host format: {host}")
+                    
+                    host_part, port_part = host.split(':', 1)
+                    if not host_part or not port_part:
+                        raise ValueError(f"Invalid host:port format: {host}")
+                    
+                    try:
+                        port = int(port_part)
+                        if not (1 <= port <= 65535):
+                            raise ValueError(f"Invalid port: {port}")
+                    except ValueError:
+                        raise ValueError(f"Invalid port number: {port_part}")
+            
+            # Validate thresholds
+            if config.enable_escalation and config.escalation_threshold <= 0.5:
+                raise ValueError("Escalation threshold should be greater than 0.5")
+            
+            if config.enable_fallback and config.fallback_threshold <= 0.1:
+                raise ValueError("Fallback threshold should be greater than 0.1")
+            
+            if config.vector_similarity_threshold <= 0.3:
+                raise ValueError("Vector similarity threshold should be greater than 0.3")
+            
+            # Validate cache settings
+            if config.enable_embedding_cache and config.embedding_cache_size < 100:
+                raise ValueError("Embedding cache size should be at least 100")
+            
+            self.logger.info("Configuration validation passed")
+            
+        except Exception as e:
+            self.logger.error(f"Configuration validation failed: {e}")
+            raise ValueError(f"Invalid configuration: {e}")

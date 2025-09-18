@@ -771,6 +771,63 @@ async def get_configuration_status(token: str = Depends(verify_admin_token)):
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
+@app.post("/validate-config")
+async def validate_configuration(token: str = Depends(verify_admin_token)):
+    """Validate current configuration - Admin only"""
+    if not orchestrator:
+        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+
+    try:
+        validation_results = {
+            "search_service": {
+                "enabled": hasattr(orchestrator, 'search_service') and orchestrator.search_service is not None,
+                "validation_passed": False,
+                "errors": [],
+                "warnings": []
+            }
+        }
+        
+        # Validate search service configuration
+        if hasattr(orchestrator, 'search_service') and orchestrator.search_service:
+            try:
+                config = orchestrator.search_service.config
+                
+                # Validate configuration using Pydantic validation
+                config.validate(config)
+                validation_results["search_service"]["validation_passed"] = True
+                
+                # Additional runtime validation
+                if hasattr(config, 'es_hosts') and config.es_hosts:
+                    # Test Elasticsearch connectivity
+                    try:
+                        if hasattr(orchestrator.search_service, '_client_factory') and orchestrator.search_service._client_factory:
+                            health = await orchestrator.search_service._client_factory.health_check()
+                            if health.get('status') != 'green':
+                                validation_results["search_service"]["warnings"].append(
+                                    f"Elasticsearch cluster status: {health.get('status', 'unknown')}"
+                                )
+                    except Exception as e:
+                        validation_results["search_service"]["warnings"].append(
+                            f"Elasticsearch connectivity check failed: {str(e)}"
+                        )
+                
+                # Validate fallback services
+                if hasattr(config, 'enable_fallback') and config.enable_fallback:
+                    if not hasattr(orchestrator.search_service, '_fallback_watchlist_service') or not orchestrator.search_service._fallback_watchlist_service:
+                        validation_results["search_service"]["warnings"].append(
+                            "Fallback enabled but watchlist service not available"
+                        )
+                
+            except Exception as e:
+                validation_results["search_service"]["validation_passed"] = False
+                validation_results["search_service"]["errors"].append(str(e))
+        
+        return validation_results
+    except Exception as e:
+        logger.error(f"Error validating configuration: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
 @app.get("/languages")
 async def get_supported_languages():
     """Get list of supported languages"""

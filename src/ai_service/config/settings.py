@@ -397,6 +397,27 @@ class SearchConfig(BaseModel, HotReloadableConfig):
         """Validate Elasticsearch hosts"""
         if not v:
             raise ValueError("At least one Elasticsearch host must be specified")
+        
+        # Validate host format
+        for host in v:
+            if not host or not isinstance(host, str):
+                raise ValueError(f"Invalid host format: {host}")
+            
+            # Basic host validation (host:port format)
+            if ':' not in host:
+                raise ValueError(f"Host must include port: {host}")
+            
+            host_part, port_part = host.split(':', 1)
+            if not host_part or not port_part:
+                raise ValueError(f"Invalid host:port format: {host}")
+            
+            try:
+                port = int(port_part)
+                if not (1 <= port <= 65535):
+                    raise ValueError(f"Port must be between 1 and 65535: {port}")
+            except ValueError as e:
+                raise ValueError(f"Invalid port number: {port_part}")
+        
         return v
     
     @field_validator('es_timeout')
@@ -405,7 +426,88 @@ class SearchConfig(BaseModel, HotReloadableConfig):
         """Validate timeout value"""
         if v <= 0:
             raise ValueError("Timeout must be positive")
+        if v > 300:  # 5 minutes max
+            raise ValueError("Timeout must not exceed 300 seconds")
         return v
+    
+    @field_validator('escalation_threshold', 'fallback_threshold', 'vector_similarity_threshold')
+    @classmethod
+    def validate_thresholds(cls, v: float) -> float:
+        """Validate threshold values"""
+        if not 0.0 <= v <= 1.0:
+            raise ValueError("Thresholds must be between 0.0 and 1.0")
+        return v
+    
+    @field_validator('vector_dimension')
+    @classmethod
+    def validate_vector_dimension(cls, v: int) -> int:
+        """Validate vector dimension"""
+        if v <= 0:
+            raise ValueError("Vector dimension must be positive")
+        if v > 4096:
+            raise ValueError("Vector dimension must not exceed 4096")
+        return v
+    
+    @field_validator('max_concurrent_requests')
+    @classmethod
+    def validate_max_concurrent_requests(cls, v: int) -> int:
+        """Validate max concurrent requests"""
+        if v <= 0:
+            raise ValueError("Max concurrent requests must be positive")
+        if v > 100:
+            raise ValueError("Max concurrent requests must not exceed 100")
+        return v
+    
+    @field_validator('request_timeout_ms')
+    @classmethod
+    def validate_request_timeout_ms(cls, v: int) -> int:
+        """Validate request timeout in milliseconds"""
+        if v <= 0:
+            raise ValueError("Request timeout must be positive")
+        if v > 30000:  # 30 seconds max
+            raise ValueError("Request timeout must not exceed 30000 milliseconds")
+        return v
+    
+    @field_validator('embedding_cache_size')
+    @classmethod
+    def validate_embedding_cache_size(cls, v: int) -> int:
+        """Validate embedding cache size"""
+        if v <= 0:
+            raise ValueError("Embedding cache size must be positive")
+        if v > 100000:
+            raise ValueError("Embedding cache size must not exceed 100000")
+        return v
+    
+    @field_validator('embedding_cache_ttl_seconds')
+    @classmethod
+    def validate_embedding_cache_ttl_seconds(cls, v: int) -> int:
+        """Validate embedding cache TTL in seconds"""
+        if v <= 0:
+            raise ValueError("Embedding cache TTL must be positive")
+        if v > 86400:  # 24 hours max
+            raise ValueError("Embedding cache TTL must not exceed 86400 seconds")
+        return v
+    
+    @model_validator(mode='after')
+    def validate_configuration_consistency(self) -> 'SearchConfig':
+        """Validate configuration consistency"""
+        # Validate that escalation threshold is reasonable
+        if self.enable_escalation and self.escalation_threshold <= 0.5:
+            raise ValueError("Escalation threshold should be greater than 0.5 for meaningful escalation")
+        
+        # Validate that fallback threshold is reasonable
+        if self.enable_fallback and self.fallback_threshold <= 0.1:
+            raise ValueError("Fallback threshold should be greater than 0.1 for meaningful fallback")
+        
+        # Validate that vector similarity threshold is reasonable
+        if self.vector_similarity_threshold <= 0.3:
+            raise ValueError("Vector similarity threshold should be greater than 0.3 for meaningful similarity")
+        
+        # Validate that cache settings are reasonable
+        if self.enable_embedding_cache and self.embedding_cache_size < 100:
+            raise ValueError("Embedding cache size should be at least 100 for meaningful caching")
+        
+        return self
     
     def _reload_configuration(self) -> None:
         """Reload configuration from environment variables."""
