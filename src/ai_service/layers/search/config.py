@@ -217,6 +217,12 @@ class HybridSearchConfig(BaseModel):
     fallback_max_results: int = Field(default=100, ge=10, le=500, description="Maximum results from fallback search")
     enable_fallback_health_check: bool = Field(default=True, description="Enable health checks for fallback services")
     
+    # Vector fallback settings
+    enable_vector_fallback: bool = Field(default=True, description="Enable vector search fallback")
+    vector_fallback_threshold: float = Field(default=0.4, ge=0.0, le=1.0, description="Score threshold for vector fallback")
+    vector_fallback_timeout_ms: int = Field(default=3000, ge=100, le=15000, description="Vector fallback search timeout in milliseconds")
+    vector_fallback_max_results: int = Field(default=50, ge=5, le=200, description="Maximum results from vector fallback search")
+    
     # Elasticsearch configuration
     elasticsearch: ElasticsearchConfig = Field(default_factory=ElasticsearchConfig)
     

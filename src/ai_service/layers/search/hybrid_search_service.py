@@ -954,9 +954,14 @@ class HybridSearchService(BaseService, SearchService):
                 self.logger.error(f"AC fallback search failed: {exc}")
 
         # Vector fallback search if AC didn't provide enough results
-        if len(fallback_results) < max_results and self._fallback_vector_service:
+        if (len(fallback_results) < max_results and 
+            self._fallback_vector_service and 
+            self.config.enable_vector_fallback):
             try:
-                remaining_results = max_results - len(fallback_results)
+                remaining_results = min(
+                    max_results - len(fallback_results),
+                    self.config.vector_fallback_max_results
+                )
                 vector_hits = self._fallback_vector_service.search(
                     query_text, 
                     top_k=remaining_results
@@ -965,8 +970,8 @@ class HybridSearchService(BaseService, SearchService):
                     if len(fallback_results) >= max_results:
                         break
                         
-                    # Apply fallback threshold
-                    if float(score) < self.config.fallback_threshold:
+                    # Apply vector-specific fallback threshold
+                    if float(score) < self.config.vector_fallback_threshold:
                         continue
                         
                     doc = None
@@ -986,7 +991,8 @@ class HybridSearchService(BaseService, SearchService):
                             trace={
                                 "reason": "fallback_vector",
                                 "service": "EnhancedVectorIndex",
-                                "threshold": self.config.fallback_threshold
+                                "threshold": self.config.vector_fallback_threshold,
+                                "max_results": self.config.vector_fallback_max_results
                             }
                         )
                     )
@@ -1000,7 +1006,13 @@ class HybridSearchService(BaseService, SearchService):
         """Check health status of fallback services."""
         health = {
             "watchlist_service": {"available": False, "ready": False, "error": None},
-            "vector_service": {"available": False, "ready": False, "error": None}
+            "vector_service": {"available": False, "ready": False, "error": None},
+            "vector_fallback_enabled": self.config.enable_vector_fallback,
+            "vector_fallback_config": {
+                "threshold": self.config.vector_fallback_threshold,
+                "max_results": self.config.vector_fallback_max_results,
+                "timeout_ms": self.config.vector_fallback_timeout_ms
+            }
         }
         
         if not self.config.enable_fallback_health_check:
