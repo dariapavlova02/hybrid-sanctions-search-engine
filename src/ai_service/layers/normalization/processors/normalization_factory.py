@@ -63,7 +63,7 @@ except ImportError:  # pragma: no cover - optional heavy dependency
     russian_names = None  # type: ignore
     ukrainian_names = None  # type: ignore
 
-PERSON_ROLES = {"given", "surname", "patronymic", "initial", "suffix", "other", "unknown"}
+PERSON_ROLES = {"given", "surname", "patronymic", "initial", "suffix", "other"}
 SEPARATOR_TOKENS = {"и", "та", "and", ","}
 
 
