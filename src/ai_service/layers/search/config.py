@@ -213,6 +213,9 @@ class HybridSearchConfig(BaseModel):
     # Fallback settings
     enable_fallback: bool = Field(default=True, description="Enable fallback to local indexes")
     fallback_threshold: float = Field(default=0.3, ge=0.0, le=1.0, description="Score threshold for fallback")
+    fallback_timeout_ms: int = Field(default=2000, ge=100, le=10000, description="Fallback search timeout in milliseconds")
+    fallback_max_results: int = Field(default=100, ge=10, le=500, description="Maximum results from fallback search")
+    enable_fallback_health_check: bool = Field(default=True, description="Enable health checks for fallback services")
     
     # Elasticsearch configuration
     elasticsearch: ElasticsearchConfig = Field(default_factory=ElasticsearchConfig)

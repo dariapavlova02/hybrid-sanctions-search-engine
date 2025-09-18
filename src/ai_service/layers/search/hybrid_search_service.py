@@ -171,12 +171,22 @@ class HybridSearchService(BaseService, SearchService):
         return self._pseudo_embedding(query_text)
 
     def _ensure_fallback_services(self) -> None:
+        """Initialize fallback services with proper error handling."""
         if not self.config.enable_fallback:
             return
-        if self._fallback_watchlist_service is None:
-            self._fallback_watchlist_service = WatchlistIndexService()
-        if self._fallback_vector_service is None:
-            self._fallback_vector_service = EnhancedVectorIndex()
+            
+        try:
+            if self._fallback_watchlist_service is None:
+                self._fallback_watchlist_service = WatchlistIndexService()
+                self.logger.debug("Initialized WatchlistIndexService fallback")
+                
+            if self._fallback_vector_service is None:
+                self._fallback_vector_service = EnhancedVectorIndex()
+                self.logger.debug("Initialized EnhancedVectorIndex fallback")
+                
+        except Exception as exc:
+            self.logger.error(f"Failed to initialize fallback services: {exc}")
+            # Don't raise - fallback should be graceful
 
     def _load_fusion_weights(self) -> Tuple[Dict[str, float], Dict[str, float]]:
         """Load fusion weights and boosts from configuration."""
@@ -901,46 +911,119 @@ class HybridSearchService(BaseService, SearchService):
 
         fallback_results: List[Candidate] = []
         query_text = normalized.normalized or text
+        max_results = min(opts.top_k, self.config.fallback_max_results)
 
+        # AC fallback search
         if self._fallback_watchlist_service and self._fallback_watchlist_service.ready():
-            ac_hits = self._fallback_watchlist_service.search(query_text, top_k=opts.top_k, trace=search_trace)
-            for doc_id, score in ac_hits:
-                doc = self._fallback_watchlist_service.get_doc(doc_id, trace=search_trace)
-                if not doc:
-                    continue
-                fallback_results.append(
-                    Candidate(
-                        doc_id=doc_id,
-                        score=float(score),
-                        text=doc.text,
-                        entity_type=doc.entity_type,
-                        metadata=doc.metadata,
-                        search_mode=SearchMode.FALLBACK_AC,
-                        match_fields=["fallback_ac"],
-                        confidence=min(1.0, float(score)),
-                    )
+            try:
+                ac_hits = self._fallback_watchlist_service.search(
+                    query_text, 
+                    top_k=max_results, 
+                    trace=search_trace
                 )
-
-        if not fallback_results and self._fallback_vector_service:
-            vector_hits = self._fallback_vector_service.search(query_text, top_k=opts.top_k)
-            for doc_id, score in vector_hits:
-                doc = None
-                if self._fallback_watchlist_service:
+                for doc_id, score in ac_hits:
+                    if len(fallback_results) >= max_results:
+                        break
+                        
                     doc = self._fallback_watchlist_service.get_doc(doc_id, trace=search_trace)
-                fallback_results.append(
-                    Candidate(
-                        doc_id=doc_id,
-                        score=float(score),
-                        text=doc.text if doc else query_text,
-                        entity_type=doc.entity_type if doc else "unknown",
-                        metadata=doc.metadata if doc else {},
-                        search_mode=SearchMode.FALLBACK_VECTOR,
-                        match_fields=["fallback_vector"],
-                        confidence=min(1.0, float(score)),
+                    if not doc:
+                        continue
+                        
+                    # Apply fallback threshold
+                    if float(score) < self.config.fallback_threshold:
+                        continue
+                        
+                    fallback_results.append(
+                        Candidate(
+                            doc_id=doc_id,
+                            score=float(score),
+                            text=doc.text,
+                            entity_type=doc.entity_type,
+                            metadata=doc.metadata,
+                            search_mode=SearchMode.FALLBACK_AC,
+                            match_fields=["fallback_ac"],
+                            confidence=min(1.0, float(score)),
+                            trace={
+                                "reason": "fallback_ac",
+                                "service": "WatchlistIndexService",
+                                "threshold": self.config.fallback_threshold
+                            }
+                        )
                     )
-                )
+            except Exception as exc:
+                self.logger.error(f"AC fallback search failed: {exc}")
 
+        # Vector fallback search if AC didn't provide enough results
+        if len(fallback_results) < max_results and self._fallback_vector_service:
+            try:
+                remaining_results = max_results - len(fallback_results)
+                vector_hits = self._fallback_vector_service.search(
+                    query_text, 
+                    top_k=remaining_results
+                )
+                for doc_id, score in vector_hits:
+                    if len(fallback_results) >= max_results:
+                        break
+                        
+                    # Apply fallback threshold
+                    if float(score) < self.config.fallback_threshold:
+                        continue
+                        
+                    doc = None
+                    if self._fallback_watchlist_service:
+                        doc = self._fallback_watchlist_service.get_doc(doc_id, trace=search_trace)
+                        
+                    fallback_results.append(
+                        Candidate(
+                            doc_id=doc_id,
+                            score=float(score),
+                            text=doc.text if doc else query_text,
+                            entity_type=doc.entity_type if doc else "unknown",
+                            metadata=doc.metadata if doc else {},
+                            search_mode=SearchMode.FALLBACK_VECTOR,
+                            match_fields=["fallback_vector"],
+                            confidence=min(1.0, float(score)),
+                            trace={
+                                "reason": "fallback_vector",
+                                "service": "EnhancedVectorIndex",
+                                "threshold": self.config.fallback_threshold
+                            }
+                        )
+                    )
+            except Exception as exc:
+                self.logger.error(f"Vector fallback search failed: {exc}")
+
+        self.logger.info(f"Fallback search returned {len(fallback_results)} results")
         return fallback_results
+    
+    async def _check_fallback_health(self) -> Dict[str, Any]:
+        """Check health status of fallback services."""
+        health = {
+            "watchlist_service": {"available": False, "ready": False, "error": None},
+            "vector_service": {"available": False, "ready": False, "error": None}
+        }
+        
+        if not self.config.enable_fallback_health_check:
+            return health
+            
+        # Check WatchlistIndexService
+        if self._fallback_watchlist_service:
+            try:
+                health["watchlist_service"]["available"] = True
+                health["watchlist_service"]["ready"] = self._fallback_watchlist_service.ready()
+            except Exception as exc:
+                health["watchlist_service"]["error"] = str(exc)
+        
+        # Check EnhancedVectorIndex
+        if self._fallback_vector_service:
+            try:
+                health["vector_service"]["available"] = True
+                # EnhancedVectorIndex doesn't have a ready() method, so we assume it's ready if available
+                health["vector_service"]["ready"] = True
+            except Exception as exc:
+                health["vector_service"]["error"] = str(exc)
+        
+        return health
     
     def _update_metrics(self, success: bool, processing_time_ms: float, result_count: int, avg_score: float = 0.0) -> None:
         """Update search metrics."""
@@ -1056,6 +1139,9 @@ class HybridSearchService(BaseService, SearchService):
             
             # Check fallback services
             health_status["fallback_enabled"] = self.config.enable_fallback
+            if self.config.enable_fallback:
+                fallback_health = await self._check_fallback_health()
+                health_status["fallback_services"] = fallback_health
 
         except Exception as e:
             health_status["status"] = "unhealthy"
