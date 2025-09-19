@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-service-config
+  namespace: ai-service
+data:
+  # Search configuration
+  search.yaml: |
+    search:
+      enable_search: true
+      default_search_mode: "hybrid"
+      default_top_k: 10
+      default_threshold: 0.5
+      
+      # Elasticsearch configuration
+      elasticsearch:
+        hosts: ["elasticsearch:9200"]
+        timeout: 30
+        max_retries: 3
+        retry_on_timeout: true
+        verify_certs: false
+        maxsize: 50
+        http_compress: true
+        sniff_on_start: true
+        sniff_on_connection_fail: true
+      
+      # Caching configuration
+      enable_search_cache: true
+      search_cache_size: 2000
+      search_cache_ttl_seconds: 1800
+      enable_query_caching: true
+      query_cache_size: 5000
+      query_cache_ttl_seconds: 3600
+      enable_embedding_cache: true
+      embedding_cache_size: 1000
+      embedding_cache_ttl_seconds: 3600
+      
+      # Performance optimization
+      enable_query_optimization: true
+      ac_query_boost_factor: 1.2
+      vector_query_boost_factor: 1.1
+      bm25_query_boost_factor: 1.0
+      
+      # Security configuration
+      enable_elasticsearch_auth: false
+      enable_rate_limiting: true
+      rate_limit_requests_per_minute: 1000
+      enable_query_validation: true
+      enable_sensitive_data_filtering: true
+      enable_audit_logging: true
+      
+      # Fallback configuration
+      enable_fallback: true
+      fallback_threshold: 0.3
+      fallback:
+        watchlist_index:
+          enabled: true
+          timeout: 5
+        vector_index:
+          enabled: true
+          timeout: 5
+
+  # Logging configuration
+  logging.yaml: |
+    version: 1
+    disable_existing_loggers: false
+    
+    formatters:
+      standard:
+        format: "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+      detailed:
+        format: "%(asctime)s [%(levelname)s] %(name)s:%(lineno)d: %(message)s"
+    
+    handlers:
+      console:
+        class: logging.StreamHandler
+        level: INFO
+        formatter: standard
+        stream: ext://sys.stdout
+      file:
+        class: logging.handlers.RotatingFileHandler
+        level: DEBUG
+        formatter: detailed
+        filename: /app/logs/ai-service.log
+        maxBytes: 10485760  # 10MB
+        backupCount: 5
+    
+    loggers:
+      ai_service:
+        level: DEBUG
+        handlers: [console, file]
+        propagate: false
+      elasticsearch:
+        level: WARNING
+        handlers: [console]
+        propagate: false
+    
+    root:
+      level: INFO
+      handlers: [console]

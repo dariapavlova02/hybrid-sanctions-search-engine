@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-service
+  labels:
+    name: ai-service
+    app: ai-service
