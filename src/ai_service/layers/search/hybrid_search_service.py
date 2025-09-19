@@ -78,6 +78,14 @@ class HybridSearchService(BaseService, SearchService):
         # Embedding cache
         self._embedding_cache: Dict[str, Tuple[List[float], datetime]] = {}
         self._cache_lock = asyncio.Lock()
+        
+        # Search result cache
+        self._search_cache: Dict[str, Tuple[List[Candidate], datetime]] = {}
+        self._search_cache_lock = asyncio.Lock()
+        
+        # Query performance monitoring
+        self._query_performance: List[Dict[str, Any]] = []
+        self._performance_lock = asyncio.Lock()
 
         # Fusion weights/boosts
         self._fusion_weights, self._fusion_boosts = self._load_fusion_weights()
@@ -350,6 +358,32 @@ class HybridSearchService(BaseService, SearchService):
             "confidence": normalized.confidence
         }
         
+        # Check cache first
+        cache_key = self._generate_search_cache_key(text, opts)
+        cached_candidates = await self._get_cached_search_result(cache_key)
+        
+        if cached_candidates is not None:
+            # Return cached results
+            search_log_data.update({
+                "status": "cache_hit",
+                "processing_time_ms": 0,
+                "result_count": len(cached_candidates),
+                "avg_score": sum(c.score for c in cached_candidates) / len(cached_candidates) if cached_candidates else 0.0,
+                "search_modes_used": ["cache"]
+            })
+            self.logger.info("Search completed from cache", extra=search_log_data)
+            
+            # Record performance for cache hit
+            await self._record_query_performance(
+                query=text,
+                search_mode=opts.search_mode.value,
+                processing_time_ms=0,
+                result_count=len(cached_candidates),
+                cache_hit=True
+            )
+            
+            return cached_candidates
+        
         try:
             # Determine search strategy based on options
             if opts.search_mode == SearchMode.AC:
@@ -369,6 +403,18 @@ class HybridSearchService(BaseService, SearchService):
             processing_time = (time.time() - start_time) * 1000  # Convert to ms
             avg_score = sum(c.score for c in candidates) / len(candidates) if candidates else 0.0
             self._update_metrics(True, processing_time, len(candidates), avg_score)
+            
+            # Cache search results
+            await self._cache_search_result(cache_key, candidates)
+            
+            # Record query performance
+            await self._record_query_performance(
+                query=text,
+                search_mode=opts.search_mode.value,
+                processing_time_ms=processing_time,
+                result_count=len(candidates),
+                cache_hit=False
+            )
             
             # Log successful search
             search_log_data.update({
@@ -1203,7 +1249,196 @@ class HybridSearchService(BaseService, SearchService):
         """Clear the embedding cache."""
         async with self._cache_lock:
             self._embedding_cache.clear()
-        self.logger.info("Embedding cache cleared")
+            self.logger.info("Embedding cache cleared")
+    
+    async def _get_cached_search_result(self, cache_key: str) -> Optional[List[Candidate]]:
+        """Get cached search result if available and not expired."""
+        if not self.config.enable_search_cache:
+            return None
+            
+        async with self._search_cache_lock:
+            if cache_key in self._search_cache:
+                candidates, timestamp = self._search_cache[cache_key]
+                
+                # Check if cache entry is expired
+                age_seconds = (datetime.now() - timestamp).total_seconds()
+                if age_seconds < self.config.search_cache_ttl_seconds:
+                    self.logger.debug(f"Cache hit for search key: {cache_key[:20]}...")
+                    return candidates
+                else:
+                    # Remove expired entry
+                    del self._search_cache[cache_key]
+                    self.logger.debug(f"Cache expired for search key: {cache_key[:20]}...")
+            
+            return None
+    
+    async def _cache_search_result(self, cache_key: str, candidates: List[Candidate]) -> None:
+        """Cache search result."""
+        if not self.config.enable_search_cache:
+            return
+            
+        async with self._search_cache_lock:
+            # Check cache size limit
+            if len(self._search_cache) >= self.config.search_cache_size:
+                # Remove oldest entry
+                oldest_key = min(self._search_cache.keys(), 
+                               key=lambda k: self._search_cache[k][1])
+                del self._search_cache[oldest_key]
+                self.logger.debug(f"Cache evicted oldest entry: {oldest_key[:20]}...")
+            
+            self._search_cache[cache_key] = (candidates, datetime.now())
+            self.logger.debug(f"Cached search result for key: {cache_key[:20]}...")
+    
+    def _generate_search_cache_key(self, query: str, opts: SearchOpts) -> str:
+        """Generate cache key for search query."""
+        import hashlib
+        
+        # Create a hash of the query and options
+        key_data = {
+            "query": query,
+            "search_mode": opts.search_mode.value,
+            "top_k": opts.top_k,
+            "threshold": opts.threshold,
+            "ac_boost": opts.ac_boost,
+            "vector_boost": opts.vector_boost,
+            "entity_types": opts.entity_types,
+            "metadata_filters": opts.metadata_filters
+        }
+        
+        key_string = str(sorted(key_data.items()))
+        return hashlib.md5(key_string.encode()).hexdigest()
+    
+    async def clear_search_cache(self) -> None:
+        """Clear the search result cache."""
+        async with self._search_cache_lock:
+            self._search_cache.clear()
+            self.logger.info("Search result cache cleared")
+    
+    async def invalidate_search_cache(self, pattern: Optional[str] = None) -> int:
+        """Invalidate search cache entries matching pattern or all if None."""
+        async with self._search_cache_lock:
+            if pattern is None:
+                # Clear all cache
+                count = len(self._search_cache)
+                self._search_cache.clear()
+                self.logger.info(f"Invalidated all {count} search cache entries")
+                return count
+            else:
+                # Remove entries matching pattern
+                keys_to_remove = [key for key in self._search_cache.keys() if pattern in key]
+                for key in keys_to_remove:
+                    del self._search_cache[key]
+                self.logger.info(f"Invalidated {len(keys_to_remove)} search cache entries matching pattern: {pattern}")
+                return len(keys_to_remove)
+    
+    async def cleanup_expired_cache_entries(self) -> int:
+        """Clean up expired cache entries."""
+        now = datetime.now()
+        expired_count = 0
+        
+        async with self._search_cache_lock:
+            keys_to_remove = []
+            for key, (_, timestamp) in self._search_cache.items():
+                age_seconds = (now - timestamp).total_seconds()
+                if age_seconds >= self.config.search_cache_ttl_seconds:
+                    keys_to_remove.append(key)
+            
+            for key in keys_to_remove:
+                del self._search_cache[key]
+                expired_count += 1
+            
+            if expired_count > 0:
+                self.logger.info(f"Cleaned up {expired_count} expired search cache entries")
+        
+        return expired_count
+    
+    async def _record_query_performance(self, query: str, search_mode: str, processing_time_ms: float, result_count: int, cache_hit: bool = False) -> None:
+        """Record query performance metrics."""
+        async with self._performance_lock:
+            performance_record = {
+                "timestamp": datetime.now().isoformat(),
+                "query": query[:100],  # Truncate long queries
+                "search_mode": search_mode,
+                "processing_time_ms": processing_time_ms,
+                "result_count": result_count,
+                "cache_hit": cache_hit
+            }
+            
+            self._query_performance.append(performance_record)
+            
+            # Keep only last 1000 records to prevent memory issues
+            if len(self._query_performance) > 1000:
+                self._query_performance = self._query_performance[-1000:]
+    
+    async def get_query_performance_stats(self) -> Dict[str, Any]:
+        """Get query performance statistics."""
+        async with self._performance_lock:
+            if not self._query_performance:
+                return {
+                    "total_queries": 0,
+                    "avg_processing_time_ms": 0,
+                    "avg_result_count": 0,
+                    "cache_hit_rate": 0,
+                    "search_mode_distribution": {}
+                }
+            
+            # Calculate statistics
+            processing_times = [record["processing_time_ms"] for record in self._query_performance]
+            result_counts = [record["result_count"] for record in self._query_performance]
+            cache_hits = [record["cache_hit"] for record in self._query_performance]
+            search_modes = [record["search_mode"] for record in self._query_performance]
+            
+            # Calculate averages
+            avg_processing_time = sum(processing_times) / len(processing_times)
+            avg_result_count = sum(result_counts) / len(result_counts)
+            cache_hit_rate = sum(cache_hits) / len(cache_hits) if cache_hits else 0
+            
+            # Search mode distribution
+            mode_distribution = {}
+            for mode in search_modes:
+                mode_distribution[mode] = mode_distribution.get(mode, 0) + 1
+            
+            return {
+                "total_queries": len(self._query_performance),
+                "avg_processing_time_ms": avg_processing_time,
+                "avg_result_count": avg_result_count,
+                "cache_hit_rate": cache_hit_rate,
+                "search_mode_distribution": mode_distribution,
+                "min_processing_time_ms": min(processing_times),
+                "max_processing_time_ms": max(processing_times),
+                "min_result_count": min(result_counts),
+                "max_result_count": max(result_counts)
+            }
+    
+    async def clear_query_performance(self) -> None:
+        """Clear query performance records."""
+        async with self._performance_lock:
+            self._query_performance.clear()
+            self.logger.info("Query performance records cleared")
+    
+    async def get_search_cache_stats(self) -> Dict[str, Any]:
+        """Get search cache statistics."""
+        async with self._search_cache_lock:
+            if not self._search_cache:
+                return {
+                    "cache_size": 0,
+                    "cache_enabled": self.config.enable_search_cache,
+                    "max_cache_size": self.config.search_cache_size,
+                    "cache_ttl_seconds": self.config.search_cache_ttl_seconds
+                }
+            
+            now = datetime.now()
+            ages = [(now - timestamp).total_seconds() for _, (_, timestamp) in self._search_cache.items()]
+            
+            return {
+                "cache_size": len(self._search_cache),
+                "cache_enabled": self.config.enable_search_cache,
+                "max_cache_size": self.config.search_cache_size,
+                "cache_ttl_seconds": self.config.search_cache_ttl_seconds,
+                "avg_age_seconds": sum(ages) / len(ages) if ages else 0,
+                "max_age_seconds": max(ages) if ages else 0,
+                "min_age_seconds": min(ages) if ages else 0
+            }
     
     async def get_embedding_cache_stats(self) -> Dict[str, Any]:
         """Get embedding cache statistics."""
@@ -1388,6 +1623,16 @@ class HybridSearchService(BaseService, SearchService):
             
             # Add embedding cache information
             health_status["embedding_cache"] = await self.get_embedding_cache_stats()
+            
+            # Add search cache information
+            health_status["search_cache"] = await self.get_search_cache_stats()
+            
+            # Add connection pool statistics
+            if self._client_factory:
+                health_status["connection_pool"] = await self._client_factory.get_connection_stats()
+            
+            # Add query performance statistics
+            health_status["query_performance"] = await self.get_query_performance_stats()
 
         except Exception as e:
             health_status["status"] = "unhealthy"

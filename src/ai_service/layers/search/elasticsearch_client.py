@@ -27,20 +27,34 @@ class ElasticsearchClientFactory:
         self._lock = asyncio.Lock()
 
     def _build_es_config(self) -> Dict[str, Any]:
-        """Build Elasticsearch client configuration."""
+        """Build Elasticsearch client configuration with connection pooling."""
         es_config = {
             "hosts": self.es_config.normalized_hosts(),
             "timeout": self.es_config.timeout,
             "max_retries": self.es_config.max_retries,
             "retry_on_timeout": self.es_config.retry_on_timeout,
             "verify_certs": self.es_config.verify_certs,
+            # Connection pooling settings
+            "maxsize": 25,  # Maximum number of connections in the pool
+            "http_compress": True,  # Enable HTTP compression
+            "sniff_on_start": True,  # Sniff cluster nodes on startup
+            "sniff_on_connection_fail": True,  # Sniff on connection failure
+            "sniff_timeout": 10,  # Timeout for sniffing
+            "sniff_interval": 60,  # Interval between sniffing attempts
+            "min_delay_between_sniffing": 5,  # Minimum delay between sniffing
+            "max_delay_between_sniffing": 30,  # Maximum delay between sniffing
+            # Connection settings
+            "http_auth": None,  # Will be set below if needed
+            "headers": {
+                "User-Agent": "ai-service-search/1.0.0"
+            }
         }
         
         # Add authentication
         if self.es_config.api_key:
             es_config["api_key"] = self.es_config.api_key
         elif self.es_config.username and self.es_config.password:
-            es_config["basic_auth"] = (self.es_config.username, self.es_config.password)
+            es_config["http_auth"] = (self.es_config.username, self.es_config.password)
         
         # Add CA certificates if provided
         if self.es_config.ca_certs:
@@ -122,3 +136,34 @@ class ElasticsearchClientFactory:
         """Run a lightweight connectivity check against Elasticsearch."""
         health = await self.health_check()
         return health.get("status") == "healthy"
+    
+    async def get_connection_stats(self) -> Dict[str, Any]:
+        """Get connection pool statistics."""
+        stats = {
+            "total_clients": len(self._clients),
+            "clients": {}
+        }
+        
+        for host, client in self._clients.items():
+            client_stats = {
+                "host": host,
+                "connected": True
+            }
+            
+            try:
+                # Try to get connection pool info
+                if hasattr(client, 'transport') and hasattr(client.transport, 'connection_pool'):
+                    pool = client.transport.connection_pool
+                    client_stats.update({
+                        "pool_size": len(pool.connections) if hasattr(pool, 'connections') else 0,
+                        "maxsize": getattr(pool, 'maxsize', 25),
+                        "dead_count": len(pool.dead) if hasattr(pool, 'dead') else 0,
+                        "live_count": len(pool.live) if hasattr(pool, 'live') else 0
+                    })
+            except Exception as e:
+                client_stats["error"] = str(e)
+                client_stats["connected"] = False
+            
+            stats["clients"][host] = client_stats
+        
+        return stats

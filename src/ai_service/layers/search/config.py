@@ -230,6 +230,11 @@ class HybridSearchConfig(BaseModel):
     enable_embedding_preprocessing: bool = Field(default=True, description="Enable query preprocessing for embeddings")
     embedding_batch_size: int = Field(default=1, ge=1, le=32, description="Batch size for embedding generation")
     
+    # Search result caching settings
+    enable_search_cache: bool = Field(default=True, description="Enable caching for search results")
+    search_cache_size: int = Field(default=500, ge=50, le=5000, description="Maximum number of cached search results")
+    search_cache_ttl_seconds: int = Field(default=1800, ge=60, le=86400, description="Search result cache TTL in seconds")
+    
     # Elasticsearch configuration
     elasticsearch: ElasticsearchConfig = Field(default_factory=ElasticsearchConfig)
     
