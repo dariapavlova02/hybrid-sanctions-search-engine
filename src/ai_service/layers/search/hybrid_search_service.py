@@ -337,6 +337,19 @@ class HybridSearchService(BaseService, SearchService):
         start_time = time.time()
         self._metrics.total_requests += 1
         
+        # Structured logging for search operation
+        search_log_data = {
+            "operation": "find_candidates",
+            "query": text,
+            "normalized_text": normalized.normalized_text,
+            "search_mode": opts.search_mode.value,
+            "top_k": opts.top_k,
+            "threshold": opts.threshold,
+            "timestamp": datetime.now().isoformat(),
+            "language": normalized.language,
+            "confidence": normalized.confidence
+        }
+        
         try:
             # Determine search strategy based on options
             if opts.search_mode == SearchMode.AC:
@@ -357,6 +370,16 @@ class HybridSearchService(BaseService, SearchService):
             avg_score = sum(c.score for c in candidates) / len(candidates) if candidates else 0.0
             self._update_metrics(True, processing_time, len(candidates), avg_score)
             
+            # Log successful search
+            search_log_data.update({
+                "status": "success",
+                "processing_time_ms": processing_time,
+                "result_count": len(candidates),
+                "avg_score": avg_score,
+                "search_modes_used": [opts.search_mode.value]
+            })
+            self.logger.info("Search completed successfully", extra=search_log_data)
+            
             self.logger.info(
                 f"Search completed: {len(candidates)} candidates found in {processing_time:.2f}ms"
             )
@@ -367,7 +390,14 @@ class HybridSearchService(BaseService, SearchService):
             processing_time = (time.time() - start_time) * 1000
             self._update_metrics(False, processing_time, 0)
             
-            self.logger.error(f"Search failed: {e}")
+            # Log failed search
+            search_log_data.update({
+                "status": "error",
+                "processing_time_ms": processing_time,
+                "error": str(e),
+                "error_type": type(e).__name__
+            })
+            self.logger.error("Search failed", extra=search_log_data)
 
             # Fallback to local indexes when Elasticsearch is unavailable
             return await self._fallback_search(normalized, text, opts, search_trace)
@@ -381,10 +411,21 @@ class HybridSearchService(BaseService, SearchService):
     ) -> List[Candidate]:
         """Execute AC search only."""
         self._metrics.ac_requests += 1
+        start_time = time.time()
 
         # Create dummy trace if none provided
         if search_trace is None:
             search_trace = SearchTrace(enabled=False)
+        
+        # Performance logging for AC search
+        ac_log_data = {
+            "operation": "ac_search",
+            "query": text,
+            "normalized_text": normalized.normalized_text,
+            "top_k": opts.top_k,
+            "threshold": opts.threshold,
+            "timestamp": datetime.now().isoformat()
+        }
 
         try:
             query_text = normalized.normalized or text
@@ -444,10 +485,26 @@ class HybridSearchService(BaseService, SearchService):
                 self.logger.warning("AC adapter unavailable – using fallback search")
                 return await self._fallback_search(normalized, text, opts, search_trace)
 
+            # Log AC search results
+            ac_log_data.update({
+                "status": "success",
+                "processing_time_ms": search_time,
+                "result_count": len(candidates),
+                "avg_score": sum(c.score for c in candidates) / len(candidates) if candidates else 0.0
+            })
+            self.logger.info("AC search completed", extra=ac_log_data)
+
             return candidates
 
         except Exception as e:
-            self.logger.error(f"AC search failed: {e}")
+            processing_time = (time.time() - start_time) * 1000
+            ac_log_data.update({
+                "status": "error",
+                "processing_time_ms": processing_time,
+                "error": str(e),
+                "error_type": type(e).__name__
+            })
+            self.logger.error("AC search failed", extra=ac_log_data)
             search_trace.note(f"AC search failed: {str(e)}")
             return []
 
@@ -460,10 +517,21 @@ class HybridSearchService(BaseService, SearchService):
     ) -> List[Candidate]:
         """Execute vector search only."""
         self._metrics.vector_requests += 1
+        start_time = time.time()
 
         # Create dummy trace if none provided
         if search_trace is None:
             search_trace = SearchTrace(enabled=False)
+
+        # Performance logging for vector search
+        vector_log_data = {
+            "operation": "vector_search",
+            "query": text,
+            "normalized_text": normalized.normalized_text,
+            "top_k": opts.top_k,
+            "threshold": opts.threshold,
+            "timestamp": datetime.now().isoformat()
+        }
 
         try:
             query_text = normalized.normalized or text
@@ -526,10 +594,26 @@ class HybridSearchService(BaseService, SearchService):
                 self.logger.warning("Vector adapter unavailable – using fallback search")
                 return await self._fallback_search(normalized, text, opts, search_trace)
 
+            # Log vector search results
+            vector_log_data.update({
+                "status": "success",
+                "processing_time_ms": search_time,
+                "result_count": len(candidates),
+                "avg_score": sum(c.score for c in candidates) / len(candidates) if candidates else 0.0
+            })
+            self.logger.info("Vector search completed", extra=vector_log_data)
+
             return candidates
 
         except Exception as e:
-            self.logger.error(f"Vector search failed: {e}")
+            processing_time = (time.time() - start_time) * 1000
+            vector_log_data.update({
+                "status": "error",
+                "processing_time_ms": processing_time,
+                "error": str(e),
+                "error_type": type(e).__name__
+            })
+            self.logger.error("Vector search failed", extra=vector_log_data)
             search_trace.note(f"Vector search failed: {str(e)}")
             return []
     
@@ -1167,6 +1251,42 @@ class HybridSearchService(BaseService, SearchService):
             # Calculate P95 latency
             sorted_times = sorted(self._request_times)
             p95_index = int(len(sorted_times) * 0.95)
+            
+            # Update metrics service if available
+            if hasattr(self, 'metrics_service') and self.metrics_service:
+                try:
+                    # Record search metrics
+                    self.metrics_service.record_metric(
+                        name="search_requests_total",
+                        value=1,
+                        metric_type="counter",
+                        tags={"status": "success" if success else "failed"}
+                    )
+                    
+                    self.metrics_service.record_metric(
+                        name="search_latency_ms",
+                        value=processing_time_ms,
+                        metric_type="histogram",
+                        tags={"operation": "hybrid_search"}
+                    )
+                    
+                    self.metrics_service.record_metric(
+                        name="search_results_count",
+                        value=result_count,
+                        metric_type="histogram",
+                        tags={"operation": "hybrid_search"}
+                    )
+                    
+                    if avg_score > 0:
+                        self.metrics_service.record_metric(
+                            name="search_avg_score",
+                            value=avg_score,
+                            metric_type="histogram",
+                            tags={"operation": "hybrid_search"}
+                        )
+                        
+                except Exception as e:
+                    self.logger.warning(f"Failed to record metrics: {e}")
             self._metrics.p95_latency_ms = sorted_times[p95_index] if p95_index < len(sorted_times) else sorted_times[-1]
 
         # Update result quality metrics

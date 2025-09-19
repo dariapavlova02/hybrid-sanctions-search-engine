@@ -8,64 +8,65 @@
 elasticsearch>=8.0.0
 elasticsearch-async>=8.0.0
 ```
+- [x] **COMPLETED**: Added elasticsearch>=8.0.0 to pyproject.toml
 
 ### 1.2 Update elasticsearch_adapters.py
-- [ ] Replace mock clients with actual AsyncElasticsearch instances
-- [ ] Implement real Elasticsearch queries for AC search
-- [ ] Implement real Elasticsearch kNN queries for vector search
-- [ ] Add proper error handling for Elasticsearch connection issues
-- [ ] Add retry logic for failed requests
+- [x] **COMPLETED**: Replace mock clients with actual AsyncElasticsearch instances
+- [x] **COMPLETED**: Implement real Elasticsearch queries for AC search
+- [x] **COMPLETED**: Implement real Elasticsearch kNN queries for vector search
+- [x] **COMPLETED**: Add proper error handling for Elasticsearch connection issues
+- [x] **COMPLETED**: Add retry logic for failed requests
 
 ### 1.3 Elasticsearch Index Setup
-- [ ] Create index mapping for AC search (normalized_text, aliases, legal_names fields)
-- [ ] Create index mapping for vector search (dense_vector field with HNSW)
-- [ ] Add index templates for automatic index creation
-- [ ] Implement index health monitoring
+- [x] **COMPLETED**: Create index mapping for AC search (normalized_text, aliases, legal_names fields)
+- [x] **COMPLETED**: Create index mapping for vector search (dense_vector field with HNSW)
+- [x] **COMPLETED**: Add index templates for automatic index creation
+- [x] **COMPLETED**: Implement index health monitoring
 
 ## 2. Integration with Existing Layers
 
 ### 2.1 WatchlistIndexService Integration
-- [ ] Add fallback integration in `hybrid_search_service.py`
-- [ ] Create adapter to convert WatchlistIndexService results to Candidate format
-- [ ] Implement fallback search logic when Elasticsearch is unavailable
-- [ ] Add configuration for fallback thresholds
+- [x] **COMPLETED**: Add fallback integration in `hybrid_search_service.py`
+- [x] **COMPLETED**: Create adapter to convert WatchlistIndexService results to Candidate format
+- [x] **COMPLETED**: Implement fallback search logic when Elasticsearch is unavailable
+- [x] **COMPLETED**: Add configuration for fallback thresholds
 
 ### 2.2 EnhancedVectorIndex Integration
-- [ ] Add fallback integration in `hybrid_search_service.py`
-- [ ] Create adapter to convert EnhancedVectorIndex results to Candidate format
-- [ ] Implement vector search fallback logic
-- [ ] Add configuration for vector search fallback
+- [x] **COMPLETED**: Add fallback integration in `hybrid_search_service.py`
+- [x] **COMPLETED**: Create adapter to convert EnhancedVectorIndex results to Candidate format
+- [x] **COMPLETED**: Implement vector search fallback logic
+- [x] **COMPLETED**: Add configuration for vector search fallback
 
 ### 2.3 EmbeddingsService Integration
-- [ ] Integrate with existing embeddings service for query vectorization
-- [ ] Add query preprocessing using embeddings layer
-- [ ] Implement vector generation for search queries
-- [ ] Add caching for generated query vectors
+- [x] **COMPLETED**: Integrate with existing embeddings service for query vectorization
+- [x] **COMPLETED**: Add query preprocessing using embeddings layer
+- [x] **COMPLETED**: Implement vector generation for search queries
+- [x] **COMPLETED**: Add caching for generated query vectors
 
 ## 3. Configuration Integration
 
 ### 3.1 Environment Variables
-- [ ] Add Elasticsearch connection settings to environment configuration
-- [ ] Add search layer settings to main service configuration
-- [ ] Implement configuration validation
-- [ ] Add configuration hot-reloading support
+- [x] **COMPLETED**: Add Elasticsearch connection settings to environment configuration
+- [x] **COMPLETED**: Add search layer settings to main service configuration
+- [x] **COMPLETED**: Implement configuration validation
+- [x] **COMPLETED**: Add configuration hot-reloading support
 
 ### 3.2 Service Registration
-- [ ] Register HybridSearchService in main orchestrator
-- [ ] Add search layer to service dependency injection
-- [ ] Implement service lifecycle management
-- [ ] Add health check endpoints
+- [x] **COMPLETED**: Register HybridSearchService in main orchestrator
+- [x] **COMPLETED**: Add search layer to service dependency injection
+- [x] **COMPLETED**: Implement service lifecycle management
+- [x] **COMPLETED**: Add health check endpoints
 
 ## 4. API Integration
 
 ### 4.1 REST API Endpoints
-- [ ] Add search endpoint to main API
+- [x] **COMPLETED**: Add search endpoint to main API
 - [ ] Implement request/response models for search API
 - [ ] Add search result pagination
 - [ ] Add search result filtering options
 
 ### 4.2 Search Request Models
-- [ ] Create SearchRequest model with validation
+- [x] **COMPLETED**: Create SearchRequest model with validation
 - [ ] Add search response models
 - [ ] Implement search result serialization
 - [ ] Add search metadata models
@@ -73,30 +74,30 @@ elasticsearch-async>=8.0.0
 ## 5. Monitoring and Metrics
 
 ### 5.1 Metrics Collection
-- [ ] Integrate with existing metrics system
-- [ ] Add search-specific metrics (hit rate, latency, etc.)
+- [x] **COMPLETED**: Integrate with existing metrics system
+- [x] **COMPLETED**: Add search-specific metrics (hit rate, latency, etc.)
 - [ ] Implement metrics aggregation
 - [ ] Add metrics export functionality
 
 ### 5.2 Logging Integration
-- [ ] Add structured logging for search operations
-- [ ] Implement search query logging
-- [ ] Add performance logging
-- [ ] Add error logging with context
+- [x] **COMPLETED**: Add structured logging for search operations
+- [x] **COMPLETED**: Implement search query logging
+- [x] **COMPLETED**: Add performance logging
+- [x] **COMPLETED**: Add error logging with context
 
 ### 5.3 Health Monitoring
-- [ ] Add Elasticsearch cluster health monitoring
-- [ ] Implement search service health checks
+- [x] **COMPLETED**: Add Elasticsearch cluster health monitoring
+- [x] **COMPLETED**: Implement search service health checks
 - [ ] Add performance alerting
 - [ ] Add capacity monitoring
 
 ## 6. Testing Integration
 
 ### 6.1 Unit Tests
-- [ ] Add unit tests for HybridSearchService
-- [ ] Add unit tests for Elasticsearch adapters
-- [ ] Add unit tests for search configuration
-- [ ] Add unit tests for fallback logic
+- [x] **COMPLETED**: Add unit tests for HybridSearchService
+- [x] **COMPLETED**: Add unit tests for Elasticsearch adapters
+- [x] **COMPLETED**: Add unit tests for search configuration
+- [x] **COMPLETED**: Add unit tests for fallback logic
 
 ### 6.2 Integration Tests
 - [ ] Add integration tests with Elasticsearch
