@@ -203,30 +203,32 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
         return should_queries
 
     def _build_ac_pattern_queries(self, query: str, opts: SearchOpts) -> List[Dict[str, Any]]:
-        """Build AC pattern queries for T0/T1 patterns."""
+        """Build optimized AC pattern queries for T0/T1 patterns."""
         ac_queries = []
         
-        # Exact pattern match (T0/T1)
+        # Exact pattern match (T0/T1) - highest priority
         ac_queries.append({
             "term": {
                 "pattern": {
                     "value": query,
-                    "boost": opts.ac_boost * 5.0,  # High boost for exact pattern match
+                    "boost": opts.ac_boost * 10.0 * self.config.ac_query_boost_factor,
                 }
             }
         })
         
-        # Edge ngram match for partial patterns
+        # Optimized edge ngram match with better scoring
         ac_queries.append({
             "match": {
                 "pattern.edge_ngram": {
                     "query": query,
-                    "boost": opts.ac_boost * 2.0,
+                    "boost": opts.ac_boost * 3.0 * self.config.ac_query_boost_factor,
+                    "fuzziness": "0",  # Disable fuzziness for better performance
+                    "operator": "and"  # All terms must match
                 }
             }
         })
         
-        # Phrase match for multi-word patterns
+        # Optimized phrase match for multi-word patterns
         ac_queries.append({
             "match_phrase": {
                 "pattern": {
@@ -630,22 +632,25 @@ class ElasticsearchVectorAdapter(ElasticsearchAdapter):
         cos_threshold = getattr(self.config, 'vector_cos_threshold', 0.45)
         max_results = getattr(self.config, 'vector_fallback_max_results', 50)
         
-        # kNN query for vector similarity
+        # Optimized kNN query for vector similarity
         knn_query = {
             "field": "dense_vector",
             "query_vector": query_vector,
             "k": max_results,
-            "num_candidates": max_results * 2,
-            "similarity": cos_threshold
+            "num_candidates": max_results * 3,  # Increased candidates for better recall
+            "similarity": cos_threshold,
+            "boost": 2.0 * self.config.vector_query_boost_factor  # Boost vector similarity scores
         }
         
-        # BM25 query for text matching
+        # Optimized BM25 query for text matching
         bm25_query = {
             "multi_match": {
                 "query": query_text,
-                "fields": ["text^2", "normalized_text^1.5"],
+                "fields": ["text^3", "normalized_text^2", "aliases^1.5"],  # Better field weights
                 "type": "best_fields",
-                "fuzziness": "AUTO"
+                "fuzziness": "1",  # Reduced fuzziness for better performance
+                "minimum_should_match": "75%",  # Require most terms to match
+                "boost": 1.5 * self.config.bm25_query_boost_factor  # Boost BM25 scores
             }
         }
         

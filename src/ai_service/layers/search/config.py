@@ -235,6 +235,29 @@ class HybridSearchConfig(BaseModel):
     search_cache_size: int = Field(default=500, ge=50, le=5000, description="Maximum number of cached search results")
     search_cache_ttl_seconds: int = Field(default=1800, ge=60, le=86400, description="Search result cache TTL in seconds")
     
+    # Query optimization settings
+    enable_query_optimization: bool = Field(default=True, description="Enable query optimization features")
+    ac_query_boost_factor: float = Field(default=1.0, ge=0.1, le=5.0, description="AC query boost factor")
+    vector_query_boost_factor: float = Field(default=1.0, ge=0.1, le=5.0, description="Vector query boost factor")
+    bm25_query_boost_factor: float = Field(default=1.0, ge=0.1, le=5.0, description="BM25 query boost factor")
+    enable_query_caching: bool = Field(default=True, description="Enable query result caching")
+    query_cache_size: int = Field(default=1000, ge=100, le=10000, description="Maximum number of cached queries")
+    query_cache_ttl_seconds: int = Field(default=3600, ge=60, le=86400, description="Query cache TTL in seconds")
+    
+    # Security settings
+    enable_elasticsearch_auth: bool = Field(default=False, description="Enable Elasticsearch authentication")
+    es_auth_type: str = Field(default="basic", description="Elasticsearch authentication type (basic, api_key, ssl)")
+    es_username: Optional[str] = Field(default=None, description="Elasticsearch username")
+    es_password: Optional[str] = Field(default=None, description="Elasticsearch password")
+    es_api_key: Optional[str] = Field(default=None, description="Elasticsearch API key")
+    es_ca_certs: Optional[str] = Field(default=None, description="Elasticsearch CA certificates path")
+    enable_ssl_verification: bool = Field(default=True, description="Enable SSL certificate verification")
+    enable_audit_logging: bool = Field(default=False, description="Enable audit logging for search operations")
+    enable_rate_limiting: bool = Field(default=False, description="Enable rate limiting for search requests")
+    rate_limit_requests_per_minute: int = Field(default=100, ge=10, le=10000, description="Rate limit requests per minute")
+    enable_query_validation: bool = Field(default=True, description="Enable query validation and sanitization")
+    enable_sensitive_data_filtering: bool = Field(default=True, description="Enable sensitive data filtering in results")
+    
     # Elasticsearch configuration
     elasticsearch: ElasticsearchConfig = Field(default_factory=ElasticsearchConfig)
     

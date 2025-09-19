@@ -4,7 +4,7 @@ import asyncio
 import json
 import math
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -86,6 +86,14 @@ class HybridSearchService(BaseService, SearchService):
         # Query performance monitoring
         self._query_performance: List[Dict[str, Any]] = []
         self._performance_lock = asyncio.Lock()
+        
+        # Query caching
+        self._query_cache: Dict[str, Tuple[Dict[str, Any], datetime]] = {}
+        self._query_cache_lock = asyncio.Lock()
+        
+        # Rate limiting
+        self._rate_limiter: Dict[str, List[datetime]] = {}
+        self._rate_limit_lock = asyncio.Lock()
 
         # Fusion weights/boosts
         self._fusion_weights, self._fusion_boosts = self._load_fusion_weights()
@@ -345,6 +353,14 @@ class HybridSearchService(BaseService, SearchService):
         start_time = time.time()
         self._metrics.total_requests += 1
         
+        # Validate and sanitize query
+        text = self._validate_query(text)
+        
+        # Check rate limit
+        client_id = getattr(opts, 'client_id', 'default')
+        if not await self._check_rate_limit(client_id):
+            raise Exception("Rate limit exceeded")
+        
         # Structured logging for search operation
         search_log_data = {
             "operation": "find_candidates",
@@ -355,7 +371,8 @@ class HybridSearchService(BaseService, SearchService):
             "threshold": opts.threshold,
             "timestamp": datetime.now().isoformat(),
             "language": normalized.language,
-            "confidence": normalized.confidence
+            "confidence": normalized.confidence,
+            "client_id": client_id
         }
         
         # Check cache first
@@ -396,6 +413,9 @@ class HybridSearchService(BaseService, SearchService):
             # Process and rank results
             candidates = self._process_results(candidates, opts)
             
+            # Filter sensitive data
+            candidates = self._filter_sensitive_data(candidates)
+            
             # Limit payload size to prevent excessive memory usage
             search_trace.limit_payload_size(max_size_kb=200)
             
@@ -425,6 +445,9 @@ class HybridSearchService(BaseService, SearchService):
                 "search_modes_used": [opts.search_mode.value]
             })
             self.logger.info("Search completed successfully", extra=search_log_data)
+            
+            # Log audit event
+            self._log_audit_event("search_success", text, len(candidates), client_id)
             
             self.logger.info(
                 f"Search completed: {len(candidates)} candidates found in {processing_time:.2f}ms"
@@ -1416,6 +1439,188 @@ class HybridSearchService(BaseService, SearchService):
             self._query_performance.clear()
             self.logger.info("Query performance records cleared")
     
+    async def _get_cached_query(self, query_key: str) -> Optional[Dict[str, Any]]:
+        """Get cached query if available and not expired."""
+        if not self.config.enable_query_caching:
+            return None
+            
+        async with self._query_cache_lock:
+            if query_key in self._query_cache:
+                query_data, timestamp = self._query_cache[query_key]
+                
+                # Check if cache entry is expired
+                age_seconds = (datetime.now() - timestamp).total_seconds()
+                if age_seconds < self.config.query_cache_ttl_seconds:
+                    self.logger.debug(f"Query cache hit for key: {query_key[:20]}...")
+                    return query_data
+                else:
+                    # Remove expired entry
+                    del self._query_cache[query_key]
+                    self.logger.debug(f"Query cache expired for key: {query_key[:20]}...")
+            
+            return None
+    
+    async def _cache_query(self, query_key: str, query_data: Dict[str, Any]) -> None:
+        """Cache query data."""
+        if not self.config.enable_query_caching:
+            return
+            
+        async with self._query_cache_lock:
+            # Check cache size limit
+            if len(self._query_cache) >= self.config.query_cache_size:
+                # Remove oldest entry
+                oldest_key = min(self._query_cache.keys(), 
+                               key=lambda k: self._query_cache[k][1])
+                del self._query_cache[oldest_key]
+                self.logger.debug(f"Query cache evicted oldest entry: {oldest_key[:20]}...")
+            
+            self._query_cache[query_key] = (query_data, datetime.now())
+            self.logger.debug(f"Cached query data for key: {query_key[:20]}...")
+    
+    def _generate_query_cache_key(self, query: str, search_mode: str) -> str:
+        """Generate cache key for query data."""
+        import hashlib
+        
+        key_data = {
+            "query": query,
+            "search_mode": search_mode
+        }
+        
+        key_string = str(sorted(key_data.items()))
+        return hashlib.md5(key_string.encode()).hexdigest()
+    
+    async def clear_query_cache(self) -> None:
+        """Clear the query cache."""
+        async with self._query_cache_lock:
+            self._query_cache.clear()
+            self.logger.info("Query cache cleared")
+    
+    async def get_query_cache_stats(self) -> Dict[str, Any]:
+        """Get query cache statistics."""
+        async with self._query_cache_lock:
+            if not self._query_cache:
+                return {
+                    "cache_size": 0,
+                    "cache_enabled": self.config.enable_query_caching,
+                    "max_cache_size": self.config.query_cache_size,
+                    "cache_ttl_seconds": self.config.query_cache_ttl_seconds
+                }
+            
+            now = datetime.now()
+            ages = [(now - timestamp).total_seconds() for _, (_, timestamp) in self._query_cache.items()]
+            
+            return {
+                "cache_size": len(self._query_cache),
+                "cache_enabled": self.config.enable_query_caching,
+                "max_cache_size": self.config.query_cache_size,
+                "cache_ttl_seconds": self.config.query_cache_ttl_seconds,
+                "avg_age_seconds": sum(ages) / len(ages) if ages else 0,
+                "max_age_seconds": max(ages) if ages else 0,
+                "min_age_seconds": min(ages) if ages else 0
+            }
+    
+    def _validate_query(self, query: str) -> str:
+        """Validate and sanitize search query."""
+        if not self.config.enable_query_validation:
+            return query
+        
+        # Remove potentially dangerous characters
+        import re
+        sanitized = re.sub(r'[<>"\']', '', query)
+        
+        # Limit query length
+        max_length = 1000
+        if len(sanitized) > max_length:
+            sanitized = sanitized[:max_length]
+            self.logger.warning(f"Query truncated to {max_length} characters")
+        
+        # Check for SQL injection patterns
+        sql_patterns = [
+            r'(union|select|insert|update|delete|drop|create|alter)\s+',
+            r'(or|and)\s+\d+\s*=\s*\d+',
+            r';\s*(drop|delete|insert|update)',
+            r'--\s*',
+            r'/\*.*?\*/'
+        ]
+        
+        for pattern in sql_patterns:
+            if re.search(pattern, sanitized, re.IGNORECASE):
+                self.logger.warning(f"Potential SQL injection pattern detected in query: {pattern}")
+                sanitized = re.sub(pattern, '', sanitized, flags=re.IGNORECASE)
+        
+        return sanitized.strip()
+    
+    async def _check_rate_limit(self, client_id: str = "default") -> bool:
+        """Check if client has exceeded rate limit."""
+        if not self.config.enable_rate_limiting:
+            return True
+        
+        now = datetime.now()
+        minute_ago = now - timedelta(minutes=1)
+        
+        async with self._rate_limit_lock:
+            if client_id not in self._rate_limiter:
+                self._rate_limiter[client_id] = []
+            
+            # Remove old requests
+            self._rate_limiter[client_id] = [
+                req_time for req_time in self._rate_limiter[client_id]
+                if req_time > minute_ago
+            ]
+            
+            # Check if limit exceeded
+            if len(self._rate_limiter[client_id]) >= self.config.rate_limit_requests_per_minute:
+                return False
+            
+            # Add current request
+            self._rate_limiter[client_id].append(now)
+            return True
+    
+    def _filter_sensitive_data(self, candidates: List[Candidate]) -> List[Candidate]:
+        """Filter sensitive data from search results."""
+        if not self.config.enable_sensitive_data_filtering:
+            return candidates
+        
+        filtered_candidates = []
+        for candidate in candidates:
+            # Create a copy to avoid modifying original
+            filtered_candidate = Candidate(
+                doc_id=candidate.doc_id,
+                score=candidate.score,
+                text=candidate.text,
+                entity_type=candidate.entity_type,
+                metadata=candidate.metadata.copy() if candidate.metadata else {},
+                search_mode=candidate.search_mode,
+                match_fields=candidate.match_fields,
+                confidence=candidate.confidence
+            )
+            
+            # Remove sensitive fields from metadata
+            sensitive_fields = ['ssn', 'passport', 'credit_card', 'bank_account', 'phone', 'email']
+            for field in sensitive_fields:
+                if field in filtered_candidate.metadata:
+                    filtered_candidate.metadata[field] = "***"
+            
+            filtered_candidates.append(filtered_candidate)
+        
+        return filtered_candidates
+    
+    def _log_audit_event(self, event_type: str, query: str, result_count: int, client_id: str = "default") -> None:
+        """Log audit event for security monitoring."""
+        if not self.config.enable_audit_logging:
+            return
+        
+        audit_data = {
+            "event_type": event_type,
+            "query": query[:100],  # Truncate for privacy
+            "result_count": result_count,
+            "client_id": client_id,
+            "timestamp": datetime.now().isoformat(),
+            "service": "hybrid_search"
+        }
+        
+        self.logger.info("Audit event", extra=audit_data)
+    
     async def get_search_cache_stats(self) -> Dict[str, Any]:
         """Get search cache statistics."""
         async with self._search_cache_lock:
@@ -1633,6 +1838,9 @@ class HybridSearchService(BaseService, SearchService):
             
             # Add query performance statistics
             health_status["query_performance"] = await self.get_query_performance_stats()
+            
+            # Add query cache statistics
+            health_status["query_cache"] = await self.get_query_cache_stats()
 
         except Exception as e:
             health_status["status"] = "unhealthy"
