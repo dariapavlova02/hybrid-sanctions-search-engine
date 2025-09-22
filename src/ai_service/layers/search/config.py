@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Union
 
 import yaml
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class ElasticsearchConfig(BaseModel):
@@ -269,7 +269,8 @@ class HybridSearchConfig(BaseModel):
     metrics_window_size: int = Field(default=1000, ge=100, le=10000, description="Metrics rolling window size")
     metrics_retention_hours: int = Field(default=24, ge=1, le=168, description="Metrics retention in hours")
     
-    @validator("default_mode")
+    @field_validator("default_mode")
+    @classmethod
     def validate_default_mode(cls, v):
         """Validate default search mode"""
         valid_modes = ["ac", "vector", "hybrid"]
