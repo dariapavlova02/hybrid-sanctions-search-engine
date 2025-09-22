@@ -13,14 +13,18 @@ from typing import Dict, List, Optional, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
-# Graceful fallback for nameparser
-try:
-    from nameparser import HumanName
-    NAMEPARSER_AVAILABLE = True
-except ImportError:
-    logger.warning("nameparser not available, using fallback parsing")
-    NAMEPARSER_AVAILABLE = False
-    HumanName = None
+# Use lazy import to avoid module-level warning
+from ...utils.lazy_imports import NAMEPARSER
+
+def get_human_name():
+    """Get HumanName class if nameparser is available."""
+    if NAMEPARSER is not None:
+        return NAMEPARSER.HumanName
+    return None
+
+# Set availability flag based on lazy import
+NAMEPARSER_AVAILABLE = NAMEPARSER is not None
+HumanName = get_human_name()
 
 
 @dataclass

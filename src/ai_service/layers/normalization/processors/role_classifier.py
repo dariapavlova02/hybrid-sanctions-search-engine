@@ -17,10 +17,16 @@ except ImportError:  # pragma: no cover
     NewsEmbedding = None  # type: ignore
     NamesExtractor = None  # type: ignore
 
-try:  # Optional dependency for English name parsing
-    from nameparser import HumanName
-except ImportError:  # pragma: no cover
-    HumanName = None  # type: ignore
+# Use lazy import for consistency with other modules
+from ....utils.lazy_imports import NAMEPARSER
+
+def get_human_name():
+    """Get HumanName class if nameparser is available."""
+    if NAMEPARSER is not None:
+        return NAMEPARSER.HumanName
+    return None
+
+HumanName = get_human_name()
 
 
 ORG_LEGAL_FORMS: Set[str] = {
@@ -92,6 +98,14 @@ _DIM_SUFFIX_MAP = {
         "ына",
         "ой",   # Добавляем падежные формы
         "ей",   # Добавляем падежные формы
+        "ову",  # Дательный падеж: Петрову, Иванову
+        "еву",  # Дательный падеж: Алексееву
+        "ину",  # Дательный падеж: Смирнину
+        "ыну",  # Дательный падеж:
+        "ским", # Дательный падеж: Московскому -> Московскому
+        "цким", # Дательный падеж:
+        "ому",  # Дательный падеж для прилагательных фамилий
+        "ему",  # Дательный падеж для прилагательных фамилий
         "ский",
         "ская",
         "цкий",
@@ -103,6 +117,10 @@ _DIM_SUFFIX_MAP = {
     "uk": [
         "енко",
         "енк",
+        # Russian surname endings that appear in Ukrainian contexts
+        "ов", "ев", "ин", "ын",
+        "ова", "ева", "ина", "ына",
+        "ський", "ська", "цький", "цька",
         "ко",
         "ський",
         "ська",
@@ -378,6 +396,10 @@ class RoleClassifier:
         lower = token.lower()
         lang = language if language in self.given_names else "ru"
 
+        # For English, check if this looks like an Irish/Scottish surname
+        if language == "en" and self._is_irish_scottish_surname(token):
+            return "surname"
+
         if lower in self.given_names.get(lang, set()):
             return "given"
         if lower in self.surnames.get(lang, set()):
@@ -391,10 +413,101 @@ class RoleClassifier:
             if self._classify_surname_by_suffix(token, language) == "surname":
                 return "surname"
 
-        if token[0].isupper() and token.isalpha() and not token.isupper():
-            return "given"
+        # Check for mixed-script personal names (e.g., O'Брайен-Смит)
+        # These often contain apostrophes and hyphens but should be considered personal names
+        if self._is_mixed_script_personal_name(token):
+            return "surname"  # Mixed-script names are typically surnames
+
+        # Check for pure English apostrophe names (O'Brien, D'Angelo) in Cyrillic contexts
+        # These should be treated as surnames when in ru/uk contexts
+        if language in ("ru", "uk") and self._is_english_apostrophe_name(token):
+            return "surname"
+
+        # Check for names with apostrophes (both Cyrillic and Latin contexts)
+        # Examples: Д'яченко, O'Connor
+        if token[0].isupper() and not token.isupper():
+            # Allow letters, apostrophes, and hyphens in names
+            name_chars = set(token.replace("'", "").replace("-", ""))
+            if name_chars and all(c.isalpha() for c in name_chars):
+                # For Russian/Ukrainian context, treat apostrophe names as surnames
+                if language in ("ru", "uk") and "'" in token:
+                    return "surname"
+                # Otherwise, treat as given name
+                return "given"
 
         return "unknown"
+
+    def _is_mixed_script_personal_name(self, token: str) -> bool:
+        """Check if token is a mixed-script personal name (e.g., O'Брайен-Смит)."""
+        if not token or len(token) < 3:
+            return False
+
+        # Must start with uppercase letter
+        if not token[0].isupper():
+            return False
+
+        # Check for mix of Latin and Cyrillic characters (including Ukrainian-specific)
+        has_latin = any(c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz' for c in token)
+        has_cyrillic = any(c in 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюяІіЄєЇїҐґ' for c in token)
+
+        if not (has_latin and has_cyrillic):
+            return False
+
+        # Should contain mostly letters with allowed special characters (apostrophe, hyphen)
+        allowed_chars = set('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+                           'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюяІіЄєЇїҐґ'
+                           '\'-')
+
+        for char in token:
+            if char not in allowed_chars:
+                return False
+
+        # Additional heuristics: typical patterns for mixed-script names
+        # Often start with Latin prefix like O', Mc, etc.
+        latin_prefixes = ["O'", "Mc", "Mac", "De", "Di", "La", "Le", "Van", "Von"]
+        for prefix in latin_prefixes:
+            if token.startswith(prefix):
+                return True
+
+        return True
+
+    def _is_english_apostrophe_name(self, token: str) -> bool:
+        """Check if token is an English name with apostrophe (e.g., O'Brien, D'Angelo)."""
+        if not token or len(token) < 3:
+            return False
+
+        # Must start with uppercase letter
+        if not token[0].isupper():
+            return False
+
+        # Must contain apostrophe
+        if "'" not in token:
+            return False
+
+        # Should contain only Latin letters, apostrophes, and optionally hyphens
+        allowed_chars = set('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\'-')
+        for char in token:
+            if char not in allowed_chars:
+                return False
+
+        # Should be all Latin characters (no Cyrillic)
+        has_cyrillic = any(c in 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюяІіЄєЇїҐґ' for c in token)
+        if has_cyrillic:
+            return False
+
+        # Common Irish/Scottish prefixes with apostrophe
+        apostrophe_prefixes = ["O'", "D'", "Mc'", "Mac'"]
+        for prefix in apostrophe_prefixes:
+            if token.startswith(prefix):
+                return True
+
+        # Generic pattern: starts with letter(s), has apostrophe, continues with letters
+        if token.count("'") == 1:
+            parts = token.split("'")
+            if len(parts) == 2 and all(part.isalpha() for part in parts):
+                return True
+
+        return False
 
     def _classify_surname_by_suffix(self, token: str, language: str) -> str:
         token_lower = token.lower()
@@ -452,7 +565,16 @@ class RoleClassifier:
             elif role == "unknown" and idx > 0 and tagged[idx - 1][1] == "given":
                 new_role = "surname"
             elif role == "given" and idx > 0 and tagged[idx - 1][1] == "given":
-                if self._looks_like_surname_candidate(token, language):
+                # For English, assume second given name in sequence is a surname
+                # For other languages, use surname candidate check
+                # Also apply this for ASCII names in Cyrillic contexts (mixed-script support)
+                if (language == "en" or
+                    self._looks_like_surname_candidate(token, language) or
+                    (token.isascii() and language in ("ru", "uk"))):
+                    new_role = "surname"
+            elif role == "given" and idx > 0 and tagged[idx - 1][1] == "initial":
+                # Handle pattern: initial + initial + given -> initial + initial + surname
+                if language == "en" or self._looks_like_surname_candidate(token, language):
                     new_role = "surname"
 
             improved.append((token, new_role))
@@ -471,6 +593,9 @@ class RoleClassifier:
     def _is_initial(self, token: str) -> bool:
         if self._initial_pattern.match(token):
             return True
+        # Handle initials with multiple dots (e.g., "J.." -> "J.")
+        if re.match(r'^[A-Za-zА-Яа-яІЇЄҐіїєґ]\.+$', token):
+            return True
         if len(token) == 1 and token.isalpha() and token.lower() not in self._context_words:
             return True
         return False
@@ -478,10 +603,34 @@ class RoleClassifier:
     def _split_multi_initial(self, token: str) -> List[str]:
         if self._initial_pattern.match(token):
             return [f"{part}." for part in token.split(".") if part]
+        # Handle initials with multiple dots (e.g., "J.." -> "J.")
+        if re.match(r'^[A-Za-zА-Яа-яІЇЄҐіїєґ]\.+$', token):
+            # Extract the letter and normalize to single dot
+            letter = token[0]
+            return [f"{letter}."]
         return [token]
 
     def _is_context_word(self, token: str) -> bool:
         return token.lower() in self._context_words
+
+    def _is_irish_scottish_surname(self, token: str) -> bool:
+        """Check if token looks like an Irish or Scottish surname with apostrophe."""
+        if not token or len(token) < 3:
+            return False
+
+        # Irish surnames with apostrophes (O'Sullivan, O'Connor, etc.)
+        if token.startswith("O'") and len(token) > 2:
+            return True
+
+        # Scottish surnames with apostrophes (D'Angelo, D'Artagnan, etc.)
+        if token.startswith("D'") and len(token) > 2:
+            return True
+
+        # Mac/Mc surnames (MacDonald, McConnor, etc.)
+        if token.lower().startswith(("mac", "mc")) and len(token) > 3:
+            return True
+
+        return False
 
     def _register_org(
         self,
