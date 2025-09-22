@@ -1,6 +1,9 @@
 {
   "template": {
     "settings": {
+      "index": {
+        "max_ngram_diff": 10
+      },
       "analysis": {
         "normalizer": {
           "case_insensitive_normalizer": {
@@ -38,7 +41,7 @@
           "char_ngram_filter": {
             "type": "ngram",
             "min_gram": 3,
-            "max_gram": 5,
+            "max_gram": 3,
             "token_chars": ["letter", "digit"]
           },
           "shingle": {

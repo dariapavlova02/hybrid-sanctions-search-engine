@@ -129,26 +129,28 @@ class ElasticsearchSetup:
         template_data = {
             "template": {
                 "settings": {
+                    "index": {
+                        "max_ngram_diff": 10
+                    },
                     "analysis": {
                         "normalizer": {
                             "case_insensitive_normalizer": {
                                 "type": "custom",
-                                "filter": ["lowercase", "asciifolding", "icu_folding"]
+                                "filter": ["lowercase", "asciifolding"]
                             }
                         },
                         "analyzer": {
                             "icu_text_analyzer": {
                                 "type": "custom",
-                                "tokenizer": "icu_tokenizer",
-                                "filter": ["icu_normalizer", "icu_folding", "lowercase"]
+                                "tokenizer": "standard",
+                                "filter": ["lowercase", "asciifolding"]
                             },
                             "shingle_analyzer": {
                                 "type": "custom",
-                                "tokenizer": "icu_tokenizer",
+                                "tokenizer": "standard",
                                 "filter": [
-                                    "icu_normalizer",
-                                    "icu_folding", 
                                     "lowercase",
+                                    "asciifolding",
                                     "shingle"
                                 ]
                             },
@@ -166,7 +168,7 @@ class ElasticsearchSetup:
                             "char_ngram_filter": {
                                 "type": "ngram",
                                 "min_gram": 3,
-                                "max_gram": 5,
+                                "max_gram": 4,
                                 "token_chars": ["letter", "digit"]
                             },
                             "shingle": {
@@ -203,11 +205,7 @@ class ElasticsearchSetup:
             "template": {
                 "settings": {
                     "number_of_shards": 1,
-                    "number_of_replicas": 1,
-                    "index": {
-                        "knn": True,
-                        "knn.algo_param.ef_search": 100
-                    }
+                    "number_of_replicas": 1
                 },
                 "mappings": {
                     "properties": {
@@ -239,12 +237,6 @@ class ElasticsearchSetup:
                         "name_ngrams": {
                             "type": "text",
                             "analyzer": "char_ngram_analyzer"
-                        },
-                        "name_vector": {
-                            "type": "dense_vector",
-                            "dims": 384,
-                            "index": True,
-                            "similarity": "cosine"
                         },
                         "meta": {
                             "type": "object",

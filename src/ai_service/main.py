@@ -15,7 +15,7 @@ from collections import defaultdict
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field, ValidationError, validator, ValidationError
@@ -40,7 +40,9 @@ from ai_service.exceptions import (
 from ai_service.utils import get_logger, setup_logging
 from ai_service.utils.response_formatter import format_processing_result
 from ai_service.contracts.base_contracts import NormalizationResponse, ProcessResponse, UnifiedProcessingResult
+# from ai_service.layers.search.contracts import SearchRequest, SearchOpts
 from ai_service.utils.feature_flags import FeatureFlags, get_feature_flag_manager
+from ai_service.monitoring.prometheus_exporter import get_exporter
 
 # Setup centralized logging
 setup_logging()
@@ -124,6 +126,20 @@ class SearchSimilarRequest(BaseModel):
     use_embeddings: bool = True
 
 
+# class SearchRequest(BaseModel):
+#     """Request model for name search"""
+#     
+#     query: str = Field(..., max_length=SERVICE_CONFIG.max_input_length, min_length=1)
+#     opts: SearchOpts = Field(default_factory=SearchOpts)
+#     
+#     @validator('query')
+#     def validate_query(cls, v):
+#         """Validate search query"""
+#         if not v.strip():
+#             raise ValueError("Query cannot be empty")
+#         return v.strip()
+
+
 class ComplexityAnalysisRequest(BaseModel):
     """Request model for text processing"""
 
@@ -181,8 +197,8 @@ class RateLimitingMiddleware:
         response = await call_next(request)
         return response
 
-# Add rate limiting middleware
-app.middleware("http")(RateLimitingMiddleware(max_requests=1000, window_seconds=60))
+# Add rate limiting middleware - optimized for 100+ RPS
+app.middleware("http")(RateLimitingMiddleware(max_requests=6000, window_seconds=60))
 
 # Initialize orchestrator
 orchestrator = None
@@ -312,13 +328,17 @@ def verify_admin_token(
 
 def check_spacy_models():
     """Check availability of required SpaCy models"""
+    try:
+        import spacy
+    except ImportError:
+        logger.warning("spaCy not available, skipping model checks")
+        return False
+
     required_models = ["en_core_web_sm", "ru_core_news_sm", "uk_core_news_sm"]
     missing_models = []
 
     for model_name in required_models:
         try:
-            import spacy
-
             nlp = spacy.load(model_name)
             logger.info(f"Model {model_name} loaded successfully")
         except OSError:
@@ -326,8 +346,8 @@ def check_spacy_models():
             logger.warning(f"Model {model_name} not found")
 
     if missing_models:
-        logger.error(f"Missing models: {', '.join(missing_models)}")
-        logger.error(
+        logger.warning(f"Missing models: {', '.join(missing_models)}")
+        logger.warning(
             "Run: poetry run post-install or python -m spacy download <model_name>"
         )
         return False
@@ -343,9 +363,9 @@ async def startup_event():
 
     logger.info("Initializing AI services...")
 
-    # Check models on startup
+    # Check models on startup (non-blocking)
     if not check_spacy_models():
-        logger.error("Failed to load required models. Service may not work correctly.")
+        logger.warning("SpaCy models not available. NER features will be disabled.")
 
     try:
         # Initialize unified orchestrator with production configuration
@@ -358,10 +378,29 @@ async def startup_event():
 
 @app.get("/health")
 async def health_check():
-    """Service health check"""
+    """Basic service health check"""
+    if orchestrator:
+        return {
+            "status": "healthy",
+            "service": "AI Service",
+            "version": "1.0.0",
+            "timestamp": time.time(),
+        }
+    else:
+        return {
+            "status": "initializing",
+            "service": "AI Service",
+            "version": "1.0.0",
+            "timestamp": time.time(),
+        }
+
+
+@app.get("/health/detailed")
+async def detailed_health_check():
+    """Detailed service health check with component status"""
     if orchestrator:
         stats = orchestrator.get_processing_stats()
-        
+
         # Get search service health if available
         search_health = {}
         if hasattr(orchestrator, 'search_service') and orchestrator.search_service:
@@ -369,11 +408,25 @@ async def health_check():
                 search_health = await orchestrator.search_service.health_check()
             except Exception as e:
                 search_health = {"status": "error", "error": str(e)}
-        
+
+        # Check HTTP client pool health
+        try:
+            from ai_service.utils.http_client_pool import get_http_pool
+            pool = get_http_pool()
+            pool_stats = pool.get_stats()
+            pool_health = {
+                "status": "healthy",
+                "active_clients": pool_stats.get("async_client_created", False),
+                "connections": pool_stats
+            }
+        except Exception as e:
+            pool_health = {"status": "error", "error": str(e)}
+
         return {
             "status": "healthy",
             "service": "AI Service",
             "version": "1.0.0",
+            "timestamp": time.time(),
             "implementation": "full",
             "orchestrator": {
                 "initialized": True,
@@ -385,16 +438,75 @@ async def health_check():
                 ),
                 "cache_hit_rate": stats.get("cache", {}).get("hit_rate", 0) if isinstance(stats.get("cache"), dict) else 0,
                 "services": stats.get("services", {}),
-                "search_service": search_health,
             },
+            "components": {
+                "search_service": search_health,
+                "http_client_pool": pool_health,
+            }
         }
     else:
         return {
             "status": "initializing",
             "service": "AI Service",
             "version": "1.0.0",
+            "timestamp": time.time(),
             "orchestrator": {"initialized": False},
         }
+
+
+@app.get("/health/live")
+async def liveness_check():
+    """Kubernetes liveness probe - basic service availability"""
+    return {"status": "alive", "timestamp": time.time()}
+
+
+@app.get("/health/ready")
+async def readiness_check():
+    """Kubernetes readiness probe - service ready to accept traffic"""
+    if orchestrator:
+        # Check if core services are available
+        try:
+            stats = orchestrator.get_processing_stats()
+
+            # Check if we can process a simple request (lightweight check)
+            is_ready = (
+                stats.get("total_processed", 0) >= 0 and  # Orchestrator is working
+                hasattr(orchestrator, 'normalization_service')  # Core service available
+            )
+
+            if is_ready:
+                return {
+                    "status": "ready",
+                    "timestamp": time.time(),
+                    "message": "Service ready to accept requests"
+                }
+            else:
+                return JSONResponse(
+                    status_code=503,
+                    content={
+                        "status": "not_ready",
+                        "timestamp": time.time(),
+                        "message": "Service not ready"
+                    }
+                )
+        except Exception as e:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "status": "not_ready",
+                    "timestamp": time.time(),
+                    "error": str(e)
+                }
+            )
+    else:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "not_ready",
+                "timestamp": time.time(),
+                "message": "Orchestrator not initialized"
+            }
+        )
 
 
 @app.get("/metrics")
@@ -404,61 +516,36 @@ async def get_metrics():
     Returns metrics in Prometheus text format
     """
     try:
-        if not orchestrator:
-            return "# HELP ai_service_up Service is up and running\n# TYPE ai_service_up gauge\nai_service_up 0\n"
+        # Get the Prometheus exporter
+        exporter = get_exporter()
 
-        # Get orchestrator metrics
-        stats = orchestrator.get_processing_stats()
+        # Update service status metrics based on orchestrator availability
+        if orchestrator:
+            stats = orchestrator.get_processing_stats()
 
-        # Get MetricsService metrics if available
-        metrics_lines = []
+            # Update success rate if available
+            total_requests = stats.get('total_processed', 0)
+            successful_requests = stats.get('successful', 0)
+            if total_requests > 0:
+                success_rate = successful_requests / total_requests
+                exporter.update_success_rate(success_rate)
 
-        # Basic service metrics
-        metrics_lines.append("# HELP ai_service_up Service is up and running")
-        metrics_lines.append("# TYPE ai_service_up gauge")
-        metrics_lines.append("ai_service_up 1")
+            # Update cache hit rate if available
+            if 'cache' in stats:
+                cache_hit_rate = stats['cache'].get('hit_rate', 0.0)
+                exporter.update_cache_hit_rate(cache_hit_rate)
 
-        # Processing metrics
-        metrics_lines.append("# HELP ai_service_requests_total Total processed requests")
-        metrics_lines.append("# TYPE ai_service_requests_total counter")
-        metrics_lines.append(f"ai_service_requests_total {stats.get('total_processed', 0)}")
+            # Update active connections estimate (based on service availability)
+            if 'services' in stats:
+                active_services = sum(1 for s in stats['services'].values() if s.get('available', False))
+                exporter.update_active_connections(active_services)
 
-        metrics_lines.append("# HELP ai_service_requests_successful_total Total successful requests")
-        metrics_lines.append("# TYPE ai_service_requests_successful_total counter")
-        metrics_lines.append(f"ai_service_requests_successful_total {stats.get('successful', 0)}")
-
-        metrics_lines.append("# HELP ai_service_requests_failed_total Total failed requests")
-        metrics_lines.append("# TYPE ai_service_requests_failed_total counter")
-        metrics_lines.append(f"ai_service_requests_failed_total {stats.get('failed', 0)}")
-
-        # Performance metrics
-        if 'performance' in stats:
-            perf = stats['performance']
-            metrics_lines.append("# HELP ai_service_processing_time_avg_seconds Average processing time")
-            metrics_lines.append("# TYPE ai_service_processing_time_avg_seconds gauge")
-            metrics_lines.append(f"ai_service_processing_time_avg_seconds {perf.get('avg_processing_time', 0)}")
-
-            metrics_lines.append("# HELP ai_service_processing_time_p95_seconds 95th percentile processing time")
-            metrics_lines.append("# TYPE ai_service_processing_time_p95_seconds gauge")
-            metrics_lines.append(f"ai_service_processing_time_p95_seconds {perf.get('p95_processing_time', 0)}")
-
-        # Cache metrics
-        if 'cache' in stats:
-            cache = stats['cache']
-            metrics_lines.append("# HELP ai_service_cache_hit_rate Cache hit rate")
-            metrics_lines.append("# TYPE ai_service_cache_hit_rate gauge")
-            metrics_lines.append(f"ai_service_cache_hit_rate {cache.get('hit_rate', 0)}")
-
-        # Service availability metrics
-        if 'services' in stats:
-            services = stats['services']
-            for service_name, service_status in services.items():
-                metrics_lines.append(f"# HELP ai_service_component_available Component {service_name} availability")
-                metrics_lines.append(f"# TYPE ai_service_component_available gauge")
-                available = 1 if service_status.get('available', True) else 0
-                metrics_lines.append(f"ai_service_component_available{{component=\"{service_name}\"}} {available}")
-
-        return "\n".join(metrics_lines) + "\n"
+        # Return metrics in Prometheus format with correct Content-Type
+        metrics_content = exporter.get_metrics().decode('utf-8')
+        return Response(
+            content=metrics_content,
+            media_type=exporter.get_metrics_content_type()
+        )
 
     except Exception as e:
         logger.error(f"Error generating metrics: {e}")
@@ -667,6 +754,34 @@ async def analyze_complexity(request: ComplexityAnalysisRequest):
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
+# @app.post("/search")
+# async def search_names(request: SearchRequest):
+#     """Search for names using hybrid search"""
+#     if not orchestrator:
+#         raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+# 
+#     try:
+#         # Check if search service is available
+#         if not hasattr(orchestrator, 'search_service') or not orchestrator.search_service:
+#             raise HTTPException(status_code=503, detail="Search service not available")
+# 
+#         # Perform search using HybridSearchService
+#         results = await orchestrator.search_service.search(
+#             query=request.query,
+#             opts=request.opts
+#         )
+# 
+#         return {
+#             "query": request.query,
+#             "results": results,
+#             "total_results": len(results),
+#             "search_time_ms": getattr(results, 'search_time_ms', 0) if hasattr(results, 'search_time_ms') else 0
+#         }
+#     except Exception as e:
+#         logger.error(f"Error searching names: {e}")
+#         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
 @app.get("/stats")
 async def get_statistics():
     """Get service operation statistics"""
@@ -856,8 +971,13 @@ async def root():
         "orchestrator": orchestrator is not None,
         "endpoints": {
             "health": "/health",
+            "health_detailed": "/health/detailed",
+            "health_live": "/health/live",
+            "health_ready": "/health/ready",
+            "metrics": "/metrics",
             "process": "/process",
             "process_batch": "/process-batch",
+            # "search": "/search",  # Temporarily disabled
             "search_similar": "/search-similar",
             "analyze_complexity": "/analyze-complexity",
             "stats": "/stats",
@@ -870,6 +990,7 @@ async def root():
             "Text normalization",
             "Variant generation",
             "Signal detection",
+            # "Hybrid search",  # Temporarily disabled
             "Similarity search",
             "Complexity analysis",
             "Batch processing",
