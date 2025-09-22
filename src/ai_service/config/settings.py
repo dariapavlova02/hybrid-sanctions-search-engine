@@ -394,6 +394,19 @@ class SearchConfig(BaseModel, HotReloadableConfig):
     def __init__(self, **data):
         super().__init__(**data)
         # Note: HotReloadableConfig not used for SearchConfig to avoid config_path conflicts
+
+    @property
+    def elasticsearch(self):
+        """Compatibility property to provide elasticsearch config for search services"""
+        from ..layers.search.config import ElasticsearchConfig
+        return ElasticsearchConfig(
+            hosts=self.es_hosts,
+            username=self.es_username,
+            password=self.es_password,
+            api_key=self.es_api_key,
+            verify_certs=self.es_verify_certs,
+            timeout=self.es_timeout
+        )
     
     @field_validator('es_hosts')
     @classmethod
