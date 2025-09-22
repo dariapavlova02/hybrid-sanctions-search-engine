@@ -14,7 +14,6 @@ from pydantic import BaseModel, Field
 
 from .elasticsearch_wrapper import ElasticsearchClient
 from ..layers.embeddings.embedding_service import EmbeddingService
-from ..config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
