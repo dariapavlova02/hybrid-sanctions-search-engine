@@ -41,9 +41,11 @@ from ..contracts.base_contracts import (
 # Import HybridSearchService conditionally to avoid elasticsearch dependency issues
 try:
     from ..layers.search.hybrid_search_service import HybridSearchService
+    from ..layers.search.contracts import SearchOpts
 except ImportError as e:
     logger.warning(f"Failed to import HybridSearchService: {e}")
     HybridSearchService = None
+    SearchOpts = None
 from ..contracts.decision_contracts import (
     DecisionInput,
     DecisionOutput,
@@ -543,12 +545,26 @@ class UnifiedOrchestrator:
 
                 # Perform search using normalized text
                 query = norm_result.normalized if norm_result.normalized else ""
-                if query.strip():
-                    search_results = await self.search_service.search_similar(
-                        normalized_text=query,
-                        limit=10,
+                original_text = context.original_text if context else query
+                if query.strip() and SearchOpts:
+                    search_opts = SearchOpts(
+                        top_k=10,
                         threshold=0.7
                     )
+                    candidates = await self.search_service.find_candidates(
+                        normalized=norm_result,
+                        text=original_text,
+                        opts=search_opts
+                    )
+
+                    # Convert candidates to the expected search_results format
+                    search_results = {
+                        "query": query,
+                        "results": [candidate.to_dict() for candidate in candidates],
+                        "total_hits": len(candidates),
+                        "search_type": "hybrid",
+                        "processing_time_ms": 0  # Will be updated by search service
+                    }
 
                     if search_trace:
                         result_count = search_results.get('total_hits', 0) if search_results else 0
