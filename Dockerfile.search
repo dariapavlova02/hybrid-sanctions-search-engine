@@ -63,10 +63,19 @@ import prometheus_client; print('✅ prometheus_client installed')
 print('🎉 All dependencies verified!')
 "
 
-# Install spaCy models (optional, fail silently if not available)
-RUN python -m spacy download en_core_web_sm || echo "English model not available" && \
-    python -m spacy download ru_core_news_sm || echo "Russian model not available" && \
-    python -m spacy download uk_core_news_sm || echo "Ukrainian model not available"
+# Install spaCy models with better error handling
+RUN echo "📦 Installing spaCy models..." && \
+    python -m spacy download en_core_web_sm 2>/dev/null && echo "✅ English model: en_core_web_sm" || \
+    (python -m spacy download en 2>/dev/null && echo "✅ English model: en") || \
+    echo "❌ No English models available" && \
+    \
+    python -m spacy download ru_core_news_sm 2>/dev/null && echo "✅ Russian model: ru_core_news_sm" || \
+    (python -m spacy download xx_ent_wiki_sm 2>/dev/null && echo "✅ Multilingual model for Russian") || \
+    echo "❌ No Russian models available" && \
+    \
+    echo "📝 Available spaCy models:" && \
+    python -c "import spacy; print([model for model in spacy.info()['pipelines'] if model])" 2>/dev/null || echo "No models found" && \
+    echo "✅ spaCy setup completed"
 
 # Copy application code
 COPY . .
