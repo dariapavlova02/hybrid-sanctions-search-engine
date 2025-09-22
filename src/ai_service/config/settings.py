@@ -5,6 +5,7 @@ Structured configuration classes with validation and type hints
 
 import os
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -357,6 +358,9 @@ class SearchConfig(BaseModel, HotReloadableConfig):
     
     model_config = {"validate_assignment": True}
     
+    # Hot reload configuration
+    config_path: Optional[Path] = Field(default=None, exclude=True)
+    
     # Elasticsearch connection
     es_hosts: List[str] = Field(default_factory=lambda: os.getenv("ES_HOSTS", "localhost:9200").split(","))
     es_username: Optional[str] = Field(default_factory=lambda: os.getenv("ES_USERNAME"))
@@ -389,7 +393,7 @@ class SearchConfig(BaseModel, HotReloadableConfig):
     
     def __init__(self, **data):
         super().__init__(**data)
-        HotReloadableConfig.__init__(self)
+        # Note: HotReloadableConfig not used for SearchConfig to avoid config_path conflicts
     
     @field_validator('es_hosts')
     @classmethod
