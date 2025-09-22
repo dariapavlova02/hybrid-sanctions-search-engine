@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Background
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from ..layers.search.elasticsearch_client import ElasticsearchClient
+from .elasticsearch_wrapper import ElasticsearchClient
 from ..layers.embeddings.embedding_service import EmbeddingService
 from ..config.settings import get_settings
 
