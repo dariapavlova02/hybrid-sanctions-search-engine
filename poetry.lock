@@ -365,14 +365,14 @@ files = [
 
 [[package]]
 name = "elastic-transport"
-version = "8.17.1"
+version = "8.10.0"
 description = "Transport classes and utilities shared among Python Elastic client libraries"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.6"
 groups = ["main"]
 files = [
-    {file = "elastic_transport-8.17.1-py3-none-any.whl", hash = "sha256:192718f498f1d10c5e9aa8b9cf32aed405e469a7f0e9d6a8923431dbb2c59fb8"},
-    {file = "elastic_transport-8.17.1.tar.gz", hash = "sha256:5edef32ac864dca8e2f0a613ef63491ee8d6b8cfb52881fa7313ba9290cac6d2"},
+    {file = "elastic-transport-8.10.0.tar.gz", hash = "sha256:ca51d08a4d16611701a57fb70592dbc7cb68c40fef4ac1becfe4aea100fe82ef"},
+    {file = "elastic_transport-8.10.0-py3-none-any.whl", hash = "sha256:e73ac3c7ad4e9209436207143d797d3f6b62a399a34d2729e069e44c9ea2cadc"},
 ]
 
 [package.dependencies]
@@ -380,7 +380,7 @@ certifi = "*"
 urllib3 = ">=1.26.2,<3"
 
 [package.extras]
-develop = ["aiohttp", "furo", "httpx", "opentelemetry-api", "opentelemetry-sdk", "orjson", "pytest", "pytest-asyncio", "pytest-cov", "pytest-httpserver", "pytest-mock", "requests", "respx", "sphinx (>2)", "sphinx-autodoc-typehints", "trustme"]
+develop = ["aiohttp", "furo", "mock", "pytest", "pytest-asyncio", "pytest-cov", "pytest-httpserver", "pytest-mock", "requests", "sphinx (>2)", "sphinx-autodoc-typehints", "trustme"]
 
 [[package]]
 name = "elasticsearch"
@@ -2764,4 +2764,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.14"
-content-hash = "2498b8ef100d3319bf466bc954c2b57c0109e0688a0b1f184443a45cf0cbf341"
+content-hash = "80242c66525564cdc2aa74d47992e06fd98690b9e1f3d5c024f30cfe894e14de"

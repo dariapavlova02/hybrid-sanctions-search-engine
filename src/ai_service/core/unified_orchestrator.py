@@ -37,7 +37,7 @@ from ..contracts.base_contracts import (
     ValidationServiceInterface,
     VariantsServiceInterface,
 )
-# from ..layers.search.hybrid_search_service import HybridSearchService
+from ..layers.search.hybrid_search_service import HybridSearchService
 from ..contracts.decision_contracts import (
     DecisionInput,
     DecisionOutput,
