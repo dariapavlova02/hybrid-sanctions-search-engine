@@ -27,8 +27,11 @@ COPY pyproject.toml poetry.lock ./
 # Configure Poetry
 RUN poetry config virtualenvs.create false
 
-# Install dependencies (without root project)
+# Install dependencies with lock file
 RUN poetry install --only=main --no-root
+
+# Verify and install specific missing dependencies
+RUN pip install rapidfuzz>=3.5.0 spacy>=3.7.0 transliterate>=1.10.2 prometheus-client>=0.19.0
 
 # Install spaCy models (optional, fail silently if not available)
 RUN python -m spacy download en_core_web_sm || echo "English model not available" && \
@@ -40,6 +43,9 @@ COPY . .
 
 # Copy production environment file
 COPY env.production.maximum_relevancy .env
+
+# Create logs directory for logging config
+RUN mkdir -p logs && chmod 755 logs
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash app && \
