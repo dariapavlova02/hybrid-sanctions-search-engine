@@ -66,7 +66,15 @@ RUN echo "🔍 Verifying dependencies..." && \
 RUN echo "📦 Installing spaCy models..." && \
     python -m spacy download en_core_web_sm && echo "✅ English model installed" || echo "❌ English model failed" && \
     python -m spacy download ru_core_news_sm && echo "✅ Russian model installed" || echo "❌ Russian model failed" && \
+    python -m spacy download uk_core_news_sm && echo "✅ Ukrainian model installed" || echo "❌ Ukrainian model failed" && \
     python -m spacy download xx_ent_wiki_sm && echo "✅ Multilingual model installed" || echo "❌ Multilingual model failed"
+
+# Verify spaCy models are properly installed
+RUN echo "🔍 Verifying spaCy models..." && \
+    python -c "import spacy; spacy.load('en_core_web_sm'); print('✅ English model working')" && \
+    python -c "import spacy; spacy.load('ru_core_news_sm'); print('✅ Russian model working')" && \
+    python -c "import spacy; spacy.load('uk_core_news_sm'); print('✅ Ukrainian model working')" && \
+    echo "🎉 All spaCy models verified!"
 
 # Copy production environment file
 COPY env.production.maximum_relevancy .env
