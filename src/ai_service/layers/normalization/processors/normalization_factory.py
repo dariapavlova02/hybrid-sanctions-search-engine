@@ -148,7 +148,7 @@ class NormalizationFactory(ErrorReportingMixin):
         # Initialize role taggers with unified lexicon and AC acceleration
         self.lexicons = get_lexicons()
         self.role_tagger = RoleTagger(window=3, enable_ac=False)  # Conservative: AC disabled for now
-        self.role_tagger_service = RoleTaggerService()  # New FSM-based role tagger with default lexicons
+        self.role_tagger_service = RoleTaggerService(role_classifier=self.role_classifier)  # Pass role classifier to FSM tagger
         
         # Initialize NER gateways with graceful fallback
         self.ner_gateway_uk = None
@@ -336,7 +336,7 @@ class NormalizationFactory(ErrorReportingMixin):
                 # Use new FSM-based role tagger service
                 if not hasattr(self, 'role_tagger_service') or self.role_tagger_service is None:
                     # Initialize role tagger service
-                    self.role_tagger_service = RoleTaggerService()
+                    self.role_tagger_service = RoleTaggerService(role_classifier=self.role_classifier)
                 
                 role_tags = self.role_tagger_service.tag(tokens, config.language)
                 role_tagger_traces = self._create_fsm_role_tagger_traces(role_tags, tokens)
@@ -402,6 +402,7 @@ class NormalizationFactory(ErrorReportingMixin):
             roles_for_morphology = filtered_roles
         else:
             tokens_for_morphology = classified_tokens
+            # Use FSM-updated roles if available, otherwise fallback to classified roles
             roles_for_morphology = roles
         if (
             config.language in {"ru", "uk"}
@@ -413,7 +414,7 @@ class NormalizationFactory(ErrorReportingMixin):
                 unresolved_diminutive_indices,
             ) = self._apply_diminutives(
                 classified_tokens,
-                roles,
+                roles_for_morphology,
                 config.language,
                 effective_flags,
             )
@@ -421,7 +422,7 @@ class NormalizationFactory(ErrorReportingMixin):
         # Step 3: Morphological normalization
         try:
             normalized_tokens, morph_traces = await self._normalize_morphology(
-                tokens_for_morphology, roles, config, skip_indices=None, effective_flags=effective_flags
+                tokens_for_morphology, roles_for_morphology, config, skip_indices=None, effective_flags=effective_flags
             )
             
             # Apply yo_strategy again after morphology to ensure consistency

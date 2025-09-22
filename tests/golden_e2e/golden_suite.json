@@ -1,0 +1,581 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "description": "Golden test suite for e2e verification of all processing layers",
+    "layers": ["ingest", "smart_filter", "pattern_builder", "signals", "decision_engine", "post_export_sanitizer", "report_assembler"],
+    "test_count": 32
+  },
+  "tests": [
+    {
+      "id": "G-ING-01",
+      "layer": "ingest",
+      "description": "базовый EN с шумом",
+      "input": {
+        "person_id": 1001,
+        "full_name": "Dr. John A. Smith Jr.",
+        "birthdate": "1976-08-09",
+        "tin": "782611846337",
+        "source_lang_hint": "en"
+      },
+      "expect": {
+        "ingest.status": "ok",
+        "ingest.full_name_raw": "Dr. John A. Smith Jr.",
+        "ingest.lang": "en"
+      },
+      "assert": [
+        "ingest.lang == 'en'",
+        "ingest.tin == '782611846337'",
+        "isinstance(ingest.birthdate, str)"
+      ]
+    },
+    {
+      "id": "G-ING-02",
+      "layer": "ingest",
+      "description": "RU без подсказки языка",
+      "input": {
+        "person_id": 1002,
+        "full_name": "Ковриков Роман Валерійович",
+        "birthdate": "1976-08-09",
+        "tin": "782611846337"
+      },
+      "expect": {
+        "ingest.status": "ok",
+        "ingest.full_name_raw": "Ковриков Роман Валерійович",
+        "ingest.lang": "auto",
+        "ingest.lang_detected": "ru-ua"
+      },
+      "assert": [
+        "ingest.lang_detected in ['ru','uk','ru-ua']"
+      ]
+    },
+    {
+      "id": "G-ING-03",
+      "layer": "ingest",
+      "description": "компания (для типизации сущности)",
+      "input": {
+        "entity_id": 2001,
+        "name": "ACME Holdings Ltd.",
+        "type_hint": "company"
+      },
+      "expect": {
+        "ingest.entity_type": "company",
+        "ingest.name_raw": "ACME Holdings Ltd."
+      },
+      "assert": [
+        "ingest.entity_type == 'company'"
+      ]
+    },
+    {
+      "id": "G-SF-01",
+      "layer": "smart_filter",
+      "description": "удаление титула/суффикса/миддла EN",
+      "input": {
+        "full_name_raw": "Dr. John A. Smith Jr.",
+        "lang": "en"
+      },
+      "expect": {
+        "sf.cleaned_name": "John Smith",
+        "sf.applied_rules": ["title_suffix_filter", "middle_name_filter"]
+      },
+      "assert": [
+        "sf.cleaned_name == 'John Smith'",
+        "all(r in sf.applied_rules for r in ['title_suffix_filter','middle_name_filter'])"
+      ]
+    },
+    {
+      "id": "G-SF-02",
+      "layer": "smart_filter",
+      "description": "инициалы как middle → убрать",
+      "input": {
+        "full_name_raw": "Mary J. Watson",
+        "lang": "en"
+      },
+      "expect": {
+        "sf.cleaned_name": "Mary Watson"
+      },
+      "assert": [
+        "sf.cleaned_name == 'Mary Watson'"
+      ]
+    },
+    {
+      "id": "G-SF-03",
+      "layer": "smart_filter",
+      "description": "RU+UA смешанная графика → нормализация юникода, без смешивания слоёв",
+      "input": {
+        "full_name_raw": "Ковріков Роман Валерiйович",
+        "lang": "ru-ua"
+      },
+      "expect": {
+        "sf.cleaned_name": "Ковриков Роман Валерийович",
+        "sf.applied_rules": ["unicode_nfkc", "cyrillic_unify"]
+      },
+      "assert": [
+        "re.match(r'^Ковриков Роман Валер(ий|ій)ович$', sf.cleaned_name)"
+      ]
+    },
+    {
+      "id": "G-SF-04",
+      "layer": "smart_filter",
+      "description": "удалить бытовой мусор",
+      "input": {
+        "full_name_raw": "Mr  John  Smith (CEO)",
+        "lang": "en"
+      },
+      "expect": {
+        "sf.cleaned_name": "John Smith"
+      },
+      "assert": [
+        "sf.cleaned_name == 'John Smith'",
+        "'(' not in sf.cleaned_name"
+      ]
+    },
+    {
+      "id": "G-SF-05",
+      "layer": "smart_filter",
+      "description": "компания — оставить корпоративные суффиксы",
+      "input": {
+        "name_raw": "ACME Holdings Ltd.",
+        "entity_type": "company"
+      },
+      "expect": {
+        "sf.cleaned_name": "ACME Holdings Ltd."
+      },
+      "assert": [
+        "sf.cleaned_name == 'ACME Holdings Ltd.'"
+      ]
+    },
+    {
+      "id": "G-PB-01",
+      "layer": "pattern_builder",
+      "description": "RU/EN перестановки + альтернативный патроним",
+      "input": {
+        "cleaned_name": "Ковриков Роман Валерьевич",
+        "lang": "ru"
+      },
+      "expect": {
+        "tier1.NAME_PERMUTATION.includes": [
+          "Ковриков Роман Валерьевич",
+          "Ковриков, Роман Валерьевич",
+          "Роман Ковриков Валерьевич",
+          "Valerievich Roman Kovrykov",
+          "Kovrykov, Roman Valerievich"
+        ]
+      },
+      "assert": [
+        "len(tier1.NAME_PERMUTATION) >= 12"
+      ]
+    },
+    {
+      "id": "G-PB-02",
+      "layer": "pattern_builder",
+      "description": "Инициалы — околонормативные",
+      "input": {
+        "cleaned_name": "Kovrykov Roman Valeriiovych",
+        "lang": "en"
+      },
+      "expect": {
+        "tier2.INITIALS_EVERYWHERE.includes": [
+          "R. Kovrykov",
+          "Kovrykov, Roman V",
+          "Kovrykov R.V.",
+          "Ковриков Р.В.",
+          "Ковриков, Роман В"
+        ]
+      },
+      "assert": [
+        "any('Kovrykov, Roman V' == x for x in tier2.INITIALS_EVERYWHERE)",
+        "any(re.match(r'^R\\. Kovrykov', x) for x in tier2.INITIALS_EVERYWHERE)"
+      ]
+    },
+    {
+      "id": "G-PB-03",
+      "layer": "pattern_builder",
+      "description": "Transliteration — Title Case «Kovrikov…»",
+      "input": {
+        "cleaned_name": "Ковриков Роман Валерійович",
+        "lang": "uk"
+      },
+      "expect": {
+        "tier2.TRANSLITERATION_VARIANT.includes": [
+          "Kovrikov Roman Valeriyovych",
+          "Kovrikov Roman Valeriiovych"
+        ]
+      },
+      "assert": [
+        "len([x for x in tier2.TRANSLITERATION_VARIANT if x.startswith('Kovrikov ')]) >= 2"
+      ]
+    },
+    {
+      "id": "G-PB-04",
+      "layer": "pattern_builder",
+      "description": "Diminutives (рома/ромчик/ромка и en: Roma/Rom)",
+      "input": {
+        "cleaned_name": "Ковриков Роман",
+        "lang": "ru-ua"
+      },
+      "expect": {
+        "tier2.DIMINUTIVE_VARIANT.includes_any": [
+          "ковриков рома",
+          "ковриков ромчик",
+          "ковриков ромка",
+          "Roma kovrykov",
+          "Rom kovrykov"
+        ]
+      },
+      "assert": [
+        "len(tier2.DIMINUTIVE_VARIANT) >= 6"
+      ]
+    },
+    {
+      "id": "G-PB-05",
+      "layer": "pattern_builder",
+      "description": "Удалён одиночный токен (POTENTIAL_SURNAME)",
+      "input": {
+        "cleaned_name": "John Smith",
+        "lang": "en"
+      },
+      "expect": {
+        "removed_sections": ["POTENTIAL_SURNAME"]
+      },
+      "assert": [
+        "'POTENTIAL_SURNAME' not in tiers"
+      ]
+    },
+    {
+      "id": "G-PB-06",
+      "layer": "pattern_builder",
+      "description": "Tier-3 мусор с кириллическими хвостами — не должен появляться",
+      "input": {
+        "cleaned_name": "Ковриков Роман Валерьевич",
+        "lang": "ru"
+      },
+      "expect": {},
+      "assert": [
+        "not any(re.search(r'(й|и)уцх\\b|вйцх\\b', x) for x in tier3.TYPO_VARIANT)"
+      ]
+    },
+    {
+      "id": "G-SIG-01",
+      "layer": "signals",
+      "description": "Exact match по ITN (Tier-0)",
+      "input": {
+        "query": "782611846337",
+        "index": {
+          "tin": ["782611846337"]
+        }
+      },
+      "expect": {
+        "signal": "exact",
+        "confidence": 1.0,
+        "evidence": ["tin"]
+      },
+      "assert": [
+        "score.exact >= 0.99"
+      ]
+    },
+    {
+      "id": "G-SIG-02",
+      "layer": "signals",
+      "description": "Strong match по ФИО+DOB",
+      "input": {
+        "query": {
+          "name": "Roman Kovrykov",
+          "dob": "1976-08-09"
+        },
+        "doc": {
+          "name": "Kovrykov Roman",
+          "dob": "1976-08-09"
+        }
+      },
+      "expect": {
+        "signal": "strong",
+        "evidence": ["name_perm", "dob"]
+      },
+      "assert": [
+        "score.strong >= 0.85"
+      ]
+    },
+    {
+      "id": "G-SIG-03",
+      "layer": "signals",
+      "description": "Medium (имя+фамилия совпали, патроним/дата нет)",
+      "input": {
+        "query": {
+          "name": "Kovrykov Roman",
+          "dob": null
+        },
+        "doc": {
+          "name": "Roman Kovrykov Valerievich",
+          "dob": "1976-08-09"
+        }
+      },
+      "expect": {
+        "signal": "medium",
+        "evidence": ["name_core"]
+      },
+      "assert": [
+        "0.5 <= score.medium < 0.85"
+      ]
+    },
+    {
+      "id": "G-SIG-04",
+      "layer": "signals",
+      "description": "Weak (только диминутив попал)",
+      "input": {
+        "query": {
+          "name": "Roma Kovrykov"
+        },
+        "doc": {
+          "name": "Roman Kovrykov"
+        }
+      },
+      "expect": {
+        "signal": "weak",
+        "evidence": ["diminutive"]
+      },
+      "assert": [
+        "0.2 <= score.weak < 0.5"
+      ]
+    },
+    {
+      "id": "G-SIG-05",
+      "layer": "signals",
+      "description": "No match (разные фамилии)",
+      "input": {
+        "query": {
+          "name": "Roman Kovrykov"
+        },
+        "doc": {
+          "name": "Roman Petrov"
+        }
+      },
+      "expect": {
+        "signal": "none"
+      },
+      "assert": [
+        "score.total == 0"
+      ]
+    },
+    {
+      "id": "G-DEC-01",
+      "layer": "decision_engine",
+      "description": "Exact по TIN → REJECT (санклист)",
+      "input": {
+        "signal": "exact",
+        "evidence": ["tin"],
+        "list_type": "sanctions"
+      },
+      "expect": {
+        "decision": "REJECT"
+      },
+      "assert": [
+        "decision == 'REJECT'"
+      ]
+    },
+    {
+      "id": "G-DEC-02",
+      "layer": "decision_engine",
+      "description": "Strong по ФИО → REQUIRE DOB+TIN",
+      "input": {
+        "signal": "strong",
+        "evidence": ["name_perm"],
+        "has_doc_dob": false,
+        "has_doc_tin": false
+      },
+      "expect": {
+        "decision": "REVIEW",
+        "action": "request_dob_tin"
+      },
+      "assert": [
+        "decision == 'REVIEW'"
+      ]
+    },
+    {
+      "id": "G-DEC-03",
+      "layer": "decision_engine",
+      "description": "Medium → NO REVIEW (policy)",
+      "input": {
+        "signal": "medium",
+        "policy": {
+          "min_review": "strong"
+        }
+      },
+      "expect": {
+        "decision": "PASS"
+      },
+      "assert": [
+        "decision == 'PASS'"
+      ]
+    },
+    {
+      "id": "G-DEC-04",
+      "layer": "decision_engine",
+      "description": "Weak + высокий риск страны → всё равно PASS",
+      "input": {
+        "signal": "weak",
+        "country_risk": "high"
+      },
+      "expect": {
+        "decision": "PASS"
+      },
+      "assert": [
+        "decision == 'PASS'"
+      ]
+    },
+    {
+      "id": "G-DEC-05",
+      "layer": "decision_engine",
+      "description": "Company strong (name+regno) → REVIEW",
+      "input": {
+        "entity_type": "company",
+        "signal": "strong",
+        "evidence": ["name", "regno"]
+      },
+      "expect": {
+        "decision": "REVIEW"
+      },
+      "assert": [
+        "decision == 'REVIEW'"
+      ]
+    },
+    {
+      "id": "G-SAN-01",
+      "layer": "post_export_sanitizer",
+      "description": "Dedup + Trim",
+      "input": {
+        "strings": ["  John  Smith ", "john smith", "John Smith"]
+      },
+      "expect": {
+        "out": ["John Smith"]
+      },
+      "assert": [
+        "len(out) == 1"
+      ]
+    },
+    {
+      "id": "G-SAN-02",
+      "layer": "post_export_sanitizer",
+      "description": "Запрет одиночных токенов",
+      "input": {
+        "strings": ["valeriiovych", "Kovrykov", "John Smith"]
+      },
+      "expect": {
+        "out": ["John Smith"]
+      },
+      "assert": [
+        "all(x not in out for x in ['valeriiovych','Kovrykov'])"
+      ]
+    },
+    {
+      "id": "G-SAN-03",
+      "layer": "post_export_sanitizer",
+      "description": "Чистота алфавита в Tier-1",
+      "input": {
+        "tier1": ["Kovrykov, Роман", "Roman Kovrykov", "Ковриков Роман"]
+      },
+      "expect": {
+        "tier1_out": ["Roman Kovrykov", "Ковриков Роман"],
+        "moved_to_mixed": ["Kovrykov, Роман"]
+      },
+      "assert": [
+        "len(tier1_out) == 2"
+      ]
+    },
+    {
+      "id": "G-SAN-04",
+      "layer": "post_export_sanitizer",
+      "description": "Инициалы — белый список шаблонов",
+      "input": {
+        "strings": ["R. Kovrykov", "Kovrykov, Roman V", "Kovrykov R.V.", "Kovrykov, R.", "R. K."]
+      },
+      "expect": {
+        "out": ["R. Kovrykov", "Kovrykov, Roman V", "Kovrykov R.V."]
+      },
+      "assert": [
+        "len(out) == 3"
+      ]
+    },
+    {
+      "id": "G-SAN-05",
+      "layer": "post_export_sanitizer",
+      "description": "Гендерная согласованность",
+      "input": {
+        "strings": ["Коврикова Роман", "Ковриков Роман"]
+      },
+      "expect": {
+        "out": ["Ковриков Роман"]
+      },
+      "assert": [
+        "\"Коврикова Роман\" not in out"
+      ]
+    },
+    {
+      "id": "G-REP-01",
+      "layer": "report_assembler",
+      "description": "Полный отчёт по персоне",
+      "input": {
+        "person_id": 32450,
+        "sf.cleaned_name": "Kovrykov Roman",
+        "tiers.summary": {
+          "t0": 1,
+          "t1": 44,
+          "t2": 43,
+          "t3": 233
+        },
+        "signals": {
+          "best": "strong",
+          "evidence": ["name_perm", "dob"]
+        },
+        "decision": "REVIEW"
+      },
+      "expect": {
+        "report.status": "ok",
+        "report.includes": ["patterns_by_tier", "rules_trace", "decision_block", "metrics"]
+      },
+      "assert": [
+        "report.metrics.coverage >= 0.9",
+        "report.decision == 'REVIEW'",
+        "'title_suffix_filter' in report.rules_trace"
+      ]
+    },
+    {
+      "id": "G-REP-02",
+      "layer": "report_assembler",
+      "description": "Компания — короткий отчёт",
+      "input": {
+        "entity_id": 2001,
+        "sf.cleaned_name": "ACME Holdings Ltd.",
+        "signals": {
+          "best": "strong",
+          "evidence": ["name", "regno"]
+        },
+        "decision": "REVIEW"
+      },
+      "expect": {
+        "report.includes": ["patterns_by_tier", "decision_block"]
+      },
+      "assert": [
+        "'diminutives' not in report"
+      ]
+    },
+    {
+      "id": "G-REP-03",
+      "layer": "report_assembler",
+      "description": "No match → PASS + пустой trace",
+      "input": {
+        "sf.cleaned_name": "John Smith",
+        "signals": {
+          "best": "none"
+        },
+        "decision": "PASS"
+      },
+      "expect": {
+        "report.status": "ok",
+        "report.decision": "PASS"
+      },
+      "assert": [
+        "len(report.matches) == 0"
+      ]
+    }
+  ]
+}

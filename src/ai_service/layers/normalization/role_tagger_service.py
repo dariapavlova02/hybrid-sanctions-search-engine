@@ -561,35 +561,70 @@ class SingleCharNumberRule(FSMTransitionRule):
 
 
 class DefaultPersonRule(FSMTransitionRule):
-    """Default rule for person name tokens."""
-    
+    """Default rule for person name tokens that considers morphology and dictionaries."""
+
+    def __init__(self, role_classifier=None, language="ru"):
+        self.role_classifier = role_classifier
+        self.language = language
+
     def can_apply(self, state: FSMState, token: Token, context: List[Token]) -> bool:
         # Accept both capitalized and non-capitalized names
         # but exclude punctuation, all-caps, and single characters
-        return (not token.is_punct and 
+        return (not token.is_punct and
                 not token.is_all_caps and
                 len(token.text) > 1 and
                 token.text.isalpha())  # Only alphabetic characters
-    
+
     def apply(self, state: FSMState, token: Token, context: List[Token]) -> Tuple[FSMState, TokenRole, str, List[str]]:
         evidence = ["person_heuristic"]
-        
+
+        # Use role classifier to determine actual role if available
+        if self.role_classifier:
+            # Use token's language if available, otherwise fall back to instance language
+            lang = getattr(token, 'lang', self.language) or self.language
+            predicted_role = self.role_classifier._classify_personal_role(token.text, lang)
+
+            if predicted_role == "surname":
+                if state == FSMState.START:
+                    return FSMState.SURNAME_EXPECTED, TokenRole.SURNAME, "surname_detected", evidence + [f"morphology_{predicted_role}"]
+                elif state == FSMState.GIVEN_EXPECTED:
+                    return FSMState.PATRONYMIC_EXPECTED, TokenRole.SURNAME, "surname_detected", evidence + [f"morphology_{predicted_role}"]
+                elif state == FSMState.SURNAME_EXPECTED:
+                    return FSMState.PATRONYMIC_EXPECTED, TokenRole.SURNAME, "surname_detected", evidence + [f"morphology_{predicted_role}"]
+
+            elif predicted_role == "given":
+                if state == FSMState.START:
+                    return FSMState.SURNAME_EXPECTED, TokenRole.GIVEN, "given_detected", evidence + [f"morphology_{predicted_role}"]
+                elif state == FSMState.SURNAME_EXPECTED:
+                    return FSMState.PATRONYMIC_EXPECTED, TokenRole.GIVEN, "given_detected", evidence + [f"morphology_{predicted_role}"]
+                elif state == FSMState.GIVEN_EXPECTED:
+                    # Check if this token is the same as the previous given name (duplicate)
+                    if context and len(context) >= 1:
+                        prev_token = context[-1]  # Previous token
+                        if prev_token.text.lower() == token.text.lower():
+                            return FSMState.GIVEN_EXPECTED, TokenRole.GIVEN, "duplicate_given_detected", evidence + [f"morphology_{predicted_role}"]
+                    return FSMState.SURNAME_EXPECTED, TokenRole.GIVEN, "given_detected", evidence + [f"morphology_{predicted_role}"]
+
+            elif predicted_role == "patronymic":
+                return FSMState.DONE, TokenRole.PATRONYMIC, "patronymic_detected", evidence + [f"morphology_{predicted_role}"]
+
+        # Fallback to original positional logic if no classifier or unknown role
         if state == FSMState.START:
-            return FSMState.GIVEN_EXPECTED, TokenRole.GIVEN, "given_detected", evidence
+            return FSMState.GIVEN_EXPECTED, TokenRole.GIVEN, "given_detected", evidence + ["positional_fallback"]
         elif state == FSMState.GIVEN_EXPECTED:
             # Check if this token is the same as the previous given name (duplicate)
             if context and len(context) >= 1:
                 prev_token = context[-1]  # Previous token
                 if prev_token.text.lower() == token.text.lower():
-                    return FSMState.GIVEN_EXPECTED, TokenRole.GIVEN, "duplicate_given_detected", evidence
-            return FSMState.SURNAME_EXPECTED, TokenRole.GIVEN, "given_detected", evidence
+                    return FSMState.GIVEN_EXPECTED, TokenRole.GIVEN, "duplicate_given_detected", evidence + ["positional_fallback"]
+            return FSMState.SURNAME_EXPECTED, TokenRole.GIVEN, "given_detected", evidence + ["positional_fallback"]
         elif state == FSMState.SURNAME_EXPECTED:
             # Check if this token is the same as the previous given name (duplicate)
             if context and len(context) >= 2:
                 prev_token = context[-2]  # Previous token
                 if prev_token.text.lower() == token.text.lower():
-                    return FSMState.SURNAME_EXPECTED, TokenRole.GIVEN, "duplicate_given_detected", evidence
-            return FSMState.PATRONYMIC_EXPECTED, TokenRole.SURNAME, "surname_detected", evidence
+                    return FSMState.SURNAME_EXPECTED, TokenRole.GIVEN, "duplicate_given_detected", evidence + ["positional_fallback"]
+            return FSMState.PATRONYMIC_EXPECTED, TokenRole.SURNAME, "surname_detected", evidence + ["positional_fallback"]
         else:
             return state, TokenRole.UNKNOWN, "fallback_unknown", evidence
 
@@ -597,43 +632,48 @@ class DefaultPersonRule(FSMTransitionRule):
 class RoleTaggerService:
     """FSM-based role tagger service with detailed tracing."""
     
-    def __init__(self, stopwords=None, org_legal_forms=None, lang='auto', strict_stopwords=False):
+    def __init__(self, stopwords=None, org_legal_forms=None, lang='auto', strict_stopwords=False, role_classifier=None):
         """
         Initialize role tagger service.
-        
+
         Args:
             stopwords: Dict[str, Set[str]] - language -> set of stopwords
             org_legal_forms: Set[str] - set of legal forms for organization detection
             lang: str - language code ('ru', 'uk', 'en', 'auto')
             strict_stopwords: bool - enable strict stopword filtering
+            role_classifier: RoleClassifier - role classifier for morphological analysis
         """
         # Load default lexicons if not provided
         self.lexicons = get_lexicons()
-        
+
+        # Store role classifier and language
+        self.role_classifier = role_classifier
+        self.lang = lang
+
         # Override with provided parameters if given
         if stopwords is not None:
             if not isinstance(stopwords, dict):
                 raise TypeError(f"stopwords must be Dict[str, Set[str]], got {type(stopwords)}")
             self.lexicons.stopwords.update(stopwords)
-        
+
         if org_legal_forms is not None:
             if not isinstance(org_legal_forms, set):
                 raise TypeError(f"org_legal_forms must be Set[str], got {type(org_legal_forms)}")
             self.lexicons.legal_forms.update(org_legal_forms)
-        
+
         # Initialize rules
         self.rules = RoleRules(strict_stopwords=strict_stopwords)
-        
+
         # Set context window for organization detection
         self.window = 3
-        
+
         # Pre-compile regex patterns for efficiency
         self._init_patterns()
-        
+
         # Initialize FSM rules
         self._init_rules()
-        
-        logger.debug(f"RoleTaggerService initialized with window={self.window}")
+
+        logger.debug(f"RoleTaggerService initialized with window={self.window}, role_classifier={'available' if role_classifier else 'none'}")
     
     def _init_patterns(self):
         """Initialize pre-compiled regex patterns."""
@@ -664,7 +704,7 @@ class RoleTaggerService:
             SurnameSuffixRule(self.rules.surname_suffixes),
             PatronymicSuffixRule(self.rules.patronymic_suffixes),
             SingleCharNumberRule(),  # Handle single characters and numbers as 'other'
-            DefaultPersonRule(),
+            DefaultPersonRule(self.role_classifier, self.lang),  # Pass role classifier and language
         ]
     
     def tag(self, tokens: List[str], lang: str, flags: Any = None) -> List[RoleTag]:

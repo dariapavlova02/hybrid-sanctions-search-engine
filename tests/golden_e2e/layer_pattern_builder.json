@@ -1,0 +1,118 @@
+{
+  "layer": "pattern_builder",
+  "description": "Pattern Builder layer tests",
+  "tests": [
+    {
+      "id": "G-PB-01",
+      "layer": "pattern_builder",
+      "description": "RU/EN перестановки + альтернативный патроним",
+      "input": {
+        "cleaned_name": "Ковриков Роман Валерьевич",
+        "lang": "ru"
+      },
+      "expect": {
+        "tier1.NAME_PERMUTATION.includes": [
+          "Ковриков Роман Валерьевич",
+          "Ковриков, Роман Валерьевич",
+          "Роман Ковриков Валерьевич",
+          "Valerievich Roman Kovrykov",
+          "Kovrykov, Roman Valerievich"
+        ]
+      },
+      "assert": [
+        "len(tier1.NAME_PERMUTATION) >= 12"
+      ]
+    },
+    {
+      "id": "G-PB-02",
+      "layer": "pattern_builder",
+      "description": "Инициалы — околонормативные",
+      "input": {
+        "cleaned_name": "Kovrykov Roman Valeriiovych",
+        "lang": "en"
+      },
+      "expect": {
+        "tier2.INITIALS_EVERYWHERE.includes": [
+          "R. Kovrykov",
+          "Kovrykov, Roman V",
+          "Kovrykov R.V.",
+          "Ковриков Р.В.",
+          "Ковриков, Роман В"
+        ]
+      },
+      "assert": [
+        "any('Kovrykov, Roman V' == x for x in tier2.INITIALS_EVERYWHERE)",
+        "any(re.match(r'^R\\. Kovrykov', x) for x in tier2.INITIALS_EVERYWHERE)"
+      ]
+    },
+    {
+      "id": "G-PB-03",
+      "layer": "pattern_builder",
+      "description": "Transliteration — Title Case «Kovrikov…»",
+      "input": {
+        "cleaned_name": "Ковриков Роман Валерійович",
+        "lang": "uk"
+      },
+      "expect": {
+        "tier2.TRANSLITERATION_VARIANT.includes": [
+          "Kovrikov Roman Valeriyovych",
+          "Kovrikov Roman Valeriiovych"
+        ]
+      },
+      "assert": [
+        "len([x for x in tier2.TRANSLITERATION_VARIANT if x.startswith('Kovrikov ')]) >= 2"
+      ]
+    },
+    {
+      "id": "G-PB-04",
+      "layer": "pattern_builder",
+      "description": "Diminutives (рома/ромчик/ромка и en: Roma/Rom)",
+      "input": {
+        "cleaned_name": "Ковриков Роман",
+        "lang": "ru-ua"
+      },
+      "expect": {
+        "tier2.DIMINUTIVE_VARIANT.includes_any": [
+          "ковриков рома",
+          "ковриков ромчик",
+          "ковриков ромка",
+          "Roma kovrykov",
+          "Rom kovrykov"
+        ]
+      },
+      "assert": [
+        "len(tier2.DIMINUTIVE_VARIANT) >= 6"
+      ]
+    },
+    {
+      "id": "G-PB-05",
+      "layer": "pattern_builder",
+      "description": "Удалён одиночный токен (POTENTIAL_SURNAME)",
+      "input": {
+        "cleaned_name": "John Smith",
+        "lang": "en"
+      },
+      "expect": {
+        "removed_sections": [
+          "POTENTIAL_SURNAME"
+        ]
+      },
+      "assert": [
+        "'POTENTIAL_SURNAME' not in tiers"
+      ]
+    },
+    {
+      "id": "G-PB-06",
+      "layer": "pattern_builder",
+      "description": "Tier-3 мусор с кириллическими хвостами — не должен появляться",
+      "input": {
+        "cleaned_name": "Ковриков Роман Валерьевич",
+        "lang": "ru"
+      },
+      "expect": {},
+      "assert": [
+        "not any(re.search(r'(й|и)уцх\\b|вйцх\\b', x) for x in tier3.TYPO_VARIANT)"
+      ]
+    }
+  ]
+}

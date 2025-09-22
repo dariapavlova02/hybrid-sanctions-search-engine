@@ -135,11 +135,13 @@ class MorphologyProcessor:
             else:
                 trace.append(f"Surname to nominative: '{token}' -> '{normalized}'")
 
-        analyzer_norm = self._analyzer_normalize(normalized, language)
-        if analyzer_norm and analyzer_norm.lower() != normalized.lower():
-            trace.append(f"Analyzer normalized surname '{normalized}' -> '{analyzer_norm}'")
-            normalized = analyzer_norm
-            fallback = False
+        # Skip analyzer normalization for surnames to avoid corruption
+        # Surnames are already properly normalized by convert_surname_to_nominative
+        # analyzer_norm = self._analyzer_normalize(normalized, language)
+        # if analyzer_norm and analyzer_norm.lower() != normalized.lower():
+        #     trace.append(f"Analyzer normalized surname '{normalized}' -> '{analyzer_norm}'")
+        #     normalized = analyzer_norm
+        #     fallback = False
 
         return normalized, fallback, trace
 

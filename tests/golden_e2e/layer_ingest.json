@@ -1,0 +1,64 @@
+{
+  "layer": "ingest",
+  "description": "Ingest layer tests",
+  "tests": [
+    {
+      "id": "G-ING-01",
+      "layer": "ingest",
+      "description": "базовый EN с шумом",
+      "input": {
+        "person_id": 1001,
+        "full_name": "Dr. John A. Smith Jr.",
+        "birthdate": "1976-08-09",
+        "tin": "782611846337",
+        "source_lang_hint": "en"
+      },
+      "expect": {
+        "ingest.status": "ok",
+        "ingest.full_name_raw": "Dr. John A. Smith Jr.",
+        "ingest.lang": "en"
+      },
+      "assert": [
+        "ingest.lang == 'en'",
+        "ingest.tin == '782611846337'",
+        "typeof ingest.birthdate == 'string'"
+      ]
+    },
+    {
+      "id": "G-ING-02",
+      "layer": "ingest",
+      "description": "RU без подсказки языка",
+      "input": {
+        "person_id": 1002,
+        "full_name": "Ковриков Роман Валерійович",
+        "birthdate": "1976-08-09",
+        "tin": "782611846337"
+      },
+      "expect": {
+        "ingest.status": "ok",
+        "ingest.lang": "auto",
+        "ingest.lang_detected": "ru-ua"
+      },
+      "assert": [
+        "ingest.lang_detected in ['ru','uk','ru-ua']"
+      ]
+    },
+    {
+      "id": "G-ING-03",
+      "layer": "ingest",
+      "description": "компания (для типизации сущности)",
+      "input": {
+        "entity_id": 2001,
+        "name": "ACME Holdings Ltd.",
+        "type_hint": "company"
+      },
+      "expect": {
+        "ingest.entity_type": "company",
+        "ingest.name_raw": "ACME Holdings Ltd."
+      },
+      "assert": [
+        "ingest.entity_type == 'company'"
+      ]
+    }
+  ]
+}

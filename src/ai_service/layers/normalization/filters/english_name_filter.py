@@ -178,8 +178,13 @@ class EnglishNameFilter:
             token = remaining_tokens[i]
             token_lower = token.lower().rstrip('.')
 
-            # Always include the last token as part of surname
-            if i == len(remaining_tokens) - 1:
+            # Skip generation suffixes when identifying surname
+            if token_lower in GENERATION_SUFFIXES:
+                i -= 1
+                continue
+
+            # Always include the last non-generation-suffix token as part of surname
+            if len(surname_tokens) == 0:  # First surname token we encounter
                 surname_tokens.insert(0, token)
                 i -= 1
                 continue
@@ -217,9 +222,17 @@ class EnglishNameFilter:
                 # Stop collecting surname tokens
                 break
 
-        # Remove collected surname tokens from remaining
-        surname_count = len(surname_tokens)
-        first_tokens = remaining_tokens[:-surname_count] if surname_count > 0 else remaining_tokens
+        # Remove collected surname tokens and generation suffixes from remaining
+        # Count how many tokens from the end to exclude (surname + generation suffixes)
+        excluded_count = 0
+        for i in range(len(remaining_tokens) - 1, -1, -1):
+            token_lower = remaining_tokens[i].lower().rstrip('.')
+            if token_lower in GENERATION_SUFFIXES or remaining_tokens[i] in surname_tokens:
+                excluded_count += 1
+            else:
+                break
+
+        first_tokens = remaining_tokens[:-excluded_count] if excluded_count > 0 else remaining_tokens
 
         # Step 2: Keep only the first given name
         if len(first_tokens) > 1:

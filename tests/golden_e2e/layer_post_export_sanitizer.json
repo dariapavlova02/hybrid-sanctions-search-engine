@@ -1,0 +1,113 @@
+{
+  "layer": "post_export_sanitizer",
+  "description": "Post Export Sanitizer layer tests",
+  "tests": [
+    {
+      "id": "G-SAN-01",
+      "layer": "post_export_sanitizer",
+      "description": "Dedup + Trim",
+      "input": {
+        "strings": [
+          "  John  Smith ",
+          "john smith",
+          "John Smith"
+        ]
+      },
+      "expect": {
+        "out": [
+          "John Smith"
+        ]
+      },
+      "assert": [
+        "len(out) == 1"
+      ]
+    },
+    {
+      "id": "G-SAN-02",
+      "layer": "post_export_sanitizer",
+      "description": "Запрет одиночных токенов",
+      "input": {
+        "strings": [
+          "valeriiovych",
+          "Kovrykov",
+          "John Smith"
+        ]
+      },
+      "expect": {
+        "out": [
+          "John Smith"
+        ]
+      },
+      "assert": [
+        "all(x not in out for x in ['valeriiovych','Kovrykov'])"
+      ]
+    },
+    {
+      "id": "G-SAN-03",
+      "layer": "post_export_sanitizer",
+      "description": "Чистота алфавита в Tier-1",
+      "input": {
+        "tier1": [
+          "Kovrykov, Роман",
+          "Roman Kovrykov",
+          "Ковриков Роман"
+        ]
+      },
+      "expect": {
+        "tier1_out": [
+          "Roman Kovrykov",
+          "Ковриков Роман"
+        ],
+        "moved_to_mixed": [
+          "Kovrykov, Роман"
+        ]
+      },
+      "assert": [
+        "len(tier1_out) == 2"
+      ]
+    },
+    {
+      "id": "G-SAN-04",
+      "layer": "post_export_sanitizer",
+      "description": "Инициалы — белый список шаблонов",
+      "input": {
+        "strings": [
+          "R. Kovrykov",
+          "Kovrykov, Roman V",
+          "Kovrykov R.V.",
+          "Kovrykov, R.",
+          "R. K."
+        ]
+      },
+      "expect": {
+        "out": [
+          "R. Kovrykov",
+          "Kovrykov, Roman V",
+          "Kovrykov R.V."
+        ]
+      },
+      "assert": [
+        "len(out) == 3"
+      ]
+    },
+    {
+      "id": "G-SAN-05",
+      "layer": "post_export_sanitizer",
+      "description": "Гендерная согласованность",
+      "input": {
+        "strings": [
+          "Коврикова Роман",
+          "Ковриков Роман"
+        ]
+      },
+      "expect": {
+        "out": [
+          "Ковриков Роман"
+        ]
+      },
+      "assert": [
+        "\"Коврикова Роман\" not in out"
+      ]
+    }
+  ]
+}

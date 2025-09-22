@@ -1,0 +1,95 @@
+{
+  "layer": "decision_engine",
+  "description": "Decision Engine layer tests",
+  "tests": [
+    {
+      "id": "G-DEC-01",
+      "layer": "decision_engine",
+      "description": "Exact по TIN → REJECT (санклист)",
+      "input": {
+        "signal": "exact",
+        "evidence": [
+          "tin"
+        ],
+        "list_type": "sanctions"
+      },
+      "expect": {
+        "decision": "REJECT"
+      },
+      "assert": [
+        "decision == 'REJECT'"
+      ]
+    },
+    {
+      "id": "G-DEC-02",
+      "layer": "decision_engine",
+      "description": "Strong по ФИО → REQUIRE DOB+TIN",
+      "input": {
+        "signal": "strong",
+        "evidence": [
+          "name_perm"
+        ],
+        "has_doc_dob": false,
+        "has_doc_tin": false
+      },
+      "expect": {
+        "decision": "REVIEW",
+        "action": "request_dob_tin"
+      },
+      "assert": [
+        "decision == 'REVIEW'"
+      ]
+    },
+    {
+      "id": "G-DEC-03",
+      "layer": "decision_engine",
+      "description": "Medium → NO REVIEW (policy)",
+      "input": {
+        "signal": "medium",
+        "policy": {
+          "min_review": "strong"
+        }
+      },
+      "expect": {
+        "decision": "PASS"
+      },
+      "assert": [
+        "decision == 'PASS'"
+      ]
+    },
+    {
+      "id": "G-DEC-04",
+      "layer": "decision_engine",
+      "description": "Weak + высокий риск страны → всё равно PASS",
+      "input": {
+        "signal": "weak",
+        "country_risk": "high"
+      },
+      "expect": {
+        "decision": "PASS"
+      },
+      "assert": [
+        "decision == 'PASS'"
+      ]
+    },
+    {
+      "id": "G-DEC-05",
+      "layer": "decision_engine",
+      "description": "Company strong (name+regno) → REVIEW",
+      "input": {
+        "entity_type": "company",
+        "signal": "strong",
+        "evidence": [
+          "name",
+          "regno"
+        ]
+      },
+      "expect": {
+        "decision": "REVIEW"
+      },
+      "assert": [
+        "decision == 'REVIEW'"
+      ]
+    }
+  ]
+}

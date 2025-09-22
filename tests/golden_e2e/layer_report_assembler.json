@@ -1,0 +1,88 @@
+{
+  "layer": "report_assembler",
+  "description": "Report Assembler layer tests",
+  "tests": [
+    {
+      "id": "G-REP-01",
+      "layer": "report_assembler",
+      "description": "Полный отчёт по персоне",
+      "input": {
+        "person_id": 32450,
+        "sf.cleaned_name": "Kovrykov Roman",
+        "tiers.summary": {
+          "t0": 1,
+          "t1": 44,
+          "t2": 43,
+          "t3": 233
+        },
+        "signals": {
+          "best": "strong",
+          "evidence": [
+            "name_perm",
+            "dob"
+          ]
+        },
+        "decision": "REVIEW"
+      },
+      "expect": {
+        "report.status": "ok",
+        "report.includes": [
+          "patterns_by_tier",
+          "rules_trace",
+          "decision_block",
+          "metrics"
+        ]
+      },
+      "assert": [
+        "report.metrics.coverage >= 0.9",
+        "report.decision == 'REVIEW'",
+        "'title_suffix_filter' in report.rules_trace"
+      ]
+    },
+    {
+      "id": "G-REP-02",
+      "layer": "report_assembler",
+      "description": "Компания — короткий отчёт",
+      "input": {
+        "entity_id": 2001,
+        "sf.cleaned_name": "ACME Holdings Ltd.",
+        "signals": {
+          "best": "strong",
+          "evidence": [
+            "name",
+            "regno"
+          ]
+        },
+        "decision": "REVIEW"
+      },
+      "expect": {
+        "report.includes": [
+          "patterns_by_tier",
+          "decision_block"
+        ]
+      },
+      "assert": [
+        "'diminutives' not in report"
+      ]
+    },
+    {
+      "id": "G-REP-03",
+      "layer": "report_assembler",
+      "description": "No match → PASS + пустой trace",
+      "input": {
+        "sf.cleaned_name": "John Smith",
+        "signals": {
+          "best": "none"
+        },
+        "decision": "PASS"
+      },
+      "expect": {
+        "report.status": "ok",
+        "report.decision": "PASS"
+      },
+      "assert": [
+        "len(report.matches) == 0"
+      ]
+    }
+  ]
+}

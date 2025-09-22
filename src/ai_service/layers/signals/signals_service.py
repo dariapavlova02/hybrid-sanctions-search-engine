@@ -1165,6 +1165,52 @@ class SignalsService:
                     if key not in ["persons", "organizations"]:
                         setattr(self, key, value)
 
+                # Add backward compatibility attributes for test expectations
+                # Extract numbers (IDs) from persons and organizations
+                self.numbers = {}
+                all_ids = []
+
+                # Collect IDs from persons
+                for person in self.persons:
+                    if hasattr(person, 'ids') and person.ids:
+                        all_ids.extend(person.ids)
+
+                # Collect IDs from organizations
+                for org in self.organizations:
+                    if hasattr(org, 'ids') and org.ids:
+                        all_ids.extend(org.ids)
+
+                # Organize IDs by type
+                for id_item in all_ids:
+                    if isinstance(id_item, dict):
+                        id_type = id_item.get('type', 'unknown')
+                        id_value = id_item.get('value', id_item.get('raw', ''))
+                        if id_type not in self.numbers:
+                            self.numbers[id_type] = []
+                        self.numbers[id_type].append(id_value)
+
+                # Extract dates from persons
+                self.dates = {}
+                birth_dates = []
+
+                for person in self.persons:
+                    # Check for both dob and birth_date attributes for compatibility
+                    dob = None
+                    if hasattr(person, 'dob') and person.dob:
+                        dob = person.dob
+                    elif hasattr(person, 'birth_date') and person.birth_date:
+                        dob = person.birth_date
+
+                    if dob:
+                        birth_dates.append(str(dob))
+
+                # Also check extras for dates
+                extras_dates = result_dict.get("extras", {}).get("dates", [])
+                birth_dates.extend(extras_dates)
+
+                if birth_dates:
+                    self.dates['birth_dates'] = birth_dates
+
         return ResultWrapper(result_dict)
 
     def _extract_person_tokens(self, text: str, language: str) -> List[List[str]]:

@@ -1,0 +1,119 @@
+{
+  "layer": "signals",
+  "description": "Signals layer tests",
+  "tests": [
+    {
+      "id": "G-SIG-01",
+      "layer": "signals",
+      "description": "Exact match по ITN (Tier-0)",
+      "input": {
+        "query": "782611846337",
+        "index": {
+          "tin": [
+            "782611846337"
+          ]
+        }
+      },
+      "expect": {
+        "signal": "exact",
+        "confidence": 1.0,
+        "evidence": [
+          "tin"
+        ]
+      },
+      "assert": [
+        "score.exact >= 0.99"
+      ]
+    },
+    {
+      "id": "G-SIG-02",
+      "layer": "signals",
+      "description": "Strong match по ФИО+DOB",
+      "input": {
+        "query": {
+          "name": "Roman Kovrykov",
+          "dob": "1976-08-09"
+        },
+        "doc": {
+          "name": "Kovrykov Roman",
+          "dob": "1976-08-09"
+        }
+      },
+      "expect": {
+        "signal": "strong",
+        "evidence": [
+          "name_perm",
+          "dob"
+        ]
+      },
+      "assert": [
+        "score.strong >= 0.85"
+      ]
+    },
+    {
+      "id": "G-SIG-03",
+      "layer": "signals",
+      "description": "Medium (имя+фамилия совпали, патроним/дата нет)",
+      "input": {
+        "query": {
+          "name": "Kovrykov Roman",
+          "dob": null
+        },
+        "doc": {
+          "name": "Roman Kovrykov Valerievich",
+          "dob": "1976-08-09"
+        }
+      },
+      "expect": {
+        "signal": "medium",
+        "evidence": [
+          "name_core"
+        ]
+      },
+      "assert": [
+        "0.5 <= score.medium < 0.85"
+      ]
+    },
+    {
+      "id": "G-SIG-04",
+      "layer": "signals",
+      "description": "Weak (только диминутив попал)",
+      "input": {
+        "query": {
+          "name": "Roma Kovrykov"
+        },
+        "doc": {
+          "name": "Roman Kovrykov"
+        }
+      },
+      "expect": {
+        "signal": "weak",
+        "evidence": [
+          "diminutive"
+        ]
+      },
+      "assert": [
+        "0.2 <= score.weak < 0.5"
+      ]
+    },
+    {
+      "id": "G-SIG-05",
+      "layer": "signals",
+      "description": "No match (разные фамилии)",
+      "input": {
+        "query": {
+          "name": "Roman Kovrykov"
+        },
+        "doc": {
+          "name": "Roman Petrov"
+        }
+      },
+      "expect": {
+        "signal": "none"
+      },
+      "assert": [
+        "score.total == 0"
+      ]
+    }
+  ]
+}

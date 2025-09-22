@@ -1,0 +1,91 @@
+{
+  "layer": "smart_filter",
+  "description": "Smart Filter layer tests",
+  "tests": [
+    {
+      "id": "G-SF-01",
+      "layer": "smart_filter",
+      "description": "удаление титула/суффикса/миддла EN",
+      "input": {
+        "full_name_raw": "Dr. John A. Smith Jr.",
+        "lang": "en"
+      },
+      "expect": {
+        "sf.cleaned_name": "John Smith",
+        "sf.applied_rules": [
+          "title_suffix_filter",
+          "middle_name_filter"
+        ]
+      },
+      "assert": [
+        "sf.cleaned_name == 'John Smith'",
+        "all(r in sf.applied_rules for r in ['title_suffix_filter','middle_name_filter'])"
+      ]
+    },
+    {
+      "id": "G-SF-02",
+      "layer": "smart_filter",
+      "description": "инициалы как middle → убрать",
+      "input": {
+        "full_name_raw": "Mary J. Watson",
+        "lang": "en"
+      },
+      "expect": {
+        "sf.cleaned_name": "Mary Watson"
+      },
+      "assert": [
+        "sf.cleaned_name == 'Mary Watson'"
+      ]
+    },
+    {
+      "id": "G-SF-03",
+      "layer": "smart_filter",
+      "description": "RU+UA смешанная графика → нормализация юникода, без смешивания слоёв",
+      "input": {
+        "full_name_raw": "Ковріков Роман Валерiйович",
+        "lang": "ru-ua"
+      },
+      "expect": {
+        "sf.cleaned_name": "Ковриков Роман Валерийович",
+        "sf.applied_rules": [
+          "unicode_nfkc",
+          "cyrillic_unify"
+        ]
+      },
+      "assert": [
+        "re.match(r'^Ковриков Роман Валер(ий|ій)ович$', sf.cleaned_name)"
+      ]
+    },
+    {
+      "id": "G-SF-04",
+      "layer": "smart_filter",
+      "description": "удалить бытовой мусор",
+      "input": {
+        "full_name_raw": "Mr  John  Smith (CEO)",
+        "lang": "en"
+      },
+      "expect": {
+        "sf.cleaned_name": "John Smith"
+      },
+      "assert": [
+        "sf.cleaned_name == 'John Smith'",
+        "'(' not in sf.cleaned_name"
+      ]
+    },
+    {
+      "id": "G-SF-05",
+      "layer": "smart_filter",
+      "description": "компания — оставить корпоративные суффиксы",
+      "input": {
+        "name_raw": "ACME Holdings Ltd.",
+        "entity_type": "company"
+      },
+      "expect": {
+        "sf.cleaned_name": "ACME Holdings Ltd."
+      },
+      "assert": [
+        "sf.cleaned_name == 'ACME Holdings Ltd.'"
+      ]
+    }
+  ]
+}
