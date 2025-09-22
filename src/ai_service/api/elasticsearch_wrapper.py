@@ -2,6 +2,7 @@
 Simple Elasticsearch wrapper for admin endpoints.
 """
 
+import os
 import asyncio
 from typing import Any, Dict, List, Optional
 
@@ -15,20 +16,19 @@ except ImportError:
     NotFoundError = Exception
     ELASTICSEARCH_AVAILABLE = False
 
-from ..config.settings import get_settings
+# Configuration will be read from environment variables
 
 class SimpleElasticsearchClient:
     """Simple Elasticsearch client wrapper for admin operations."""
 
     def __init__(self):
-        self.settings = get_settings()
         self.client = None
         self._closed = False
 
         if ELASTICSEARCH_AVAILABLE:
-            # Get Elasticsearch URL from settings or environment
-            es_host = getattr(self.settings, 'elasticsearch_host', 'localhost')
-            es_port = getattr(self.settings, 'elasticsearch_port', 9200)
+            # Get Elasticsearch URL from environment
+            es_host = os.environ.get('ELASTICSEARCH_HOST', 'localhost')
+            es_port = int(os.environ.get('ELASTICSEARCH_PORT', '9200'))
             es_url = f"http://{es_host}:{es_port}"
 
             self.client = AsyncElasticsearch([es_url])
