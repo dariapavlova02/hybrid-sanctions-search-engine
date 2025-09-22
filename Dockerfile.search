@@ -1,5 +1,5 @@
 # Multi-stage build for AI Service with Elasticsearch support
-FROM python:3.11-slim as base
+FROM python:3.11-slim AS base
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -54,14 +54,12 @@ RUN pip install --no-cache-dir \
 RUN poetry install --only=main --no-root
 
 # Verify all critical dependencies are installed
-RUN python -c "
-import nameparser; print('✅ nameparser installed')
-import rapidfuzz; print('✅ rapidfuzz installed')
-import spacy; print('✅ spacy installed')
-import transliterate; print('✅ transliterate installed')
-import prometheus_client; print('✅ prometheus_client installed')
-print('🎉 All dependencies verified!')
-"
+RUN python -c "import nameparser; print('✅ nameparser installed')" && \
+    python -c "import rapidfuzz; print('✅ rapidfuzz installed')" && \
+    python -c "import spacy; print('✅ spacy installed')" && \
+    python -c "import transliterate; print('✅ transliterate installed')" && \
+    python -c "import prometheus_client; print('✅ prometheus_client installed')" && \
+    echo "🎉 All dependencies verified!"
 
 # Install spaCy models with better error handling
 RUN echo "📦 Installing spaCy models..." && \
@@ -73,8 +71,8 @@ RUN echo "📦 Installing spaCy models..." && \
     (python -m spacy download xx_ent_wiki_sm 2>/dev/null && echo "✅ Multilingual model for Russian") || \
     echo "❌ No Russian models available" && \
     \
-    echo "📝 Available spaCy models:" && \
-    python -c "import spacy; print([model for model in spacy.info()['pipelines'] if model])" 2>/dev/null || echo "No models found" && \
+    echo "📝 Checking installed spaCy models:" && \
+    python -c "import spacy; import os; models = [d for d in os.listdir(spacy.util.find_package_path('spacy').parent) if d.startswith(('en_', 'ru_', 'xx_'))]; print('Installed models:', models if models else 'None')" 2>/dev/null || echo "No models found" && \
     echo "✅ spaCy setup completed"
 
 # Copy application code
