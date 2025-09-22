@@ -521,6 +521,7 @@ class UnifiedOrchestrator:
         norm_result: Any,
         embeddings: Optional[list],
         errors: list,
+        original_text: str,
         search_trace: Optional[SearchTrace] = None
     ) -> Optional[Dict[str, Any]]:
         """
@@ -545,7 +546,6 @@ class UnifiedOrchestrator:
 
                 # Perform search using normalized text
                 query = norm_result.normalized if norm_result.normalized else ""
-                original_text = context.original_text if context else query
                 if query.strip() and SearchOpts:
                     search_opts = SearchOpts(
                         top_k=10,
@@ -822,7 +822,7 @@ class UnifiedOrchestrator:
             # ================================================================
             # Layer 9: Search (optional)
             # ================================================================
-            search_results = await self._handle_search_layer(norm_result, embeddings, errors, search_trace)
+            search_results = await self._handle_search_layer(norm_result, embeddings, errors, text, search_trace)
 
             # ================================================================
             # Layer 10: Decision & Response
