@@ -148,7 +148,7 @@ class OrchestratorFactory:
                 try:
                     from ..layers.variants.variant_generation_service import VariantGenerationService
                     variants_service = VariantGenerationService()
-                    await variants_service.initialize()
+                    variants_service.initialize()  # Not async
                     logger.info("Variants service initialized")
                 except Exception as e:
                     logger.warning(f"Failed to initialize variants service: {e}")
@@ -186,7 +186,7 @@ class OrchestratorFactory:
                     from ..config.settings import SEARCH_CONFIG
                     from ..layers.search.hybrid_search_service import HybridSearchService
                     search_service = HybridSearchService(SEARCH_CONFIG)
-                    await search_service.initialize()
+                    search_service.initialize()  # Not async
                     logger.info("Search service initialized")
                 except Exception as e:
                     logger.warning(f"Failed to initialize search service: {e}")

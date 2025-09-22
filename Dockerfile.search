@@ -38,6 +38,9 @@ RUN python -m spacy download en_core_web_sm || echo "English model not available
 # Copy application code
 COPY . .
 
+# Copy production environment file
+COPY env.production.maximum_relevancy .env
+
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash app && \
     chown -R app:app /app
