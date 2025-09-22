@@ -27,11 +27,41 @@ COPY pyproject.toml poetry.lock ./
 # Configure Poetry
 RUN poetry config virtualenvs.create false
 
-# Install dependencies with lock file
+# First install all dependencies via pip (more reliable)
+RUN pip install --no-cache-dir \
+    fastapi>=0.116.1 \
+    uvicorn[standard]>=0.35.0 \
+    pydantic>=2.11.7 \
+    pydantic-settings>=2.10.1 \
+    pyahocorasick>=2.2.0 \
+    sentence-transformers>=5.1.0 \
+    scipy>=1.14.0 \
+    numpy>=1.24.0 \
+    pymorphy3>=2.0.4 \
+    pymorphy3-dicts-uk>=2.4.1.1.1663094765 \
+    pymorphy3-dicts-ru>=2.4.417150.4580142 \
+    pyyaml>=6.0.2 \
+    httpx>=0.27.0 \
+    nameparser>=1.1.0 \
+    elasticsearch==8.11.0 \
+    elastic-transport==8.10.0 \
+    prometheus-client>=0.19.0 \
+    rapidfuzz>=3.5.0 \
+    spacy>=3.7.0 \
+    transliterate>=1.10.2
+
+# Then run poetry install for any remaining dependencies
 RUN poetry install --only=main --no-root
 
-# Verify and install specific missing dependencies
-RUN pip install rapidfuzz>=3.5.0 spacy>=3.7.0 transliterate>=1.10.2 prometheus-client>=0.19.0
+# Verify all critical dependencies are installed
+RUN python -c "
+import nameparser; print('✅ nameparser installed')
+import rapidfuzz; print('✅ rapidfuzz installed')
+import spacy; print('✅ spacy installed')
+import transliterate; print('✅ transliterate installed')
+import prometheus_client; print('✅ prometheus_client installed')
+print('🎉 All dependencies verified!')
+"
 
 # Install spaCy models (optional, fail silently if not available)
 RUN python -m spacy download en_core_web_sm || echo "English model not available" && \
