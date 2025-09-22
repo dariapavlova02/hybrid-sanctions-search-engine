@@ -3,9 +3,11 @@ Mock Search Service for testing when elasticsearch is not available.
 """
 
 from typing import Any, Dict, List, Optional
+from .contracts import SearchService, Candidate, SearchOpts, SearchMetrics
+from ...contracts.base_contracts import NormalizationResult
 
 
-class MockSearchService:
+class MockSearchService(SearchService):
     """Mock search service that provides empty results when elasticsearch is unavailable."""
 
     def __init__(self, config=None):
@@ -40,6 +42,15 @@ class MockSearchService:
             "warnings": ["Search service not available - using mock"],
         }
 
+    async def find_candidates(
+        self,
+        normalized: NormalizationResult,
+        text: str,
+        opts: SearchOpts
+    ) -> List[Candidate]:
+        """Find search candidates (mock implementation)."""
+        return []  # Empty list of candidates
+
     async def search_similar(
         self,
         normalized_text: str,
@@ -58,3 +69,11 @@ class MockSearchService:
             "processing_time_ms": 1,
             "warnings": ["Similarity search not available - using mock"],
         }
+
+    def get_metrics(self) -> SearchMetrics:
+        """Get mock search metrics."""
+        return SearchMetrics()
+
+    def reset_metrics(self) -> None:
+        """Reset mock search metrics."""
+        pass
