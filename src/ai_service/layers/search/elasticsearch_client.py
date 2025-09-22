@@ -7,7 +7,10 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from elasticsearch import AsyncElasticsearch
-from elasticsearch.exceptions import ElasticsearchException
+try:
+    from elasticsearch.exceptions import ElasticsearchException
+except ImportError:
+    from elasticsearch.exceptions import RequestError as ElasticsearchException
 
 from ...utils.logging_config import get_logger
 from .config import HybridSearchConfig, ElasticsearchConfig
@@ -34,8 +37,8 @@ class ElasticsearchClientFactory:
             "max_retries": self.es_config.max_retries,
             "retry_on_timeout": self.es_config.retry_on_timeout,
             "verify_certs": self.es_config.verify_certs,
-            # Connection pooling settings
-            "maxsize": 25,  # Maximum number of connections in the pool
+            # Enhanced connection pooling settings for production
+            "maxsize": 50,  # Increased from 25 - Maximum number of connections in the pool
             "http_compress": True,  # Enable HTTP compression
             "sniff_on_start": True,  # Sniff cluster nodes on startup
             "sniff_on_connection_fail": True,  # Sniff on connection failure
@@ -43,6 +46,11 @@ class ElasticsearchClientFactory:
             "sniff_interval": 60,  # Interval between sniffing attempts
             "min_delay_between_sniffing": 5,  # Minimum delay between sniffing
             "max_delay_between_sniffing": 30,  # Maximum delay between sniffing
+            # Additional performance optimizations
+            "http_auth_timeout": 30,  # Authentication timeout
+            "dead_timeout": 60,  # Time before retrying a dead node
+            "http_pool_connections": 25,  # Number of connection pools to cache
+            "http_pool_maxsize": 10,  # Maximum number of connections to save in the pool
             # Connection settings
             "http_auth": None,  # Will be set below if needed
             "headers": {

@@ -13,7 +13,11 @@ from typing import Any, Dict, List, Optional
 from functools import wraps
 
 from elasticsearch import AsyncElasticsearch
-from elasticsearch.exceptions import ElasticsearchException, ConnectionError, TimeoutError
+try:
+    from elasticsearch.exceptions import ElasticsearchException, ConnectionError, TimeoutError
+except ImportError:
+    # Fallback for newer elasticsearch versions
+    from elasticsearch.exceptions import ConnectionError, RequestError as ElasticsearchException, TimeoutError
 
 from ...utils.logging_config import get_logger
 

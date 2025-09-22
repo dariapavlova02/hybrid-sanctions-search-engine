@@ -9,7 +9,10 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime
 
 from elasticsearch import AsyncElasticsearch
-from elasticsearch.exceptions import ElasticsearchException
+try:
+    from elasticsearch.exceptions import ElasticsearchException
+except ImportError:
+    from elasticsearch.exceptions import RequestError as ElasticsearchException
 
 from ...utils.logging_config import get_logger
 from .config import HybridSearchConfig
