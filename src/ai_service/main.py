@@ -157,6 +157,9 @@ app = FastAPI(
     redoc_url=INTEGRATION_CONFIG.redoc_url if INTEGRATION_CONFIG.enable_docs else None,
 )
 
+# Import admin endpoints
+from ai_service.api.admin_endpoints import router as admin_router
+
 # Configure CORS
 if INTEGRATION_CONFIG.cors_enabled:
     app.add_middleware(
@@ -166,6 +169,9 @@ if INTEGRATION_CONFIG.cors_enabled:
         allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["*"],
     )
+
+# Include admin endpoints
+app.include_router(admin_router)
 
 # Rate limiting for DoS protection
 class RateLimitingMiddleware:
