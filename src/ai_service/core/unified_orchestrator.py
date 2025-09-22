@@ -13,7 +13,8 @@ Layers implemented:
 6. Signals (enrichment)
 7. Variants (optional)
 8. Embeddings (optional)
-9. Decision & Response
+9. Search (optional)
+10. Decision & Response
 """
 
 import asyncio
@@ -37,7 +38,12 @@ from ..contracts.base_contracts import (
     ValidationServiceInterface,
     VariantsServiceInterface,
 )
-from ..layers.search.hybrid_search_service import HybridSearchService
+# Import HybridSearchService conditionally to avoid elasticsearch dependency issues
+try:
+    from ..layers.search.hybrid_search_service import HybridSearchService
+except ImportError as e:
+    logger.warning(f"Failed to import HybridSearchService: {e}")
+    HybridSearchService = None
 from ..contracts.decision_contracts import (
     DecisionInput,
     DecisionOutput,
@@ -508,6 +514,79 @@ class UnifiedOrchestrator:
 
         return embeddings
 
+    async def _handle_search_layer(
+        self,
+        norm_result: Any,
+        embeddings: Optional[list],
+        errors: list,
+        search_trace: Optional[SearchTrace] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Handle Layer 9: Search (optional)
+
+        Args:
+            norm_result: Result from name normalization
+            embeddings: Generated embeddings (optional)
+            errors: List to accumulate errors
+            search_trace: Search trace for debugging
+
+        Returns:
+            Search results or None if disabled/failed
+        """
+        search_results = None
+
+        if self.enable_search and self.search_service:
+            layer_start = time.time()
+            try:
+                if self.metrics_service:
+                    self.metrics_service.record_counter('processing.search.started', 1)
+
+                # Perform search using normalized text
+                query = norm_result.normalized if norm_result.normalized else ""
+                if query.strip():
+                    search_results = await self.search_service.search_similar(
+                        normalized_text=query,
+                        limit=10,
+                        threshold=0.7
+                    )
+
+                    if search_trace:
+                        result_count = search_results.get('total_hits', 0) if search_results else 0
+                        search_trace.note(f"Search completed: {result_count} results for '{query}'")
+
+                    logger.debug(f"Search completed for '{query}': {search_results.get('total_hits', 0) if search_results else 0} results")
+
+                else:
+                    if search_trace:
+                        search_trace.note("Search skipped - empty normalized text")
+                    logger.debug("Search skipped - empty normalized text")
+
+                # Update metrics
+                if self.metrics_service:
+                    self.metrics_service.record_timer('processing.layer.search', time.time() - layer_start)
+                    if search_results:
+                        hit_count = search_results.get('total_hits', 0)
+                        self.metrics_service.record_histogram('search.results.count', hit_count)
+                        if hit_count > 0:
+                            self.metrics_service.record_counter('processing.search.found_results', 1)
+                        else:
+                            self.metrics_service.record_counter('processing.search.no_results', 1)
+
+            except Exception as e:
+                logger.warning(f"Search failed: {e}")
+                if search_trace:
+                    search_trace.note(f"Search failed: {str(e)}")
+                if self.metrics_service:
+                    self.metrics_service.record_counter('processing.search.failed', 1)
+                errors.append(f"Search: {str(e)}")
+
+        else:
+            logger.debug("Search layer skipped - service disabled or unavailable")
+            if search_trace:
+                search_trace.note("Search layer skipped - service disabled or unavailable")
+
+        return search_results
+
     async def _handle_decision_layer(
         self,
         context: ProcessingContext,
@@ -719,13 +798,18 @@ class UnifiedOrchestrator:
             # Layer 8: Embeddings (optional)
             # ================================================================
             embeddings = await self._handle_embeddings_layer(norm_result, generate_embeddings, errors)
-            
+
             # Add trace note for vector fallback
             if search_trace and embeddings:
                 search_trace.note("Vector fallback engaged - embeddings generated for search")
 
             # ================================================================
-            # Layer 9: Decision & Response
+            # Layer 9: Search (optional)
+            # ================================================================
+            search_results = await self._handle_search_layer(norm_result, embeddings, errors, search_trace)
+
+            # ================================================================
+            # Layer 10: Decision & Response
             # ================================================================
             decision_result = await self._handle_decision_layer(
                 context, norm_result, signals_result, variants, embeddings, errors, search_trace
@@ -765,6 +849,7 @@ class UnifiedOrchestrator:
                 signals=signals_result,
                 variants=variants,
                 embeddings=embeddings,
+                search_results=search_results,
                 decision=decision_result,
                 processing_time=processing_time,
                 success=self._safe_len(errors) == 0,

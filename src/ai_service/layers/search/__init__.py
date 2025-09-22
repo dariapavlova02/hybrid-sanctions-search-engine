@@ -8,24 +8,48 @@ This layer provides:
 - Metrics and logging for search performance
 """
 
-from .hybrid_search_service import HybridSearchService
-from .contracts import (
-    Candidate,
-    SearchOpts,
-    SearchService,
-    SearchMetrics,
-    SearchMode,
-)
-from .config import HybridSearchConfig
-from .elasticsearch_adapters import (
-    ElasticsearchACAdapter,
-    ElasticsearchVectorAdapter,
-)
-from .elasticsearch_client import ElasticsearchClientFactory
+# Conditional imports to handle elasticsearch dependency issues
+try:
+    from .hybrid_search_service import HybridSearchService
+    SEARCH_SERVICE_AVAILABLE = True
+except ImportError as e:
+    HybridSearchService = None
+    SEARCH_SERVICE_AVAILABLE = False
+
+try:
+    from .contracts import (
+        Candidate,
+        SearchOpts,
+        SearchService,
+        SearchMetrics,
+        SearchMode,
+    )
+    from .config import HybridSearchConfig
+    from .elasticsearch_adapters import (
+        ElasticsearchACAdapter,
+        ElasticsearchVectorAdapter,
+    )
+    from .elasticsearch_client import ElasticsearchClientFactory
+except ImportError:
+    # Provide dummy placeholders
+    Candidate = None
+    SearchOpts = None
+    SearchService = None
+    SearchMetrics = None
+    SearchMode = None
+    HybridSearchConfig = None
+    ElasticsearchACAdapter = None
+    ElasticsearchVectorAdapter = None
+    ElasticsearchClientFactory = None
+
+# Always available
+from .mock_search_service import MockSearchService
 
 __all__ = [
     "HybridSearchService",
-    "SearchService", 
+    "MockSearchService",
+    "SEARCH_SERVICE_AVAILABLE",
+    "SearchService",
     "Candidate",
     "SearchOpts",
     "SearchMode",

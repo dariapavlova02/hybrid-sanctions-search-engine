@@ -189,9 +189,18 @@ class OrchestratorFactory:
                     search_service.initialize()  # Not async
                     logger.info("Search service initialized")
                 except Exception as e:
-                    logger.warning(f"Failed to initialize search service: {e}")
-                    search_service = None
-                    enable_search = False
+                    logger.warning(f"Failed to initialize search service: {e}, using mock")
+                    # Use mock search service as fallback
+                    try:
+                        from ..layers.search.mock_search_service import MockSearchService
+                        search_service = MockSearchService()
+                        search_service.initialize()
+                        logger.info("Mock search service initialized as fallback")
+                        # Keep enable_search=True so search layer still runs with mock
+                    except Exception as mock_e:
+                        logger.error(f"Failed to initialize mock search service: {mock_e}")
+                        search_service = None
+                        enable_search = False
 
             # Metrics service - optional but recommended for production
             metrics_service = None

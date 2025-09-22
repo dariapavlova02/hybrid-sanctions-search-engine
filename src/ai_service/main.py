@@ -611,6 +611,7 @@ async def process_text(request: ProcessTextRequest):
             processing_time=result.processing_time,
             signals=_extract_signals_dict(result) if result.signals else None,
             decision=_extract_decision_dict(result) if result.decision else None,
+            search_results=result.search_results,
             embedding=result.embeddings if request.generate_embeddings else None,
         )
     except ServiceUnavailableError as e:

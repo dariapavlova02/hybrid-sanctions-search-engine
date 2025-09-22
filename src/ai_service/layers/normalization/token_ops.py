@@ -143,9 +143,20 @@ def normalize_apostrophe_name(token: str, *, titlecase: bool = False, trace: Opt
     
     # Apply titlecase if requested
     if titlecase:
-        # Use title() for proper capitalization including apostrophes
-        # title() handles cases like "o'neil" -> "O'Neil" correctly
-        normalized_token = cleaned_token.title()
+        # Special handling for Ukrainian names with apostrophes
+        if "'" in cleaned_token and any(char in cleaned_token.lower() for char in "єїіґ"):
+            # Ukrainian name: normalize apostrophe type and apply proper case
+            # Convert ' (straight apostrophe) to ʼ (modifier letter apostrophe)
+            ukrainian_normalized = cleaned_token.replace("'", "ʼ").replace("'", "ʼ")
+            # Apply titlecase only to the first letter, keep rest lowercase
+            if ukrainian_normalized:
+                normalized_token = ukrainian_normalized[0].upper() + ukrainian_normalized[1:].lower()
+            else:
+                normalized_token = ukrainian_normalized
+        else:
+            # Use title() for proper capitalization including apostrophes
+            # title() handles cases like "o'neil" -> "O'Neil" correctly
+            normalized_token = cleaned_token.title()
     else:
         normalized_token = cleaned_token
     

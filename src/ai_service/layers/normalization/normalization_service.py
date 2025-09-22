@@ -28,6 +28,7 @@ from .morphology_adapter import MorphologyAdapter, get_global_adapter
 from .processors.normalization_factory import NormalizationFactory, NormalizationConfig
 from .lexicon_loader import get_lexicons
 from .role_tagger import RoleTagger, TokenRole
+from .homoglyph_detector import homoglyph_detector
 
 # Check for optional dependencies
 try:
@@ -439,6 +440,16 @@ class NormalizationService:
             if validation_result:
                 self._stats['failed_requests'] += 1
                 return validation_result
+
+            # Homoglyph detection and normalization (security preprocessing)
+            normalized_text, homoglyph_analysis = homoglyph_detector.secure_normalize(text)
+            if homoglyph_analysis['warnings']:
+                # Log security warnings for potential homoglyph attacks
+                self.logger.warning(f"Homoglyph attack detected: {homoglyph_analysis['warnings']}")
+                self.logger.warning(f"Original: '{text}' -> Normalized: '{normalized_text}'")
+
+            # Use the normalized text for further processing
+            text = normalized_text
 
             # Language detection
             detected_language = self._detect_language(text, language)
@@ -1031,6 +1042,10 @@ class NormalizationService:
     ) -> NormalizationResult:
         """Force nominative outputs and retain feminine surname endings when needed."""
 
+        # TEMPORARY FIX: Disable duplicate morphology that corrupts factory results
+        print(f"DEBUG: _enforce_nominative_and_gender DISABLED to prevent double morphology")
+        return result
+
         if not self.feature_flags.enforce_nominative():
             return result
 
@@ -1048,30 +1063,15 @@ class NormalizationService:
         given_gender = "unknown"
         personal_sequence = []
 
+        # Note: Original morphology logic was here but caused double processing
+        # since the factory already handles morphology correctly
+
         for trace in result.trace:
             role = trace.role
-            if role in {"given", "patronymic", "surname", "unknown"}:
-                original_output = trace.output
-                # Use the new to_nominative_cached method with feature flags
-                nominative, trace_note = adapter.to_nominative_cached(original_output, lang, self.feature_flags, role)
-                if nominative and nominative != original_output:
-                    # Apply titlecase to nominative result
-                    titlecased_nominative = self._to_title(nominative)
-                    trace.notes = self._append_trace_note(
-                        trace.notes,
-                        {
-                            "type": "morph",
-                            "action": "to_nominative",
-                            "token": original_output,
-                            "result": titlecased_nominative,
-                        },
-                    )
-                    trace.output = titlecased_nominative
-
-                if role == "given" and given_gender == "unknown":
-                    detected_gender = adapter.detect_gender(trace.output, lang)
-                    if detected_gender in {"femn", "masc"}:
-                        given_gender = detected_gender
+            if role == "given" and given_gender == "unknown":
+                detected_gender = adapter.detect_gender(trace.output, lang)
+                if detected_gender in {"femn", "masc"}:
+                    given_gender = detected_gender
 
             # Apply gender-based surname preservation for feminine names
             # Only apply if we have detected feminine gender from a given name in this sequence

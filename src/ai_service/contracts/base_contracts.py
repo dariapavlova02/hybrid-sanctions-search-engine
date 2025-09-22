@@ -46,6 +46,7 @@ class ProcessResponse(BaseModel):
     # Additional sections for /process endpoint
     signals: Optional[Dict[str, Any]] = None
     decision: Optional[Dict[str, Any]] = None
+    search_results: Optional[Dict[str, Any]] = None
     embedding: Optional[List[float]] = None
 
 
@@ -222,6 +223,9 @@ class UnifiedProcessingResult:
     variants: Optional[List[str]] = None
     embeddings: Optional[List[float]] = None
 
+    # Search results (optional)
+    search_results: Optional[Dict[str, Any]] = None
+
     # Decision engine result (Layer 9)
     decision: Optional["DecisionResult"] = None
 
@@ -271,6 +275,7 @@ class UnifiedProcessingResult:
             },
             "variants": self.variants,
             "embeddings": self.embeddings,
+            "search_results": self.search_results,
             "decision": self.decision.model_dump() if self.decision else None,
             "processing_time": self.processing_time,
             "success": self.success,

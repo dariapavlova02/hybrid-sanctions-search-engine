@@ -421,9 +421,11 @@ class NormalizationFactory(ErrorReportingMixin):
 
         # Step 3: Morphological normalization
         try:
+            self.logger.debug(f"Morphology input: {len(tokens_for_morphology)} tokens")
             normalized_tokens, morph_traces = await self._normalize_morphology(
                 tokens_for_morphology, roles_for_morphology, config, skip_indices=None, effective_flags=effective_flags
             )
+            self.logger.debug(f"Morphology output: {len(normalized_tokens)} normalized tokens")
             
             # Apply yo_strategy again after morphology to ensure consistency
             if config.language == "ru" and config.yo_strategy in {"preserve", "fold"}:
@@ -462,9 +464,11 @@ class NormalizationFactory(ErrorReportingMixin):
 
         # Step 4: Gender processing
         try:
+            self.logger.debug(f"Gender processing input: {len(normalized_tokens)} tokens")
             final_tokens, gender_traces, gender_info = await self._process_gender(
                 normalized_tokens, roles, config
             )
+            self.logger.debug(f"Gender processing output: {len(final_tokens)} tokens")
         except Exception as e:
             self.logger.error(f"Gender processing failed: {e}")
             errors.append(f"Gender processing failed: {e}")
@@ -473,7 +477,9 @@ class NormalizationFactory(ErrorReportingMixin):
             gender_info = {}
 
         # Step 4.5: Apply tokenizer improvements (post-processing)
+        self.logger.debug(f"Post-processing input: {len(final_tokens)} tokens")
         final_tokens, improvement_traces_post = self._apply_tokenizer_improvements_post(final_tokens, roles, effective_flags)
+        self.logger.debug(f"Post-processing output: {len(final_tokens)} tokens")
         self.logger.debug(f"Applied post-processing tokenizer improvements: {len(improvement_traces_post)} improvements")
         
         # Step 4.6: Apply double dot collapse to final tokens
@@ -742,10 +748,9 @@ class NormalizationFactory(ErrorReportingMixin):
         Excludes ORG-спаны (organization spans) from person concatenation.
         Also filters Latin tokens in Cyrillic languages (ru/uk).
         """
+        self.logger.debug(f"Filtering person tokens from {len(trace)} trace entries")
         filtered_tokens = []
         processed_tokens = set()  # Track processed tokens to avoid duplicates
-        
-        self.logger.debug(f"Filtering person tokens from {len(trace)} trace entries")
         for i, token_trace in enumerate(trace):
             # Skip non-TokenTrace objects
             if not isinstance(token_trace, TokenTrace):
@@ -821,11 +826,34 @@ class NormalizationFactory(ErrorReportingMixin):
         # Create a mapping from token to role for sorting
         token_to_role = {}
         for token_trace in trace:
-            if token_trace.role in PERSON_ROLES and token_trace.output in deduplicated_tokens:
-                token_to_role[token_trace.output] = token_trace.role
-        
-        role_order = {'given': 0, 'surname': 1, 'patronymic': 2, 'initial': 3}
+            if token_trace.role in PERSON_ROLES:
+                # Find matching token in deduplicated_tokens (handle apostrophe variations)
+                matching_token = None
+                for dedup_token in deduplicated_tokens:
+                    # Normalize apostrophes for comparison (handle all apostrophe types)
+                    trace_normalized = token_trace.output.replace("'", "'").replace("'", "'").replace("ʼ", "'")
+                    dedup_normalized = dedup_token.replace("'", "'").replace("'", "'").replace("ʼ", "'")
+                    if trace_normalized.lower() == dedup_normalized.lower():
+                        matching_token = dedup_token
+                        break
+
+                if matching_token:
+                    token_to_role[matching_token] = token_trace.role
+                    self.logger.debug(f"Mapped token role: {matching_token} → {token_trace.role}")
+                else:
+                    self.logger.warning(f"Could not find role for trace.output='{token_trace.output}' in {deduplicated_tokens}")
+
+        # Role order depends on language
+        if language == "uk":
+            # Ukrainian order: surname given patronymic
+            role_order = {'surname': 0, 'given': 1, 'patronymic': 2, 'initial': 3}
+        else:
+            # Default order: given surname patronymic
+            role_order = {'given': 0, 'surname': 1, 'patronymic': 2, 'initial': 3}
+        self.logger.debug(f"Sorting tokens by role order: {role_order}")
+        self.logger.debug(f"Token to role mapping: {token_to_role}")
         deduplicated_tokens.sort(key=lambda x: role_order.get(token_to_role.get(x, ''), 999))
+        self.logger.debug(f"Sorted tokens: {deduplicated_tokens}")
         
         self.logger.debug(f"Filtered person tokens: {filtered_tokens}")
         self.logger.debug(f"Deduplicated person tokens: {deduplicated_tokens}")
@@ -1656,7 +1684,7 @@ class NormalizationFactory(ErrorReportingMixin):
 
         return tokens, traces, gender_info
 
-    def _reconstruct_text(self, tokens: List[str], roles: List[str]) -> str:
+    def _reconstruct_text(self, tokens: List[str], roles: List[str], language: str = "auto") -> str:
         """Reconstruct normalized text from tokens."""
         # Only include personal tokens (not unknown/organization tokens)
         personal_tokens = []
@@ -1664,8 +1692,13 @@ class NormalizationFactory(ErrorReportingMixin):
             if role in {'given', 'surname', 'patronymic', 'initial'}:
                 personal_tokens.append((token, role))
 
-        # Sort tokens by role: given, surname, patronymic, initial
-        role_order = {'given': 0, 'surname': 1, 'patronymic': 2, 'initial': 3}
+        # Sort tokens by role: given, surname, patronymic, initial (language-dependent)
+        if language == "uk":
+            # Ukrainian order: surname given patronymic
+            role_order = {'surname': 0, 'given': 1, 'patronymic': 2, 'initial': 3}
+        else:
+            # Default order: given surname patronymic
+            role_order = {'given': 0, 'surname': 1, 'patronymic': 2, 'initial': 3}
         personal_tokens.sort(key=lambda x: role_order.get(x[1], 999))
         
         # Extract just the tokens
@@ -1693,7 +1726,13 @@ class NormalizationFactory(ErrorReportingMixin):
             final_tokens = list(final_tokens) if final_tokens else []
 
         for i, (orig, role) in enumerate(zip(original_tokens, roles)):
-            final = final_tokens[i] if i < len(final_tokens) else orig
+            # CRITICAL FIX: Ensure final_tokens and original_tokens are synchronized
+            if i < len(final_tokens):
+                final = final_tokens[i]
+            else:
+                # If final_tokens is shorter, this means token was filtered out
+                final = ""  # Empty output indicates filtered token
+                self.logger.warning(f"Token '{orig}' at index {i} was filtered out (final_tokens length: {len(final_tokens)})")
 
             # Find relevant traces for this token
             token_traces = [t for t in processing_traces if orig in t or str(i) in t]
