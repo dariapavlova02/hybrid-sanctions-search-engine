@@ -14,10 +14,16 @@ from functools import wraps
 
 from elasticsearch import AsyncElasticsearch
 try:
-    from elasticsearch.exceptions import ElasticsearchException, ConnectionError, TimeoutError
+    from elasticsearch.exceptions import ElasticsearchException, ConnectionError
+    try:
+        from elasticsearch.exceptions import TimeoutError
+    except ImportError:
+        # TimeoutError may not exist in some versions
+        TimeoutError = Exception
 except ImportError:
     # Fallback for newer elasticsearch versions
-    from elasticsearch.exceptions import ConnectionError, RequestError as ElasticsearchException, TimeoutError
+    from elasticsearch.exceptions import ConnectionError, RequestError as ElasticsearchException
+    TimeoutError = Exception
 
 from ...utils.logging_config import get_logger
 
