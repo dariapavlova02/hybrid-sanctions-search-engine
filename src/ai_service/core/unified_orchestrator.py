@@ -37,7 +37,7 @@ from ..contracts.base_contracts import (
     ValidationServiceInterface,
     VariantsServiceInterface,
 )
-from ..layers.search.hybrid_search_service import HybridSearchService
+# from ..layers.search.hybrid_search_service import HybridSearchService
 from ..contracts.decision_contracts import (
     DecisionInput,
     DecisionOutput,
@@ -78,7 +78,7 @@ class UnifiedOrchestrator:
         embeddings_service: Optional[EmbeddingsServiceInterface] = None,
         decision_engine: Optional[DecisionEngine] = None,
         metrics_service: Optional[MetricsService] = None,
-        search_service: Optional[HybridSearchService] = None,
+        search_service: Optional[Any] = None,  # HybridSearchService temporarily disabled
         default_feature_flags: Optional[FeatureFlags] = None,
         # Configuration - defaults from SERVICE_CONFIG
         enable_smart_filter: Optional[bool] = None,
