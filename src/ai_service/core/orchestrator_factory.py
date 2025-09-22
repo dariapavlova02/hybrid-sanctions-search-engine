@@ -183,9 +183,10 @@ class OrchestratorFactory:
             # Search service - optional
             if enable_search and search_service is None:
                 try:
-                    from ..config.settings import SEARCH_CONFIG
+                    from ..layers.search.config import HybridSearchConfig
                     from ..layers.search.hybrid_search_service import HybridSearchService
-                    search_service = HybridSearchService(SEARCH_CONFIG)
+                    search_config = HybridSearchConfig.from_env()
+                    search_service = HybridSearchService(search_config)
                     search_service.initialize()  # Not async
                     logger.info("Search service initialized")
                 except Exception as e:
