@@ -251,9 +251,12 @@ class NameParser:
         
         return (best_match, best_score) if best_match else None
 
-# Global instance
-name_parser = NameParser()
+# Lazy global instance
+_name_parser = None
 
 def get_name_parser() -> NameParser:
-    """Get the global name parser instance."""
-    return name_parser
+    """Get the global name parser instance (lazy initialization)."""
+    global _name_parser
+    if _name_parser is None:
+        _name_parser = NameParser()
+    return _name_parser
