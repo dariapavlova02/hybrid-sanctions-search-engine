@@ -10,7 +10,7 @@ from .embedding_preprocessor import EmbeddingPreprocessor
 # Legacy re-exports for backward compatibility
 from ..adapters.legacy_normalization_adapter import LegacyNormalizationAdapter
 from ..layers.normalization.normalization_service import NormalizationService as ModernNormalizationService
-from ..core.unified_orchestrator import UnifiedOrchestrator
+# UnifiedOrchestrator removed to avoid circular import
 
 # Legacy aliases for backward compatibility
 NormalizationService = LegacyNormalizationAdapter
@@ -23,5 +23,4 @@ __all__ = [
     "NormalizationService",
     "AdvancedNormalizationService",
     "ModernNormalizationService",
-    "UnifiedOrchestrator",
 ]
