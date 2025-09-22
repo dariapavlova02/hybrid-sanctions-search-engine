@@ -393,7 +393,10 @@ class SearchConfig(BaseModel, HotReloadableConfig):
     
     def __init__(self, **data):
         super().__init__(**data)
-        # Note: HotReloadableConfig not used for SearchConfig to avoid config_path conflicts
+        # Initialize HotReloadableConfig attributes to avoid _watcher errors
+        self._watcher = None
+        self._last_reload = None
+        self._reload_count = 0
 
     @property
     def elasticsearch(self):

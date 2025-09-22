@@ -30,6 +30,11 @@ RUN poetry config virtualenvs.create false
 # Install dependencies (without root project)
 RUN poetry install --only=main --no-root
 
+# Install spaCy models (optional, fail silently if not available)
+RUN python -m spacy download en_core_web_sm || echo "English model not available" && \
+    python -m spacy download ru_core_news_sm || echo "Russian model not available" && \
+    python -m spacy download uk_core_news_sm || echo "Ukrainian model not available"
+
 # Copy application code
 COPY . .
 
