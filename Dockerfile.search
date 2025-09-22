@@ -5,7 +5,8 @@ FROM python:3.11-slim AS base
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONPATH=/app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -21,14 +22,16 @@ WORKDIR /app
 # Install Poetry
 RUN pip install poetry
 
-# Copy Poetry files
-COPY pyproject.toml poetry.lock ./
+# Copy application code FIRST
+COPY . .
 
-# Configure Poetry
-RUN poetry config virtualenvs.create false
+# Configure Poetry to NOT create virtual environments
+RUN poetry config virtualenvs.create false && \
+    poetry config virtualenvs.in-project false
 
-# First install all dependencies via pip (more reliable)
-RUN pip install --no-cache-dir \
+# Install all dependencies directly via pip (force global installation)
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
     fastapi>=0.116.1 \
     uvicorn[standard]>=0.35.0 \
     pydantic>=2.11.7 \
@@ -50,33 +53,20 @@ RUN pip install --no-cache-dir \
     spacy>=3.7.0 \
     transliterate>=1.10.2
 
-# Then run poetry install for any remaining dependencies
-RUN poetry install --only=main --no-root
-
 # Verify all critical dependencies are installed
-RUN python -c "import nameparser; print('✅ nameparser installed')" && \
-    python -c "import rapidfuzz; print('✅ rapidfuzz installed')" && \
-    python -c "import spacy; print('✅ spacy installed')" && \
-    python -c "import transliterate; print('✅ transliterate installed')" && \
-    python -c "import prometheus_client; print('✅ prometheus_client installed')" && \
+RUN echo "🔍 Verifying dependencies..." && \
+    python -c "import nameparser; print('✅ nameparser:', nameparser.__version__)" && \
+    python -c "import rapidfuzz; print('✅ rapidfuzz:', rapidfuzz.__version__)" && \
+    python -c "import spacy; print('✅ spacy:', spacy.__version__)" && \
+    python -c "import transliterate; print('✅ transliterate available')" && \
+    python -c "import prometheus_client; print('✅ prometheus_client available')" && \
     echo "🎉 All dependencies verified!"
 
-# Install spaCy models with better error handling
+# Install spaCy models
 RUN echo "📦 Installing spaCy models..." && \
-    python -m spacy download en_core_web_sm 2>/dev/null && echo "✅ English model: en_core_web_sm" || \
-    (python -m spacy download en 2>/dev/null && echo "✅ English model: en") || \
-    echo "❌ No English models available" && \
-    \
-    python -m spacy download ru_core_news_sm 2>/dev/null && echo "✅ Russian model: ru_core_news_sm" || \
-    (python -m spacy download xx_ent_wiki_sm 2>/dev/null && echo "✅ Multilingual model for Russian") || \
-    echo "❌ No Russian models available" && \
-    \
-    echo "📝 Checking installed spaCy models:" && \
-    python -c "import spacy; import os; models = [d for d in os.listdir(spacy.util.find_package_path('spacy').parent) if d.startswith(('en_', 'ru_', 'xx_'))]; print('Installed models:', models if models else 'None')" 2>/dev/null || echo "No models found" && \
-    echo "✅ spaCy setup completed"
-
-# Copy application code
-COPY . .
+    python -m spacy download en_core_web_sm && echo "✅ English model installed" || echo "❌ English model failed" && \
+    python -m spacy download ru_core_news_sm && echo "✅ Russian model installed" || echo "❌ Russian model failed" && \
+    python -m spacy download xx_ent_wiki_sm && echo "✅ Multilingual model installed" || echo "❌ Multilingual model failed"
 
 # Copy production environment file
 COPY env.production.maximum_relevancy .env
@@ -96,5 +86,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Default command
-CMD ["poetry", "run", "uvicorn", "src.ai_service.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Default command - run directly without poetry
+CMD ["python", "-m", "uvicorn", "src.ai_service.main:app", "--host", "0.0.0.0", "--port", "8000"]
