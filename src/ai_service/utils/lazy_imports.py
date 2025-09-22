@@ -73,12 +73,26 @@ def get_spacy_ru() -> Optional[Any]:
         logger.warning(f"Failed to load ru_core_news_sm: {e}")
         return None
 
-# Global instances for easy access
-NLP_EN: Optional[Any] = None
-NLP_UK: Optional[Any] = None
-NLP_RU: Optional[Any] = None
-NAMEPARSER: Optional[Any] = None
-RAPIDFUZZ: Optional[Any] = None
+# Global instances for easy access - initialize immediately
+logger.info("Initializing lazy imports on module load...")
+
+NAMEPARSER = lazy_import("nameparser")
+RAPIDFUZZ = lazy_import("rapidfuzz")
+
+# Initialize spacy models
+NLP_EN = get_spacy_en()
+NLP_UK = get_spacy_uk()
+NLP_RU = get_spacy_ru()
+
+# Log final status
+_status = {
+    "nameparser": NAMEPARSER is not None,
+    "rapidfuzz": RAPIDFUZZ is not None,
+    "spacy_en": NLP_EN is not None,
+    "spacy_uk": NLP_UK is not None,
+    "spacy_ru": NLP_RU is not None,
+}
+logger.info(f"Lazy imports initialized: {_status}")
 
 def initialize_lazy_imports() -> None:
     """Initialize all lazy imports."""

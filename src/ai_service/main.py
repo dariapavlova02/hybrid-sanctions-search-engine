@@ -48,10 +48,8 @@ from ai_service.monitoring.prometheus_exporter import get_exporter
 setup_logging()
 logger = get_logger(__name__)
 
-# Initialize lazy imports for optional dependencies
-logger.info("Initializing optional dependencies...")
-from ai_service.utils.lazy_imports import initialize_lazy_imports
-initialize_lazy_imports()
+# Import lazy_imports module to trigger initialization
+from ai_service.utils.lazy_imports import NAMEPARSER, RAPIDFUZZ, NLP_EN, NLP_UK, NLP_RU
 
 # Create FastAPI application
 
