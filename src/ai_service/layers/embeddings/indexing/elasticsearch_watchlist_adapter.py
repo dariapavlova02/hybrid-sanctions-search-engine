@@ -109,7 +109,8 @@ class ElasticsearchWatchlistAdapter:
                     base_url=self.config.es_url,
                     auth=auth,
                     verify=self.config.es_verify_ssl,
-                    timeout=self.config.es_timeout
+                    timeout=self.config.es_timeout,
+                    # Note: Connection pooling handled by underlying transport
                 )
             return self._client
 

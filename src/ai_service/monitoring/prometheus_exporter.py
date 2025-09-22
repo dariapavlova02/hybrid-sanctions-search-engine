@@ -15,11 +15,53 @@ from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
 
-from prometheus_client import (
-    Counter, Histogram, Gauge, CollectorRegistry, 
-    generate_latest, CONTENT_TYPE_LATEST
-)
-from prometheus_client.core import HistogramMetricFamily, CounterMetricFamily, GaugeMetricFamily
+try:
+    from prometheus_client import (
+        Counter, Histogram, Gauge, CollectorRegistry,
+        generate_latest, CONTENT_TYPE_LATEST
+    )
+    from prometheus_client.core import HistogramMetricFamily, CounterMetricFamily, GaugeMetricFamily
+    PROMETHEUS_AVAILABLE = True
+except ImportError:
+    # Fallback mode when prometheus_client is not available
+    PROMETHEUS_AVAILABLE = False
+    CONTENT_TYPE_LATEST = "text/plain; charset=utf-8"
+
+    # Fallback implementations
+    class FallbackMetric:
+        def __init__(self, name, description, labels=None, **kwargs):
+            self.name = name
+            self.description = description
+            self._labels = labels or []
+            self.value = 0
+            self.label_values = {}
+
+        def labels(self, **kwargs):
+            return self
+
+        def inc(self, amount=1):
+            self.value += amount
+
+        def observe(self, value):
+            self.value = value
+
+        def set(self, value):
+            self.value = value
+
+    class Counter(FallbackMetric):
+        pass
+
+    class Histogram(FallbackMetric):
+        def __init__(self, name, description, labels=None, buckets=None, **kwargs):
+            super().__init__(name, description, labels, **kwargs)
+            self.buckets = buckets or []
+
+    class Gauge(FallbackMetric):
+        pass
+
+    class CollectorRegistry:
+        def __init__(self):
+            self.metrics = []
 
 
 class SearchMode(str, Enum):
@@ -64,11 +106,13 @@ class SearchPrometheusExporter:
     def __init__(self, registry: Optional[CollectorRegistry] = None):
         """
         Initialize Prometheus exporter.
-        
+
         Args:
             registry: Prometheus registry, uses default if None
         """
         self.registry = registry or CollectorRegistry()
+        self.prometheus_available = PROMETHEUS_AVAILABLE
+        self._fallback_metrics = {}  # For fallback mode
         self._setup_metrics()
     
     def _setup_metrics(self) -> None:
@@ -267,14 +311,49 @@ class SearchPrometheusExporter:
             for _ in range(count):
                 self.record_es_error(error_type)
     
-    def get_metrics(self) -> str:
+    def get_metrics(self) -> bytes:
         """
         Get metrics in Prometheus format.
-        
+
         Returns:
             Metrics in Prometheus text format
         """
-        return generate_latest(self.registry)
+        if self.prometheus_available:
+            return generate_latest(self.registry)
+        else:
+            # Fallback mode - generate basic metrics manually
+            metrics_lines = []
+
+            # Basic service metrics
+            metrics_lines.append("# HELP ai_service_up Service is up and running")
+            metrics_lines.append("# TYPE ai_service_up gauge")
+            metrics_lines.append("ai_service_up 1")
+
+            # Search requests
+            if hasattr(self, 'hybrid_search_requests_total'):
+                metrics_lines.append("# HELP hybrid_search_requests_total Total hybrid search requests")
+                metrics_lines.append("# TYPE hybrid_search_requests_total counter")
+                metrics_lines.append(f"hybrid_search_requests_total {{mode=\"hybrid\"}} {self.hybrid_search_requests_total.value}")
+
+            # Success rate
+            if hasattr(self, 'search_success_rate'):
+                metrics_lines.append("# HELP search_success_rate Search success rate")
+                metrics_lines.append("# TYPE search_success_rate gauge")
+                metrics_lines.append(f"search_success_rate {self.search_success_rate.value}")
+
+            # Active connections
+            if hasattr(self, 'active_search_connections'):
+                metrics_lines.append("# HELP active_search_connections Active search connections")
+                metrics_lines.append("# TYPE active_search_connections gauge")
+                metrics_lines.append(f"active_search_connections {self.active_search_connections.value}")
+
+            # Cache hit rate
+            if hasattr(self, 'search_cache_hit_rate'):
+                metrics_lines.append("# HELP search_cache_hit_rate Search cache hit rate")
+                metrics_lines.append("# TYPE search_cache_hit_rate gauge")
+                metrics_lines.append(f"search_cache_hit_rate {self.search_cache_hit_rate.value}")
+
+            return ("\n".join(metrics_lines) + "\n").encode('utf-8')
     
     def get_metrics_content_type(self) -> str:
         """

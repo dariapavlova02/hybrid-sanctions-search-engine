@@ -31,7 +31,7 @@ def is_legal_form(token: str, lexicons: Lexicons) -> bool:
     if not lexicons or not lexicons.legal_forms:
         return False
     
-    return token.upper() in lexicons.legal_forms
+    return token.lower() in lexicons.legal_forms
 
 
 def is_legal_form_lang(token: str, lang: str, lexicons: Lexicons) -> bool:
@@ -40,7 +40,7 @@ def is_legal_form_lang(token: str, lang: str, lexicons: Lexicons) -> bool:
         return False
     
     lang_legal_forms = lexicons.legal_forms_lang.get(lang, set())
-    return token.upper() in lang_legal_forms
+    return token.lower() in lang_legal_forms
 
 
 def is_person_stopword(token: str, lang: str, lexicons: Lexicons) -> bool:
@@ -143,9 +143,10 @@ class RoleRules:
     
     # Context window for organization detection
     org_context_window: int = 3
-    
+
     # Feature flags
     prefer_surname_first: bool = False
+    strict_stopwords: bool = False
 
 
 class FSMTransitionRule(ABC):
@@ -596,7 +597,7 @@ class DefaultPersonRule(FSMTransitionRule):
 class RoleTaggerService:
     """FSM-based role tagger service with detailed tracing."""
     
-    def __init__(self, stopwords=None, org_legal_forms=None, lang='auto'):
+    def __init__(self, stopwords=None, org_legal_forms=None, lang='auto', strict_stopwords=False):
         """
         Initialize role tagger service.
         
@@ -604,6 +605,7 @@ class RoleTaggerService:
             stopwords: Dict[str, Set[str]] - language -> set of stopwords
             org_legal_forms: Set[str] - set of legal forms for organization detection
             lang: str - language code ('ru', 'uk', 'en', 'auto')
+            strict_stopwords: bool - enable strict stopword filtering
         """
         # Load default lexicons if not provided
         self.lexicons = get_lexicons()
@@ -620,7 +622,7 @@ class RoleTaggerService:
             self.lexicons.legal_forms.update(org_legal_forms)
         
         # Initialize rules
-        self.rules = RoleRules()
+        self.rules = RoleRules(strict_stopwords=strict_stopwords)
         
         # Set context window for organization detection
         self.window = 3
@@ -655,9 +657,9 @@ class RoleTaggerService:
             StopwordRule(self.lexicons, False),
             PaymentContextRule(self.lexicons, False),
             PersonStopwordRule(self.lexicons, True, self.rules.org_context_window),
+            OrganizationContextRule(self.lexicons, self.rules.org_context_window),
             LegalFormOrgSpanRule(self.lexicons, self.rules.org_context_window),  # NEW: ORG span detection
             OrganizationNgramRule(self.lexicons, self.rules.org_context_window),
-            OrganizationContextRule(self.lexicons, self.rules.org_context_window),
             InitialDetectionRule(),
             SurnameSuffixRule(self.rules.surname_suffixes),
             PatronymicSuffixRule(self.rules.patronymic_suffixes),

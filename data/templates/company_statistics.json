@@ -1,0 +1,18 @@
+{
+  "total_patterns": 71249,
+  "total_variants": 237256,
+  "total_searchable_items": 308505,
+  "tier_distribution": {
+    "tier_0_exact": 0,
+    "tier_1_high_recall": 30087,
+    "tier_2_medium_recall": 41162,
+    "tier_3_broad_recall": 0
+  },
+  "expected_precision": {
+    "average": 0.45958890651096856,
+    "tier_0": 0.0,
+    "tier_1": 0.7014042609765014,
+    "tier_2": 0.28283611097614303,
+    "tier_3": 0.0
+  }
+}

@@ -1,0 +1,955 @@
+ГЕНЕРАЦИЯ ВАРИАНТОВ ДЛЯ САНКЦИОННИКА
+Время генерации: 2025-09-19 11:09:21
+Исходные данные: {
+  "id": 1,
+  "person_id": 32450,
+  "name": "Ковриков Роман Валерійович",
+  "name_ru": null,
+  "name_en": "Kovrykov Roman Valeriiovych",
+  "birthdate": "1976-08-09",
+  "itn": "782611846337",
+  "itn_import": "782611846337",
+  "status": 1
+}
+================================================================================
+
+ВСЕГО СГЕНЕРИРОВАНО ПАТТЕРНОВ: 449
+
+
+==================== TIER 0 (1 паттернов) ====================
+
+--- ITN_CODE (1 вариантов) ---
+  1. 782611846337 [precision: 1.0] [lang: unknown]
+
+
+==================== TIER 1 (24 паттернов) ====================
+
+--- FULL_NAME_AGGRESSIVE (4 вариантов) ---
+  1. kovrykov roman valeriiovych [precision: 0.7] [lang: en]
+
+  2. kovrykov roman [precision: 0.7] [lang: en]
+
+  3. kovrykov roman valeriiovych [precision: 0.7] [lang: mixed]
+
+  4. kovrykov roman [precision: 0.7] [lang: mixed]
+
+
+--- MIXED_LANGUAGE_VARIANT (16 вариантов) ---
+  1. ковриков роман valeriyovich kovrykov roman valeriiovych [precision: 0.6] [lang: mixed]
+
+  2. ковриков роман valeriyovich коврйков roman valeriiovych [precision: 0.6] [lang: mixed]
+
+  3. ковриков роман valeriyovich kovrykov роман valeriiovych [precision: 0.6] [lang: mixed]
+
+  4. ковриков роман valeriyovich kovrykov roman валерііовйцх [precision: 0.6] [lang: mixed]
+
+  5. ковриков roman валерійович kovrykov roman valeriiovych [precision: 0.6] [lang: mixed]
+
+  6. kovrikov роман валерійович kovrykov roman valeriiovych [precision: 0.6] [lang: mixed]
+
+  7. ковриков роман валерійович kovrykov roman valeriiovych [precision: 0.6] [lang: mixed]
+
+  8. kovrikov роман валерійович коврйков roman valeriiovych [precision: 0.6] [lang: mixed]
+
+  9. kovrikov роман валерійович kovrykov роман valeriiovych [precision: 0.6] [lang: mixed]
+
+ 10. kovrikov роман валерійович kovrykov roman валерііовйцх [precision: 0.6] [lang: mixed]
+
+ 11. ковриков roman валерійович коврйков roman valeriiovych [precision: 0.6] [lang: mixed]
+
+ 12. ковриков roman валерійович kovrykov роман valeriiovych [precision: 0.6] [lang: mixed]
+
+ 13. ковриков roman валерійович kovrykov roman валерііовйцх [precision: 0.6] [lang: mixed]
+
+ 14. ковриков роман валерійович коврйков roman valeriiovych [precision: 0.6] [lang: mixed]
+
+ 15. ковриков роман валерійович kovrykov роман valeriiovych [precision: 0.6] [lang: mixed]
+
+ 16. ковриков роман валерійович kovrykov roman валерііовйцх [precision: 0.6] [lang: mixed]
+
+
+--- POTENTIAL_SURNAME (4 вариантов) ---
+  1. valeriiovych [precision: 0.3] [lang: en]
+
+  2. kovrykov [precision: 0.3] [lang: en]
+
+  3. valeriiovych [precision: 0.3] [lang: mixed]
+
+  4. kovrykov [precision: 0.3] [lang: mixed]
+
+
+==================== TIER 2 (12 паттернов) ====================
+
+--- DECLENSION_VARIANT (8 вариантов) ---
+  1. ковриковым роман валерійович коврйков роман валерііовйцх [precision: 0.3] [lang: mixed]
+
+  2. ковриков роман валерійович коврйковым роман валерііовйцх [precision: 0.3] [lang: mixed]
+
+  3. ковриков роман валерійович коврйкову роман валерііовйцх [precision: 0.3] [lang: mixed]
+
+  4. ковриков роман валерійович коврйкова роман валерііовйцх [precision: 0.3] [lang: mixed]
+
+  5. коврикову роман валерійович коврйков роман валерііовйцх [precision: 0.3] [lang: mixed]
+
+  6. коврикова роман валерійович коврйков роман валерііовйцх [precision: 0.3] [lang: mixed]
+
+  7. коврикове роман валерійович коврйков роман валерііовйцх [precision: 0.3] [lang: mixed]
+
+  8. ковриков роман валерійович коврйкове роман валерііовйцх [precision: 0.3] [lang: mixed]
+
+
+--- TRANSLITERATION_VARIANT (4 вариантов) ---
+  1. коврыков роман валєрїїовыch [precision: 0.5] [lang: en]
+
+  2. коврыков роман [precision: 0.5] [lang: en]
+
+  3. коврыков роман валєрїїовыch [precision: 0.5] [lang: mixed]
+
+  4. коврыков роман [precision: 0.5] [lang: mixed]
+
+
+==================== TIER 3 (412 паттернов) ====================
+
+--- OTHER_VARIANT (22 вариантов) ---
+  1. ковриков-роман-валерійович [precision: 0.1] [lang: ru]
+
+  2. ковриков_роман_валерійович [precision: 0.1] [lang: ru]
+
+  3. коврико. роман валерійович [precision: 0.1] [lang: ru]
+
+  4. коврик. роман валерійович [precision: 0.1] [lang: ru]
+
+  5. ковриковроманвалерійович [precision: 0.1] [lang: ru]
+
+  6. коври. роман валерійович [precision: 0.1] [lang: ru]
+
+  7. ковр. роман валерійович [precision: 0.1] [lang: ru]
+
+  8. ков. роман валерійович [precision: 0.1] [lang: ru]
+
+  9. ко. роман валерійович [precision: 0.1] [lang: ru]
+
+ 10. к. роман валерійович [precision: 0.1] [lang: ru]
+
+ 11. к.р.в. [precision: 0.1] [lang: ru]
+
+ 12. к.р.в [precision: 0.1] [lang: ru]
+
+ 13. kovrykov-roman-valeriiovych [precision: 0.1] [lang: en]
+
+ 14. kovrykov_roman_valeriiovych [precision: 0.1] [lang: en]
+
+ 15. kovryko. roman valeriiovych [precision: 0.1] [lang: en]
+
+ 16. kovryk. roman valeriiovych [precision: 0.1] [lang: en]
+
+ 17. kovrykovromanvaleriiovych [precision: 0.1] [lang: en]
+
+ 18. kovry. roman valeriiovych [precision: 0.1] [lang: en]
+
+ 19. kovr. roman valeriiovych [precision: 0.1] [lang: en]
+
+ 20. kov. roman valeriiovych [precision: 0.1] [lang: en]
+
+ 21. ko. roman valeriiovych [precision: 0.1] [lang: en]
+
+ 22. k. roman valeriiovych [precision: 0.1] [lang: en]
+
+
+--- TYPO_VARIANT (390 вариантов) ---
+  1. kovrykov roman valeriioivych [precision: 0.1] [lang: en]
+
+  2. kovrykov roman valeriioavych [precision: 0.1] [lang: en]
+
+  3. kovrykov roman valeriiovycuh [precision: 0.1] [lang: en]
+
+  4. kovrykov roman vaaleriiovych [precision: 0.1] [lang: en]
+
+  5. kovrykov roman vaeleriiovych [precision: 0.1] [lang: en]
+
+  6. kovrykov roman valoeriiovych [precision: 0.1] [lang: en]
+
+  7. kovrykov roman valeriiouvych [precision: 0.1] [lang: en]
+
+  8. kovrykov roman valeruiiovych [precision: 0.1] [lang: en]
+
+  9. kovrykov roman valeriioevych [precision: 0.1] [lang: en]
+
+ 10. kovrykov roman valeriiovyuch [precision: 0.1] [lang: en]
+
+ 11. kovrykov roman valeriiovycoh [precision: 0.1] [lang: en]
+
+ 12. kovrykov roman valeriiovyche [precision: 0.1] [lang: en]
+
+ 13. коврыков роман валєрїїоoвыch [precision: 0.1] [lang: en]
+
+ 14. коврыков роман валєрїїовaыch [precision: 0.1] [lang: en]
+
+ 15. коврыков роман валєрїїовыcah [precision: 0.1] [lang: en]
+
+ 16. коврыков роман ваuлєрїїовыch [precision: 0.1] [lang: en]
+
+ 17. коврыков роман валєрїїовeыch [precision: 0.1] [lang: en]
+
+ 18. коврыков роман iвалєрїїовыch [precision: 0.1] [lang: en]
+
+ 19. коврыков роман валєрїuїовыch [precision: 0.1] [lang: en]
+
+ 20. коврыков роман валєрїїоaвыch [precision: 0.1] [lang: en]
+
+ 21. коврыков роман валєeрїїовыch [precision: 0.1] [lang: en]
+
+ 22. коврыков роман валєрoїїовыch [precision: 0.1] [lang: en]
+
+ 23. коврыков роман валєрїeїовыch [precision: 0.1] [lang: en]
+
+ 24. коврыков роман валєрїїоuвыch [precision: 0.1] [lang: en]
+
+ 25. kovrykov roman vileriiovych [precision: 0.1] [lang: en]
+
+ 26. kovrykov roman valeriaovych [precision: 0.1] [lang: en]
+
+ 27. kovrykov roman valeriiovycu [precision: 0.1] [lang: en]
+
+ 28. kovrykov roman valeriioeych [precision: 0.1] [lang: en]
+
+ 29. kovrykov roman valeriiooych [precision: 0.1] [lang: en]
+
+ 30. kovrykov roman valeriiovyco [precision: 0.1] [lang: en]
+
+ 31. kovrykov roman voleriiovych [precision: 0.1] [lang: en]
+
+ 32. kovrykov roman vaneriiovych [precision: 0.1] [lang: en]
+
+ 33. kovrykov roman saleriiovych [precision: 0.1] [lang: en]
+
+ 34. kovrykov roman valeriioaych [precision: 0.1] [lang: en]
+
+ 35. kovrykov roman aaleriiovych [precision: 0.1] [lang: en]
+
+ 36. kovrykov roman valeriiosych [precision: 0.1] [lang: en]
+
+ 37. kovrykov roman valeroiovych [precision: 0.1] [lang: en]
+
+ 38. kovrykov roman valariiovych [precision: 0.1] [lang: en]
+
+ 39. kovrykov roman valeiiiovych [precision: 0.1] [lang: en]
+
+ 40. kovrykov roman valerioovych [precision: 0.1] [lang: en]
+
+ 41. kovrykov roman valereiovych [precision: 0.1] [lang: en]
+
+ 42. kovrykov roman valeriiovyeh [precision: 0.1] [lang: en]
+
+ 43. kovrykov roman vaoeriiovych [precision: 0.1] [lang: en]
+
+ 44. kovrykov roman taleriiovych [precision: 0.1] [lang: en]
+
+ 45. kovrykov roman valeriiouych [precision: 0.1] [lang: en]
+
+ 46. kovrykov roman valeriiovyih [precision: 0.1] [lang: en]
+
+ 47. kovrykov roman valtriiovych [precision: 0.1] [lang: en]
+
+ 48. kovrykov roman valeriiovoch [precision: 0.1] [lang: en]
+
+ 49. kovrykov roman valeriiovyci [precision: 0.1] [lang: en]
+
+ 50. kovrykov roman valeriiovycr [precision: 0.1] [lang: en]
+
+ 51. kovrykov roman vrleriiovych [precision: 0.1] [lang: en]
+
+ 52. kovrykov roman veleriiovych [precision: 0.1] [lang: en]
+
+ 53. коврыков роман валєрїtовыch [precision: 0.1] [lang: en]
+
+ 54. коврыков роман валєрeїовыch [precision: 0.1] [lang: en]
+
+ 55. коврыков роман ваtєрїїовыch [precision: 0.1] [lang: en]
+
+ 56. коврыков роман валєрїїовnch [precision: 0.1] [lang: en]
+
+ 57. коврыков роман валoрїїовыch [precision: 0.1] [lang: en]
+
+ 58. коврыков роман валєрiїовыch [precision: 0.1] [lang: en]
+
+ 59. коврыков роман валєрrїовыch [precision: 0.1] [lang: en]
+
+ 60. коврыков роман валєрїїовtch [precision: 0.1] [lang: en]
+
+ 61. коврыков роман валєрїїrвыch [precision: 0.1] [lang: en]
+
+ 62. коврыков роман валєрїїовuch [precision: 0.1] [lang: en]
+
+ 63. коврыков роман ваaєрїїовыch [precision: 0.1] [lang: en]
+
+ 64. коврыков роман валaрїїовыch [precision: 0.1] [lang: en]
+
+ 65. коврыков роман валєрїїоsыch [precision: 0.1] [lang: en]
+
+ 66. коврыков роман вaлєрїїовыch [precision: 0.1] [lang: en]
+
+ 67. коврыков роман вiлєрїїовыch [precision: 0.1] [lang: en]
+
+ 68. коврыков роман валєрaїовыch [precision: 0.1] [lang: en]
+
+ 69. коврыков роман валnрїїовыch [precision: 0.1] [lang: en]
+
+ 70. коврыков роман uалєрїїовыch [precision: 0.1] [lang: en]
+
+ 71. коврыков роман валєрїїовыth [precision: 0.1] [lang: en]
+
+ 72. коврыков роман валєрїїоiыch [precision: 0.1] [lang: en]
+
+ 73. коврыков роман валєрїїовыih [precision: 0.1] [lang: en]
+
+ 74. коврыков роман валєрїїовыca [precision: 0.1] [lang: en]
+
+ 75. коврыков роман валeрїїовыch [precision: 0.1] [lang: en]
+
+ 76. коврыков роман валєрїїоtыch [precision: 0.1] [lang: en]
+
+ 77. коврыков роман валєoїїовыch [precision: 0.1] [lang: en]
+
+ 78. коврыков роман валєрїїовich [precision: 0.1] [lang: en]
+
+ 79. коврыков роман ваєрїїовыch [precision: 0.1] [lang: en]
+
+ 80. коврыков роман валрїїовыch [precision: 0.1] [lang: en]
+
+ 81. kovrykuov roman [precision: 0.1] [lang: en]
+
+ 82. koivrykov roman [precision: 0.1] [lang: en]
+
+ 83. kovryekov roman [precision: 0.1] [lang: en]
+
+ 84. ekovrykov roman [precision: 0.1] [lang: en]
+
+ 85. kouvrykov roman [precision: 0.1] [lang: en]
+
+ 86. kovrykova roman [precision: 0.1] [lang: en]
+
+ 87. kovrykovu roman [precision: 0.1] [lang: en]
+
+ 88. kovrykoev roman [precision: 0.1] [lang: en]
+
+ 89. kovrykoav roman [precision: 0.1] [lang: en]
+
+ 90. kovurykov roman [precision: 0.1] [lang: en]
+
+ 91. kovriykov roman [precision: 0.1] [lang: en]
+
+ 92. kaovrykov roman [precision: 0.1] [lang: en]
+
+ 93. kovraykov roman [precision: 0.1] [lang: en]
+
+ 94. kovrykiov roman [precision: 0.1] [lang: en]
+
+ 95. kovrykoiv roman [precision: 0.1] [lang: en]
+
+ 96. akovrykov roman [precision: 0.1] [lang: en]
+
+ 97. коoврыков роман [precision: 0.1] [lang: en]
+
+ 98. коврыкоaв роман [precision: 0.1] [lang: en]
+
+ 99. коврыковe роман [precision: 0.1] [lang: en]
+
+100. коврыковo роман [precision: 0.1] [lang: en]
+
+101. кuоврыков роман [precision: 0.1] [lang: en]
+
+102. ковeрыков роман [precision: 0.1] [lang: en]
+
+103. кoоврыков роман [precision: 0.1] [lang: en]
+
+104. ковiрыков роман [precision: 0.1] [lang: en]
+
+105. кiоврыков роман [precision: 0.1] [lang: en]
+
+106. коuврыков роман [precision: 0.1] [lang: en]
+
+107. коврыкоiв роман [precision: 0.1] [lang: en]
+
+108. коврыaков роман [precision: 0.1] [lang: en]
+
+109. коврыкоuв роман [precision: 0.1] [lang: en]
+
+110. коврыкоoв роман [precision: 0.1] [lang: en]
+
+111. eковрыков роман [precision: 0.1] [lang: en]
+
+112. kovrukov roman [precision: 0.1] [lang: en]
+
+113. kovrakov roman [precision: 0.1] [lang: en]
+
+114. knvrykov roman [precision: 0.1] [lang: en]
+
+115. koarykov roman [precision: 0.1] [lang: en]
+
+116. aovrykov roman [precision: 0.1] [lang: en]
+
+117. kotrykov roman [precision: 0.1] [lang: en]
+
+118. kovrekov roman [precision: 0.1] [lang: en]
+
+119. ksvrykov roman [precision: 0.1] [lang: en]
+
+120. kovrykav roman [precision: 0.1] [lang: en]
+
+121. koorykov roman [precision: 0.1] [lang: en]
+
+122. kovuykov roman [precision: 0.1] [lang: en]
+
+123. kovsykov roman [precision: 0.1] [lang: en]
+
+124. kovryeov roman [precision: 0.1] [lang: en]
+
+125. kovrskov roman [precision: 0.1] [lang: en]
+
+126. kovryoov roman [precision: 0.1] [lang: en]
+
+127. kosrykov roman [precision: 0.1] [lang: en]
+
+128. kovtykov roman [precision: 0.1] [lang: en]
+
+129. kovrykoa roman [precision: 0.1] [lang: en]
+
+130. kovrykor roman [precision: 0.1] [lang: en]
+
+131. kovrokov roman [precision: 0.1] [lang: en]
+
+132. tovrykov roman [precision: 0.1] [lang: en]
+
+133. kovryktv roman [precision: 0.1] [lang: en]
+
+134. uоврыков роман [precision: 0.1] [lang: en]
+
+135. коврыtов роман [precision: 0.1] [lang: en]
+
+136. ковiыков роман [precision: 0.1] [lang: en]
+
+137. tоврыков роман [precision: 0.1] [lang: en]
+
+138. eоврыков роман [precision: 0.1] [lang: en]
+
+139. коврыкaв роман [precision: 0.1] [lang: en]
+
+140. коoрыков роман [precision: 0.1] [lang: en]
+
+141. кuврыков роман [precision: 0.1] [lang: en]
+
+142. nоврыков роман [precision: 0.1] [lang: en]
+
+143. коврiков роман [precision: 0.1] [lang: en]
+
+144. коврoков роман [precision: 0.1] [lang: en]
+
+145. коsрыков роман [precision: 0.1] [lang: en]
+
+146. ковuыков роман [precision: 0.1] [lang: en]
+
+147. коврыкоu роман [precision: 0.1] [lang: en]
+
+148. iоврыков роман [precision: 0.1] [lang: en]
+
+149. коврыкоa роман [precision: 0.1] [lang: en]
+
+150. кiврыков роман [precision: 0.1] [lang: en]
+
+151. ковsыков роман [precision: 0.1] [lang: en]
+
+152. sоврыков роман [precision: 0.1] [lang: en]
+
+153. коврыeов роман [precision: 0.1] [lang: en]
+
+154. коврыoов роман [precision: 0.1] [lang: en]
+
+155. коnрыков роман [precision: 0.1] [lang: en]
+
+156. коврыuов роман [precision: 0.1] [lang: en]
+
+157. kovrkov roman [precision: 0.1] [lang: en]
+
+158. kovryov roman [precision: 0.1] [lang: en]
+
+159. evaleriiovych [precision: 0.1] [lang: en]
+
+160. valeeriiovych [precision: 0.1] [lang: en]
+
+161. avaleriiovych [precision: 0.1] [lang: en]
+
+162. vaeleriiovych [precision: 0.1] [lang: en]
+
+163. valeriiovuych [precision: 0.1] [lang: en]
+
+164. valeriioevych [precision: 0.1] [lang: en]
+
+165. valeriiovyach [precision: 0.1] [lang: en]
+
+166. valeriiovyceh [precision: 0.1] [lang: en]
+
+167. valeriiovycih [precision: 0.1] [lang: en]
+
+168. valaeriiovych [precision: 0.1] [lang: en]
+
+169. valeriioavych [precision: 0.1] [lang: en]
+
+170. valeariiovych [precision: 0.1] [lang: en]
+
+171. valeriioovych [precision: 0.1] [lang: en]
+
+172. valeriiovaych [precision: 0.1] [lang: en]
+
+173. valeriiovycuh [precision: 0.1] [lang: en]
+
+174. valeriieovych [precision: 0.1] [lang: en]
+
+175. vaileriiovych [precision: 0.1] [lang: en]
+
+176. valeriiovyche [precision: 0.1] [lang: en]
+
+177. корыков роман [precision: 0.1] [lang: en]
+
+178. коврыкв роман [precision: 0.1] [lang: en]
+
+179. valeriiovyca [precision: 0.1] [lang: en]
+
+180. valeriiovyoh [precision: 0.1] [lang: en]
+
+181. vrleriiovych [precision: 0.1] [lang: en]
+
+182. valerisovych [precision: 0.1] [lang: en]
+
+183. valeriiovyuh [precision: 0.1] [lang: en]
+
+184. valertiovych [precision: 0.1] [lang: en]
+
+185. valeriiovich [precision: 0.1] [lang: en]
+
+186. valeeiiovych [precision: 0.1] [lang: en]
+
+187. valrriiovych [precision: 0.1] [lang: en]
+
+188. valeriiovuch [precision: 0.1] [lang: en]
+
+189. valuriiovych [precision: 0.1] [lang: en]
+
+190. naleriiovych [precision: 0.1] [lang: en]
+
+191. ковриковым роман валерійович коврйков роман валериііовйцх [precision: 0.1] [lang: mixed]
+
+192. ковриковым роман валерійович коврйков роман валерііовийцх [precision: 0.1] [lang: mixed]
+
+193. ковриковым роман валерійович коврйков роман валерііуовйцх [precision: 0.1] [lang: mixed]
+
+194. ковриковым роман валерійович коврйков роман валоерііовйцх [precision: 0.1] [lang: mixed]
+
+195. ковриковым роман валерійович коврйков роман валерііовйцхе [precision: 0.1] [lang: mixed]
+
+196. ковриковым роман валерійович коврйков роман валерііовейцх [precision: 0.1] [lang: mixed]
+
+197. ковриковым роман валерійович коврйков роман валерііовйецх [precision: 0.1] [lang: mixed]
+
+198. ковриковым роман валерійович коврйков роман валерііовйцих [precision: 0.1] [lang: mixed]
+
+199. ковриковым роман валерійович коврйков роман ваолерііовйцх [precision: 0.1] [lang: mixed]
+
+200. ковриковым роман валерійович коврйков роман ваулерііовйцх [precision: 0.1] [lang: mixed]
+
+201. ковриковым роман валерійович коврйков роман воалерііовйцх [precision: 0.1] [lang: mixed]
+
+202. ковриковым роман валерійович коврйков роман валерііовйицх [precision: 0.1] [lang: mixed]
+
+203. ковриковым роман валерійович коврйков роман валеарііовйцх [precision: 0.1] [lang: mixed]
+
+204. ковриковым роман валерійович коврйков роман валерііовайцх [precision: 0.1] [lang: mixed]
+
+205. ковриковым роман валерійович коврйков роман веалерііовйцх [precision: 0.1] [lang: mixed]
+
+206. ковриковым роман валерійович коврйков роман валерііовйцех [precision: 0.1] [lang: mixed]
+
+207. ковриковым роман валерійович коврйков роман валерііоовйцх [precision: 0.1] [lang: mixed]
+
+208. ковриковым роман валерійович коврйков роман валерііоевйцх [precision: 0.1] [lang: mixed]
+
+209. ковриков роман валерійович коврйковым роман вуалерііовйцх [precision: 0.1] [lang: mixed]
+
+210. ковриков роман валерійович коврйковым роман валерііовйацх [precision: 0.1] [lang: mixed]
+
+211. ковриков роман валерійович коврйковым роман валерііовойцх [precision: 0.1] [lang: mixed]
+
+212. ковриков роман валерійович коврйковым роман валерііиовйцх [precision: 0.1] [lang: mixed]
+
+213. ковриков роман валерійович коврйковым роман валерііовийцх [precision: 0.1] [lang: mixed]
+
+214. ковриков роман валерійович коврйковым роман валерііовйецх [precision: 0.1] [lang: mixed]
+
+215. ковриков роман валерійович коврйковым роман ваулерііовйцх [precision: 0.1] [lang: mixed]
+
+216. ковриков роман валерійович коврйковым роман валерііоувйцх [precision: 0.1] [lang: mixed]
+
+217. ковриков роман валерійович коврйковым роман валеерііовйцх [precision: 0.1] [lang: mixed]
+
+218. ковриков роман валерійович коврйковым роман валерііовуйцх [precision: 0.1] [lang: mixed]
+
+219. ковриков роман валерійович коврйковым роман валеріаіовйцх [precision: 0.1] [lang: mixed]
+
+220. ковриков роман валерійович коврйковым роман увалерііовйцх [precision: 0.1] [lang: mixed]
+
+221. ковриков роман валерійович коврйковым роман валерііеовйцх [precision: 0.1] [lang: mixed]
+
+222. ковриков роман валерійович коврйковым роман ваалерііовйцх [precision: 0.1] [lang: mixed]
+
+223. ковриков роман валерійович коврйковым роман валерііоавйцх [precision: 0.1] [lang: mixed]
+
+224. ковриков роман vаaleriyovich kovrykov roman valeriiovych [precision: 0.1] [lang: mixed]
+
+225. ковриков роман valerаiyovich kovrykov roman valeriiovych [precision: 0.1] [lang: mixed]
+
+226. ковриков роман valeriyеovich kovrykov roman valeriiovych [precision: 0.1] [lang: mixed]
+
+227. ковриков роман valeriyоovich kovrykov roman valeriiovych [precision: 0.1] [lang: mixed]
+
+228. ковриков роман valeriyаovich kovrykov roman valeriiovych [precision: 0.1] [lang: mixed]
+
+229. ковриков роман valаeriyovich kovrykov roman valeriiovych [precision: 0.1] [lang: mixed]
+
+230. ковриков роман valeriyovуich kovrykov roman valeriiovych [precision: 0.1] [lang: mixed]
+
+231. ковриков роман vaоleriyovich kovrykov roman valeriiovych [precision: 0.1] [lang: mixed]
+
+232. ковриков роман valeriyovichе kovrykov roman valeriiovych [precision: 0.1] [lang: mixed]
+
+233. ковриков роман valeеriyovich kovrykov roman valeriiovych [precision: 0.1] [lang: mixed]
+
+234. ковриков роман valeriиyovich kovrykov roman valeriiovych [precision: 0.1] [lang: mixed]
+
+235. ковриков роман valeriyoеvich kovrykov roman valeriiovych [precision: 0.1] [lang: mixed]
+
+236. ковриков роман valeriyovicаh kovrykov roman valeriiovych [precision: 0.1] [lang: mixed]
+
+237. ковриков роман valeriyoviеch kovrykov roman valeriiovych [precision: 0.1] [lang: mixed]
+
+238. ковриков роман valeуriyovich kovrykov roman valeriiovych [precision: 0.1] [lang: mixed]
+
+239. ковриков роман уvaleriyovich kovrykov roman valeriiovych [precision: 0.1] [lang: mixed]
+
+240. ковриков роман valeriyoviиch kovrykov roman valeriiovych [precision: 0.1] [lang: mixed]
+
+241. ковриков роман valerуiyovich kovrykov roman valeriiovych [precision: 0.1] [lang: mixed]
+
+242. ковриков роман valeriyovichе коврйков roman valeriiovych [precision: 0.1] [lang: mixed]
+
+243. ковриков роман valеeriyovich коврйков roman valeriiovych [precision: 0.1] [lang: mixed]
+
+244. ковриков роман valeиriyovich коврйков roman valeriiovych [precision: 0.1] [lang: mixed]
+
+245. ковриков роман valeriyovicиh коврйков roman valeriiovych [precision: 0.1] [lang: mixed]
+
+246. ковриков роман valeriyoоvich коврйков roman valeriiovych [precision: 0.1] [lang: mixed]
+
+247. ковриков роман valeriyovicоh коврйков roman valeriiovych [precision: 0.1] [lang: mixed]
+
+248. ковриков роман valeriуyovich коврйков roman valeriiovych [precision: 0.1] [lang: mixed]
+
+249. ковриков роман valeriеyovich коврйков roman valeriiovych [precision: 0.1] [lang: mixed]
+
+250. ковриков роман valоeriyovich коврйков roman valeriiovych [precision: 0.1] [lang: mixed]
+
+251. ковриков роман valeriyoviуch kovrykov роман valeriiovych [precision: 0.1] [lang: mixed]
+
+252. ковриков роман valeriyoиvich kovrykov роман valeriiovych [precision: 0.1] [lang: mixed]
+
+253. ковриков роман valаeriyovich kovrykov роман valeriiovych [precision: 0.1] [lang: mixed]
+
+254. ковриков роман иvaleriyovich kovrykov роман valeriiovych [precision: 0.1] [lang: mixed]
+
+255. ковриков роман valeriyиovich kovrykov роман valeriiovych [precision: 0.1] [lang: mixed]
+
+256. ковриков роман valeriyoуvich kovrykov роман valeriiovych [precision: 0.1] [lang: mixed]
+
+257. ковриков роман vaиleriyovich kovrykov роман valeriiovych [precision: 0.1] [lang: mixed]
+
+258. ковриков роман еvaleriyovich kovrykov роман valeriiovych [precision: 0.1] [lang: mixed]
+
+259. ковриков роман valerоiyovich kovrykov роман valeriiovych [precision: 0.1] [lang: mixed]
+
+260. ковриков роман valerоiyovich kovrykov roman валерііовйцх [precision: 0.1] [lang: mixed]
+
+261. ковриков роман valeriyovicаh kovrykov roman валерііовйцх [precision: 0.1] [lang: mixed]
+
+262. ковриков роман valeriyoviиch kovrykov roman валерііовйцх [precision: 0.1] [lang: mixed]
+
+263. ковриков роман vaиleriyovich kovrykov roman валерііовйцх [precision: 0.1] [lang: mixed]
+
+264. ковриков роман valeriyovichу kovrykov roman валерііовйцх [precision: 0.1] [lang: mixed]
+
+265. ковриков роман valeriyoаvich kovrykov roman валерііовйцх [precision: 0.1] [lang: mixed]
+
+266. ковриков роман vаaleriyovich kovrykov roman валерііовйцх [precision: 0.1] [lang: mixed]
+
+267. ковриков роман valeriyаovich kovrykov roman валерііовйцх [precision: 0.1] [lang: mixed]
+
+268. ковриков роман valeriyoviеch kovrykov roman валерііовйцх [precision: 0.1] [lang: mixed]
+
+269. ковриков роман valeriyovicуh kovrykov roman валерііовйцх [precision: 0.1] [lang: mixed]
+
+270. ковриков роман valeriеyovich kovrykov roman валерііовйцх [precision: 0.1] [lang: mixed]
+
+271. ковриков роман valeriyоovich kovrykov roman валерііовйцх [precision: 0.1] [lang: mixed]
+
+272. ковриков роман valerаiyovich kovrykov roman валерііовйцх [precision: 0.1] [lang: mixed]
+
+273. ковриков роман vиaleriyovich kovrykov roman валерііовйцх [precision: 0.1] [lang: mixed]
+
+274. ковриков роман валерійович коврйкову роман валеріаіовйцх [precision: 0.1] [lang: mixed]
+
+275. ковриков роман валерійович коврйкову роман валерііовйецх [precision: 0.1] [lang: mixed]
+
+276. ковриков роман валерійович коврйкову роман ваалерііовйцх [precision: 0.1] [lang: mixed]
+
+277. ковриков роман валерійович коврйкову роман валерііовйцих [precision: 0.1] [lang: mixed]
+
+278. ковриков роман валерійович коврйкову роман валиерііовйцх [precision: 0.1] [lang: mixed]
+
+279. ковриков роман валерійович коврйкову роман валерііовйцхи [precision: 0.1] [lang: mixed]
+
+280. ковриков роман валерійович коврйкову роман валеріоіовйцх [precision: 0.1] [lang: mixed]
+
+281. ковриков роман валерійович коврйкову роман валеруііовйцх [precision: 0.1] [lang: mixed]
+
+282. ковриков роман валерійович коврйкову роман валераііовйцх [precision: 0.1] [lang: mixed]
+
+283. ковриков роман валерійович коврйкову роман валерііовйацх [precision: 0.1] [lang: mixed]
+
+284. ковриков роман валерійович коврйкову роман валерііовийцх [precision: 0.1] [lang: mixed]
+
+285. ковриков роман валерійович коврйкову роман валерііиовйцх [precision: 0.1] [lang: mixed]
+
+286. ковриков роман валерійович коврйкову роман валеарііовйцх [precision: 0.1] [lang: mixed]
+
+287. ковриков роман валерійович коврйкову роман валеріеіовйцх [precision: 0.1] [lang: mixed]
+
+288. ковриковым роман валерійович коврйков роман валераіовйцх [precision: 0.1] [lang: mixed]
+
+289. ковриковым роман валерійович коврйков роман валерііовйцс [precision: 0.1] [lang: mixed]
+
+290. ковриковым роман валерійович коврйков роман втлерііовйцх [precision: 0.1] [lang: mixed]
+
+291. ковриковым роман валерійович коврйков роман валурііовйцх [precision: 0.1] [lang: mixed]
+
+292. ковриковым роман валерійович коврйков роман велерііовйцх [precision: 0.1] [lang: mixed]
+
+293. ковриковым роман валерійович коврйков роман валерііовуцх [precision: 0.1] [lang: mixed]
+
+294. ковриковым роман валерійович коврйков роман валерііовйнх [precision: 0.1] [lang: mixed]
+
+295. ковриковым роман валерійович коврйков роман валееііовйцх [precision: 0.1] [lang: mixed]
+
+296. ковриковым роман валерійович коврйков роман валереіовйцх [precision: 0.1] [lang: mixed]
+
+297. ковриковым роман валерійович коврйков роман валерііовйух [precision: 0.1] [lang: mixed]
+
+298. ковриковым роман валерійович коврйков роман валерііоврцх [precision: 0.1] [lang: mixed]
+
+299. ковриковым роман валерійович коврйков роман валерісовйцх [precision: 0.1] [lang: mixed]
+
+300. ковриковым роман валерійович коврйков роман валериіовйцх [precision: 0.1] [lang: mixed]
+
+301. ковриковым роман валерійович коврйков роман валерііоайцх [precision: 0.1] [lang: mixed]
+
+302. ковриковым роман валерійович коврйков роман волерііовйцх [precision: 0.1] [lang: mixed]
+
+303. ковриковым роман валерійович коврйков роман валеоііовйцх [precision: 0.1] [lang: mixed]
+
+304. ковриковым роман валерійович коврйков роман валирііовйцх [precision: 0.1] [lang: mixed]
+
+305. ковриковым роман валерійович коврйков роман валерііовйах [precision: 0.1] [lang: mixed]
+
+306. ковриковым роман валерійович коврйков роман валерііовацх [precision: 0.1] [lang: mixed]
+
+307. ковриковым роман валерійович коврйков роман ваоерііовйцх [precision: 0.1] [lang: mixed]
+
+308. ковриковым роман валерійович коврйков роман вааерііовйцх [precision: 0.1] [lang: mixed]
+
+309. ковриков роман валерійович коврйкова роман валерііовйцух [precision: 0.1] [lang: mixed]
+
+310. ковриков роман валерійович коврйкова роман валерііовойцх [precision: 0.1] [lang: mixed]
+
+311. ковриков роман валерійович коврйкова роман валерііовйоцх [precision: 0.1] [lang: mixed]
+
+312. ковриков роман валерійович коврйкова роман валеріоіовйцх [precision: 0.1] [lang: mixed]
+
+313. ковриков роман валерійович коврйкова роман валеерііовйцх [precision: 0.1] [lang: mixed]
+
+314. ковриков роман валерійович коврйкова роман валерііоовйцх [precision: 0.1] [lang: mixed]
+
+315. ковриков роман валерійович коврйкова роман валерііеовйцх [precision: 0.1] [lang: mixed]
+
+316. ковриков роман валерійович коврйкова роман валерііовейцх [precision: 0.1] [lang: mixed]
+
+317. ковриков роман валерійович коврйкова роман веалерііовйцх [precision: 0.1] [lang: mixed]
+
+318. ковриков роман валерійович коврйкова роман валерііоавйцх [precision: 0.1] [lang: mixed]
+
+319. коврикову роман валерійович коврйков роман валерііовйцах [precision: 0.1] [lang: mixed]
+
+320. коврикову роман валерійович коврйков роман валероііовйцх [precision: 0.1] [lang: mixed]
+
+321. коврикову роман валерійович коврйков роман валеруііовйцх [precision: 0.1] [lang: mixed]
+
+322. коврикову роман валерійович коврйков роман валеріуіовйцх [precision: 0.1] [lang: mixed]
+
+323. коврикову роман валерійович коврйков роман валаерііовйцх [precision: 0.1] [lang: mixed]
+
+324. коврикову роман валерійович коврйков роман валерііоавйцх [precision: 0.1] [lang: mixed]
+
+325. коврикову роман валерійович коврйков роман валерііовйецх [precision: 0.1] [lang: mixed]
+
+326. коврикову роман валерійович коврйков роман овалерііовйцх [precision: 0.1] [lang: mixed]
+
+327. коврикову роман валерійович коврйков роман валериііовйцх [precision: 0.1] [lang: mixed]
+
+328. коврикову роман валерійович коврйков роман валеріеіовйцх [precision: 0.1] [lang: mixed]
+
+329. коврикову роман валерійович коврйков роман валерііиовйцх [precision: 0.1] [lang: mixed]
+
+330. ковриков роман валерійович коврйковым роман налерііовйцх [precision: 0.1] [lang: mixed]
+
+331. ковриков роман валерійович коврйковым роман валррііовйцх [precision: 0.1] [lang: mixed]
+
+332. ковриков роман валерійович коврйковым роман валерііоейцх [precision: 0.1] [lang: mixed]
+
+333. ковриков роман валерійович коврйковым роман васерііовйцх [precision: 0.1] [lang: mixed]
+
+334. ковриков роман валерійович коврйковым роман ваиерііовйцх [precision: 0.1] [lang: mixed]
+
+335. ковриков роман валерійович коврйковым роман валерііоийцх [precision: 0.1] [lang: mixed]
+
+336. ковриков роман валерійович коврйковым роман вауерііовйцх [precision: 0.1] [lang: mixed]
+
+337. ковриков роман валерійович коврйковым роман ваоерііовйцх [precision: 0.1] [lang: mixed]
+
+338. ковриков роман валерійович коврйковым роман валенііовйцх [precision: 0.1] [lang: mixed]
+
+339. ковриков роман валерійович коврйковым роман валесііовйцх [precision: 0.1] [lang: mixed]
+
+340. ковриков роман валерійович коврйковым роман валерііовсцх [precision: 0.1] [lang: mixed]
+
+341. ковриков роман валерійович коврйковым роман валерііоайцх [precision: 0.1] [lang: mixed]
+
+342. ковриков роман валерійович коврйковым роман валерсіовйцх [precision: 0.1] [lang: mixed]
+
+343. ковриков роман валерійович коврйковым роман валерніовйцх [precision: 0.1] [lang: mixed]
+
+344. ковриков роман валерійович коврйковым роман талерііовйцх [precision: 0.1] [lang: mixed]
+
+345. ковриков роман валерійович коврйковым роман валееііовйцх [precision: 0.1] [lang: mixed]
+
+346. ковриков роман валерійович коврйковым роман валерііовйух [precision: 0.1] [lang: mixed]
+
+347. ковриков роман валерійович коврйковым роман вааерііовйцх [precision: 0.1] [lang: mixed]
+
+348. ковриков роман валерійович коврйковым роман валерііосйцх [precision: 0.1] [lang: mixed]
+
+349. ковриков роман валерійович коврйковым роман валерііовацх [precision: 0.1] [lang: mixed]
+
+350. ковриков роман валерійович коврйковым роман врлерііовйцх [precision: 0.1] [lang: mixed]
+
+351. ковриков роман валерійович коврйковым роман валерріовйцх [precision: 0.1] [lang: mixed]
+
+352. ковриков роман валерійович коврйковым роман ватерііовйцх [precision: 0.1] [lang: mixed]
+
+353. ковриков роман валерійович коврйковым роман валерііовйтх [precision: 0.1] [lang: mixed]
+
+354. ковриков роман валерійович коврйковым роман валерііовйцн [precision: 0.1] [lang: mixed]
+
+355. коврикова роман валерійович коврйков роман валеруііовйцх [precision: 0.1] [lang: mixed]
+
+356. коврикова роман валерійович коврйков роман воалерііовйцх [precision: 0.1] [lang: mixed]
+
+357. коврикова роман валерійович коврйков роман валеурііовйцх [precision: 0.1] [lang: mixed]
+
+358. коврикова роман валерійович коврйков роман валерііоевйцх [precision: 0.1] [lang: mixed]
+
+359. коврикова роман валерійович коврйков роман валеріоіовйцх [precision: 0.1] [lang: mixed]
+
+360. коврикова роман валерійович коврйков роман валерііоувйцх [precision: 0.1] [lang: mixed]
+
+361. коврикова роман валерійович коврйков роман ваелерііовйцх [precision: 0.1] [lang: mixed]
+
+362. коврикова роман валерійович коврйков роман валеріиіовйцх [precision: 0.1] [lang: mixed]
+
+363. коврикова роман валерійович коврйков роман валераііовйцх [precision: 0.1] [lang: mixed]
+
+364. коврикова роман валерійович коврйков роман валерііовойцх [precision: 0.1] [lang: mixed]
+
+365. коврикова роман валерійович коврйков роман ваолерііовйцх [precision: 0.1] [lang: mixed]
+
+366. коврикова роман валерійович коврйков роман валероііовйцх [precision: 0.1] [lang: mixed]
+
+367. коврикове роман валерійович коврйков роман валерііовйцех [precision: 0.1] [lang: mixed]
+
+368. коврикове роман валерійович коврйков роман валероііовйцх [precision: 0.1] [lang: mixed]
+
+369. коврикове роман валерійович коврйков роман валеріиіовйцх [precision: 0.1] [lang: mixed]
+
+370. коврикове роман валерійович коврйков роман валеерііовйцх [precision: 0.1] [lang: mixed]
+
+371. коврикове роман валерійович коврйков роман валерііовйцхо [precision: 0.1] [lang: mixed]
+
+372. коврикове роман валерійович коврйков роман валерііовйцух [precision: 0.1] [lang: mixed]
+
+373. коврикове роман валерійович коврйков роман валерііовйцох [precision: 0.1] [lang: mixed]
+
+374. коврикове роман валерійович коврйков роман валеруііовйцх [precision: 0.1] [lang: mixed]
+
+375. коврикове роман валерійович коврйков роман валеарііовйцх [precision: 0.1] [lang: mixed]
+
+376. коврикове роман валерійович коврйков роман валерііовийцх [precision: 0.1] [lang: mixed]
+
+377. ковриков роман валерійович коврйкове роман валеріуіовйцх [precision: 0.1] [lang: mixed]
+
+378. ковриков роман валерійович коврйкове роман валеирііовйцх [precision: 0.1] [lang: mixed]
+
+379. ковриков роман валерійович коврйкове роман валеріоіовйцх [precision: 0.1] [lang: mixed]
+
+380. ковриков роман валерійович коврйкове роман валерііовйцхе [precision: 0.1] [lang: mixed]
+
+381. ковриков роман валерійович коврйкове роман увалерііовйцх [precision: 0.1] [lang: mixed]
+
+382. ковриков роман валерійович коврйкове роман валеарііовйцх [precision: 0.1] [lang: mixed]
+
+383. ковриков роман валерійович коврйкове роман ваилерііовйцх [precision: 0.1] [lang: mixed]
+
+384. ковриков роман валерійович коврйкове роман веалерііовйцх [precision: 0.1] [lang: mixed]
+
+385. ковриков роман валерійович коврйкове роман валераііовйцх [precision: 0.1] [lang: mixed]
+
+386. ковриков роман валерійович коврйкове роман вуалерііовйцх [precision: 0.1] [lang: mixed]
+
+387. ковриков роман валерійович коврйкове роман ваулерііовйцх [precision: 0.1] [lang: mixed]
+
+388. ковриков роман валерійович коврйкове роман валерііоувйцх [precision: 0.1] [lang: mixed]
+
+389. ковриков роман валерійович коврйкове роман валерііеовйцх [precision: 0.1] [lang: mixed]
+
+390. ковриков roman валерійович kovrykov roman vиaleriiovych [precision: 0.1] [lang: mixed]
+
+
+==================== СТАТИСТИКА ПО ТИРАМ ====================
+Tier 0:    1 паттернов (  0.2%)
+Tier 1:   24 паттернов (  5.3%)
+Tier 2:   12 паттернов (  2.7%)
+Tier 3:  412 паттернов ( 91.8%)
+
+==================== СТАТИСТИКА ПО ТИПАМ ====================
+declension_variant       :    8 паттернов (  1.8%)
+full_name_aggressive     :    4 паттернов (  0.9%)
+itn_code                 :    1 паттернов (  0.2%)
+mixed_language_variant   :   16 паттернов (  3.6%)
+other_variant            :   22 паттернов (  4.9%)
+potential_surname        :    4 паттернов (  0.9%)
+transliteration_variant  :    4 паттернов (  0.9%)
+typo_variant             :  390 паттернов ( 86.9%)

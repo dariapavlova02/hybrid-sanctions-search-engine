@@ -185,7 +185,7 @@ def _get_common_surnames(language: str) -> set:
             "bailey", "reed", "kelly", "howard", "ramos", "kim", "cox", "ward", "richardson",
             "watson", "brooks", "chavez", "wood", "james", "bennett", "gray", "mendoza",
             "ruiz", "hughes", "price", "alvarez", "castillo", "sanders", "patel", "myers",
-            "long", "ross", "foster", "jimenez"
+            "long", "ross", "foster", "jimenez", "connor", "oconnor"
         }
     }
     

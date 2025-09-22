@@ -21,7 +21,7 @@ class TestMixedScriptNames:
     def test_ascii_names_in_ukrainian_context(self, service):
         """Test ASCII names in Ukrainian context are preserved"""
         text = "Владимир и John Smith работают вместе"
-        result = service._normalize_sync(text, language="uk")
+        result = service.normalize_sync(text, language="uk")
         
         # Check that ASCII names are preserved and properly classified
         assert "John" in result.normalized
@@ -41,7 +41,7 @@ class TestMixedScriptNames:
     def test_ascii_names_in_russian_context(self, service):
         """Test ASCII names in Russian context are preserved"""
         text = "Анна Петрова и Mary Johnson работают вместе"
-        result = service._normalize_sync(text, language="ru")
+        result = service.normalize_sync(text, language="ru")
         
         # Check that ASCII names are preserved
         assert "Mary" in result.normalized
@@ -57,7 +57,7 @@ class TestMixedScriptNames:
     def test_ascii_names_with_cyrillic_surnames(self, service):
         """Test ASCII given names with Cyrillic surnames"""
         text = "John Коваленко и Mary Петрова работают вместе"
-        result = service._normalize_sync(text, language="uk")
+        result = service.normalize_sync(text, language="uk")
         
         # Check that all names are preserved
         assert "John" in result.normalized
@@ -79,7 +79,7 @@ class TestMixedScriptNames:
     def test_ascii_names_positional_inference(self, service):
         """Test that ASCII names get proper positional inference"""
         text = "John Smith работает в компании"
-        result = service._normalize_sync(text, language="ru")
+        result = service.normalize_sync(text, language="ru")
         
         # Check that positional inference works for ASCII names
         john_trace = next(t for t in result.trace if t.token == "John")
@@ -95,7 +95,7 @@ class TestMixedScriptNames:
     def test_ascii_names_no_morphology(self, service):
         """Test that ASCII names skip morphology"""
         text = "John Smith работает"
-        result = service._normalize_sync(text, language="uk")
+        result = service.normalize_sync(text, language="uk")
         
         # Check that ASCII names are not morphed
         john_trace = next(t for t in result.trace if t.token == "John")
@@ -112,7 +112,7 @@ class TestMixedScriptNames:
     def test_mixed_script_multiple_persons(self, service):
         """Test multiple persons with mixed scripts"""
         text = "Владимир и John работают вместе"
-        result = service._normalize_sync(text, language="ru")
+        result = service.normalize_sync(text, language="ru")
         
         # Check that both names are preserved
         assert "Владимир" in result.normalized
@@ -128,19 +128,19 @@ class TestMixedScriptNames:
     def test_ascii_names_with_apostrophes(self, service):
         """Test ASCII names with apostrophes in Cyrillic context"""
         text = "Владимир и O'Brien работают вместе"
-        result = service._normalize_sync(text, language="uk")
+        result = service.normalize_sync(text, language="uk")
         
         # Check that apostrophe names are preserved
         assert "O'Brien" in result.normalized
         
         # Check role classification
         obrien_trace = next(t for t in result.trace if t.token == "O'Brien")
-        assert obrien_trace.role == "given"
+        assert obrien_trace.role == "surname"  # O'Brien is an Irish surname
 
     def test_ascii_names_not_demoted_to_unknown(self, service):
         """Test that ASCII names are not demoted to unknown solely by script"""
         text = "John Smith работает"
-        result = service._normalize_sync(text, language="ru")
+        result = service.normalize_sync(text, language="ru")
         
         # Check that no ASCII names are classified as unknown
         ascii_traces = [t for t in result.trace if t.token.isascii() and t.token.isalpha()]

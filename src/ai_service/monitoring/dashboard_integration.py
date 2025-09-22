@@ -274,7 +274,7 @@ class DashboardDataExporter:
         alerts_dashboard.rows.extend([active_alerts_row, sla_row])
         self.dashboards["alerts_sla"] = alerts_dashboard
 
-    def get_dashboard_data(
+    async def get_dashboard_data(
         self,
         dashboard_name: str,
         time_window_seconds: float = 3600.0,

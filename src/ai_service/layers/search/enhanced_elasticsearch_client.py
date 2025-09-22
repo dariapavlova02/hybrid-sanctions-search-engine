@@ -142,8 +142,7 @@ class EnhancedElasticsearchClient:
             timeout=self._timeout(operation_type),
             verify=verify,
             transport=self._transport,
-            # Connection pool settings
-            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
+            # Note: Connection pooling configured at transport level
         )
 
     async def get_client(self, host: Optional[str] = None, operation_type: str = "default") -> httpx.AsyncClient:

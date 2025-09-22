@@ -8,9 +8,23 @@ It uses simple heuristics like capitalization and dictionary lookups.
 import re
 from typing import Any, Dict, List, Set
 
-from ...data.dicts.english_nicknames import ENGLISH_NICKNAMES
-from ...data.dicts.russian_diminutives import RUSSIAN_DIMINUTIVES
-from ...data.dicts.ukrainian_diminutives import UKRAINIAN_DIMINUTIVES
+import json
+from pathlib import Path
+
+# Load data from root data directory
+_data_dir = Path(__file__).parent.parent.parent.parent.parent / "data"
+
+# Load English nicknames
+with open(_data_dir / "lexicons" / "en_nicknames.json", "r", encoding="utf-8") as f:
+    ENGLISH_NICKNAMES = json.load(f)
+
+# Load Russian diminutives
+with open(_data_dir / "diminutives_ru.json", "r", encoding="utf-8") as f:
+    RUSSIAN_DIMINUTIVES = json.load(f)
+
+# Load Ukrainian diminutives  
+with open(_data_dir / "diminutives_uk.json", "r", encoding="utf-8") as f:
+    UKRAINIAN_DIMINUTIVES = json.load(f)
 from ...utils.logging_config import get_logger
 
 

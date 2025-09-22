@@ -6,7 +6,7 @@ High-Recall AC Pattern Generator для санкционного скринин�
 
 import re
 from dataclasses import dataclass
-from typing import Dict, List, Set, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 
 @dataclass
@@ -116,13 +116,9 @@ class HighRecallACGenerator:
             # Паспорта - допуск серии и номера через пробел (AA 123456)
             # Серия может быть кириллицей или латиницей, после нормализации - латиницей
             "passport": [
-                r"\b[a-z]{2}\s*\d{6,8}\b",  # Базовый формат: aa123456 или aa 123456 (нормализованный)
-                r"\b[a-z]{2}\s+\d{6,8}\b",  # С пробелом: aa 123456 (нормализованный)
-                r"\b(?:passport|seriya|series)[:\s]*([a-z]{2}\s*\d{6,8})\b",  # С контекстом (нормализованный)
-                # Дополнительные паттерны для исходного текста (до нормализации)
-                r"\b[A-ZА-Я]{2}\s*\d{6,8}\b",  # Исходный формат: AA123456 или АА123456
-                r"\b[A-ZА-Я]{2}\s+\d{6,8}\b",  # С пробелом: AA 123456 или АА 123456
-                r"\b(?:паспорт|passport|серия|series)[:\s]*([A-ZА-Я]{2}\s*\d{6,8})\b",  # С контекстом (исходный)
+                r"\b(?:passport|pasport|seriya|series)[:\s]*([a-z]{2}\s*\d{6,8})\b",  # С контекстом (нормализованный)
+                r"\b(?:паспорт|passport|pasport|серия|series)[:\s]*([A-ZА-Я]{2}\s*\d{6,8})\b",  # С контекстом (исходный)
+                # Только с контекстом, чтобы избежать ложных срабатываний
             ],
             
             # ИНН РФ - 10 и 12 цифр (после нормализации)
@@ -131,30 +127,30 @@ class HighRecallACGenerator:
                 r"\b(?:inn|identifikacionnyy\s+nomer)[:\s]*(\d{12})\b",  # 12 цифр с контекстом
                 r"\b\d{10}\b(?=.*(?:inn|identifikacionnyy))",  # 10 цифр в контексте ИНН
                 r"\b\d{12}\b(?=.*(?:inn|identifikacionnyy))",  # 12 цифр в контексте ИНН
-                r"\b\d{3}\s*\d{3}\s*\d{3}\s*\d{3}\b",  # Форматированный ИНН 10 цифр
-                r"\b\d{3}\s*\d{3}\s*\d{3}\s*\d{3}\s*\d{2}\b",  # Форматированный ИНН 12 цифр
+                # Убираем паттерны без контекста, чтобы избежать ложных срабатываний
             ],
             
             # ИНН Украина - 10 цифр (после нормализации)
             "inn_ua": [
                 r"\b(?:inn|identifikatsiynyy\s+nomer)[:\s]*(\d{10})\b",  # 10 цифр с контекстом
                 r"\b\d{10}\b(?=.*(?:inn|identifikatsiynyy))",  # 10 цифр в контексте ИНН
-                r"\b\d{3}\s*\d{3}\s*\d{2}\s*\d{2}\b",  # Форматированный ИНН 10 цифр
+                # Убираем паттерны без контекста
             ],
             
             # ЕДРПОУ - 8 цифр (после нормализации)
             "edrpou": [
                 r"\b(?:edrpou|yedynyy\s+derzhavnyy\s+reyestr)[:\s]*(\d{8})\b",  # 8 цифр с контекстом
                 r"\b\d{8}\b(?=.*(?:edrpou|yedynyy))",  # 8 цифр в контексте ЕДРПОУ
-                r"\b\d{2}\s*\d{2}\s*\d{2}\s*\d{2}\b",  # Форматированный ЕДРПОУ
+                # Убираем паттерны без контекста
             ],
             
             # IBAN - допускай пробелы каждые 4 символа (после нормализации)
             "iban": [
-                r"\b(?:iban[:\s]*)?([a-z]{2}\s*\d{2}(?:\s*[a-z0-9]){11,30})\b",  # Базовый IBAN с пробелами
-                r"\b(?:iban[:\s]*)?([a-z]{2}\s*\d{2}\s*[a-z0-9]{4}\s*[a-z0-9]{4}\s*[a-z0-9]{4}\s*[a-z0-9]{4}\s*[a-z0-9]{4}\s*[a-z0-9]{4}\s*[a-z0-9]{4})\b",  # Украинский IBAN с пробелами
+                r"\b(?:iban[:\s]+)([a-z]{2}\s*\d{2}(?:\s*[a-z0-9]){11,30})\b",  # Базовый IBAN с контекстом
+                r"\b(?:iban[:\s]+)([a-z]{2}\s*\d{2}\s*[a-z0-9]{4}\s*[a-z0-9]{4}\s*[a-z0-9]{4}\s*[a-z0-9]{4}\s*[a-z0-9]{4}\s*[a-z0-9]{4}\s*[a-z0-9]{4})\b",  # Украинский IBAN с контекстом
                 r"\bua\d{2}\s*\d{4}\s*\d{4}\s*\d{4}\s*\d{4}\s*\d{4}\s*\d{4}\s*\d{4}\b",  # Украинский IBAN
-                r"\b(?:iban[:\s]*)?([a-z]{2}\d{2}[a-z0-9]{15,32})\b",  # IBAN без пробелов
+                r"\b(?:iban[:\s]+)([a-z]{2}\d{2}[a-z0-9]{15,32})\b",  # IBAN без пробелов с контекстом
+                # IBAN паттерны требуют обязательный контекст "iban"
             ],
             
             # Дополнительные документные паттерны (после нормализации)
@@ -169,7 +165,7 @@ class HighRecallACGenerator:
             ],
             
             "swift_bic": [
-                r"\b(?:swift|bic|swift/bic|mfo)[:\s]*([a-z]{4}[a-z]{2}[a-z0-9]{2}(?:[a-z0-9]{3})?)\b",
+                r"\b(?:swift|bic|swift/bic|mfo)[:\s]+([a-z]{4}[a-z]{2}[a-z0-9]{2}(?:[a-z0-9]{3})?)\b",
             ],
         }
 
@@ -195,7 +191,8 @@ class HighRecallACGenerator:
 
     def normalize_for_ac(self, text: str) -> str:
         """
-        Универсальная нормализация для Aho-Corasick с использованием готового UnicodeService.
+        Нормализация текста для Aho-Corasick
+        Только NFKC, casefold, унификация символов - БЕЗ транслитерации
         
         Args:
             text: Входная строка для нормализации
@@ -206,41 +203,26 @@ class HighRecallACGenerator:
         if not text:
             return ""
         
-        # Используем готовый UnicodeService с агрессивной нормализацией
-        result = self.unicode_service.normalize_text(
-            text, 
-            aggressive=True,  # Агрессивная нормализация
-            normalize_homoglyphs=False  # Не используем встроенную де-гомоглифизацию
-        )
+        # Graceful fallback: если UnicodeService недоступен, используем локальную нормализацию
+        try:
+            if hasattr(self, 'unicode_service') and self.unicode_service:
+                result = self.unicode_service.normalize_text(
+                    text, 
+                    aggressive=True,
+                    normalize_homoglyphs=False
+                )
+                normalized = result["normalized"]
+            else:
+                normalized = text
+        except Exception:
+            normalized = text
         
-        # Применяем casefold для унификации регистра
-        normalized = result["normalized"].casefold()
-        
-        # Дополнительная NFKC нормализация после casefold для акцентов
+        # NFKC нормализация
         import unicodedata
         normalized = unicodedata.normalize('NFKC', normalized)
         
-        # Принудительная де-гомоглифизация кириллицы в латиницу для AC
-        # (AC должен работать с латинскими символами для универсальности)
-        cyrillic_to_latin = {
-            'а': 'a', 'А': 'A', 'б': 'b', 'Б': 'B', 'в': 'v', 'В': 'V',
-            'г': 'g', 'Г': 'G', 'д': 'd', 'Д': 'D', 'е': 'e', 'Е': 'E',
-            'ё': 'e', 'Ё': 'E', 'ж': 'zh', 'Ж': 'ZH', 'з': 'z', 'З': 'Z',
-            'и': 'i', 'И': 'I', 'й': 'y', 'Й': 'Y', 'к': 'k', 'К': 'K',
-            'л': 'l', 'Л': 'L', 'м': 'm', 'М': 'M', 'н': 'n', 'Н': 'N',
-            'о': 'o', 'О': 'O', 'п': 'p', 'П': 'P', 'р': 'r', 'Р': 'R',
-            'с': 's', 'С': 'S', 'т': 't', 'Т': 'T', 'у': 'u', 'У': 'U',
-            'ф': 'f', 'Ф': 'F', 'х': 'h', 'Х': 'H', 'ц': 'ts', 'Ц': 'TS',
-            'ч': 'ch', 'Ч': 'CH', 'ш': 'sh', 'Ш': 'SH', 'щ': 'sch', 'Щ': 'SCH',
-            'ъ': '', 'Ъ': '', 'ы': 'y', 'Ы': 'Y', 'ь': '', 'Ь': '',
-            'э': 'e', 'Э': 'E', 'ю': 'u', 'Ю': 'U', 'я': 'ya', 'Я': 'YA',
-            # Украинские символы
-            'і': 'i', 'І': 'I', 'ї': 'i', 'Ї': 'I', 'є': 'e', 'Є': 'E',
-            'ґ': 'g', 'Ґ': 'G',
-        }
-        
-        for cyrillic, latin in cyrillic_to_latin.items():
-            normalized = normalized.replace(cyrillic, latin)
+        # Casefold для унификации регистра
+        normalized = normalized.casefold()
         
         # Дополнительная нормализация для AC
         # Заменяем двойные кавычки на одинарные для унификации
@@ -259,6 +241,293 @@ class HighRecallACGenerator:
         
         return normalized
 
+    def generate_high_recall_patterns_from_sanctions_data(self, sanctions_record: Dict[str, Any]) -> List[RecallOptimizedPattern]:
+        """Генерация паттернов из данных санкций с использованием всех доступных вариантов имен"""
+        patterns = []
+        
+        # TIER 0: Автоматическое извлечение документов и кодов
+        tier_0_patterns = self._extract_document_codes_from_sanctions(sanctions_record)
+        patterns.extend(tier_0_patterns)
+        
+        # Извлекаем все доступные варианты имен
+        name_variants = []
+        
+        # Основное имя
+        if sanctions_record.get("name"):
+            name_variants.append(sanctions_record["name"])
+        
+        # Русская версия
+        if sanctions_record.get("name_ru"):
+            name_variants.append(sanctions_record["name_ru"])
+        
+        # Английская версия
+        if sanctions_record.get("name_en"):
+            name_variants.append(sanctions_record["name_en"])
+        
+        # Убираем дубликаты и пустые значения
+        name_variants = list(set([name for name in name_variants if name and name.strip()]))
+        
+        if not name_variants:
+            return patterns
+        
+        # Генерируем паттерны для каждого варианта имени
+        for name_variant in name_variants:
+            # Определяем язык для каждого варианта
+            variant_language = self._detect_language_for_variant(name_variant)
+            
+            # Генерируем паттерны для этого варианта
+            variant_patterns = self.generate_high_recall_patterns(name_variant, variant_language)
+            patterns.extend(variant_patterns)
+        
+        # Генерируем смешанные варианты, если есть разные языки
+        if len(name_variants) > 1:
+            mixed_patterns = self._generate_mixed_sanctions_variants(name_variants)
+            patterns.extend(mixed_patterns)
+        
+        # Генерируем дополнительные сокращенные варианты для каждого имени
+        for name_variant in name_variants:
+            variant_language = self._detect_language_for_variant(name_variant)
+            
+            # Генерируем сокращенные варианты
+            shortened_variants = self._generate_shortened_variants(name_variant, variant_language)
+            for variant in shortened_variants:
+                patterns.append(RecallOptimizedPattern(
+                    pattern=variant,
+                    pattern_type="shortened_variant",
+                    recall_tier=2,
+                    precision_hint=0.4,
+                    variants=[],
+                    language=variant_language
+                ))
+            
+                # Генерируем правильные транслитерации
+                if variant_language in ["ru", "uk"]:
+                    latin_translit = self._transliterate_to_latin(name_variant)
+                    if latin_translit != name_variant:
+                        patterns.append(RecallOptimizedPattern(
+                            pattern=latin_translit,
+                            pattern_type="transliteration_variant",
+                            recall_tier=2,
+                            precision_hint=0.5,
+                            variants=[],
+                            language="en"
+                        ))
+                
+                # Генерируем дополнительные варианты для каждого имени
+                name_parts = self._extract_name_components(name_variant, variant_language)
+                if len(name_parts) >= 2:
+                    surname = name_parts[0] if name_parts else ""
+                    first_name = name_parts[1] if len(name_parts) > 1 else ""
+                    patronymic = name_parts[2] if len(name_parts) > 2 else ""
+                    
+                    if surname and first_name:
+                        # Генерируем перестановки для Tier 1
+                        permutations = self._generate_name_permutations(surname, first_name, patronymic, variant_language)
+                        for variant in permutations:
+                            patterns.append(RecallOptimizedPattern(
+                                pattern=variant,
+                                pattern_type="name_permutation",
+                                recall_tier=1,
+                                precision_hint=0.8,
+                                variants=[],
+                                language=variant_language
+                            ))
+                        
+                        # Генерируем полные ФИО с альтернативными патронимами
+                        if patronymic:
+                            full_name_variants = self._generate_full_name_with_alternative_patronymics(surname, first_name, patronymic, variant_language)
+                            for variant in full_name_variants:
+                                patterns.append(RecallOptimizedPattern(
+                                    pattern=variant,
+                                    pattern_type="full_name_with_alternative_patronymic",
+                                    recall_tier=1,
+                                    precision_hint=0.8,
+                                    variants=[],
+                                    language=variant_language
+                                ))
+                        
+                        # Генерируем инициалы во всех позициях для Tier 2
+                        initials_variants = self._generate_initials_everywhere(surname, first_name, patronymic, variant_language)
+                        for variant in initials_variants:
+                            patterns.append(RecallOptimizedPattern(
+                                pattern=variant,
+                                pattern_type="initials_everywhere",
+                                recall_tier=2,
+                                precision_hint=0.6,
+                                variants=[],
+                                language=variant_language
+                            ))
+                        
+                        # Генерируем контролируемые транслитерации для Tier 2
+                        for part in [surname, first_name, patronymic]:
+                            if part:
+                                controlled_translits = self._generate_controlled_transliterations(part, variant_language)
+                                for variant in controlled_translits:
+                                    patterns.append(RecallOptimizedPattern(
+                                        pattern=variant,
+                                        pattern_type="controlled_transliteration",
+                                        recall_tier=2,
+                                        precision_hint=0.7,
+                                        variants=[],
+                                        language=variant_language
+                                    ))
+                        
+                        # Генерируем нормативные варианты патронима для Tier 2
+                        if patronymic:
+                            patronymic_variants = self._map_patronymic_variants(patronymic, variant_language)
+                            for variant in patronymic_variants:
+                                patterns.append(RecallOptimizedPattern(
+                                    pattern=variant,
+                                    pattern_type="patronymic_variant",
+                                    recall_tier=2,
+                                    precision_hint=0.6,
+                                    variants=[],
+                                    language=variant_language
+                                ))
+                        
+                        # Генерируем женские формы фамилии (только в контролируемых случаях)
+                        if self._should_generate_feminine_surname(first_name, patronymic):
+                            feminine_variants = self._generate_feminine_surname_variants(surname, variant_language)
+                            for variant in feminine_variants:
+                                patterns.append(RecallOptimizedPattern(
+                                    pattern=variant,
+                                    pattern_type="feminine_surname",
+                                    recall_tier=2,
+                                    precision_hint=0.5,
+                                    variants=[],
+                                    language=variant_language
+                                ))
+        
+        # Очистка и дедупликация перед возвратом
+        sanitized_patterns = self._post_export_sanitizer(patterns)
+        
+        return sanitized_patterns
+
+    def _extract_document_codes_from_sanctions(self, sanctions_record: Dict[str, Any]) -> List[RecallOptimizedPattern]:
+        """Извлекает документы и коды из данных санкций для Tier 0"""
+        patterns = []
+        
+        # ИНН (Идентификационный налоговый номер) - для физических лиц
+        if sanctions_record.get("itn"):
+            itn = str(sanctions_record["itn"]).strip()
+            if itn and itn != "null":
+                patterns.append(RecallOptimizedPattern(
+                    pattern=itn,
+                    pattern_type="itn_code",
+                    recall_tier=0,
+                    precision_hint=1.0,
+                    variants=[],
+                    language="unknown"
+                ))
+        
+        # ИНН для импорта
+        if sanctions_record.get("itn_import"):
+            itn_import = str(sanctions_record["itn_import"]).strip()
+            if itn_import and itn_import != "null" and itn_import != sanctions_record.get("itn", ""):
+                patterns.append(RecallOptimizedPattern(
+                    pattern=itn_import,
+                    pattern_type="itn_import_code",
+                    recall_tier=0,
+                    precision_hint=1.0,
+                    variants=[],
+                    language="unknown"
+                ))
+        
+        # Налоговый номер - для компаний
+        if sanctions_record.get("tax_number"):
+            tax_number = str(sanctions_record["tax_number"]).strip()
+            if tax_number and tax_number != "null":
+                patterns.append(RecallOptimizedPattern(
+                    pattern=tax_number,
+                    pattern_type="tax_number",
+                    recall_tier=0,
+                    precision_hint=1.0,
+                    variants=[],
+                    language="unknown"
+                ))
+        
+        # Регистрационный номер - для компаний
+        if sanctions_record.get("reg_number"):
+            reg_number = str(sanctions_record["reg_number"]).strip()
+            if reg_number and reg_number != "null":
+                patterns.append(RecallOptimizedPattern(
+                    pattern=reg_number,
+                    pattern_type="reg_number",
+                    recall_tier=0,
+                    precision_hint=1.0,
+                    variants=[],
+                    language="unknown"
+                ))
+        
+        # ЕДРПОУ (Единый государственный реестр предприятий и организаций Украины)
+        # Обычно это 8-значный код, но может быть и в других полях
+        for field_name in ["edrpou", "edrpou_code", "registration_number"]:
+            if sanctions_record.get(field_name):
+                edrpou = str(sanctions_record[field_name]).strip()
+                if edrpou and edrpou != "null":
+                    patterns.append(RecallOptimizedPattern(
+                        pattern=edrpou,
+                        pattern_type="edrpou_code",
+                        recall_tier=0,
+                        precision_hint=1.0,
+                        variants=[],
+                        language="unknown"
+                    ))
+        
+        # Другие возможные коды
+        for field_name in ["passport", "passport_number", "id_number", "document_number"]:
+            if sanctions_record.get(field_name):
+                doc_number = str(sanctions_record[field_name]).strip()
+                if doc_number and doc_number != "null":
+                    patterns.append(RecallOptimizedPattern(
+                        pattern=doc_number,
+                        pattern_type="document_code",
+                        recall_tier=0,
+                        precision_hint=1.0,
+                        variants=[],
+                        language="unknown"
+                    ))
+        
+        return patterns
+
+    def _detect_language_for_variant(self, text: str) -> str:
+        """Определяет язык для варианта имени"""
+        if not text:
+            return "unknown"
+        
+        # Простая эвристика определения языка
+        has_cyrillic = any('\u0400' <= char <= '\u04FF' for char in text)
+        has_latin = any('a' <= char.lower() <= 'z' for char in text)
+        
+        if has_cyrillic and has_latin:
+            return "mixed"
+        elif has_cyrillic:
+            return "ru"
+        elif has_latin:
+            return "en"
+        else:
+            return "unknown"
+
+    def _generate_mixed_sanctions_variants(self, name_variants: List[str]) -> List[RecallOptimizedPattern]:
+        """Генерирует смешанные варианты из разных языковых версий имен"""
+        patterns = []
+        
+        # Находим кириллические и латинские варианты
+        cyrillic_variants = [name for name in name_variants if any('\u0400' <= char <= '\u04FF' for char in name)]
+        latin_variants = [name for name in name_variants if any('a' <= char.lower() <= 'z' for char in name) and not any('\u0400' <= char <= '\u04FF' for char in name)]
+        
+        # Генерируем комбинации кириллических и латинских имен
+        for cyr_name in cyrillic_variants:
+            for lat_name in latin_variants:
+                # Создаем смешанный вариант
+                mixed_variant = f"{cyr_name} {lat_name}"
+                
+                # Генерируем паттерны для смешанного варианта
+                mixed_patterns = self.generate_high_recall_patterns(mixed_variant, "mixed")
+                patterns.extend(mixed_patterns)
+        
+        return patterns
+
     def generate_high_recall_patterns(
         self, text: str, language: str = "auto", entity_metadata: Dict = None
     ) -> List[RecallOptimizedPattern]:
@@ -276,28 +545,319 @@ class HighRecallACGenerator:
         patterns = []
         entity_metadata = entity_metadata or {}
 
-        # TIER 0: Exact documents (100% automatic hit)
-        patterns.extend(self._extract_documents_comprehensive(normalized_text))
+        # TIER 0: Exact documents (100% automatic hit) - паспорта, ИНН, IBAN и др.
+        tier_0_patterns = self._extract_documents_comprehensive(normalized_text)
+        for pattern in tier_0_patterns:
+            pattern.recall_tier = 0
+        patterns.extend(tier_0_patterns)
 
-        # TIER 1: High Recall - all names and companies
-        patterns.extend(self._extract_all_names_aggressive(normalized_text, language))
-        patterns.extend(self._extract_all_companies_aggressive(normalized_text, language))
+        # TIER 1: High Recall - полные ФИО и названия компаний
+        tier_1_patterns = []
+        tier_1_patterns.extend(self._extract_all_names_aggressive(normalized_text, language))
+        tier_1_patterns.extend(self._extract_all_companies_aggressive(normalized_text, language))
+        
+        # Обработка смешанного режима для Tier 1
+        if language == "mixed":
+            # Генерируем паттерны для кириллических языков
+            tier_1_patterns.extend(self._extract_all_names_aggressive(normalized_text, "ru"))
+            tier_1_patterns.extend(self._extract_all_companies_aggressive(normalized_text, "ru"))
+            
+            # Генерируем паттерны для английского языка
+            tier_1_patterns.extend(self._extract_all_names_aggressive(normalized_text, "en"))
+            tier_1_patterns.extend(self._extract_all_companies_aggressive(normalized_text, "en"))
+            
+            # Генерируем смешанные варианты (кириллица + латиница)
+            mixed_variants = self._generate_mixed_language_variants(normalized_text)
+            for variant in mixed_variants:
+                tier_1_patterns.append(RecallOptimizedPattern(
+                    pattern=variant,
+                    pattern_type="mixed_language_variant",
+                    recall_tier=1,
+                    precision_hint=0.6,
+                    variants=[],
+                    language=language
+                ))
+        
+        for pattern in tier_1_patterns:
+            pattern.recall_tier = 1
+        patterns.extend(tier_1_patterns)
 
-        # TIER 2: Medium Recall - name parts, initials, abbreviations
-        patterns.extend(self._extract_name_parts_and_initials(normalized_text, language))
+        # TIER 2: Medium Recall - склонения, диминутивы, транслитерации, варианты написаний
+        tier_2_patterns = []
+        
+        # Генерируем склонения и диминутивы для всех имен из Tier 1
+        for tier_1_pattern in tier_1_patterns:
+            if tier_1_pattern.pattern_type in ["full_name_aggressive", "company_aggressive"]:
+                # Генерируем склонения
+                declension_variants = self._generate_declension_variants(tier_1_pattern.pattern, language)
+                for variant in declension_variants:
+                    tier_2_patterns.append(RecallOptimizedPattern(
+                        pattern=variant,
+                        pattern_type="declension_variant",
+                        recall_tier=2,
+                        precision_hint=0.3,
+                        variants=[],
+                        language=language
+                    ))
+                
+                # Генерируем диминутивы
+                diminutive_variants = self._generate_diminutive_variants(tier_1_pattern.pattern, language)
+                for variant in diminutive_variants:
+                    tier_2_patterns.append(RecallOptimizedPattern(
+                        pattern=variant,
+                        pattern_type="diminutive_variant",
+                        recall_tier=2,
+                        precision_hint=0.4,
+                        variants=[],
+                        language=language
+                    ))
+                
+                # Генерируем транслитерации
+                translit_variants = self._generate_transliteration_variants(tier_1_pattern.pattern, language)
+                for variant in translit_variants:
+                    tier_2_patterns.append(RecallOptimizedPattern(
+                        pattern=variant,
+                        pattern_type="transliteration_variant",
+                        recall_tier=2,
+                        precision_hint=0.5,
+                        variants=[],
+                        language=language
+                    ))
+        
+        # Добавляем части имен как отдельные паттерны Tier 2
+        name_parts = self._extract_name_parts_and_initials(normalized_text, language)
+        for pattern in name_parts:
+            pattern.recall_tier = 2
+        tier_2_patterns.extend(name_parts)
+        
+        # Для смешанного режима генерируем склонения для полных имен
+        if language == "mixed":
+            # Генерируем склонения для полного имени на кириллице
+            cyrillic_name = self._transliterate_to_cyrillic(normalized_text)
+            if cyrillic_name != normalized_text:  # Если есть кириллические символы
+                declension_variants = self._generate_declension_variants(cyrillic_name, "ru")
+                for variant in declension_variants:
+                    tier_2_patterns.append(RecallOptimizedPattern(
+                        pattern=variant,
+                        pattern_type="declension_variant",
+                        recall_tier=2,
+                        precision_hint=0.3,
+                        variants=[],
+                        language=language
+                    ))
 
-        # TIER 3: Broad Recall - suspicious sequences
-        patterns.extend(self._extract_suspicious_sequences(normalized_text, language))
+            # Генерируем склонения для полного имени на латинице
+            latin_name = self._transliterate_to_latin(normalized_text)
+            if latin_name != normalized_text:  # Если есть латинские символы
+                declension_variants = self._generate_declension_variants(latin_name, "en")
+                for variant in declension_variants:
+                    tier_2_patterns.append(RecallOptimizedPattern(
+                        pattern=variant,
+                        pattern_type="declension_variant",
+                        recall_tier=2,
+                        precision_hint=0.3,
+                        variants=[],
+                        language=language
+                    ))
 
-        # Generate automatic variants for all patterns
-        patterns_with_variants = self._generate_comprehensive_variants(
-            patterns, language
-        )
+            # Генерируем диминутивы для полного имени на кириллице
+            if cyrillic_name != normalized_text:
+                diminutive_variants = self._generate_diminutive_variants(cyrillic_name, "ru")
+                for variant in diminutive_variants:
+                    tier_2_patterns.append(RecallOptimizedPattern(
+                        pattern=variant,
+                        pattern_type="diminutive_variant",
+                        recall_tier=2,
+                        precision_hint=0.4,
+                        variants=[],
+                        language=language
+                    ))
+
+            # Генерируем диминутивы для полного имени на латинице
+            if latin_name != normalized_text:
+                diminutive_variants = self._generate_diminutive_variants(latin_name, "en")
+                for variant in diminutive_variants:
+                    tier_2_patterns.append(RecallOptimizedPattern(
+                        pattern=variant,
+                        pattern_type="diminutive_variant",
+                        recall_tier=2,
+                        precision_hint=0.4,
+                        variants=[],
+                        language=language
+                    ))
+        
+        patterns.extend(tier_2_patterns)
+
+        # TIER 3: Broad Recall - опечатки, другие возможные варианты
+        tier_3_patterns = []
+        
+        # Генерируем опечатки для всех паттернов из Tier 1 и Tier 2
+        all_base_patterns = tier_1_patterns + tier_2_patterns
+        for base_pattern in all_base_patterns:
+            typo_variants = self._generate_typo_variants(base_pattern.pattern, language)
+            for variant in typo_variants:
+                tier_3_patterns.append(RecallOptimizedPattern(
+                    pattern=variant,
+                    pattern_type="typo_variant",
+                    recall_tier=3,
+                    precision_hint=0.1,
+                    variants=[],
+                    language=language
+                ))
+        
+        # Генерируем сокращенные варианты для Tier 2
+        shortened_variants = self._generate_shortened_variants(normalized_text, language)
+        for variant in shortened_variants:
+            tier_2_patterns.append(RecallOptimizedPattern(
+                pattern=variant,
+                pattern_type="shortened_variant",
+                recall_tier=2,
+                precision_hint=0.4,
+                variants=[],
+                language=language
+            ))
+
+        # Генерируем перестановки имен для Tier 1
+        name_parts = self._extract_name_components(normalized_text, language)
+        if len(name_parts) >= 2:
+            surname = name_parts[0] if name_parts else ""
+            first_name = name_parts[1] if len(name_parts) > 1 else ""
+            patronymic = name_parts[2] if len(name_parts) > 2 else ""
+            
+            if surname and first_name:
+                # Генерируем перестановки
+                permutations = self._generate_name_permutations(surname, first_name, patronymic, language)
+                for variant in permutations:
+                    tier_1_patterns.append(RecallOptimizedPattern(
+                        pattern=variant,
+                        pattern_type="name_permutation",
+                        recall_tier=1,
+                        precision_hint=0.8,
+                        variants=[],
+                        language=language
+                    ))
+                
+                # Генерируем полные ФИО с альтернативными патронимами
+                if patronymic:
+                    full_name_variants = self._generate_full_name_with_alternative_patronymics(surname, first_name, patronymic, language)
+                    for variant in full_name_variants:
+                        tier_1_patterns.append(RecallOptimizedPattern(
+                            pattern=variant,
+                            pattern_type="full_name_with_alternative_patronymic",
+                            recall_tier=1,
+                            precision_hint=0.8,
+                            variants=[],
+                            language=language
+                        ))
+                
+                # Генерируем инициалы во всех позициях для Tier 2
+                initials_variants = self._generate_initials_everywhere(surname, first_name, patronymic, language)
+                for variant in initials_variants:
+                    tier_2_patterns.append(RecallOptimizedPattern(
+                        pattern=variant,
+                        pattern_type="initials_everywhere",
+                        recall_tier=2,
+                        precision_hint=0.6,
+                        variants=[],
+                        language=language
+                    ))
+                
+                # Генерируем контролируемые транслитерации для Tier 2
+                for part in [surname, first_name, patronymic]:
+                    if part:
+                        controlled_translits = self._generate_controlled_transliterations(part, language)
+                        for variant in controlled_translits:
+                            tier_2_patterns.append(RecallOptimizedPattern(
+                                pattern=variant,
+                                pattern_type="controlled_transliteration",
+                                recall_tier=2,
+                                precision_hint=0.7,
+                                variants=[],
+                                language=language
+                            ))
+                
+                # Генерируем нормативные варианты патронима для Tier 2
+                if patronymic:
+                    patronymic_variants = self._map_patronymic_variants(patronymic, language)
+                    for variant in patronymic_variants:
+                        tier_2_patterns.append(RecallOptimizedPattern(
+                            pattern=variant,
+                            pattern_type="patronymic_variant",
+                            recall_tier=2,
+                            precision_hint=0.6,
+                            variants=[],
+                            language=language
+                        ))
+                
+                        # Генерируем женские формы фамилии (только в контролируемых случаях)
+                        if self._should_generate_feminine_surname(first_name, patronymic):
+                            feminine_variants = self._generate_feminine_surname_variants(surname, language)
+                            for variant in feminine_variants:
+                                tier_2_patterns.append(RecallOptimizedPattern(
+                                    pattern=variant,
+                                    pattern_type="feminine_surname",
+                                    recall_tier=2,
+                                    precision_hint=0.5,
+                                    variants=[],
+                                    language=language
+                                ))
+                        
+                        # Генерируем диминутивные варианты для Tier 2
+                        diminutive_variants = self._generate_diminutive_combinations(surname, first_name, language)
+                        for variant in diminutive_variants:
+                            tier_2_patterns.append(RecallOptimizedPattern(
+                                pattern=variant,
+                                pattern_type="diminutive_variant",
+                                recall_tier=2,
+                                precision_hint=0.6,
+                                variants=[],
+                                language=language
+                            ))
+        
+        # Генерируем другие возможные варианты
+        other_variants = self._generate_other_variants(normalized_text, language)
+        for variant in other_variants:
+            tier_3_patterns.append(RecallOptimizedPattern(
+                pattern=variant,
+                pattern_type="other_variant",
+                recall_tier=3,
+                precision_hint=0.1,
+                variants=[],
+                language=language
+            ))
+        
+        patterns.extend(tier_3_patterns)
+
+        # Все паттерны уже имеют правильные recall_tier, не нужно дополнительной обработки
+        patterns_with_variants = patterns
 
         # Final processing: remove only absolutely impossible ones
-        filtered_patterns = self._minimal_filtering(patterns_with_variants, language)
+        # Для смешанного режима используем "ru" как базовый для фильтрации
+        filter_language = "ru" if language == "mixed" else language
+        filtered_patterns = self._minimal_filtering(patterns_with_variants, filter_language)
 
-        return filtered_patterns
+        # Глобальный лимит для T3 - максимум 200 паттернов
+        tier_3_patterns = [p for p in filtered_patterns if p.recall_tier == 3]
+        if len(tier_3_patterns) > 200:
+            # Оставляем только первые 200 T3 паттернов
+            other_patterns = [p for p in filtered_patterns if p.recall_tier != 3]
+            tier_3_patterns = tier_3_patterns[:200]
+            filtered_patterns = other_patterns + tier_3_patterns
+
+        # Очистка и дедупликация перед возвратом
+        sanitized_patterns = self._post_export_sanitizer(filtered_patterns)
+
+        return sanitized_patterns
+
+    def _extract_name_components(self, text: str, language: str) -> List[str]:
+        """Извлекает компоненты имени (фамилия, имя, отчество) как список строк"""
+        # Простое разделение по пробелам для извлечения компонентов
+        parts = text.split()
+        
+        # Фильтруем слишком короткие части
+        filtered_parts = [part for part in parts if len(part) >= 2]
+        
+        return filtered_parts
 
     def _extract_documents_comprehensive(
         self, text: str
@@ -481,11 +1041,28 @@ class HighRecallACGenerator:
         # После нормализации все тексты в нижнем регистре и латинице
         # Универсальные паттерны для нормализованного текста
         initial_patterns = [
+            # Частичные имена с инициалами - Tier 2 (приоритетные, проверяются первыми)
+            r"\b[a-z\']{3,}\s+[a-z\']{2,}\.\s+[a-z]\.\b",  # surname name. i. (Порошенко Петр. О.)
+            r"\b[a-z\']{3,}\s+[a-z]\.\s+[a-z\']{2,}\.\b",  # surname i. name. (Порошенко П. Олекс.)
+            r"\b[a-z\']{3,}\s+[a-z]\.\s+[a-z]\.\b",  # surname i.i. (Порошенко П. О.)
+            r"\b[a-z\']{3,}\s+[a-z\']{2,}\.\s+[a-z\']{2,}\.\b",  # surname name. name. (Порошенко Петр. Олекс.)
+            
+            # Сокращенные имена
+            r"\b[a-z\']{3,}\s+[a-z]{1,3}\.\s+[a-z]\.\b",  # surname abbr. i. (Порошенко Пет. О.)
+            r"\b[a-z\']{3,}\s+[a-z]\.\s+[a-z]{1,3}\.\b",  # surname i. abbr. (Порошенко П. Олекс.)
+            
+            # Полные инициалы
             r"\b[a-z]\.\s*[a-z]\.\s*[a-z\']{2,}\b",  # i.i.surname
             r"\b[a-z\']{2,}\s+[a-z]\.\s*[a-z]\.\b",  # surname i.i.
             r"\b[a-z]\.\s*[a-z]\.\b",  # i.i.
             r"\b[a-z]\s+[a-z]\b",  # i i (без точек)
-            r"\b[a-z]{2,}\b",  # ii (слитно)
+            
+            # Специальные паттерны для сокращенных имен
+            r"\b[a-z\']{3,}\s+[a-z]\.\s+[a-z\']{1,3}\.\b",  # surname i. abbr. (Ковриков Р. Вал.)
+            r"\b[a-z\']{3,}\s+[a-z\']{1,3}\.\s+[a-z]\.\b",  # surname abbr. i. (Ковриков Вал. Р.)
+            r"\b[a-z\']{3,}\s+[a-z]\.\s+[a-z]\.\b",  # surname i. i. (Ковриков Р. В.)
+            
+            # Убрано: одиночные слова не должны классифицироваться как инициалы
         ]
 
         for pattern_str in initial_patterns:
@@ -504,29 +1081,1067 @@ class HighRecallACGenerator:
 
         return patterns
 
+    def _generate_declension_variants(self, name: str, language: str) -> List[str]:
+        """Генерация склонений для полного имени с консистентностью скриптов"""
+        variants = []
+        
+        if language in ["ru", "uk"]:
+            # Для кириллических языков - генерируем склонения
+            parts = name.split()
+            if len(parts) >= 2:
+                # Генерируем склонения для каждой части отдельно
+                for i, part in enumerate(parts):
+                    part_variants = self._generate_single_word_declensions(part)
+                    for variant in part_variants:
+                        new_parts = parts.copy()
+                        new_parts[i] = variant
+                        variants.append(" ".join(new_parts))
+            else:
+                # Для однословных имен генерируем склонения напрямую
+                variants.extend(self._generate_single_word_declensions(name))
+        
+        elif language == "mixed":
+            # Для смешанных языков - разделяем по скриптам
+            parts = name.split()
+            if len(parts) >= 2:
+                # Генерируем склонения только для кириллических частей
+                for i, part in enumerate(parts):
+                    if self._is_cyrillic(part):
+                        part_variants = self._generate_single_word_declensions(part)
+                        for variant in part_variants:
+                            new_parts = parts.copy()
+                            new_parts[i] = variant
+                            variants.append(" ".join(new_parts))
+        
+        # Для английского языка склонения не генерируем
+        
+        return list(set(variants))  # Убираем дубликаты
+    
+    def _is_cyrillic(self, text: str) -> bool:
+        """Проверяет, содержит ли текст кириллические символы"""
+        return any('\u0400' <= char <= '\u04FF' for char in text)
+    
+    def _generate_single_word_declensions(self, word: str) -> List[str]:
+        """Генерация склонений для одного слова"""
+        variants = []
+        
+        # Родительный падеж
+        if word.endswith("а"):
+            variants.append(word[:-1] + "ы")
+            variants.append(word[:-1] + "и")
+        elif word.endswith("о"):
+            variants.append(word[:-1] + "а")
+        elif word.endswith("ий"):
+            variants.append(word[:-2] + "ого")
+        elif word.endswith("ов") or word.endswith("ев"):
+            variants.append(word + "а")
+        elif word.endswith("р"):  # Петр -> Петра
+            variants.append(word + "а")
+        
+        # Дательный падеж
+        if word.endswith("а"):
+            variants.append(word[:-1] + "е")
+            variants.append(word[:-1] + "і")
+        elif word.endswith("о"):
+            variants.append(word[:-1] + "у")
+        elif word.endswith("ий"):
+            variants.append(word[:-2] + "ому")
+        elif word.endswith("ов") or word.endswith("ев"):
+            variants.append(word + "у")
+        elif word.endswith("р"):  # Петр -> Петру
+            variants.append(word + "у")
+        
+        # Творительный падеж
+        if word.endswith("а"):
+            variants.append(word[:-1] + "ой")
+            variants.append(word[:-1] + "ою")
+        elif word.endswith("о"):
+            variants.append(word[:-1] + "ом")
+        elif word.endswith("ий"):
+            variants.append(word[:-2] + "им")
+        elif word.endswith("ов") or word.endswith("ев"):
+            variants.append(word + "ым")
+        elif word.endswith("р"):  # Петр -> Петром
+            variants.append(word + "ом")
+        
+        # Предложный падеж
+        if word.endswith("а"):
+            variants.append(word[:-1] + "е")
+            variants.append(word[:-1] + "і")
+        elif word.endswith("о"):
+            variants.append(word[:-1] + "е")
+        elif word.endswith("ий"):
+            variants.append(word[:-2] + "ом")
+        elif word.endswith("ов") or word.endswith("ев"):
+            variants.append(word + "е")
+        elif word.endswith("р"):  # Петр -> Петре
+            variants.append(word + "е")
+        
+        return variants
+
+    def _generate_diminutive_variants(self, name: str, language: str) -> List[str]:
+        """Генерация диминутивов для имен с правильными комбинациями фамилия+диминутив"""
+        variants = []
+
+        # Разбиваем имя на части
+        parts = name.split()
+        if len(parts) < 2:
+            return variants
+
+        # Определяем фамилию и имя (предполагаем порядок Фамилия Имя Отчество)
+        surname = parts[0]
+        first_name = parts[1] if len(parts) > 1 else ""
+
+        if not first_name:
+            return variants
+
+        # Загружаем словари диминутивов для украинского и русского
+        diminutives_variants = []
+
+        for lang in ["uk", "ru"]:
+            try:
+                if lang not in self._diminutives_cache:
+                    self._load_diminutives_dictionary(lang)
+
+                diminutives_dict = self._diminutives_cache.get(lang, {})
+
+                # Ищем диминутивы для имени (в кириллице)
+                first_name_lower = first_name.lower()
+                if first_name_lower in diminutives_dict:
+                    canonical_name = diminutives_dict[first_name_lower]
+                    # Находим все диминутивы для этого имени
+                    for dim, full in diminutives_dict.items():
+                        if full == canonical_name and dim != first_name_lower:
+                            diminutives_variants.append(dim.title())
+
+            except Exception:
+                continue
+
+        # Создаём правильные комбинации согласно требованиям
+        clean_diminutives = []
+
+        # Только чистые кириллические диминутивы с кириллической фамилией
+        if self._is_cyrillic_text(surname):
+            for dim in diminutives_variants:
+                if self._is_cyrillic_text(dim):
+                    # RU варианты
+                    clean_diminutives.extend([
+                        f"{dim} {surname}",        # Рома Ковриков
+                        f"{surname} {dim}",        # Ковриков Рома
+                        f"{surname}, {dim}",       # Ковриков, Рома
+                    ])
+
+        # Только чистые латинские диминутивы с латинской фамилией
+        elif self._is_latin_text(surname):
+            # Транслитерируем диминутивы в латиницу
+            for dim in diminutives_variants:
+                if self._is_cyrillic_text(dim):
+                    translit_dim = self._transliterate_to_latin(dim)
+                    translit_surname = surname  # уже латиница
+                    # EN варианты
+                    clean_diminutives.extend([
+                        f"{translit_dim} {translit_surname}",        # Roma Kovrykov
+                        f"{translit_surname} {translit_dim}",        # Kovrykov Roma
+                        f"{translit_surname}, {translit_dim}",       # Kovrykov, Roma
+                    ])
+
+        # Убираем дубликаты и возвращаем
+        return list(set(clean_diminutives))[:15]  # Лимит согласно требованиям
+
+    def _load_diminutives_dictionary(self, language: str):
+        """Загружает словарь диминутивов для языка"""
+        try:
+            import json
+            from pathlib import Path
+            
+            # Путь к словарю диминутивов
+            data_dir = Path(__file__).resolve().parents[4] / "data"
+            diminutives_file = data_dir / f"diminutives_{language}.json"
+            
+            if diminutives_file.exists():
+                with open(diminutives_file, 'r', encoding='utf-8') as f:
+                    self._diminutives_cache[language] = json.load(f)
+            else:
+                self._diminutives_cache[language] = {}
+                
+        except Exception:
+            self._diminutives_cache[language] = {}
+
+    def _transliterate_to_latin(self, text: str) -> str:
+        """Транслитерация кириллицы в латиницу"""
+        translit_map = {
+            "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e",
+            "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k", "л": "l", "м": "m",
+            "н": "n", "о": "o", "п": "p", "р": "r", "с": "s", "т": "t", "у": "u",
+            "ф": "f", "х": "kh", "ц": "ts", "ч": "ch", "ш": "sh", "щ": "shch",
+            "ъ": "", "ы": "y", "ь": "", "э": "e", "ю": "yu", "я": "ya",
+            "і": "i", "ї": "i", "є": "e", "ґ": "g"
+        }
+
+        result = ""
+        for char in text:
+            lower_char = char.lower()
+            if lower_char in translit_map:
+                translit_char = translit_map[lower_char]
+                # Сохраняем регистр
+                if char.isupper() and translit_char:
+                    result += translit_char.capitalize()
+                else:
+                    result += translit_char
+            else:
+                result += char
+        return result
+
+    def _generate_transliteration_variants(self, name: str, language: str) -> List[str]:
+        """Генерация транслитераций для имен с альтернативными вариантами отчеств"""
+        variants = []
+
+        # Кириллица -> латиница с Title Case
+        if any(ord(c) >= 0x0400 for c in name):
+            # Базовая транслитерация с правильной капитализацией
+            base_translit = self._transliterate_to_latin(name)
+            if base_translit:
+                # Применяем Title Case для каждого слова
+                title_case_translit = " ".join(word.capitalize() for word in base_translit.split())
+                variants.append(title_case_translit)
+
+                # Добавляем альтернативные варианты отчества
+                patronymic_variants = self._generate_patronymic_transliteration_variants(title_case_translit)
+                variants.extend(patronymic_variants)
+
+        # Латиница -> кириллица (обратная транслитерация)
+        elif all(ord(c) < 0x0400 for c in name):
+            reverse_map = {
+                "a": "а", "b": "б", "v": "в", "g": "г", "d": "д", "e": "е",
+                "zh": "ж", "z": "з", "i": "и", "y": "й", "k": "к", "l": "л", "m": "м",
+                "n": "н", "o": "о", "p": "п", "r": "р", "s": "с", "t": "т", "u": "у",
+                "f": "ф", "kh": "х", "ts": "ц", "ch": "ч", "sh": "ш", "shch": "щ",
+                "yu": "ю", "ya": "я"
+            }
+
+            # Простая обратная транслитерация
+            cyrillic_name = name.lower()
+            for lat, cyr in reverse_map.items():
+                cyrillic_name = cyrillic_name.replace(lat, cyr)
+            variants.append(cyrillic_name.title())
+
+        return list(set(variants))  # Убираем дубликаты
+
+    def _generate_patronymic_transliteration_variants(self, translit_name: str) -> List[str]:
+        """Генерация альтернативных вариантов отчества в транслитерации"""
+        variants = []
+
+        # Словарь альтернативных вариантов отчеств
+        patronymic_alternatives = {
+            "valeriiovych": ["valeriyovych", "valerijovych", "valerievich"],
+            "valeriyovych": ["valeriiovych", "valerijovych", "valerievich"],
+            "valerijovych": ["valeriiovych", "valeriyovych", "valerievich"],
+            "valerievich": ["valeriiovych", "valeriyovych", "valerijovych"],
+        }
+
+        # Ищем отчество в имени и заменяем на альтернативы
+        name_lower = translit_name.lower()
+        for original, alternatives in patronymic_alternatives.items():
+            if original in name_lower:
+                for alt in alternatives:
+                    # Заменяем с сохранением капитализации
+                    variant = translit_name.replace(original.title(), alt.title())
+                    variants.append(variant)
+
+        return variants
+
+    def _generate_typo_variants(self, name: str, language: str) -> List[str]:
+        """Генерация опечаток для имен с жесткими ограничениями"""
+        variants = set()  # Используем set для автоматического удаления дубликатов
+        
+        words = name.split()
+        
+        # Для многословных строк - генерируем опечатки только на самом информативном слове
+        if len(words) > 1:
+            # Находим самое длинное слово (наиболее информативное)
+            target_word = max(words, key=len)
+            if len(target_word) < 5 or len(target_word) > 24:
+                return []
+            
+            # Генерируем опечатки только для этого слова
+            target_variants = self._generate_single_word_typos(target_word, language)
+            
+            # Собираем обратно строку, заменив только target_word
+            for variant in target_variants:
+                new_name = name.replace(target_word, variant, 1)
+                variants.add(new_name)
+                
+            return list(variants)[:40]  # Cap 40 для многословных
+        
+        # Для однословных строк
+        if len(name) < 5 or len(name) > 24:
+            return []
+        
+        # Генерируем опечатки для одного слова
+        single_variants = self._generate_single_word_typos(name, language)
+        return single_variants[:40]  # Cap 40 для однословных
+    
+    def _generate_single_word_typos(self, word: str, language: str) -> List[str]:
+        """Генерация опечаток для одного слова"""
+        variants = set()
+        
+        # 1. Пропуск букв (максимум 1 на слово)
+        if len(word) > 5:
+            for i in range(1, len(word) - 1):
+                typo = word[:i] + word[i+1:]
+                variants.add(typo)
+        
+        # 2. Замена букв (только для релевантных языков)
+        if language in ["ru", "uk", "mixed"]:
+            alphabet = "аеиорнсту"
+        elif language in ["en"]:
+            alphabet = "aeiourtns"
+        else:
+            alphabet = ""
+        
+        for i, char in enumerate(word):
+            for repl in alphabet:
+                if repl != char.lower():
+                    typo = word[:i] + repl + word[i+1:]
+                    variants.add(typo)
+        
+        # 3. Добавление гласных (максимум 1 на слово)
+        vowels = "аеиоу" if language in ["ru", "uk", "mixed"] else "aeiou"
+        for i in range(len(word) + 1):
+            for vowel in vowels:
+                typo = word[:i] + vowel + word[i:]
+                variants.add(typo)
+        
+        return list(variants)
+
+    def _generate_shortened_variants(self, name: str, language: str) -> List[str]:
+        """Генерация сокращенных вариантов имен (инициалы, аббревиатуры)"""
+        variants = []
+        
+        # Разбиваем имя на части
+        parts = name.split()
+        if len(parts) < 2:
+            return variants
+        
+        # Генерируем различные сокращенные варианты
+        if len(parts) >= 3:
+            # Полное имя: Фамилия Имя Отчество -> Фамилия И. О.
+            surname = parts[0]
+            first_initial = parts[1][0] + "."
+            middle_initial = parts[2][0] + "."
+            variants.append(f"{surname} {first_initial} {middle_initial}")
+            
+            # Фамилия И. Отчество
+            variants.append(f"{surname} {first_initial} {parts[2]}")
+            
+            # Фамилия Имя О.
+            variants.append(f"{surname} {parts[1]} {middle_initial}")
+            
+            # Фамилия И. О. (только инициалы)
+            variants.append(f"{surname} {first_initial} {middle_initial}")
+
+            # Недостающие варианты согласно требованиям:
+            # Фамилия И.О. (без пробела между инициалами)
+            variants.append(f"{surname} {first_initial[0]}.{middle_initial}")
+
+            # Фамилия, Имя О (без точки у последнего инициала)
+            variants.append(f"{surname}, {parts[1]} {middle_initial[0]}")
+
+        if len(parts) >= 2:
+            # Фамилия И. (только имя сокращено)
+            surname = parts[0]
+            first_initial = parts[1][0] + "."
+            variants.append(f"{surname} {first_initial}")
+            
+            # Фамилия Имя (без отчества)
+            variants.append(f"{surname} {parts[1]}")
+        
+        # Генерируем варианты с разными сокращениями отчества
+        if len(parts) >= 3:
+            surname = parts[0]
+            first_name = parts[1]
+            patronymic = parts[2]
+            
+            # Сокращаем отчество по-разному
+            if len(patronymic) > 3:
+                # Первые 3-4 символа отчества
+                short_patronymic = patronymic[:3] + "."
+                variants.append(f"{surname} {first_name} {short_patronymic}")
+                
+                # Первые 4-5 символов отчества
+                if len(patronymic) > 4:
+                    short_patronymic = patronymic[:4] + "."
+                    variants.append(f"{surname} {first_name} {short_patronymic}")
+        
+        return list(set(variants))  # Убираем дубликаты
+
+    def _generate_name_permutations(self, surname: str, first_name: str, patronymic: str, language: str) -> List[str]:
+        """Генерация всех валидных перестановок имени (Tier 1) - только чистые алфавиты"""
+        variants = []
+        
+        # Все валидные перестановки
+        permutations = [
+            # F L P (основная форма)
+            f"{first_name} {surname} {patronymic}",
+            # F L (без отчества)
+            f"{first_name} {surname}",
+            # L F P (фамилия в начале)
+            f"{surname} {first_name} {patronymic}",
+            # L F (фамилия в начале, без отчества)
+            f"{surname} {first_name}",
+            # P F L (отчество в начале)
+            f"{patronymic} {first_name} {surname}",
+            # L P F (фамилия + отчество + имя)
+            f"{surname} {patronymic} {first_name}",
+            # L P (фамилия + отчество)
+            f"{surname} {patronymic}",
+        ]
+        
+        # Добавляем варианты с запятой
+        comma_variants = [
+            f"{surname}, {first_name} {patronymic}",
+            f"{surname}, {first_name}",
+            f"{surname}, {patronymic} {first_name}",
+        ]
+        
+        variants.extend(permutations)
+        variants.extend(comma_variants)
+        
+        # Добавляем RU-патронимы для кириллических имен
+        if self._is_cyrillic_text(surname + first_name + patronymic):
+            ru_patronymic_variants = self._get_ru_patronymic_variants(patronymic)
+            for ru_patronymic in ru_patronymic_variants:
+                ru_permutations = [
+                    f"{first_name} {surname} {ru_patronymic}",
+                    f"{surname} {first_name} {ru_patronymic}",
+                    f"{ru_patronymic} {first_name} {surname}",
+                    f"{surname} {ru_patronymic} {first_name}",
+                    f"{surname}, {first_name} {ru_patronymic}",
+                    f"{surname}, {ru_patronymic} {first_name}",
+                ]
+                variants.extend(ru_permutations)
+        
+        # Добавляем EN-патронимы для латинских имен
+        if self._is_latin_text(surname + first_name + patronymic):
+            en_patronymic_variants = self._get_en_patronymic_variants(patronymic)
+            for en_patronymic in en_patronymic_variants:
+                en_permutations = [
+                    f"{first_name} {surname} {en_patronymic}",
+                    f"{surname} {first_name} {en_patronymic}",
+                    f"{en_patronymic} {first_name} {surname}",
+                    f"{surname} {en_patronymic} {first_name}",
+                    f"{surname}, {first_name} {en_patronymic}",
+                    f"{surname}, {en_patronymic} {first_name}",
+                ]
+                variants.extend(en_permutations)
+        
+        return list(set(variants))  # Убираем дубликаты
+
+    def _is_cyrillic_text(self, text: str) -> bool:
+        """Проверяет, является ли текст кириллическим"""
+        cyrillic_chars = sum(1 for c in text if 'а' <= c.lower() <= 'я' or c in 'ё')
+        return cyrillic_chars > len(text) * 0.5
+
+    def _is_latin_text(self, text: str) -> bool:
+        """Проверяет, является ли текст латинским"""
+        latin_chars = sum(1 for c in text if 'a' <= c.lower() <= 'z')
+        return latin_chars > len(text) * 0.5
+
+    def _get_ru_patronymic_variants(self, patronymic: str) -> List[str]:
+        """Получает RU-варианты патронима"""
+        ru_variants = []
+        patronymic_lower = patronymic.lower()
+        
+        if "валерійович" in patronymic_lower:
+            ru_variants.append("Валерьевич")
+        elif "valeriiovych" in patronymic_lower:
+            ru_variants.append("Валерьевич")
+        elif "valeriyovych" in patronymic_lower:
+            ru_variants.append("Валерьевич")
+        elif "valerijovych" in patronymic_lower:
+            ru_variants.append("Валерьевич")
+        
+        return ru_variants
+
+    def _get_en_patronymic_variants(self, patronymic: str) -> List[str]:
+        """Получает EN-варианты патронима"""
+        en_variants = []
+        patronymic_lower = patronymic.lower()
+        
+        if "валерійович" in patronymic_lower:
+            en_variants.extend(["Valeriiovych", "Valeriyovych", "Valerijovych", "Valerievich"])
+        elif "валерьевич" in patronymic_lower:
+            en_variants.append("Valerievich")
+        elif "valeriiovych" in patronymic_lower:
+            en_variants.extend(["Valeriiovych", "Valeriyovych", "Valerijovych", "Valerievich"])
+        
+        return en_variants
+
+    def _map_patronymic_variants(self, patronymic: str, language: str) -> List[str]:
+        """Генерация нормативных вариантов патронима (Tier 2)"""
+        variants = []
+        
+        # Словарь нормативных вариантов патронимов
+        patronymic_map = {
+            # UA кириллица -> различные варианты
+            "валерійович": [
+                "valeriiovych",  # основной UA
+                "valeriyovych",  # альтернативный UA
+                "valerijovych",  # еще один UA вариант
+                "валерьевич",    # RU эквивалент
+                "valerievich",   # RU транслитерация
+            ],
+            "валерьевич": [
+                "valerievich",   # RU транслитерация
+                "валерійович",   # UA эквивалент
+                "valeriiovych",  # UA транслитерация
+                "valeriyovych",  # UA альтернативный
+                "valerijovych",  # UA еще один
+            ],
+            # EN -> кириллица
+            "valeriiovych": [
+                "валерійович",   # UA кириллица
+                "валерьевич",    # RU кириллица
+            ],
+            "valeriyovych": [
+                "валерійович",   # UA кириллица
+                "валерьевич",    # RU кириллица
+            ],
+            "valerijovych": [
+                "валерійович",   # UA кириллица
+                "валерьевич",    # RU кириллица
+            ],
+            "valerievich": [
+                "валерьевич",    # RU кириллица
+                "валерійович",   # UA кириллица
+            ],
+        }
+        
+        patronymic_lower = patronymic.lower()
+        
+        # Ищем в словаре
+        if patronymic_lower in patronymic_map:
+            variants.extend(patronymic_map[patronymic_lower])
+        
+        # Обратный поиск
+        for key, values in patronymic_map.items():
+            if patronymic_lower in values:
+                variants.append(key)
+                variants.extend([v for v in values if v != patronymic_lower])
+        
+        return list(set(variants))  # Убираем дубликаты
+
+    def _generate_initials_everywhere(self, surname: str, first_name: str, patronymic: str, language: str) -> List[str]:
+        """Генерация инициалов во всех позициях (Tier 2)"""
+        variants = []
+        
+        # Инициалы
+        first_initial = first_name[0] + "."
+        patronymic_initial = patronymic[0] + "." if patronymic else ""
+        
+        # 1. Перед фамилией
+        if patronymic_initial:
+            variants.extend([
+                f"{first_initial}{patronymic_initial} {surname}",
+                f"{first_initial} {patronymic_initial} {surname}",
+                f"{first_initial[0]}{patronymic_initial[0]} {surname}",  # без точек
+            ])
+        else:
+            variants.extend([
+                f"{first_initial} {surname}",
+                f"{first_initial[0]} {surname}",  # без точки
+            ])
+        
+        # 2. После фамилии (без запятой)
+        if patronymic_initial:
+            variants.extend([
+                f"{surname} {first_initial} {patronymic_initial}",
+                f"{surname} {first_initial} {patronymic_initial[0]}",
+                f"{surname} {first_initial[0]}{patronymic_initial[0]}",
+            ])
+        else:
+            variants.extend([
+                f"{surname} {first_initial}",
+                f"{surname} {first_initial[0]}",
+            ])
+        
+        # 3. После имени
+        if patronymic_initial:
+            variants.extend([
+                f"{first_name} {patronymic_initial} {surname}",
+                f"{first_name} {patronymic_initial[0]} {surname}",  # без точки
+            ])
+        
+        # 4. Слитно
+        if patronymic_initial:
+            variants.extend([
+                f"{first_initial[0]}{patronymic_initial[0]}{surname}",
+                f"{surname}{first_initial[0]}{patronymic_initial[0]}",
+            ])
+        else:
+            variants.extend([
+                f"{first_initial[0]}{surname}",
+                f"{surname}{first_initial[0]}",
+            ])
+        
+        # 5. С запятой
+        if patronymic_initial:
+            variants.extend([
+                f"{surname}, {first_initial} {patronymic_initial}",
+                f"{surname}, {first_initial} {patronymic_initial[0]}",
+                f"{surname}, {first_name} {patronymic_initial}",  # имя + инициал отчества
+                f"{surname}, {first_name} {patronymic_initial[0]}",  # имя + инициал отчества без точки
+            ])
+        else:
+            variants.extend([
+                f"{surname}, {first_initial}",
+                f"{surname}, {first_initial[0]}",
+            ])
+        
+        # 6. Дополнительные естественные варианты
+        if patronymic_initial:
+            variants.extend([
+                f"{first_initial[0]}. {surname}",  # R. Kovrykov
+                f"{surname} {first_initial[0]}.{patronymic_initial[0]}.",  # Kovrykov R.V.
+                f"{surname} {first_initial[0]}{patronymic_initial[0]}",  # Kovrykov RV
+            ])
+        else:
+            variants.extend([
+                f"{first_initial[0]}. {surname}",  # R. Kovrykov
+            ])
+        
+        return list(set(variants))  # Убираем дубликаты
+
+    def _generate_controlled_transliterations(self, text: str, language: str) -> List[str]:
+        """Генерация контролируемых транслитераций (Tier 2) - только для полных ФИО"""
+        variants = []
+        
+        # Белый список разрешенных транслитераций
+        allowed_transliterations = {
+            # Фамилии
+            "ковриков": ["kovrykov", "kovrikov"],
+            "kovrykov": ["ковриков"],
+            "kovrikov": ["ковриков"],
+            
+            # Имена
+            "роман": ["roman"],
+            "roman": ["роман"],
+            
+            # Патронимы (только нормативные)
+            "валерійович": ["valeriiovych", "valeriyovych", "valerijovych"],
+            "валерьевич": ["valerievich"],
+            "valeriiovych": ["валерійович", "валерьевич"],
+            "valeriyovych": ["валерійович", "валерьевич"],
+            "valerijovych": ["валерійович", "валерьевич"],
+            "valerievich": ["валерьевич", "валерійович"],
+        }
+        
+        text_lower = text.lower()
+        
+        # Ищем в белом списке
+        if text_lower in allowed_transliterations:
+            variants.extend(allowed_transliterations[text_lower])
+        
+        # Обратный поиск
+        for key, values in allowed_transliterations.items():
+            if text_lower in values:
+                variants.append(key)
+        
+        return list(set(variants))  # Убираем дубликаты
+
+    def _generate_full_name_with_alternative_patronymics(self, surname: str, first_name: str, patronymic: str, language: str) -> List[str]:
+        """Генерация полных ФИО с альтернативными патронимами (Tier 1)"""
+        variants = []
+        
+        # Получаем все варианты патронима
+        patronymic_variants = self._map_patronymic_variants(patronymic, language)
+        
+        # Генерируем перестановки для каждого варианта патронима
+        for patronymic_variant in patronymic_variants:
+            # Основные перестановки
+            permutations = [
+                f"{surname} {first_name} {patronymic_variant}",
+                f"{first_name} {surname} {patronymic_variant}",
+                f"{patronymic_variant} {first_name} {surname}",
+                f"{surname} {patronymic_variant} {first_name}",
+            ]
+            
+            # Варианты с запятой
+            comma_variants = [
+                f"{surname}, {first_name} {patronymic_variant}",
+                f"{surname}, {patronymic_variant} {first_name}",
+            ]
+            
+            variants.extend(permutations)
+            variants.extend(comma_variants)
+        
+        return list(set(variants))  # Убираем дубликаты
+
+    def _should_generate_feminine_surname(self, first_name: str, patronymic: str) -> bool:
+        """Проверяет, нужно ли генерировать женскую форму фамилии"""
+        # Мужские имена (не генерируем женскую фамилию)
+        masculine_names = {
+            "роман", "roman", "валерійович", "валерьевич", 
+            "valeriiovych", "valerievich"
+        }
+        
+        # Проверяем имя и отчество
+        first_lower = first_name.lower()
+        patronymic_lower = patronymic.lower() if patronymic else ""
+        
+        # Если есть мужское имя или отчество - не генерируем женскую фамилию
+        if (first_lower in masculine_names or 
+            patronymic_lower in masculine_names):
+            return False
+        
+        return True
+
+    def _generate_diminutive_combinations(self, surname: str, first_name: str, language: str) -> List[str]:
+        """Генерация диминутивных вариантов (Tier 2)"""
+        variants = []
+        
+        # Белый список фамилий
+        allowed_surnames = {"ковриков", "kovrykov", "kovrikov"}
+        surname_lower = surname.lower()
+        
+        if surname_lower not in allowed_surnames:
+            return variants
+        
+        # Диминутивы для имени
+        diminutives = {
+            "роман": ["рома", "ромчик", "ромка", "ромик"],
+            "roman": ["roma", "rom"],
+        }
+        
+        first_name_lower = first_name.lower()
+        if first_name_lower in diminutives:
+            for diminutive in diminutives[first_name_lower]:
+                # RU варианты
+                if self._is_cyrillic_text(surname):
+                    variants.extend([
+                        f"{diminutive} {surname}",
+                        f"{surname} {diminutive}",
+                        f"{surname}, {diminutive}",
+                    ])
+                # EN варианты
+                elif self._is_latin_text(surname):
+                    variants.extend([
+                        f"{diminutive.capitalize()} {surname}",
+                        f"{surname} {diminutive.capitalize()}",
+                    ])
+                # Mixed варианты (только несколько)
+                else:
+                    if surname_lower == "kovrykov":
+                        variants.extend([
+                            f"{diminutive} {surname}",
+                            f"{surname} {diminutive}",
+                        ])
+        
+        return list(set(variants))  # Убираем дубликаты
+
+    def _post_export_sanitizer(self, patterns: List[RecallOptimizedPattern]) -> List[RecallOptimizedPattern]:
+        """Очистка и дедупликация паттернов перед экспортом"""
+        sanitized = []
+        seen_patterns = set()
+        
+        for pattern in patterns:
+            # Нормализуем паттерн для сравнения
+            normalized_pattern = self.normalize_for_ac(pattern.pattern)
+            
+            # Пропускаем дубликаты
+            if normalized_pattern in seen_patterns:
+                continue
+            
+            # Удаляем POTENTIAL_SURNAME полностью
+            if pattern.pattern_type == "potential_surname":
+                continue
+            
+            # Пропускаем одиночные токены в Tier 2 (кроме документов)
+            if (pattern.recall_tier == 2 and 
+                pattern.pattern_type == "controlled_transliteration" and 
+                len(pattern.pattern.split()) == 1):
+                continue
+            
+            # Проверяем чистоту алфавита в Tier 1
+            if pattern.recall_tier == 1 and self._has_mixed_script(pattern.pattern):
+                # Переносим в MIXED_LANGUAGE_VARIANT или удаляем
+                continue
+            
+            # Пропускаем некорректные склонения (женская фамилия + мужское имя)
+            if self._is_invalid_declension(pattern.pattern):
+                continue
+            
+            # Пропускаем паттерны с артефактами транслитерации
+            if self._has_transliteration_artifacts(pattern.pattern):
+                continue
+            
+            # Проверяем валидность инициалов
+            if pattern.pattern_type == "initials_everywhere" and not self._is_valid_initials(pattern.pattern):
+                continue
+            
+            # Проверяем диминутивы только с разрешенными фамилиями
+            if pattern.pattern_type == "diminutive_variant" and not self._has_allowed_surname(pattern.pattern):
+                continue
+
+            # Ограничиваем TYPO_VARIANT до 100 штук и проверяем на реалистичность
+            if pattern.pattern_type == "typo_variant":
+                if not self._is_realistic_typo(pattern.pattern):
+                    continue
+
+            seen_patterns.add(normalized_pattern)
+            sanitized.append(pattern)
+        
+        return sanitized
+
+    def _is_invalid_declension(self, pattern: str) -> bool:
+        """Проверяет, является ли склонение некорректным"""
+        # Женские фамилии с мужскими именами
+        feminine_surnames = ["кова", "ская", "ина"]
+        masculine_names = ["роман", "roman", "валерійович", "валерьевич", "valeriiovych", "valerievich"]
+        
+        pattern_lower = pattern.lower()
+        
+        for feminine in feminine_surnames:
+            if feminine in pattern_lower:
+                for masculine in masculine_names:
+                    if masculine in pattern_lower:
+                        return True
+        
+        return False
+
+    def _has_transliteration_artifacts(self, pattern: str) -> bool:
+        """Проверяет наличие артефактов транслитерации"""
+        # Артефакты типа "коврыков", "валєр", "йцх"
+        artifacts = ["коврыков", "валєр", "йцх", "ыch", "єр", "йуцх", "вйцх"]
+
+        pattern_lower = pattern.lower()
+        for artifact in artifacts:
+            if artifact in pattern_lower:
+                return True
+
+        # Проверка на невозможные биграммы
+        impossible_bigrams = [
+            r'йуцх\b', r'вйцх\b', r'йцх\b', r'уцх\b', r'йух\b',
+            r'щщ', r'жж', r'цц', r'хх', r'ьь', r'ъъ'
+        ]
+
+        import re
+        for bigram_pattern in impossible_bigrams:
+            if re.search(bigram_pattern, pattern_lower):
+                return True
+
+        return False
+
+    def _has_mixed_script(self, pattern: str) -> bool:
+        """Проверяет, содержит ли паттерн смешанные скрипты"""
+        has_cyrillic = any('а' <= c.lower() <= 'я' or c in 'ё' for c in pattern)
+        has_latin = any('a' <= c.lower() <= 'z' for c in pattern)
+        return has_cyrillic and has_latin
+
+    def _is_valid_initials(self, pattern: str) -> bool:
+        """Проверяет валидность инициальных паттернов"""
+        import re
+        
+        # Разрешенные паттерны инициалов
+        valid_patterns = [
+            r'^[A-ZА-Я]\. [A-Z][a-z]+|[А-Я][а-я]+$',  # R. Kovrykov, Р. Ковриков
+            r'^(Kovrykov|Ковриков),? (Roman|Роман) V\.?$',  # Kovrykov, Roman V
+            r'^(Kovrykov|Ковриков) R\.V\.?$',  # Kovrykov R.V.
+            r'^(Kovrykov|Ковриков) [A-ZА-Я]\. [A-ZА-Я]\.$',  # Kovrykov R. V.
+        ]
+        
+        for valid_pattern in valid_patterns:
+            if re.match(valid_pattern, pattern):
+                return True
+
+        return False
+
+    def _has_allowed_surname(self, pattern: str) -> bool:
+        """Проверяет, содержит ли паттерн разрешенную фамилию"""
+        allowed_surnames = {"ковриков", "kovrykov", "kovrikov"}
+        pattern_lower = pattern.lower()
+        return any(surname in pattern_lower for surname in allowed_surnames)
+
+    def _is_realistic_typo(self, pattern: str) -> bool:
+        """Проверяет, является ли опечатка реалистичной"""
+        # Не более 1-2 символьных замен/перестановок
+        # Белый список изменений: o↔a/e, удвоения, пропуски
+
+        # Запрещаем невозможные биграммы
+        if self._has_transliteration_artifacts(pattern):
+            return False
+
+        # Запрещаем слишком много изменений в одном слове
+        words = pattern.split()
+        for word in words:
+            if self._has_excessive_changes(word):
+                return False
+
+        return True
+
+    def _has_excessive_changes(self, word: str) -> bool:
+        """Проверяет, слишком ли много изменений в слове"""
+        # Простая эвристика: слишком много необычных символов
+        unusual_chars = sum(1 for c in word.lower() if c in 'qwxz')
+        total_chars = len(word)
+
+        # Если больше 30% необычных символов - это мусор
+        if total_chars > 0 and unusual_chars / total_chars > 0.3:
+            return True
+
+        # Проверяем на тройные повторы
+        import re
+        if re.search(r'(.)\1{2,}', word):
+            return True
+
+        return False
+
+    def _has_allowed_surname(self, pattern: str) -> bool:
+        """Проверяет, содержит ли паттерн разрешенную фамилию"""
+        allowed_surnames = {"ковриков", "kovrykov", "kovrikov"}
+        pattern_lower = pattern.lower()
+        
+        for surname in allowed_surnames:
+            if surname in pattern_lower:
+                return True
+        
+        return False
+
+    def _generate_feminine_surname_variants(self, surname: str, language: str) -> List[str]:
+        """Генерация женских форм фамилии (только в контролируемых случаях)"""
+        variants = []
+        
+        # Правила образования женских форм
+        if language in ["ru", "uk"]:
+            # Для фамилий на -ов/-ев
+            if surname.endswith(("ов", "ев")):
+                feminine = surname[:-2] + "ова"
+                variants.append(feminine)
+            # Для фамилий на -ский/-ская
+            elif surname.endswith("ский"):
+                feminine = surname[:-4] + "ская"
+                variants.append(feminine)
+            # Для фамилий на -ин/-ын
+            elif surname.endswith(("ин", "ын")):
+                feminine = surname[:-2] + "ина"
+                variants.append(feminine)
+        
+        # Английские фамилии
+        elif language == "en":
+            if surname.endswith("ov"):
+                feminine = surname[:-2] + "ova"
+                variants.append(feminine)
+            elif surname.endswith("sky"):
+                feminine = surname[:-3] + "skaya"
+                variants.append(feminine)
+        
+        return variants
+
+    def _generate_other_variants(self, text: str, language: str) -> List[str]:
+        """Генерация других возможных вариантов"""
+        variants = []
+        
+        # Варианты с дефисами
+        words = text.split()
+        if len(words) > 1:
+            variants.append("-".join(words))
+            variants.append("_".join(words))
+            variants.append("".join(words))
+        
+        # Варианты с инициалами
+        if len(words) > 1:
+            initials = ".".join([word[0] for word in words])
+            variants.append(initials)
+            variants.append(initials + ".")
+        
+        # Варианты с сокращениями
+        if len(words) > 1:
+            first_word = words[0]
+            rest_words = words[1:]
+            for i in range(1, len(first_word)):
+                short_first = first_word[:i] + "."
+                variants.append(" ".join([short_first] + rest_words))
+        
+        return variants
+
+    def _generate_mixed_language_variants(self, text: str) -> List[str]:
+        """Генерация смешанных языковых вариантов для mixed режима"""
+        variants = []
+        words = text.split()
+        
+        if len(words) >= 2:
+            # Генерируем все возможные комбинации кириллицы и латиницы
+            for i in range(len(words)):
+                for j in range(i+1, len(words)):
+                    # Создаем копию списка слов
+                    mixed_words = words.copy()
+                    
+                    # Транслитерируем i-е слово в кириллицу
+                    mixed_words[i] = self._transliterate_to_cyrillic(words[i])
+                    # Транслитерируем j-е слово в латиницу
+                    mixed_words[j] = self._transliterate_to_latin(words[j])
+                    
+                    variants.append(" ".join(mixed_words))
+                    
+                    # Обратная комбинация
+                    mixed_words = words.copy()
+                    mixed_words[i] = self._transliterate_to_latin(words[i])
+                    mixed_words[j] = self._transliterate_to_cyrillic(words[j])
+                    
+                    variants.append(" ".join(mixed_words))
+        
+        return variants
+
+    def _transliterate_to_cyrillic(self, text: str) -> str:
+        """Транслитерация в кириллицу"""
+        translit_map = {
+            "a": "а", "b": "б", "c": "ц", "d": "д", "e": "е", "f": "ф", "g": "г",
+            "h": "х", "i": "і", "j": "й", "k": "к", "l": "л", "m": "м", "n": "н",
+            "o": "о", "p": "п", "q": "к", "r": "р", "s": "с", "t": "т", "u": "у",
+            "v": "в", "w": "в", "x": "кс", "y": "й", "z": "з"
+        }
+        
+        result = ""
+        for char in text.lower():
+            if char in translit_map:
+                result += translit_map[char]
+            else:
+                result += char
+        return result
+
+    def _transliterate_to_latin(self, text: str) -> str:
+        """Улучшенная транслитерация в латиницу"""
+        # Сначала обрабатываем специальные случаи
+        text = text.replace("ійович", "iyovych")
+        text = text.replace("ійович", "iyovych")
+        text = text.replace("ійович", "iyovych")
+        
+        translit_map = {
+            "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e",
+            "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k", "л": "l", "м": "m",
+            "н": "n", "о": "o", "п": "p", "р": "r", "с": "s", "т": "t", "у": "u",
+            "ф": "f", "х": "kh", "ц": "ts", "ч": "ch", "ш": "sh", "щ": "shch",
+            "ъ": "", "ы": "y", "ь": "", "э": "e", "ю": "yu", "я": "ya",
+            "і": "i", "ї": "i", "є": "e", "ґ": "g"
+        }
+        
+        result = ""
+        for char in text.lower():
+            if char in translit_map:
+                result += translit_map[char]
+            else:
+                result += char
+        return result
+
     def _extract_suspicious_sequences(
         self, text: str, language: str
     ) -> List[RecallOptimizedPattern]:
         """Извлечение подозрительных последовательностей - Tier 3"""
         patterns = []
 
-        # Capital letter sequences (could be name/company abbreviations)
-        caps_pattern = r"\b[A-ZА-ЯІЇЄҐ]{2,6}\b"
-        for match in re.finditer(caps_pattern, text):
-            caps_seq = match.group().strip()
-            if len(caps_seq) >= 2 and caps_seq not in self.absolute_stop_words.get(
-                language, set()
-            ):
-                patterns.append(
-                    RecallOptimizedPattern(
-                        pattern=caps_seq,
-                        pattern_type="caps_sequence",
-                        recall_tier=3,
-                        precision_hint=0.1,  # Very low precision but may catch abbreviations
-                        variants=[],
-                        language=language,
-                    )
-                )
+        # Tier 3 должен генерировать варианты существующих паттернов, а не новые по одному слову
+        # Это делается в _generate_comprehensive_variants через name_variants_generators
+        # Здесь оставляем пустым, чтобы избежать ложных срабатываний
 
         return patterns
 
@@ -987,15 +2602,27 @@ class HighRecallACGenerator:
         # Sort: first high Recall, then by length
         filtered.sort(key=lambda x: (x.recall_tier, -len(x.pattern)))
 
-        # Limit total quantity for performance
-        return filtered[:200]  # Maximum 200 patterns
+        # Адаптивное ограничение количества паттернов
+        total_patterns = len(filtered)
+        
+        if total_patterns <= 1000:
+            # Если паттернов мало - не обрезаем
+            return filtered
+        else:
+            # Если много - оставляем топ-1000 по приоритету
+            # Приоритет: recall_tier (меньше = выше), длина строки (больше = выше)
+            # Сортировка уже выполнена выше: tier → длина
+            return filtered[:1000]
 
     def _detect_language(self, text: str) -> str:
-        """Определение языка"""
+        """Определение языка с поддержкой смешанного режима"""
         cyrillic = len(re.findall(r"[а-яіїєёА-ЯІЇЄЁҐ]", text))
         latin = len(re.findall(r"[a-zA-Z]", text))
 
-        if cyrillic > 0:
+        # Если есть и кириллица, и латиница - смешанный режим
+        if cyrillic > 0 and latin > 0:
+            return "mixed"
+        elif cyrillic > 0:
             ukrainian = len(re.findall(r"[іїєґІЇЄҐ]", text))
             return "uk" if ukrainian > 0 else "ru"
         elif latin > 0:
@@ -1005,9 +2632,10 @@ class HighRecallACGenerator:
 
     def export_for_high_recall_ac(
         self, patterns: List[RecallOptimizedPattern]
-    ) -> Dict[str, List[str]]:
+    ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Экспорт для многоуровневого AC с максимальным Recall
+        Каждый элемент содержит pattern, pattern_type и recall_tier
         """
         export_tiers = {
             "tier_0_exact": [],  # Documents - automatic hit
@@ -1020,33 +2648,77 @@ class HighRecallACGenerator:
             # Нормализуем основной паттерн перед экспортом
             normalized_pattern = self.normalize_for_ac(pattern.pattern)
             
+            # Создаем словарь для основного паттерна
+            pattern_dict = {
+                "pattern": normalized_pattern,
+                "pattern_type": pattern.pattern_type,
+                "recall_tier": pattern.recall_tier
+            }
+            
             # Add main pattern
-            target_tier = f"tier_{pattern.recall_tier}_"
             if pattern.recall_tier == 0:
-                export_tiers["tier_0_exact"].append(normalized_pattern)
+                export_tiers["tier_0_exact"].append(pattern_dict)
             elif pattern.recall_tier == 1:
-                export_tiers["tier_1_high_recall"].append(normalized_pattern)
+                export_tiers["tier_1_high_recall"].append(pattern_dict)
             elif pattern.recall_tier == 2:
-                export_tiers["tier_2_medium_recall"].append(normalized_pattern)
+                export_tiers["tier_2_medium_recall"].append(pattern_dict)
             else:
-                export_tiers["tier_3_broad_recall"].append(normalized_pattern)
+                export_tiers["tier_3_broad_recall"].append(pattern_dict)
 
-            # Add all variants to same level (нормализация уже применена в _generate_comprehensive_variants)
+            # Add variants with proper tier distribution
             for variant in pattern.variants:
-                if pattern.recall_tier == 0:
-                    export_tiers["tier_0_exact"].append(variant)
-                elif pattern.recall_tier == 1:
-                    export_tiers["tier_1_high_recall"].append(variant)
-                elif pattern.recall_tier == 2:
-                    export_tiers["tier_2_medium_recall"].append(variant)
+                # Определяем tier для варианта на основе его типа
+                variant_tier = self._tier_for_variant(pattern.recall_tier, pattern.pattern_type)
+                
+                variant_dict = {
+                    "pattern": variant,
+                    "pattern_type": f"{pattern.pattern_type}_variant",
+                    "recall_tier": variant_tier
+                }
+                
+                # Добавляем в соответствующий tier
+                if variant_tier == 0:
+                    export_tiers["tier_0_exact"].append(variant_dict)
+                elif variant_tier == 1:
+                    export_tiers["tier_1_high_recall"].append(variant_dict)
+                elif variant_tier == 2:
+                    export_tiers["tier_2_medium_recall"].append(variant_dict)
                 else:
-                    export_tiers["tier_3_broad_recall"].append(variant)
+                    export_tiers["tier_3_broad_recall"].append(variant_dict)
 
-        # Remove duplicates in each level
+        # Remove duplicates in each level (по pattern)
         for tier in export_tiers:
-            export_tiers[tier] = list(set(export_tiers[tier]))
+            seen_patterns = set()
+            unique_items = []
+            for item in export_tiers[tier]:
+                pattern_key = item["pattern"]
+                if pattern_key not in seen_patterns:
+                    seen_patterns.add(pattern_key)
+                    unique_items.append(item)
+            export_tiers[tier] = unique_items
 
         return export_tiers
+
+    def _tier_for_variant(self, base_tier: int, variant_type: str) -> int:
+        """Определяет tier для варианта на основе его типа"""
+        # Безопасные форматные варианты остаются в том же tier
+        if variant_type in {"format", "apostrophe", "quotes", "hyphen", "space"}:
+            return base_tier
+        
+        # Морфологические и диминутивы - не ниже Tier 2
+        if variant_type in {"morph", "gender", "diminutive", "initials", "declension_variant", "diminutive_variant"}:
+            return max(2, base_tier)
+        
+        # Транслитерации - не ниже Tier 2
+        if variant_type in {"transliteration_variant", "transliteration"}:
+            return max(2, base_tier)
+        
+        # Опечатки, грубые транслитерации, смешанные комбинации - Tier 3
+        if variant_type in {"typo_variant", "typo", "mixed_language_variant", "other_variant"}:
+            return 3
+        
+        # По умолчанию - тот же tier что у базового паттерна
+        return base_tier
 
     def get_recall_statistics(self, patterns: List[RecallOptimizedPattern]) -> Dict:
         """Статистика по Recall-оптимизации"""

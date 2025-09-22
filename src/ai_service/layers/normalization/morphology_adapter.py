@@ -711,13 +711,21 @@ class MorphologyAdapter:
         
         # Check for feminine surname preservation
         preserve_feminine = getattr(flags, 'preserve_feminine_surnames', True)
-        if preserve_feminine:
+        if preserve_feminine and role == "surname":
             # Check if this is already a nominative feminine form that should be preserved
             # Only preserve if it's singular nominative, not plural
+            # TODO: Add context-aware gender checking to avoid preserving feminine forms for male names
             for parse in parses:
                 if parse.case == "nomn" and parse.gender == "femn":
                     # Check if it's singular by looking at the tag
                     if 'plur' not in parse.tag:
+                        # For surnames that could have both masculine and feminine forms,
+                        # don't auto-preserve the feminine form - let gender logic decide
+                        lower_token = base_token.lower()
+                        if (lower_token.endswith(('ова', 'ева', 'ина', 'ская', 'цкая', 'ич', 'енко')) or
+                            lower_token.endswith('ич') or lower_token.endswith('енко')):
+                            # These endings are ambiguous, skip auto-preservation
+                            continue
                         # This is already nominative feminine singular, preserve it
                         return base_token, trace_note or "morph.preserve_feminine"
         

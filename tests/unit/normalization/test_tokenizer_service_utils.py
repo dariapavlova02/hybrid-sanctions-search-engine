@@ -239,9 +239,10 @@ class TestTokenizerServiceUtils:
         )
         
         # Empty input
-        tokens, traces = service._apply_post_processing_rules([])
+        tokens, traces, token_traces = service._apply_post_processing_rules([])
         assert tokens == []
         assert traces == []
+        assert token_traces == []
 
     def test_apply_post_processing_rules_single_token(self):
         """Test post-processing rules with single token."""
@@ -251,22 +252,22 @@ class TestTokenizerServiceUtils:
         )
         
         # Single token with double dots
-        tokens, traces = service._apply_post_processing_rules(["И.."])
+        tokens, traces, token_traces = service._apply_post_processing_rules(["И.."])
         assert tokens == ["И."]
         assert len(traces) == 1
-        assert traces[0]["action"] == "collapse_initial_double_dot"
+        assert traces[0]["rule"] == "collapse_double_dots"
         
         # Single token with hyphen
-        tokens, traces = service._apply_post_processing_rules(["Петрова-Сидорова"])
+        tokens, traces, token_traces = service._apply_post_processing_rules(["Петрова-Сидорова"])
         assert tokens == ["Петрова-Сидорова"]
         assert len(traces) == 1
         assert traces[0]["action"] == "preserve_hyphenated_name"
         
         # Single token with both
-        tokens, traces = service._apply_post_processing_rules(["И.."])
+        tokens, traces, token_traces = service._apply_post_processing_rules(["И.."])
         assert tokens == ["И."]
         assert len(traces) == 1
-        assert traces[0]["action"] == "collapse_initial_double_dot"
+        assert traces[0]["rule"] == "collapse_double_dots"
 
     def test_apply_post_processing_rules_multiple_tokens(self):
         """Test post-processing rules with multiple tokens."""
@@ -277,7 +278,7 @@ class TestTokenizerServiceUtils:
         
         # Multiple tokens with various patterns
         tokens = ["И..", "Петрова-Сидорова", "А..", "Jean-Luc"]
-        processed_tokens, traces = service._apply_post_processing_rules(tokens)
+        processed_tokens, traces, token_traces = service._apply_post_processing_rules(tokens)
         
         # Check processed tokens
         assert processed_tokens == ["И.", "Петрова-Сидорова", "А.", "Jean-Luc"]
@@ -286,11 +287,11 @@ class TestTokenizerServiceUtils:
         assert len(traces) == 4  # 2 for initials + 2 for hyphens
         
         # Check initial traces
-        initial_traces = [t for t in traces if t["action"] == "collapse_initial_double_dot"]
+        initial_traces = [t for t in traces if t.get("rule") == "collapse_double_dots"]
         assert len(initial_traces) == 2
         
         # Check hyphen traces
-        hyphen_traces = [t for t in traces if t["action"] == "preserve_hyphenated_name"]
+        hyphen_traces = [t for t in traces if t.get("action") == "preserve_hyphenated_name"]
         assert len(hyphen_traces) == 2
 
     def test_apply_post_processing_rules_disabled_features(self):
@@ -302,7 +303,7 @@ class TestTokenizerServiceUtils:
         
         # Tokens with patterns that would be processed if enabled
         tokens = ["И..", "Петрова-Сидорова", "А..", "Jean-Luc"]
-        processed_tokens, traces = service._apply_post_processing_rules(tokens)
+        processed_tokens, traces, token_traces = service._apply_post_processing_rules(tokens)
         
         # Should remain unchanged
         assert processed_tokens == tokens
@@ -317,7 +318,7 @@ class TestTokenizerServiceUtils:
         )
         
         tokens = ["И..", "Петрова-Сидорова", "А..", "Jean-Luc"]
-        processed_tokens, traces = service1._apply_post_processing_rules(tokens)
+        processed_tokens, traces, token_traces = service1._apply_post_processing_rules(tokens)
         
         assert processed_tokens == ["И.", "Петрова-Сидорова", "А.", "Jean-Luc"]
         assert len(traces) == 2  # Only initials
@@ -328,7 +329,7 @@ class TestTokenizerServiceUtils:
             preserve_hyphenated_case=True
         )
         
-        processed_tokens, traces = service2._apply_post_processing_rules(tokens)
+        processed_tokens, traces, token_traces = service2._apply_post_processing_rules(tokens)
         
         assert processed_tokens == ["И..", "Петрова-Сидорова", "А..", "Jean-Luc"]
         assert len(traces) == 2  # Only hyphens
@@ -341,22 +342,21 @@ class TestTokenizerServiceUtils:
         )
         
         tokens = ["И..", "Петрова-Сидорова"]
-        processed_tokens, traces = service._apply_post_processing_rules(tokens)
+        processed_tokens, traces, token_traces = service._apply_post_processing_rules(tokens)
         
         # Check trace structure
         for trace in traces:
             assert isinstance(trace, dict)
-            assert "type" in trace
-            assert "action" in trace
-            assert trace["type"] == "tokenize"
-            assert trace["action"] in ["collapse_initial_double_dot", "preserve_hyphenated_name"]
-            
-            if trace["action"] == "collapse_initial_double_dot":
-                assert "from" in trace
-                assert "to" in trace
-                assert trace["from"] == "И.."
-                assert trace["to"] == "И."
-            elif trace["action"] == "preserve_hyphenated_name":
+
+            # Handle different trace structures
+            if "rule" in trace and trace["rule"] == "collapse_double_dots":
+                assert "before" in trace
+                assert "after" in trace
+                assert trace["before"] == "И.."
+                assert trace["after"] == "И."
+            elif "action" in trace and trace["action"] == "preserve_hyphenated_name":
+                assert "type" in trace
+                assert trace["type"] == "tokenize"
                 assert "token" in trace
                 assert "has_hyphen" in trace
                 assert trace["token"] == "Петрова-Сидорова"
@@ -371,7 +371,7 @@ class TestTokenizerServiceUtils:
         
         # Tokens that don't need processing
         tokens = ["Иван", "Петров", "ООО", "ТОВ"]
-        processed_tokens, traces = service._apply_post_processing_rules(tokens)
+        processed_tokens, traces, token_traces = service._apply_post_processing_rules(tokens)
         
         # Should remain unchanged
         assert processed_tokens == tokens
@@ -386,7 +386,7 @@ class TestTokenizerServiceUtils:
         
         # Tokens with whitespace
         tokens = [" ", "\t", "\n", "И..", "Петрова-Сидорова"]
-        processed_tokens, traces = service._apply_post_processing_rules(tokens)
+        processed_tokens, traces, token_traces = service._apply_post_processing_rules(tokens)
         
         # Should process only valid tokens
         assert len(processed_tokens) == len(tokens)

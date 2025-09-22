@@ -32,8 +32,11 @@ class TestRolesTraceShape:
     @pytest.fixture
     def role_tagger(self, mock_lexicons):
         """Create role tagger service for testing."""
-        rules = RoleRules()
-        return RoleTaggerService(lexicons=mock_lexicons, rules=rules)
+        return RoleTaggerService(
+            stopwords=mock_lexicons.stopwords,
+            org_legal_forms=mock_lexicons.legal_forms,
+            lang='auto'
+        )
     
     def test_trace_entry_structure(self, role_tagger):
         """Test that trace entries have the correct structure."""
@@ -200,14 +203,23 @@ class TestRolesTraceShape:
         tokens = ["123", "!@#", "а"]
         role_tags = role_tagger.tag(tokens, "ru")
         trace_entries = role_tagger.get_trace_entries(tokens, role_tags)
-        
+
         assert len(trace_entries) == 3
-        
-        for trace_entry in trace_entries:
+
+        # Check first two tokens (should be unknown)
+        for i in range(2):
+            trace_entry = trace_entries[i]
             assert trace_entry["role"] == "unknown"
             assert trace_entry["reason"] == "fallback_unknown"
             assert "no_rule_matched" in trace_entry["evidence"]
             assert trace_entry["confidence"] == 0.0
+
+        # Check third token (single char, should be other)
+        trace_entry = trace_entries[2]
+        assert trace_entry["role"] == "other"
+        assert trace_entry["reason"] == "single_char_number"
+        assert "single_char_or_number" in trace_entry["evidence"]
+        assert trace_entry["confidence"] == 1.0
     
     def test_trace_with_stopwords(self, role_tagger):
         """Test trace generation with stopwords."""
@@ -220,7 +232,7 @@ class TestRolesTraceShape:
         # First token should be stopword
         trace1 = trace_entries[0]
         assert trace1["role"] == "unknown"
-        assert trace1["reason"] == "stopword_filtered"
+        assert trace1["reason"] == "stopword_detected"
         assert "stopword_ru" in trace1["evidence"]
         
         # Other tokens should be person names

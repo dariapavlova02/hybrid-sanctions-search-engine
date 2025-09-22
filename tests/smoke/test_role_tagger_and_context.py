@@ -24,9 +24,7 @@ class TestRoleTaggerAndContext:
     @pytest.fixture
     def role_tagger(self):
         """Create role tagger instance for testing."""
-        from src.ai_service.layers.normalization.lexicon_loader import get_lexicons
-        lexicons = get_lexicons()
-        return RoleTagger(lexicons, window=3)
+        return RoleTagger(window=3, enable_ac=True)
 
     def test_organization_span_detection(self, role_tagger):
         """Test organization span detection."""

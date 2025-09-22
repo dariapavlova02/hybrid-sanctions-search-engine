@@ -1,0 +1,12 @@
+{
+  "patterns": [],
+  "statistics": {
+    "persons_processed": 0,
+    "companies_processed": 0,
+    "patterns_generated": 0,
+    "tier_distribution": {},
+    "processing_time": 5.412101745605469e-05
+  },
+  "generation_timestamp": 1758266487.696512,
+  "generator_version": "1.0.0"
+}

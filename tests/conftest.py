@@ -183,7 +183,7 @@ def orchestrator_service():
         
         # Create mock cache service
         from src.ai_service.core.cache_service import CacheService
-        mock_cache_service = CacheService(max_size=100, default_ttl=60)
+        mock_cache_service = CacheService(default_ttl=60)
         
         # Create mock embeddings service
         mock_embeddings_service = AsyncMock()

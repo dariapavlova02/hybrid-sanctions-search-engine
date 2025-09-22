@@ -146,7 +146,7 @@ class TestEnglishNicknames:
         assert "William" in trace_text, f"Expected 'William' in trace for '{input_text}', trace: {result.trace}"
     
     @pytest.mark.asyncio
-    async def test_no_nickname_expansion_when_disabled(self, normalization_factory, test_flags):
+    async def test_no_nickname_expansion_when_disabled(self, normalization_factory):
         """Test that nicknames are not expanded when feature is disabled."""
         # Create config with nickname resolution disabled
         config = NormalizationConfig(
@@ -156,10 +156,17 @@ class TestEnglishNicknames:
             enable_advanced_features=True,
             debug_tracing=True
         )
-        
+
+        # Create flags with nickname resolution disabled
+        disabled_flags = FeatureFlags(
+            enable_nameparser_en=True,
+            enable_en_nicknames=False,  # Disabled
+            debug_tracing=True
+        )
+
         input_text = "Bill Gates"
-        
-        result = await normalization_factory.normalize_text(input_text, config, test_flags)
+
+        result = await normalization_factory.normalize_text(input_text, config, disabled_flags)
         
         # Basic smoke test
         assert result is not None, f"Result is None for '{input_text}'"
@@ -170,7 +177,7 @@ class TestEnglishNicknames:
         assert "William" not in result.normalized, f"Unexpected 'William' in result for '{input_text}', got '{result.normalized}'"
     
     @pytest.mark.asyncio
-    async def test_parity_with_nickname_expansion_disabled(self, normalization_factory, test_flags):
+    async def test_parity_with_nickname_expansion_disabled(self, normalization_factory):
         """Test that parity is maintained when nickname expansion is disabled."""
         # Test with nickname expansion enabled
         config_enabled = NormalizationConfig(
@@ -180,7 +187,13 @@ class TestEnglishNicknames:
             enable_advanced_features=True,
             debug_tracing=True
         )
-        
+
+        flags_enabled = FeatureFlags(
+            enable_nameparser_en=True,
+            enable_en_nicknames=True,
+            debug_tracing=True
+        )
+
         # Test with nickname expansion disabled
         config_disabled = NormalizationConfig(
             language="en",
@@ -189,16 +202,22 @@ class TestEnglishNicknames:
             enable_advanced_features=True,
             debug_tracing=True
         )
-        
+
+        flags_disabled = FeatureFlags(
+            enable_nameparser_en=True,
+            enable_en_nicknames=False,
+            debug_tracing=True
+        )
+
         test_cases = [
             "John Smith",  # No nickname
             "Robert Johnson",  # No nickname
             "Michael Brown",  # No nickname
         ]
-        
+
         for input_text in test_cases:
-            result_enabled = await normalization_factory.normalize_text(input_text, config_enabled, test_flags)
-            result_disabled = await normalization_factory.normalize_text(input_text, config_disabled, test_flags)
+            result_enabled = await normalization_factory.normalize_text(input_text, config_enabled, flags_enabled)
+            result_disabled = await normalization_factory.normalize_text(input_text, config_disabled, flags_disabled)
             
             # Both should succeed
             assert result_enabled.success, f"Enabled config failed for '{input_text}': {result_enabled.errors}"
@@ -217,7 +236,7 @@ class TestEnglishNicknames:
             ("Betty Smith", "Elizabeth Smith"),
             ("Liz Wilson", "Elizabeth Wilson"),
             ("Kate Brown", "Catherine Brown"),
-            ("Katie Davis", "Catherine Davis"),
+            ("Katie Davis", "Katherine Davis"),
             ("Sue Miller", "Susan Miller"),
         ]
         

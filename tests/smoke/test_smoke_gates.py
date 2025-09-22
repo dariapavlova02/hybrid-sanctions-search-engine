@@ -31,14 +31,12 @@ class TestSmokeGates:
             language="ru",
             enable_spacy_ner=True,
             enable_nameparser_en=True,
-            strict_stopwords=True,
-            fsm_tuned_roles=True,
-            enhanced_diminutives=True,
-            enhanced_gender_rules=True,
+            enable_fsm_tuned_roles=True,
+            enable_enhanced_diminutives=True,
+            enable_enhanced_gender_rules=True,
             enable_ac_tier0=True,
             enable_vector_fallback=True,
-            ascii_fastpath=True,
-            debug_tracing=True
+            enable_ascii_fastpath=True
         )
     
     @pytest.fixture(scope="class")
@@ -47,13 +45,12 @@ class TestSmokeGates:
         return FeatureFlags(
             enable_spacy_ner=True,
             enable_nameparser_en=True,
-            strict_stopwords=True,
-            fsm_tuned_roles=True,
-            enhanced_diminutives=True,
-            enhanced_gender_rules=True,
+            enable_fsm_tuned_roles=True,
+            enable_enhanced_diminutives=True,
+            enable_enhanced_gender_rules=True,
             enable_ac_tier0=True,
             enable_vector_fallback=True,
-            ascii_fastpath=True
+            enable_ascii_fastpath=True
         )
     
     @pytest.mark.asyncio
@@ -91,14 +88,12 @@ class TestSmokeGates:
             language="uk",
             enable_spacy_ner=True,
             enable_nameparser_en=True,
-            strict_stopwords=True,
-            fsm_tuned_roles=True,
-            enhanced_diminutives=True,
-            enhanced_gender_rules=True,
+            enable_fsm_tuned_roles=True,
+            enable_enhanced_diminutives=True,
+            enable_enhanced_gender_rules=True,
             enable_ac_tier0=True,
             enable_vector_fallback=True,
-            ascii_fastpath=True,
-            debug_tracing=True
+            enable_ascii_fastpath=True
         )
         
         test_cases = [
@@ -133,14 +128,12 @@ class TestSmokeGates:
             language="en",
             enable_spacy_ner=True,
             enable_nameparser_en=True,
-            strict_stopwords=True,
-            fsm_tuned_roles=True,
-            enhanced_diminutives=True,
-            enhanced_gender_rules=True,
+            enable_fsm_tuned_roles=True,
+            enable_enhanced_diminutives=True,
+            enable_enhanced_gender_rules=True,
             enable_ac_tier0=True,
             enable_vector_fallback=True,
-            ascii_fastpath=True,
-            debug_tracing=True
+            enable_ascii_fastpath=True
         )
         
         test_cases = [
@@ -173,10 +166,9 @@ class TestSmokeGates:
         """Test ASCII fastpath smoke."""
         ascii_config = NormalizationConfig(
             language="en",
-            ascii_fastpath=True,
+            enable_ascii_fastpath=True,
             enable_advanced_features=False,
-            enable_morphology=False,
-            debug_tracing=True
+            enable_morphology=False
         )
         
         test_cases = [

@@ -7,7 +7,8 @@ spaCy Ukrainian NER is properly integrated and improves role tagging.
 """
 
 import pytest
-from src.ai_service.layers.normalization.ner_gateways import get_spacy_uk_ner, SpacyUkNER, NERHints
+from src.ai_service.layers.normalization.ner_gateways.spacy_uk import get_spacy_uk_ner, SpacyUkNER
+from src.ai_service.layers.normalization.ner_gateways import NERHints
 
 
 class TestUkrainianNER:
@@ -16,8 +17,10 @@ class TestUkrainianNER:
     def setup_method(self):
         """Set up test fixtures."""
         self.ner = get_spacy_uk_ner()
+        if not self.ner:
+            pytest.skip("spaCy Ukrainian NER not available")
 
-    @pytest.mark.skipif(not get_spacy_uk_ner().is_available(), reason="spaCy Ukrainian model not available")
+    @pytest.mark.skipif(not (get_spacy_uk_ner() and get_spacy_uk_ner().is_available()), reason="spaCy Ukrainian model not available")
     def test_ner_model_availability(self):
         """Test that NER model is available when expected."""
         assert self.ner.is_available(), "spaCy Ukrainian NER should be available"
@@ -32,7 +35,7 @@ class TestUkrainianNER:
         assert hints.org_spans == [], "Should return empty org spans when model unavailable"
         assert hints.entities == [], "Should return empty entities when model unavailable"
 
-    @pytest.mark.skipif(not get_spacy_uk_ner().is_available(), reason="spaCy Ukrainian model not available")
+    @pytest.mark.skipif(not (get_spacy_uk_ner() and get_spacy_uk_ner().is_available()), reason="spaCy Ukrainian model not available")
     def test_person_entity_extraction(self):
         """Test extraction of person entities from Ukrainian text."""
         test_cases = [
@@ -52,7 +55,7 @@ class TestUkrainianNER:
             person_entities = [e for e in hints.entities if e.label == "PER"]
             assert len(person_entities) > 0, f"Should have person entities for: {text}"
 
-    @pytest.mark.skipif(not get_spacy_uk_ner().is_available(), reason="spaCy Ukrainian model not available")
+    @pytest.mark.skipif(not (get_spacy_uk_ner() and get_spacy_uk_ner().is_available()), reason="spaCy Ukrainian model not available")
     def test_organization_entity_extraction(self):
         """Test extraction of organization entities from Ukrainian text."""
         test_cases = [
@@ -73,7 +76,7 @@ class TestUkrainianNER:
             org_entities = [e for e in hints.entities if e.label == "ORG"]
             assert len(org_entities) > 0, f"Should have org entities for: {text}"
 
-    @pytest.mark.skipif(not get_spacy_uk_ner().is_available(), reason="spaCy Ukrainian model not available")
+    @pytest.mark.skipif(not (get_spacy_uk_ner() and get_spacy_uk_ner().is_available()), reason="spaCy Ukrainian model not available")
     def test_mixed_person_org_extraction(self):
         """Test extraction of both person and organization entities."""
         text = "Анна Ковальська працює в ТОВ ПРИВАТБАНК"
@@ -90,7 +93,7 @@ class TestUkrainianNER:
         assert len(person_entities) > 0, "Should have person entities"
         assert len(org_entities) > 0, "Should have org entities"
 
-    @pytest.mark.skipif(not get_spacy_uk_ner().is_available(), reason="spaCy Ukrainian model not available")
+    @pytest.mark.skipif(not (get_spacy_uk_ner() and get_spacy_uk_ner().is_available()), reason="spaCy Ukrainian model not available")
     def test_entity_at_position(self):
         """Test getting entity at specific character position."""
         text = "Анна Ковальська працює в ТОВ ПРИВАТБАНК"
@@ -108,7 +111,7 @@ class TestUkrainianNER:
             assert org_entity.label == "ORG", "Should be org entity"
             assert "ПРИВАТБАНК" in org_entity.text, "Should contain 'ПРИВАТБАНК'"
 
-    @pytest.mark.skipif(not get_spacy_uk_ner().is_available(), reason="spaCy Ukrainian model not available")
+    @pytest.mark.skipif(not (get_spacy_uk_ner() and get_spacy_uk_ner().is_available()), reason="spaCy Ukrainian model not available")
     def test_is_person_entity(self):
         """Test checking if text span is person entity."""
         text = "Анна Ковальська працює в ТОВ ПРИВАТБАНК"
@@ -121,7 +124,7 @@ class TestUkrainianNER:
         is_person_org = self.ner.is_person_entity(text, 25, 35)  # "ПРИВАТБАНК"
         assert not is_person_org, "Should not identify 'ПРИВАТБАНК' as person entity"
 
-    @pytest.mark.skipif(not get_spacy_uk_ner().is_available(), reason="spaCy Ukrainian model not available")
+    @pytest.mark.skipif(not (get_spacy_uk_ner() and get_spacy_uk_ner().is_available()), reason="spaCy Ukrainian model not available")
     def test_is_org_entity(self):
         """Test checking if text span is organization entity."""
         text = "Анна Ковальська працює в ТОВ ПРИВАТБАНК"
@@ -164,7 +167,7 @@ class TestUkrainianNER:
         else:
             assert stats["model_available"] is False, "Should report model as unavailable"
 
-    @pytest.mark.skipif(not get_spacy_uk_ner().is_available(), reason="spaCy Ukrainian model not available")
+    @pytest.mark.skipif(not (get_spacy_uk_ner() and get_spacy_uk_ner().is_available()), reason="spaCy Ukrainian model not available")
     def test_confidence_scores(self):
         """Test that entities have confidence scores."""
         text = "Анна Ковальська працює в ТОВ ПРИВАТБАНК"

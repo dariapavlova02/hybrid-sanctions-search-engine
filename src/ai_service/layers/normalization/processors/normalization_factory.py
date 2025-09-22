@@ -64,7 +64,7 @@ except ImportError:  # pragma: no cover - optional heavy dependency
     ukrainian_names = None  # type: ignore
 
 PERSON_ROLES = {"given", "surname", "patronymic", "initial", "suffix", "other"}
-SEPARATOR_TOKENS = {"и", "та", "and", ","}
+SEPARATOR_TOKENS = {"и", "та", "and", ",", "|", ";", "та", "і", "и"}
 
 
 @dataclass
@@ -223,6 +223,20 @@ class NormalizationFactory(ErrorReportingMixin):
 
         errors: List[str] = []
 
+        # Apply English name filter preprocessing if language is English
+        processed_text = text
+        if config.language == "en":
+            try:
+                from ..filters.english_name_filter import english_name_filter
+                if english_name_filter.should_apply_filter(config.language, text):
+                    filtered_text, filter_rules = english_name_filter.filter_name(text)
+                    if filtered_text != text:
+                        processed_text = filtered_text
+                        self.logger.debug(f"English name filter applied: '{text}' -> '{filtered_text}', rules: {filter_rules}")
+            except ImportError:
+                # English name filter not available, continue with original text
+                pass
+
         # Step 1: Tokenization with caching
         try:
             if config.enable_cache:
@@ -239,7 +253,7 @@ class NormalizationFactory(ErrorReportingMixin):
                 }
                 
                 tokenization_result = self.tokenizer_service.tokenize(
-                    text,
+                    processed_text,
                     language=config.language,
                     remove_stop_words=config.remove_stop_words,
                     preserve_names=config.preserve_names,
@@ -257,11 +271,11 @@ class NormalizationFactory(ErrorReportingMixin):
                     self.tokenizer_service.get_stats()
                 )
                 
-                self.logger.debug(f"Tokenized '{text}' into {len(tokens)} tokens (cache: {'hit' if tokenization_result.cache_hit else 'miss'})")
+                self.logger.debug(f"Tokenized '{processed_text}' into {len(tokens)} tokens (cache: {'hit' if tokenization_result.cache_hit else 'miss'})")
             else:
                 # Use direct tokenization
                 tokens, tokenization_traces, token_meta = self.token_processor.strip_noise_and_tokenize(
-                    text,
+                    processed_text,
                     language=config.language,
                     remove_stop_words=config.remove_stop_words,
                     preserve_names=config.preserve_names
@@ -286,13 +300,16 @@ class NormalizationFactory(ErrorReportingMixin):
 
         quoted_segments = token_meta.get("quoted_segments", [])
 
-        # Step 1.6: Role tagging with FSM-based service (skip for English nameparser)
-        if config.language == "en" and config.enable_nameparser_en:
-            # Skip FSM role tagger for English nameparser mode
+        # Step 1.6: Role tagging with FSM-based service (skip for English nameparser or if disabled)
+        if (config.language == "en" and config.enable_nameparser_en) or not getattr(effective_flags, 'enable_fsm_tuned_roles', False):
+            # Skip FSM role tagger for English nameparser mode or if FSM is disabled
             role_tags = []
             role_tagger_traces = []
             org_spans = []
-            self.logger.debug("FSM role tagger skipped for English nameparser mode")
+            if config.language == "en" and config.enable_nameparser_en:
+                self.logger.debug("FSM role tagger skipped for English nameparser mode")
+            else:
+                self.logger.debug("FSM role tagger disabled by enable_fsm_tuned_roles=False")
         else:
             try:
                 # Get NER hints if enabled
@@ -369,7 +386,7 @@ class NormalizationFactory(ErrorReportingMixin):
             # Pass trace if debug tracing is enabled
             trace_steps = [] if getattr(effective_flags, 'debug_tracing', False) else None
             filtered_tokens, filtered_roles, filter_traces = self._apply_role_filtering(
-                classified_tokens, roles, role_tags, effective_flags=effective_flags, trace=trace_steps
+                classified_tokens, roles, role_tags, effective_flags=effective_flags, language=config.language, trace=trace_steps
             )
             self.logger.debug(f"FSM role filtering removed {len(classified_tokens) - len(filtered_tokens)} tokens")
         else:
@@ -565,13 +582,12 @@ class NormalizationFactory(ErrorReportingMixin):
 
         # Ensure trace is a list of TokenTrace objects
         if isinstance(trace, list) and trace and isinstance(trace[0], TokenTrace):
-            filtered_person_tokens = self._filter_person_tokens(trace, config.preserve_names, roles)
+            filtered_person_tokens = self._filter_person_tokens(trace, config.preserve_names, roles, config.language)
         else:
             # If trace is not TokenTrace objects, create a simple trace
             filtered_person_tokens = final_tokens
         final_normalized_text = " ".join(filtered_person_tokens)
 
-        # Debug logging
         self.logger.debug(f"Final normalized text: '{final_normalized_text}'")
         self.logger.debug(f"Filtered person tokens: {filtered_person_tokens}")
         self.logger.debug(f"Final normalized text length: {len(final_normalized_text)}")
@@ -719,10 +735,11 @@ class NormalizationFactory(ErrorReportingMixin):
             persons=[],
         )
 
-    def _filter_person_tokens(self, trace: List[TokenTrace], preserve_names: bool, roles: List[str]) -> List[str]:
+    def _filter_person_tokens(self, trace: List[TokenTrace], preserve_names: bool, roles: List[str], language: str = "auto") -> List[str]:
         """Filter tokens to include only person-related tokens from trace with proper titlecase.
-        
+
         Excludes ORG-спаны (organization spans) from person concatenation.
+        Also filters Latin tokens in Cyrillic languages (ru/uk).
         """
         filtered_tokens = []
         processed_tokens = set()  # Track processed tokens to avoid duplicates
@@ -740,7 +757,12 @@ class NormalizationFactory(ErrorReportingMixin):
             if token_trace.role == 'org':
                 self.logger.debug(f"  Skipping ORG-спан: {token_trace.token} -> {token_trace.output}")
                 continue
-                
+
+            # Skip Latin tokens in Cyrillic languages (mixed script filtering)
+            if language in ("ru", "uk") and self._is_latin_token(token_trace.output):
+                self.logger.debug(f"  SCRIPT FILTER: Skipping Latin token '{token_trace.output}' in {language} context")
+                continue
+
             if token_trace.role in PERSON_ROLES:
                 # For initials, allow duplicates (И. И. Петров)
                 # For other roles, skip if we've already processed this token
@@ -986,7 +1008,7 @@ class NormalizationFactory(ErrorReportingMixin):
         """Classify the role of each token, returning possibly expanded tokens."""
         
         # Handle English names with nameparser if enabled
-        if config.language == "en" and config.enable_nameparser_en:
+        if config.language == "en":
             return await self._classify_english_names(tokens, config, quoted_segments)
         
         # Default classification for other languages
@@ -1008,30 +1030,67 @@ class NormalizationFactory(ErrorReportingMixin):
         """Classify English names using nameparser."""
         try:
             from ..nameparser_adapter import get_nameparser_adapter, NAMEPARSER_AVAILABLE
-            
+
+            # Check if we have initials - if so, use role_classifier instead of nameparser
+            # to preserve individual initials (e.g., "J.. J. Smith" -> "J. J. Smith")
+            has_initials = any(
+                len(token) <= 2 and token.endswith('.') and token[0].isalpha()
+                for token in tokens
+            )
+
+            # Check if we likely have multiple persons (3+ tokens suggests multiple names)
+            # This prevents nameparser from merging multiple persons into one
+            likely_multiple_persons = len(tokens) >= 3
+
+            if has_initials or likely_multiple_persons:
+                # Use role_classifier for proper initial handling
+                tagged_tokens, traces, organizations = self.role_classifier.tag_tokens(
+                    tokens, config.language, quoted_segments
+                )
+                classified_tokens = [token for token, _ in tagged_tokens]
+                roles = [role for _, role in tagged_tokens]
+                return classified_tokens, roles, traces, organizations
+
             # Get nameparser adapter
             nameparser = get_nameparser_adapter()
             
-            # Check for hyphenated and apostrophe names and split them before parsing
-            processed_tokens = []
-            for token in tokens:
-                if '-' in token and not token.startswith('-') and not token.endswith('-'):
-                    # Only split hyphens if nameparser is available, otherwise preserve hyphenated surnames
-                    if NAMEPARSER_AVAILABLE:
-                        parts = token.split('-')
-                        processed_tokens.extend(parts)
+            # Check for comma reversal pattern: ["Surname", ",", "Given"] or ["Surname,", "Given"]
+            if len(tokens) == 3 and tokens[1] == ',':
+                # Comma reversal case: ["O'Connor", ",", "Sean"] -> ["Sean", "O'Connor"]
+                surname = tokens[0]
+                given = tokens[2]
+                processed_tokens = [given, surname]
+            elif len(tokens) == 2 and tokens[0].endswith(','):
+                # Comma reversal case: ["O'Connor,", "Sean"] -> ["Sean", "O'Connor"]
+                surname = tokens[0].rstrip(',')
+                given = tokens[1]
+                processed_tokens = [given, surname]
+            else:
+                # Normal processing for other cases
+                processed_tokens = []
+                for token in tokens:
+                    if '-' in token and not token.startswith('-') and not token.endswith('-'):
+                        # Only split hyphens if nameparser is available, otherwise preserve hyphenated surnames
+                        if NAMEPARSER_AVAILABLE:
+                            parts = token.split('-')
+                            processed_tokens.extend(parts)
+                        else:
+                            processed_tokens.append(token)
+                    elif "'" in token and not token.startswith("'") and not token.endswith("'"):
+                        # For apostrophes, preserve the token but normalize the apostrophe
+                        normalized_token = token.replace("'", "'")
+                        processed_tokens.append(normalized_token)
+                    elif ',' in token:
+                        # Handle comma-separated names within a single token
+                        parts = [part.strip() for part in token.split(',')]
+                        if len(parts) == 2 and parts[0] and parts[1]:
+                            # Reverse order for comma-separated names: Last, First -> First Last
+                            processed_tokens.extend([parts[1], parts[0]])
+                        else:
+                            # Remove comma and use as single token
+                            processed_tokens.append(token.rstrip(','))
                     else:
                         processed_tokens.append(token)
-                elif "'" in token and not token.startswith("'") and not token.endswith("'"):
-                    # For apostrophes, preserve the token but normalize the apostrophe
-                    normalized_token = token.replace("'", "'")
-                    processed_tokens.append(normalized_token)
-                elif ',' in token:
-                    # Handle comma-separated names (e.g., "O'Connor, Sean")
-                    parts = [part.strip() for part in token.split(',')]
-                    processed_tokens.extend(parts)
-                else:
-                    processed_tokens.append(token)
             
             # Join tokens to form full name for parsing
             full_name = " ".join(processed_tokens)
@@ -1048,9 +1107,9 @@ class NormalizationFactory(ErrorReportingMixin):
                         # Nickname was resolved, treat as given name
                         return [resolved_name], ["given"], nickname_traces, []
                 
-                # Fall back to default classification
+                # Fall back to default classification using processed tokens (comma-reversed, etc.)
                 tagged_tokens, traces, organizations = self.role_classifier.tag_tokens(
-                    tokens, config.language, quoted_segments
+                    processed_tokens, config.language, quoted_segments
                 )
                 classified_tokens = [token for token, _ in tagged_tokens]
                 roles = [role for _, role in tagged_tokens]
@@ -1078,16 +1137,10 @@ class NormalizationFactory(ErrorReportingMixin):
                 else:
                     traces.append(f"First name: '{parsed.first}'")
             
-            # Add middle names with nickname resolution
+            # Skip middle names for normalization (remove them from output)
+            # Add trace for debugging but don't include in tokens
             for middle in parsed.middles:
-                if config.enable_en_nicknames:
-                    resolved_middle, nickname_traces = self._resolve_english_nickname(middle, config)
-                    traces.extend(nickname_traces)
-                    classified_tokens.append(resolved_middle)
-                else:
-                    classified_tokens.append(middle)
-                roles.append("given")
-                traces.append(f"Middle name: '{middle}'")
+                traces.append(f"Middle name '{middle}' removed for normalization")
             
             # Add last name with particles
             if parsed.last:
@@ -1550,6 +1603,16 @@ class NormalizationFactory(ErrorReportingMixin):
         if not config.enable_gender_adjustment or not config.enable_advanced_features:
             return tokens, ["Gender processing disabled"], {}
 
+        # Check for multiple persons (skip gender adjustment for multiple persons)
+        given_count = sum(1 for role in roles if role == 'given')
+        has_comma = ',' in tokens
+        unknown_count = sum(1 for role in roles if role == 'unknown')
+
+        # If we have multiple given names, comma, or many unknown tokens (like "Мария" classified as unknown)
+        # then this is likely multiple persons - skip global gender adjustment
+        if given_count > 1 or has_comma or unknown_count > 2:
+            return tokens, ["Gender processing skipped: multiple persons detected"], {}
+
         traces = []
         gender_info = {}
 
@@ -1978,6 +2041,10 @@ class NormalizationFactory(ErrorReportingMixin):
         elif language == "uk":
             diminutives_dict = self._diminutives_uk
         elif language == "en":
+            # Check if English nicknames are enabled
+            if not getattr(effective_flags, 'enable_en_nicknames', True):
+                # English nicknames disabled, return tokens as-is
+                return tokens, [], set()
             diminutives_dict = self._diminutives_en
         else:
             # For unsupported languages, return tokens as-is
@@ -2123,7 +2190,29 @@ class NormalizationFactory(ErrorReportingMixin):
         
         return org_spans
 
-    def _apply_role_filtering(self, tokens: List[str], roles: List[str], role_tags: List, effective_flags, trace: Optional[List[Any]] = None) -> Tuple[List[str], List[str], List[str]]:
+    def _is_cyrillic_token(self, token: str) -> bool:
+        """Check if a token contains primarily Cyrillic characters."""
+        if not token:
+            return False
+
+        cyrillic_chars = sum(1 for c in token if '\u0400' <= c <= '\u04FF' or c in 'ЁёІіЇїЄєҐґ')
+        latin_chars = sum(1 for c in token if 'A' <= c <= 'Z' or 'a' <= c <= 'z')
+
+        # Consider token Cyrillic if it has any Cyrillic chars and more Cyrillic than Latin
+        return cyrillic_chars > 0 and cyrillic_chars >= latin_chars
+
+    def _is_latin_token(self, token: str) -> bool:
+        """Check if a token contains primarily Latin characters."""
+        if not token:
+            return False
+
+        cyrillic_chars = sum(1 for c in token if '\u0400' <= c <= '\u04FF' or c in 'ЁёІіЇїЄєҐґ')
+        latin_chars = sum(1 for c in token if 'A' <= c <= 'Z' or 'a' <= c <= 'z')
+
+        # Consider token Latin if it has Latin chars and more Latin than Cyrillic
+        return latin_chars > 0 and latin_chars > cyrillic_chars
+
+    def _apply_role_filtering(self, tokens: List[str], roles: List[str], role_tags: List, effective_flags, language: str = "auto", trace: Optional[List[Any]] = None) -> Tuple[List[str], List[str], List[str]]:
         """Filter tokens based on FSM role tagger results."""
         if not role_tags or len(role_tags) != len(tokens):
             return tokens, roles, []
@@ -2138,6 +2227,21 @@ class NormalizationFactory(ErrorReportingMixin):
         org_context_windows = []
 
         for i, (token, role, tag) in enumerate(zip(tokens, roles, role_tags)):
+            # Check for script filtering: remove Latin tokens in Cyrillic languages
+            if language in ("ru", "uk") and self._is_latin_token(token):
+                # Filter out Latin tokens in Russian/Ukrainian context
+                removed_count += 1
+                traces.append(f"Script filtering: removed Latin token '{token}' in {language} context")
+
+                if trace is not None:
+                    trace.append({
+                        'stage': 'filter',
+                        'rule': 'mixed_script_filtered',
+                        'token': token,
+                        'reason': f'latin_token_in_{language}_context'
+                    })
+                continue
+
             # Check if token should be excluded based on FSM role
             if getattr(effective_flags, 'strict_stopwords', False) and tag.role.value in excluded_roles:
                 removed_count += 1

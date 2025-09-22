@@ -683,9 +683,9 @@ def log_alert_notification(alert: Alert) -> None:
 
 
 def slack_alert_notification(alert: Alert, webhook_url: str) -> None:
-    """Slack notification callback (requires requests library)."""
+    """Slack notification callback with connection pooling."""
     try:
-        import requests
+        from ..utils.http_client_pool import get_http_pool
 
         severity_colors = {
             AlertSeverity.INFO: "#36a64f",
@@ -717,7 +717,10 @@ def slack_alert_notification(alert: Alert, webhook_url: str) -> None:
                 "url": alert.details["runbook_url"]
             }]
 
-        requests.post(webhook_url, json=payload, timeout=10)
+        # Use connection pooled HTTP client
+        http_pool = get_http_pool()
+        response = http_pool.sync_post_json(webhook_url, payload, timeout=10)
+        response.raise_for_status()  # Raise exception for HTTP errors
 
     except Exception as e:
         logger = get_logger_for_component("alerts", LogCategory.MONITORING)

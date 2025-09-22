@@ -67,7 +67,8 @@ class TokenProcessor:
         # Only remove digits that are not standalone (e.g., "123" becomes "123", but "abc123def" becomes "abc def")
         if preserve_names:
             # Preserve standalone digits and digits within names
-            cleaned = re.sub(r"[^\w\s\.\-\'\,\u0400-\u04FF\u0370-\u03FF\u0100-\u017F\u0180-\u024F\u1E00-\u1EFF]", " ", cleaned)
+            # Note: \u2019 is the right single quotation mark that apostrophes get normalized to
+            cleaned = re.sub(r"[^\w\s\.\-\'\u2019\,\;\u0400-\u04FF\u0370-\u03FF\u0100-\u017F\u0180-\u024F\u1E00-\u1EFF]", " ", cleaned)
         else:
             # More restrictive but still preserve standalone digits
             cleaned = re.sub(r"[^\w\s\u0400-\u04FF\u0370-\u03FF\u0100-\u017F\u0180-\u024F\u1E00-\u1EFF]", " ", cleaned)
@@ -80,7 +81,7 @@ class TokenProcessor:
                 continue
             if preserve_names:
                 for sub_token in self._split_compound_initials(token):
-                    for final_token in re.split(r"([,])", sub_token):
+                    for final_token in re.split(r"([,|;])", sub_token):
                         final = final_token.strip()
                         if final:
                             tokens.append(final)
@@ -106,11 +107,23 @@ class TokenProcessor:
                 # Cache lower() result to avoid repeated calls
                 token_lower = token.lower()
                 if token_lower in effective_stop_words:
-                    if len(token) == 1 and token.isalpha():
-                        filtered.append(token)
-                    else:
-                        traces.append(f"Filtered stop word: '{token}'")
+                    traces.append(f"Filtered stop word: '{token}'")
                     continue
+
+            # Filter date patterns that should not appear in normalized names
+            # Common date patterns: YYYY-MM-DD, DD.MM.YYYY, MM/DD/YYYY, etc.
+            date_patterns = [
+                r'^\d{4}-\d{2}-\d{2}$',      # ISO date: 1980-01-01
+                r'^\d{2}\.\d{2}\.\d{4}$',    # European date: 01.01.1980
+                r'^\d{1,2}/\d{1,2}/\d{4}$',  # US date: 1/1/1980 or 01/01/1980
+                r'^\d{2}-\d{2}-\d{4}$',      # US date with dashes: 01-01-1980
+            ]
+
+            is_date = any(re.match(pattern, token) for pattern in date_patterns)
+            if is_date:
+                traces.append(f"Filtered date pattern: '{token}'")
+                continue
+
             filtered.append(token)
 
         result_tokens: List[str] = []
@@ -144,8 +157,22 @@ class TokenProcessor:
         if not result_tokens:
             traces.append("No tokens after filtering")
             # For property tests, ensure non-empty input produces non-empty output
-            if text.strip():
-                # Preserve the original text as a single token if everything was filtered
+            # BUT: don't preserve text that only contains stop words (mixed_function_words test case)
+            if text.strip() and remove_stop_words:
+                # Check if original text contains only stop words
+                original_tokens = text.strip().split()
+                contains_non_stop = any(
+                    token.lower() not in effective_stop_words
+                    for token in original_tokens
+                )
+                if contains_non_stop:
+                    # Preserve the original text as a single token if not all tokens were stop words
+                    result_tokens = [text.strip()]
+                    traces.append(f"Preserved original text as token: '{text.strip()}'")
+                else:
+                    traces.append("All tokens were stop words - returning empty result")
+            elif text.strip():
+                # If stop word removal is disabled, preserve the original text
                 result_tokens = [text.strip()]
                 traces.append(f"Preserved original text as token: '{text.strip()}'")
 

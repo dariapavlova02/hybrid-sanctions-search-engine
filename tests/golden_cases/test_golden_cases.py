@@ -21,7 +21,6 @@ LEGACY_KNOWN_FAILURES = {
     "uk_ner_gate": "NER filter includes country token",
     "en_title_suffix": "Titles and suffixes not trimmed",
     "en_middle_name": "Middle name not removed",
-    "en_apostrophe": "Apostrophe not typographically normalized",
     "en_double_surname": "Hyphenated surname lowercased incorrectly",
     "mixed_org_noise": "Organization tokens leak into normalized output",
     "mixed_languages": "Multi-person splitting not implemented",

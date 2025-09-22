@@ -93,39 +93,235 @@ class NormalizationService:
 
         self.logger.info("NormalizationService initialized as thin facade with feature flags")
 
+    def _is_latin_token(self, token: str) -> bool:
+        """Check if a token contains primarily Latin characters."""
+        if not token:
+            return False
+
+        cyrillic_chars = sum(1 for c in token if '\u0400' <= c <= '\u04FF' or c in 'ЁёІіЇїЄєҐґ')
+        latin_chars = sum(1 for c in token if 'A' <= c <= 'Z' or 'a' <= c <= 'z')
+
+        # Consider token Latin if it has Latin chars and more Latin than Cyrillic
+        return latin_chars > 0 and latin_chars > cyrillic_chars
+
+    def _has_mixed_scripts(self, text: str) -> bool:
+        """Check if text contains both Latin and Cyrillic characters."""
+        has_latin = any('A' <= c <= 'Z' or 'a' <= c <= 'z' for c in text)
+        has_cyrillic = any('\u0400' <= c <= '\u04FF' or c in 'ЁёІіЇїЄєҐґ' for c in text)
+        return has_latin and has_cyrillic
+
+    def _extract_persons_from_sequence(self, personal_sequence: List[Tuple[str, str]]) -> List[str]:
+        """
+        Extract individual persons from a sequence of personal tokens.
+
+        Improved logic for person boundary detection:
+        - Groups based on role patterns (initials -> given -> patronymic -> surname)
+        - Handles mixed language scenarios
+        - Supports multiple person detection
+        """
+        if not personal_sequence:
+            return []
+
+        persons = []
+        current_person = []
+
+        i = 0
+        while i < len(personal_sequence):
+            role, token = personal_sequence[i]
+            titlecased_token = self._to_title(token)
+
+            # Add current token to person (but skip punctuation/formatting tokens)
+            if role != "unknown":
+                current_person.append(titlecased_token)
+
+            # Determine if this is the end of a person
+            is_person_end = self._is_person_boundary(personal_sequence, i)
+
+            if is_person_end:
+                if current_person:
+                    persons.append(" ".join(current_person))
+                    current_person = []
+
+            i += 1
+
+        # Add any remaining tokens as the last person
+        if current_person:
+            persons.append(" ".join(current_person))
+
+        # Handle "Last, First" reordering for single person
+        if (len(persons) == 1 and len(personal_sequence) >= 3
+            and personal_sequence[0][0] == "surname" and personal_sequence[1][1] == ","
+            and personal_sequence[2][0] == "given"):
+            # Reorder from "Last, First" to "First Last"
+            surname = personal_sequence[0][1]
+            given = personal_sequence[2][1]
+            persons[0] = f"{self._to_title(given)} {self._to_title(surname)}"
+
+        return persons
+
+    def _is_person_boundary(self, sequence: List[Tuple[str, str]], current_index: int) -> bool:
+        """
+        Determine if current position is a boundary between two persons.
+
+        Person boundary rules:
+        1. After surname, if next token is initial/given (start of new person)
+        2. After patronymic, if next token is not surname (unusual but possible)
+        3. At end of sequence
+        4. Before/after unknown tokens (separators like "and", "та")
+        """
+        if current_index >= len(sequence) - 1:
+            return True  # End of sequence
+
+        current_role, current_token = sequence[current_index]
+        next_role, next_token = sequence[current_index + 1]
+
+        # Rule 1: Surname followed by initial/given indicates new person
+        if current_role == "surname" and next_role in ("initial", "given"):
+            # Exception: Check for patronymic patterns (Russian/Ukrainian)
+            # If next is given and followed by patronymic, it's same person
+            if (next_role == "given" and current_index + 2 < len(sequence)
+                and sequence[current_index + 2][0] == "patronymic"):
+                return False  # Same person continues
+
+            # Exception: Initials immediately following surname are likely same person
+            # e.g., "Иванов И.И." should be one person, not two
+            if next_role == "initial":
+                return False  # Same person continues with initials
+
+            return True  # New person starts
+
+        # Rule 2: Patronymic followed by initial/given (rare but possible)
+        if current_role == "patronymic" and next_role in ("initial", "given"):
+            return True
+
+        # Rule 3: Unknown tokens are separators
+        # Exception: Handle "Last, First" format - comma between surname and given name
+        if current_role == "unknown" or next_role == "unknown":
+            # Check for "Last, First" pattern: surname followed by comma followed by given
+            if (current_role == "surname" and next_role == "unknown"
+                and current_index + 2 < len(sequence)
+                and sequence[current_index + 1][1] == ","
+                and sequence[current_index + 2][0] == "given"):
+                return False  # Don't split on comma in "Last, First" format
+
+            # Also handle when we're at the comma itself
+            if (current_role == "unknown" and sequence[current_index][1] == ","
+                and current_index > 0 and current_index + 1 < len(sequence)
+                and sequence[current_index - 1][0] == "surname"
+                and sequence[current_index + 1][0] == "given"):
+                return False  # Don't split at comma in "Last, First" format
+
+            return True
+
+        # Rule 4: Given name followed by given name (indicates two different people)
+        if current_role == "given" and next_role == "given":
+            return True
+
+        return False
+
+    def _has_mixed_personal_names(self, text: str) -> bool:
+        """Check if text likely contains both Latin and Cyrillic personal names."""
+        if not self._has_mixed_scripts(text):
+            return False
+
+        # Look for connecting words that suggest multiple people (not business/payment contexts)
+        connectors = ['та', 'и', 'and', '&']  # Removed comma and pipe as they're too general
+        text_lower = text.lower()
+
+        # Also exclude contexts that suggest business/payment rather than personal names
+        business_keywords = ['оплата', 'платеж', 'payment', 'café', 'restaurant', '→', '->']
+        if any(keyword in text_lower for keyword in business_keywords):
+            return False
+
+        # Check if any connector appears between Latin and Cyrillic text
+        for connector in connectors:
+            if connector in text_lower:
+                parts = text_lower.split(connector)
+                if len(parts) >= 2:
+                    # Check if we have Latin in one part and Cyrillic in another
+                    has_latin_part = any(any('a' <= c <= 'z' for c in part) for part in parts)
+                    has_cyrillic_part = any(any('\u0430' <= c <= '\u044f' or c in 'ёіїєґ' for c in part) for part in parts)
+                    if has_latin_part and has_cyrillic_part:
+                        return True
+
+        return False
+
+    def _could_be_personal_name(self, token: str) -> bool:
+        """Check if a Latin token could be a personal name (not numbers, symbols, etc.)."""
+        if not token:
+            return False
+
+        # Remove common non-name patterns
+        if len(token) <= 2 and not token.isalpha():
+            return False
+
+        # Check for numbers or symbols that suggest it's not a name
+        has_digits = any(c.isdigit() for c in token)
+        has_symbols = any(c in '()[]{}@#$%^&*+=<>?/\\|~`' for c in token)
+
+        if has_digits or has_symbols:
+            return False
+
+        # Must be primarily alphabetic
+        alpha_chars = sum(1 for c in token if c.isalpha())
+        return alpha_chars >= len(token) * 0.8
+
     def _to_title(self, word: str) -> str:
         """
         Convert word to title case while preserving apostrophes and hyphens.
-        
+
         Args:
             word: Input word to convert
-            
+
         Returns:
             Word in title case (first letter uppercase, rest lowercase)
         """
         if not word:
             return word
-        
+
         # Handle hyphenated words - apply titlecase to each segment
         if '-' in word:
             segments = word.split('-')
             return '-'.join(self._to_title(segment) for segment in segments)
-        
+
         # Handle single word - first letter uppercase, rest lowercase
         if len(word) == 1:
             return word.upper()
-        
+
         # Handle apostrophes - capitalize letter after apostrophe
+        # Check ASCII apostrophe (Unicode normalization converts all to ASCII)
         result = word[0].upper()
         i = 1
         while i < len(word):
             if word[i] == "'" and i + 1 < len(word):
-                result += "'" + word[i + 1].upper()
+                result += word[i] + word[i + 1].upper()
                 i += 2
             else:
                 result += word[i].lower()
                 i += 1
-        
+
+        return result
+
+    def _apply_language_specific_apostrophe_normalization(
+        self,
+        result: NormalizationResult,
+        language: Optional[str],
+    ) -> NormalizationResult:
+        """Apply language-specific apostrophe normalization."""
+        if not language:
+            return result
+
+        lang = language.lower()
+
+        # For English, convert ASCII apostrophe to typographic apostrophe
+        if lang == "en":
+            if result.normalized:
+                result.normalized = result.normalized.replace("'", "\u2019")
+
+            # Also update tokens
+            if result.tokens:
+                result.tokens = [token.replace("'", "\u2019") for token in result.tokens]
+
         return result
 
     def _apply_role_filtering(self, text: str, language: str, feature_flags: Optional[FeatureFlags] = None) -> Tuple[str, List[Dict]]:
@@ -687,7 +883,70 @@ class NormalizationService:
             enable_spacy_ru_ner=enable_spacy_ru_ner,
         )
         result = await self.normalization_factory.normalize_text(text, config, feature_flags)
-        return self._enforce_nominative_and_gender(result, language)
+        result = self._enforce_nominative_and_gender(result, language)
+
+        # Apply language-specific apostrophe normalization
+        result = self._apply_language_specific_apostrophe_normalization(result, language)
+
+        # Apply language-specific character conversion (e.g., Russian to Ukrainian)
+        result = self._apply_language_specific_character_conversion(result, language)
+
+        return result
+
+    def _apply_language_specific_character_conversion(
+        self,
+        result: NormalizationResult,
+        language: Optional[str],
+    ) -> NormalizationResult:
+        """Apply language-specific character conversion (e.g., Russian to Ukrainian)."""
+        if not language or not DICTIONARIES_AVAILABLE:
+            return result
+
+        lang = language.lower()
+
+        # For Ukrainian language, convert Russian variants to Ukrainian canonical forms
+        if lang == "uk":
+            try:
+                from ...data.dicts.ukrainian_names import UKRAINIAN_NAMES
+
+                # Build reverse mapping: Russian variant -> Ukrainian canonical
+                # Only map variants that contain distinctly Russian characters
+                russian_to_ukrainian = {}
+                for ukrainian_name, props in UKRAINIAN_NAMES.items():
+                    if 'variants' in props:
+                        for variant in props['variants']:
+                            # Only map if variant contains Russian-specific characters
+                            # and is not already a valid Ukrainian name itself
+                            has_russian_chars = 'И' in variant or 'Ы' in variant or 'Э' in variant or 'Ё' in variant
+                            is_not_ukrainian_canonical = variant not in UKRAINIAN_NAMES
+                            if has_russian_chars or is_not_ukrainian_canonical:
+                                russian_to_ukrainian[variant] = ukrainian_name
+
+                # Convert normalized text
+                if result.normalized:
+                    words = result.normalized.split()
+                    converted_words = []
+                    for word in words:
+                        # Try to convert each word
+                        converted_word = russian_to_ukrainian.get(word, word)
+                        converted_words.append(converted_word)
+                    result.normalized = " ".join(converted_words)
+
+                # Convert tokens
+                if result.tokens:
+                    converted_tokens = []
+                    for token in result.tokens:
+                        converted_token = russian_to_ukrainian.get(token, token)
+                        converted_tokens.append(converted_token)
+                    result.tokens = converted_tokens
+
+            except ImportError:
+                pass
+            except Exception as e:
+                # Log but don't fail
+                self.logger.warning(f"Failed to apply Russian-to-Ukrainian conversion: {e}")
+
+        return result
 
     async def _process_with_legacy(
         self,
@@ -784,14 +1043,14 @@ class NormalizationService:
 
         adapter = self.morphology_adapter
         preserve_feminine = self.feature_flags.preserve_feminine_surnames()
-        personal_roles = {"given", "patronymic", "surname", "initial"}
+        personal_roles = {"given", "patronymic", "surname", "initial", "unknown"}
 
         given_gender = "unknown"
         personal_sequence = []
 
         for trace in result.trace:
             role = trace.role
-            if role in {"given", "patronymic", "surname"}:
+            if role in {"given", "patronymic", "surname", "unknown"}:
                 original_output = trace.output
                 # Use the new to_nominative_cached method with feature flags
                 nominative, trace_note = adapter.to_nominative_cached(original_output, lang, self.feature_flags, role)
@@ -814,17 +1073,24 @@ class NormalizationService:
                     if detected_gender in {"femn", "masc"}:
                         given_gender = detected_gender
 
-            if role == "surname" and preserve_feminine:
+            # Apply gender-based surname preservation for feminine names
+            # Only apply if we have detected feminine gender from a given name in this sequence
+            if (role == "surname" and preserve_feminine and given_gender == "femn"
+                and lang in ("ru", "uk")):  # Only for languages with gendered surnames
                 before_preserve = trace.output
                 preferred = prefer_feminine_form(before_preserve, given_gender, lang)
                 payload = {
                     "type": "morph",
                     "action": "preserve_feminine",
                     "token": before_preserve,
+                    "gender_context": given_gender,
+                    "language": lang,
                 }
                 if preferred != before_preserve:
                     trace.output = preferred
                     payload["result"] = preferred
+                    # Log successful gender-based transformation
+                    self.logger.debug(f"Applied feminine form: {before_preserve} -> {preferred}")
                 trace.notes = self._append_trace_note(trace.notes, payload)
 
             # Don't collect personal sequence here to avoid duplicates
@@ -857,6 +1123,32 @@ class NormalizationService:
         for trace in result.trace:
             role = trace.role
             if role in personal_roles:
+                # Skip punctuation and separators
+                # Filter separators and connectors, but be language-specific
+                # In English, comma might be name formatting ("Last, First")
+                if trace.output in {';', '|', '&', 'и', 'та', 'and'}:
+                    continue
+                # For non-English languages, also filter comma
+                if trace.output == ',' and lang != 'en':
+                    continue
+                # Skip Latin tokens in Cyrillic languages (mixed script filtering)
+                # But allow Latin tokens if: 1) mixed personal names context OR 2) organizational context with clear names
+                if lang in ("ru", "uk") and self._is_latin_token(trace.output):
+                    original_text = getattr(result, 'original_text', '')
+                    is_mixed_context = self._has_mixed_personal_names(original_text)
+                    is_personal_name = self._could_be_personal_name(trace.output)
+
+                    # More conservative: require mixed context AND personal name,
+                    # OR organizational keywords with clear English names
+                    has_org_context = any(word in original_text.lower() for word in ['llc', 'company', 'corp', 'ltd', 'inc'])
+                    is_clear_english_name = (trace.output.isalpha() and
+                                            len(trace.output) > 2 and
+                                            trace.output[0].isupper() and
+                                            not any(c in trace.output for c in 'áéíóúàèìòùâêîôûäëïöüç'))
+
+                    if not ((is_mixed_context and is_personal_name) or
+                            (has_org_context and is_clear_english_name)):
+                        continue
                 personal_sequence.append((role, trace.output))
 
         person_tokens = [token for _, token in personal_sequence]
@@ -882,20 +1174,14 @@ class NormalizationService:
                 titlecased_token = self._to_title(token)
                 titlecased_tokens.append(titlecased_token)
             
-            # For multiple persons, create separate normalized results
-            if result.persons and len(result.persons) > 1:
-                # Create separate normalized strings for each person
-                person_normalized = []
-                for person in result.persons:
-                    person_tokens_list = person.get("tokens", [])
-                    if person_tokens_list:
-                        # Apply titlecase to person tokens
-                        titlecased_person_tokens = []
-                        for token in person_tokens_list:
-                            titlecased_token = self._to_title(token)
-                            titlecased_person_tokens.append(titlecased_token)
-                        person_normalized.append(" ".join(titlecased_person_tokens))
-                result.normalized = " | ".join(person_normalized)
+            # Enhanced person grouping with improved logic
+            persons_text = self._extract_persons_from_sequence(personal_sequence)
+
+            if len(persons_text) > 1:
+                result.normalized = " | ".join(persons_text)
+            elif persons_text:
+                # Single person extracted - use the cleaned person text instead of raw tokens
+                result.normalized = persons_text[0]
             else:
                 result.normalized = " ".join(titlecased_tokens)
             person_tokens = titlecased_tokens  # Update person_tokens for tokens field

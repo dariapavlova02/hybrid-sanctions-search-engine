@@ -1,0 +1,78 @@
+{
+  "50_rps": {
+    "total_requests": 500,
+    "successful_requests": 500,
+    "failed_requests": 0,
+    "success_rate": 100.0,
+    "response_times": {
+      "min_ms": 3.304004669189453,
+      "max_ms": 1215.9650325775146,
+      "mean_ms": 91.8746190071106,
+      "median_ms": 8.0491304397583,
+      "p95_ms": 805.7135105133057,
+      "p99_ms": 1153.929238319397
+    },
+    "successful_response_times": {
+      "mean_ms": 91.8746190071106,
+      "p95_ms": 805.7135105133057
+    },
+    "error_breakdown": {}
+  },
+  "75_rps": {
+    "total_requests": 750,
+    "successful_requests": 750,
+    "failed_requests": 0,
+    "success_rate": 100.0,
+    "response_times": {
+      "min_ms": 3.0422210693359375,
+      "max_ms": 83.47010612487793,
+      "mean_ms": 6.673929850260417,
+      "median_ms": 5.844593048095703,
+      "p95_ms": 9.636950492858887,
+      "p99_ms": 49.2798638343811
+    },
+    "successful_response_times": {
+      "mean_ms": 6.673929850260417,
+      "p95_ms": 9.636950492858887
+    },
+    "error_breakdown": {}
+  },
+  "100_rps": {
+    "total_requests": 1000,
+    "successful_requests": 1000,
+    "failed_requests": 0,
+    "success_rate": 100.0,
+    "response_times": {
+      "min_ms": 2.988100051879883,
+      "max_ms": 106.5530776977539,
+      "mean_ms": 6.156057119369507,
+      "median_ms": 5.199432373046875,
+      "p95_ms": 8.034825325012207,
+      "p99_ms": 34.27191734313965
+    },
+    "successful_response_times": {
+      "mean_ms": 6.156057119369507,
+      "p95_ms": 8.034825325012207
+    },
+    "error_breakdown": {}
+  },
+  "125_rps": {
+    "total_requests": 1250,
+    "successful_requests": 1250,
+    "failed_requests": 0,
+    "success_rate": 100.0,
+    "response_times": {
+      "min_ms": 3.052234649658203,
+      "max_ms": 149.46818351745605,
+      "mean_ms": 6.2981157302856445,
+      "median_ms": 4.310250282287598,
+      "p95_ms": 8.22826623916626,
+      "p99_ms": 86.93464994430542
+    },
+    "successful_response_times": {
+      "mean_ms": 6.2981157302856445,
+      "p95_ms": 8.22826623916626
+    },
+    "error_breakdown": {}
+  }
+}

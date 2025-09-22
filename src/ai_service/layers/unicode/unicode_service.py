@@ -20,8 +20,8 @@ class UnicodeService:
 
         # Mapping for complex characters
         self.character_mapping = {
-            # Apostrophe unification for Ukrainian names (D'Artanyan, O'Connor, etc.)
-            # All apostrophe variants → standard ASCII apostrophe
+            # Apostrophe normalization for names (D'Artanyan, O'Connor, etc.)
+            # All apostrophe variants → ASCII apostrophe for consistency
             "'": "'",    # U+2019 Right single quotation mark → U+0027 ASCII apostrophe
             "'": "'",    # U+2018 Left single quotation mark → U+0027 ASCII apostrophe
             "ʼ": "'",    # U+02BC Modifier letter apostrophe → U+0027 ASCII apostrophe

@@ -31,13 +31,12 @@ class TestSanctionsE2E:
             language="ru",
             enable_spacy_ner=True,
             enable_nameparser_en=True,
-            strict_stopwords=True,
-            fsm_tuned_roles=True,
-            enhanced_diminutives=True,
-            enhanced_gender_rules=True,
+            enable_fsm_tuned_roles=True,
+            enable_enhanced_diminutives=True,
+            enable_enhanced_gender_rules=True,
             enable_ac_tier0=True,
             enable_vector_fallback=True,
-            ascii_fastpath=True,
+            enable_ascii_fastpath=True,
             debug_tracing=True
         )
     
@@ -48,12 +47,10 @@ class TestSanctionsE2E:
             enable_spacy_ner=True,
             enable_nameparser_en=True,
             strict_stopwords=True,
-            fsm_tuned_roles=True,
             enhanced_diminutives=True,
-            enhanced_gender_rules=True,
             enable_ac_tier0=True,
             enable_vector_fallback=True,
-            ascii_fastpath=True
+            debug_tracing=True
         )
     
     @pytest.fixture(scope="class")

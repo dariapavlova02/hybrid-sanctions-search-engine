@@ -51,6 +51,7 @@ pandas==2.3.2
 pillow==11.3.0
 pluggy==1.6.0
 preshed==3.0.10
+prometheus-client==0.21.1
 propcache==0.3.2
 psutil==7.0.0
 pyahocorasick==2.2.0
