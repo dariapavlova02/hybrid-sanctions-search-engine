@@ -71,19 +71,8 @@ RUN mkdir -p /app/logs "$HF_HOME" "$SENTENCE_TRANSFORMERS_HOME" && \
     chown -R app:app /app
 USER app
 
-# Pre-fetch embedding model into cache to work offline at runtime
-RUN python - <<'PY'
-try:
-    from sentence_transformers import SentenceTransformer
-    import os
-    model_name = os.getenv('EMBEDDING_MODEL','sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
-    print(f"Preloading embedding model: {model_name}")
-    SentenceTransformer(model_name)
-    print("Model cached successfully.")
-except Exception as e:
-    # Do not fail the build if model download is unavailable; runtime will lazy-load
-    print(f"Warning: failed to preload embedding model: {e}")
-PY
+# Pre-fetch embedding model into cache to work offline at runtime (skip for now to speed up build)
+# RUN python -c "import os; from sentence_transformers import SentenceTransformer; model_name = os.getenv('EMBEDDING_MODEL','sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'); print(f'Preloading embedding model: {model_name}'); SentenceTransformer(model_name); print('Model cached successfully.')" || echo "Model preload failed, will try at runtime"
 
 # Expose port
 EXPOSE 8000

@@ -10,8 +10,9 @@ from __future__ import annotations
 import asyncio
 import inspect
 import json
+import os
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple, Union
 
 import httpx
@@ -28,7 +29,7 @@ class ElasticsearchWatchlistConfig:
     """Configuration for Elasticsearch Watchlist adapter."""
     
     # Elasticsearch connection
-    es_url: str = "http://localhost:9200"
+    es_url: str = field(default_factory=lambda: os.getenv("ELASTICSEARCH_HOSTS", "http://localhost:9200"))
     es_auth: Optional[str] = None
     es_verify_ssl: bool = False
     es_timeout: float = 30.0
