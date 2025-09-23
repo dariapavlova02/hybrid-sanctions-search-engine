@@ -407,7 +407,12 @@ class SmartFilterService:
                 ]
             }
 
-            response = requests.post(search_url, json=search_query, auth=auth, timeout=5)
+            # Use configurable timeout instead of hardcoded 5 seconds
+            # Import SearchConfig to get proper ES timeout
+            from ...config.settings import SearchConfig
+            search_config = SearchConfig()
+            timeout = search_config.es_timeout
+            response = requests.post(search_url, json=search_query, auth=auth, timeout=timeout)
 
             matches = []
             patterns_loaded = 0
@@ -450,7 +455,15 @@ class SmartFilterService:
             }
 
         except Exception as e:
-            self.logger.error(f"Error in real AC search: {e}")
+            import requests
+            is_timeout = isinstance(e, (requests.Timeout, requests.ConnectTimeout, requests.ReadTimeout))
+            error_type = "timeout" if is_timeout else "error"
+
+            if is_timeout:
+                self.logger.warning(f"AC search timeout after {timeout}s: {e}")
+            else:
+                self.logger.error(f"Error in real AC search: {e}")
+
             # Fallback to empty result instead of failing
             return {
                 "matches": [],
@@ -460,7 +473,9 @@ class SmartFilterService:
                 "text_length": len(text),
                 "enabled": True,
                 "error": str(e),
-                "message": f"AC search failed: {str(e)}",
+                "error_type": error_type,
+                "timeout_used": timeout,
+                "message": f"AC search {error_type}: {str(e)}",
             }
 
     def _analyze_payment_context(self, text: str) -> Dict[str, Any]:
