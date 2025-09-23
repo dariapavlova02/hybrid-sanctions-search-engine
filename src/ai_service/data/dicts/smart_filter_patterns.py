@@ -11,6 +11,24 @@ EXCLUSION_PATTERNS = [
     r"^\d+$",  # Only digits
     r"^[^\w\s]+$",  # Only special characters
     r"^(оплата|платеж|платіж|перевод|счет|квитанция|документ)$",  # Common terms
+
+    # Document and transaction codes (universal patterns)
+    r"^[a-f0-9]{16,}$",  # Long hex codes (16+ chars): 68ccdc4cd19cabdee2eaa56c
+    r"^[a-z]{2,3}\d{6,}$",  # Code patterns: TV0015628, GM293232
+    r"^[a-z]{2,4}\d{4,}[a-z]*$",  # Mixed codes: OKPO30929821, TV0015628
+    r"^\d{8,}[a-z]+$",  # Numbers with letters: 30929821sichey, 2515321244ipn
+    r"^[a-z]+\d{8,}$",  # Letters with long numbers: ipn2515321244
+    r"^\d{10,}$",  # Very long numbers (10+ digits): 2515321244, 30929821
+
+    # Common business/document abbreviations
+    r"^(okpo|едрпоу|edrpou|ipn|іпн|inn|інн|ogrn|огрн|kpp|кпп)$",  # Document type abbreviations
+    r"^(iban|bic|swift|cor|correspondent)$",  # Banking codes
+    r"^\d+[a-z]{2,}$",  # Numbers with letter suffixes: 7sichey
+
+    # Date of birth patterns (should be extracted as signals, not normalized)
+    r"^д\.р\.$",  # д.р.
+    r"^(dob|date.of.birth|birth.date)$",  # English DOB markers
+    r"^(народ|нар|born|рођ)$",  # Birth markers
     r"^\d{4}-\d{2}-\d{2}$",  # Only date YYYY-MM-DD
     r"^\d{2}\.\d{2}\.\d{4}$",  # Only date DD.MM.YYYY
     r"^\d{2}/\d{2}/\d{4}$",  # Only date DD/MM/YYYY

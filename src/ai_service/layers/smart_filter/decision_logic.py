@@ -5,11 +5,13 @@ Combines signal detector results and makes decisions about Aho-Corasick search.
 """
 
 # Standard library imports
+import json
 import logging
 import re
 import time
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 # Local imports
@@ -72,6 +74,9 @@ class DecisionLogic:
         )
         self.confidence_scorer = ConfidenceScorer()
 
+        # Load name dictionaries for better language detection
+        self._load_name_dictionaries()
+
         # Simple language patterns for optimization (Ukrainian, Russian, English)
         self.language_patterns = {
             "ukrainian": {
@@ -118,6 +123,61 @@ class DecisionLogic:
         self.logger.info(
             f"DecisionLogic initialized (terrorism detection: {enable_terrorism_detection})"
         )
+
+    def _load_name_dictionaries(self):
+        """Load name dictionaries to enhance language patterns"""
+        try:
+            # Get data directory
+            data_dir = Path(__file__).parent.parent.parent.parent.parent / "data"
+
+            # Load diminutives (which include common names)
+            ru_names = set()
+            uk_names = set()
+            en_names = set()
+
+            # Load Russian diminutives/names
+            ru_file = data_dir / "diminutives_ru.json"
+            if ru_file.exists():
+                with open(ru_file, 'r', encoding='utf-8') as f:
+                    ru_data = json.load(f)
+                    # Both keys (diminutives) and values (canonical) are names
+                    ru_names.update(ru_data.keys())
+                    ru_names.update(ru_data.values())
+
+            # Load Ukrainian diminutives/names
+            uk_file = data_dir / "diminutives_uk.json"
+            if uk_file.exists():
+                with open(uk_file, 'r', encoding='utf-8') as f:
+                    uk_data = json.load(f)
+                    uk_names.update(uk_data.keys())
+                    uk_names.update(uk_data.values())
+
+            # Load English nicknames
+            en_file = data_dir / "lexicons" / "en_nicknames.json"
+            if en_file.exists():
+                with open(en_file, 'r', encoding='utf-8') as f:
+                    en_data = json.load(f)
+                    en_names.update(en_data.keys())
+                    en_names.update(en_data.values())
+
+            # Add top names to language patterns (limit to avoid bloat)
+            if ru_names:
+                common_ru = [name.lower() for name in list(ru_names)[:50]]  # Top 50
+                self.language_patterns["russian"]["words"].extend(common_ru)
+
+            if uk_names:
+                common_uk = [name.lower() for name in list(uk_names)[:50]]  # Top 50
+                self.language_patterns["ukrainian"]["words"].extend(common_uk)
+
+            if en_names:
+                common_en = [name.lower() for name in list(en_names)[:50]]  # Top 50
+                self.language_patterns["english"]["words"].extend(common_en)
+
+            self.logger.info(f"Enhanced language patterns with names: ru={len(common_ru) if ru_names else 0}, uk={len(common_uk) if uk_names else 0}, en={len(common_en) if en_names else 0}")
+
+        except Exception as e:
+            self.logger.warning(f"Failed to load name dictionaries for language detection: {e}")
+            # Continue with basic patterns
 
     def make_decision(
         self, text: str, context: Optional[Dict[str, Any]] = None

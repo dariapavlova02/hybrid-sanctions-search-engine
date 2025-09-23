@@ -41,9 +41,16 @@ class NameDetector:
         self.logger.info("Simplified NameDetector initialized.")
 
         # Create combined set of service words for fast lookup
+        # Only include obvious service/payment terms, not general business words
         self._service_words = set()
         for lang_words in SERVICE_WORDS.values():
             self._service_words.update(word.lower() for word in lang_words)
+
+        # Remove words that might be names to avoid false positives
+        self._service_words.discard('анна')  # Common name
+        self._service_words.discard('віра')  # Common name
+        self._service_words.discard('дарья')  # Common name
+        self._service_words.discard('віка')  # Common name
 
     def _load_name_dictionaries(self) -> Dict[str, Set[str]]:
         """Loads a combined set of names from the new flat dictionaries."""
@@ -80,6 +87,7 @@ class NameDetector:
             token_lower = token.lower()
 
             # Skip if it's a service word (payment terms, services, etc.)
+            # Now more selective - only obvious service words, not potential names
             if token_lower in self._service_words:
                 self.logger.debug(f"Skipping service word: {token}")
                 continue
