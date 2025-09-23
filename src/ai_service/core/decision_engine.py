@@ -214,6 +214,29 @@ class DecisionEngine:
         similarity_value = inp.similarity.cos_top if inp.similarity.cos_top is not None else 0.0
         similarity_contribution = self.config.w_similarity * similarity_value
         
+        # Calculate search contribution
+        search_contribution = 0.0
+        if inp.search:
+            search = inp.search
+            # Exact matches (highest priority)
+            if search.has_exact_matches and search.exact_confidence >= self.config.thr_search_exact:
+                search_contribution += self.config.w_search_exact * search.exact_confidence
+            # Phrase matches
+            if search.has_phrase_matches and search.phrase_confidence >= self.config.thr_search_phrase:
+                search_contribution += self.config.w_search_phrase * search.phrase_confidence
+            # N-gram matches
+            if search.has_ngram_matches and search.ngram_confidence >= self.config.thr_search_ngram:
+                search_contribution += self.config.w_search_ngram * search.ngram_confidence
+            # Vector matches
+            if search.has_vector_matches and search.vector_confidence >= self.config.thr_search_vector:
+                search_contribution += self.config.w_search_vector * search.vector_confidence
+            # Search bonuses
+            if search_contribution > 0:  # Only if at least one search component passed threshold
+                if search.total_matches > 1:
+                    search_contribution += self.config.bonus_multiple_matches
+                if search.high_confidence_matches > 0:
+                    search_contribution += self.config.bonus_high_confidence
+
         # Calculate bonus contributions
         date_bonus = self.config.bonus_date_match if inp.signals.date_match else 0.0
         id_bonus = self.config.bonus_id_match if inp.signals.id_match else 0.0
@@ -245,10 +268,11 @@ class DecisionEngine:
                 "person_contribution": person_contribution,
                 "org_contribution": org_contribution,
                 "similarity_contribution": similarity_contribution,
+                "search_contribution": search_contribution,
                 "date_bonus": date_bonus,
                 "id_bonus": id_bonus,
-                "total": smartfilter_contribution + person_contribution + org_contribution + 
-                        similarity_contribution + date_bonus + id_bonus
+                "total": smartfilter_contribution + person_contribution + org_contribution +
+                        similarity_contribution + search_contribution + date_bonus + id_bonus
             },
             "weights_used": {
                 "w_smartfilter": self.config.w_smartfilter,
