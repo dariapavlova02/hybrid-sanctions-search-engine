@@ -11,6 +11,8 @@ from typing import Any, Dict, List, Set
 import json
 from pathlib import Path
 
+from ...data.dicts.smart_filter_patterns import SERVICE_WORDS
+
 # Load data from root data directory
 _data_dir = Path(__file__).parent.parent.parent.parent.parent / "data"
 
@@ -37,6 +39,11 @@ class NameDetector:
         self.name_dictionaries = self._load_name_dictionaries()
         self.smart_filter_service = smart_filter_service
         self.logger.info("Simplified NameDetector initialized.")
+
+        # Create combined set of service words for fast lookup
+        self._service_words = set()
+        for lang_words in SERVICE_WORDS.values():
+            self._service_words.update(word.lower() for word in lang_words)
 
     def _load_name_dictionaries(self) -> Dict[str, Set[str]]:
         """Loads a combined set of names from the new flat dictionaries."""
@@ -70,11 +77,18 @@ class NameDetector:
         all_names_dict = self.name_dictionaries.get("all", set())
 
         for token in tokens:
+            token_lower = token.lower()
+
+            # Skip if it's a service word (payment terms, services, etc.)
+            if token_lower in self._service_words:
+                self.logger.debug(f"Skipping service word: {token}")
+                continue
+
             # Heuristic 1: Is it a capitalized word? (and not just a single letter)
             if token[0].isupper() and len(token) > 1:
                 potential_names.append(token)
             # Heuristic 2: Is it in our name dictionaries?
-            elif token.lower() in all_names_dict:
+            elif token_lower in all_names_dict:
                 potential_names.append(token)
             # Heuristic 3: Does it look like an initial? (e.g., "A.", "B.C.")
             elif re.fullmatch(r"([A-ZА-ЯІЇЄҐ]\.)+", token):

@@ -602,7 +602,7 @@ class DecisionConfig(BaseModel):
     bonus_id_match: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__BONUS_ID_MATCH", "0.15")))
     
     # Search weights (NEW)
-    w_search_exact: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SEARCH_EXACT", "0.3")))
+    w_search_exact: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SEARCH_EXACT", "0.4")))
     w_search_phrase: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SEARCH_PHRASE", "0.25")))
     w_search_ngram: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SEARCH_NGRAM", "0.2")))
     w_search_vector: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SEARCH_VECTOR", "0.15")))
@@ -616,10 +616,11 @@ class DecisionConfig(BaseModel):
     # Search bonuses (NEW)
     bonus_multiple_matches: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__BONUS_MULTIPLE_MATCHES", "0.1")))
     bonus_high_confidence: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__BONUS_HIGH_CONFIDENCE", "0.05")))
+    bonus_exact_match: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__BONUS_EXACT_MATCH", "0.2")))
     
     # Thresholds for risk levels (with ENV overrides)
     thr_high: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_HIGH", "0.85")))
-    thr_medium: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_MEDIUM", "0.65")))
+    thr_medium: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_MEDIUM", "0.5")))
     
     # Business gates
     require_tin_dob_gate: bool = Field(default_factory=lambda: os.getenv("AI_DECISION__REQUIRE_TIN_DOB_GATE", "true").lower() == "true")
@@ -643,6 +644,7 @@ class DecisionConfig(BaseModel):
             "thr_search_vector": self.thr_search_vector,
             "bonus_multiple_matches": self.bonus_multiple_matches,
             "bonus_high_confidence": self.bonus_high_confidence,
+            "bonus_exact_match": self.bonus_exact_match,
             "thr_high": self.thr_high,
             "thr_medium": self.thr_medium,
             "require_tin_dob_gate": self.require_tin_dob_gate

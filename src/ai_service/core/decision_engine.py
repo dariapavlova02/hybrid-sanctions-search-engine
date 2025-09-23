@@ -145,6 +145,10 @@ class DecisionEngine:
 
             # Search bonuses (only if at least one search component passed threshold)
             if search_components_added:
+                # Exact match bonus
+                if search.has_exact_matches and search.exact_confidence >= 0.95:
+                    score += self.config.bonus_exact_match
+
                 if search.total_matches > 1:
                     score += self.config.bonus_multiple_matches
 
