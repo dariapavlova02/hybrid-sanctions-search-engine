@@ -39,8 +39,9 @@ class UnifiedPattern:
 class UnifiedPatternService:
     """Unified Pattern Service combining best features from both services"""
 
-    def __init__(self):
+    def __init__(self, max_patterns_per_name: int = 1000):
         self.logger = get_logger(__name__)
+        self.max_patterns_per_name = max_patterns_per_name
 
         # Comprehensive language patterns
         self.name_patterns = {
@@ -221,6 +222,13 @@ class UnifiedPatternService:
 
         # Optimize and deduplicate
         optimized_patterns = self._optimize_patterns(patterns)
+
+        # Apply pattern limit to prevent combinatorial explosion
+        if len(optimized_patterns) > self.max_patterns_per_name:
+            self.logger.warning(f"Generated {len(optimized_patterns)} patterns, limiting to {self.max_patterns_per_name}")
+            # Keep highest confidence patterns first
+            optimized_patterns.sort(key=lambda p: p.confidence, reverse=True)
+            optimized_patterns = optimized_patterns[:self.max_patterns_per_name]
 
         self.logger.info(f"Generated {len(optimized_patterns)} unified patterns for language: {language}")
         return optimized_patterns

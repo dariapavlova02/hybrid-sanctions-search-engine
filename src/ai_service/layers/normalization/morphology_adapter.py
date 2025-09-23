@@ -44,7 +44,7 @@ class MorphologyAdapter:
     - Graceful degradation when pymorphy3 is unavailable
     """
 
-    def __init__(self, cache_size: int = 50000, cache: Optional[LruTtlCache] = None):
+    def __init__(self, cache_size: int = 100000, cache: Optional[LruTtlCache] = None):
         """
         Initialize morphology adapter.
         
@@ -1028,7 +1028,7 @@ _global_adapter: Optional[MorphologyAdapter] = None
 _adapter_lock = threading.Lock()
 
 
-def get_global_adapter(cache_size: int = 50000) -> MorphologyAdapter:
+def get_global_adapter(cache_size: int = 100000) -> MorphologyAdapter:
     """Get global morphology adapter instance."""
     global _global_adapter
     

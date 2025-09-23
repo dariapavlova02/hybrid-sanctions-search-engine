@@ -92,8 +92,8 @@ class DecisionEngine:
         if self.metrics_service:
             self._record_decision_metrics(risk, score, inp)
         
-        # Add search trace to details if available
-        if search_trace and search_trace.enabled:
+        # Add search trace to details if available (only in debug mode)
+        if search_trace and search_trace.enabled and getattr(self.config, 'debug_mode', False):
             details["search_trace"] = search_trace.to_dict()
         
         return DecisionOutput(
