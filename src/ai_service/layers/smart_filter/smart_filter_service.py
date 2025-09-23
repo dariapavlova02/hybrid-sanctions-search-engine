@@ -168,8 +168,21 @@ class SmartFilterService:
             ac_matches = []
             ac_confidence_bonus = 0.0
             if self.aho_corasick_enabled:
+                # Search original text
                 ac_result = self.search_aho_corasick(original_text)
                 ac_matches = ac_result.get("matches", [])
+
+                # If no matches, try normalized name order variants
+                if not ac_matches:
+                    # Try to normalize names and check reversed order
+                    text_variants = self._generate_name_variants(original_text)
+                    for variant in text_variants:
+                        variant_result = self.search_aho_corasick(variant)
+                        variant_matches = variant_result.get("matches", [])
+                        if variant_matches:
+                            ac_matches.extend(variant_matches)
+                            break  # Found matches, stop trying variants
+
                 if ac_matches:
                     ac_confidence_bonus = SERVICE_CONFIG.aho_corasick_confidence_bonus
 
@@ -315,14 +328,14 @@ class SmartFilterService:
         self, text: str, max_matches: Optional[int] = None
     ) -> Dict[str, Any]:
         """
-        Perform enhanced pattern matching using UnifiedPatternService
+        Perform real AC pattern matching using Elasticsearch AC patterns
 
         Args:
             text: Text to search in
             max_matches: Maximum number of matches to return
 
         Returns:
-            Enhanced pattern search results
+            Real AC pattern search results
 
         Raises:
             SmartFilterError: If search fails
@@ -340,42 +353,88 @@ class SmartFilterService:
 
         try:
             import time
+            import requests
+            from requests.auth import HTTPBasicAuth
             start_time = time.time()
 
-            # Detect language for better pattern generation
-            language = self._detect_language(text)
+            # ES connection details
+            ES_HOST = "95.217.84.234"
+            ES_PORT = 9200
+            ES_USER = "elastic"
+            ES_PASSWORD = "AiServiceElastic2024!"
+            ES_INDEX = "ai_service_ac_patterns"
 
-            # Generate patterns using UnifiedPatternService
-            patterns = self.pattern_service.generate_patterns(text, language=language)
+            # Normalize text for search (same as AC patterns)
+            from ..unicode.unicode_service import UnicodeService
+            unicode_service = UnicodeService()
+            normalized_result = unicode_service.normalize_text(text, normalize_homoglyphs=True)
+            normalized_text = normalized_result["normalized"]
 
-            # Convert to AC-compatible format
-            ac_patterns = self.pattern_service.export_for_aho_corasick(patterns)
+            # Search for AC patterns that match this text
+            search_url = f"http://{ES_HOST}:{ES_PORT}/{ES_INDEX}/_search"
+            auth = HTTPBasicAuth(ES_USER, ES_PASSWORD)
 
-            # Simulate AC search with our patterns
+            # Create search query to find patterns that match our text
+            search_query = {
+                "query": {
+                    "bool": {
+                        "should": [
+                            {
+                                "wildcard": {
+                                    "pattern": {
+                                        "value": f"*{normalized_text.lower()}*",
+                                        "case_insensitive": True
+                                    }
+                                }
+                            },
+                            {
+                                "match": {
+                                    "pattern": {
+                                        "query": normalized_text,
+                                        "fuzziness": "AUTO"
+                                    }
+                                }
+                            }
+                        ],
+                        "minimum_should_match": 1
+                    }
+                },
+                "size": max_matches or 50,
+                "sort": [
+                    {"tier": {"order": "asc"}},  # Lower tier = higher priority
+                    {"confidence": {"order": "desc"}},
+                    {"_score": {"order": "desc"}}
+                ]
+            }
+
+            response = requests.post(search_url, json=search_query, auth=auth, timeout=5)
+
             matches = []
-            for tier, tier_patterns in ac_patterns.items():
-                for pattern in tier_patterns[:max_matches] if max_matches else tier_patterns:
-                    # Simple substring search (in real AC implementation, this would be more sophisticated)
-                    # Case-insensitive search using regex for proper matching
-                    pattern_escaped = re.escape(pattern)
-                    match = re.search(pattern_escaped, text, re.IGNORECASE)
-                    if match:
-                        match_start = match.start()
+            patterns_loaded = 0
+
+            if response.status_code == 200:
+                result = response.json()
+                hits = result.get("hits", {}).get("hits", [])
+                patterns_loaded = result.get("hits", {}).get("total", {}).get("value", 0)
+
+                for hit in hits:
+                    source = hit["_source"]
+                    pattern = source.get("pattern", "")
+
+                    # Check if this pattern actually matches our normalized text
+                    if pattern.lower() in normalized_text.lower() or normalized_text.lower() in pattern.lower():
                         matches.append({
                             "pattern": pattern,
-                            "tier": tier,
-                            "start": match_start,
-                            "end": match.end(),
-                            "matched_text": match.group(),
-                            "confidence": self._get_pattern_confidence(pattern, tier),
-                            "pattern_type": self._infer_pattern_type(pattern, patterns)
+                            "tier": f"tier_{source.get('tier', 3)}",
+                            "start": normalized_text.lower().find(pattern.lower()),
+                            "end": normalized_text.lower().find(pattern.lower()) + len(pattern),
+                            "matched_text": pattern,
+                            "confidence": source.get("confidence", 0.5),
+                            "pattern_type": source.get("type", "unknown"),
+                            "entity_type": source.get("entity_type", "unknown"),
+                            "entity_id": source.get("entity_id", ""),
+                            "es_score": hit.get("_score", 0)
                         })
-
-            # Limit matches if requested
-            if max_matches and len(matches) > max_matches:
-                # Sort by confidence and tier priority
-                matches.sort(key=lambda x: (self._get_tier_priority(x["tier"]), x["confidence"]), reverse=True)
-                matches = matches[:max_matches]
 
             processing_time_ms = (time.time() - start_time) * 1000
 
@@ -383,17 +442,26 @@ class SmartFilterService:
                 "matches": matches,
                 "total_matches": len(matches),
                 "processing_time_ms": processing_time_ms,
-                "patterns_loaded": len(patterns),
+                "patterns_loaded": patterns_loaded,
                 "text_length": len(text),
                 "enabled": True,
-                "language": language,
-                "tier_distribution": {tier: len(tier_patterns) for tier, tier_patterns in ac_patterns.items()},
-                "message": f"Enhanced AC search completed with {len(patterns)} patterns",
+                "normalized_text": normalized_text,
+                "message": f"Real AC search completed with {len(matches)} matches from {patterns_loaded} total patterns",
             }
 
         except Exception as e:
-            self.logger.error(f"Error in enhanced AC search: {e}")
-            raise SmartFilterError(f"Enhanced pattern search failed: {str(e)}")
+            self.logger.error(f"Error in real AC search: {e}")
+            # Fallback to empty result instead of failing
+            return {
+                "matches": [],
+                "total_matches": 0,
+                "processing_time_ms": 0.0,
+                "patterns_loaded": 0,
+                "text_length": len(text),
+                "enabled": True,
+                "error": str(e),
+                "message": f"AC search failed: {str(e)}",
+            }
 
     def _analyze_payment_context(self, text: str) -> Dict[str, Any]:
         """
@@ -763,6 +831,56 @@ class SmartFilterService:
             return "latin"
         else:
             return "mixed"
+
+    def _generate_name_variants(self, text: str) -> List[str]:
+        """
+        Generate name order variants for better AC pattern matching
+
+        For input "Петро Порошенко" generates:
+        - "Порошенко Петро"
+        - "петро порошенко"
+        - "порошенко петро"
+        """
+        variants = []
+
+        # Normalize whitespace and split
+        words = text.strip().split()
+
+        if len(words) == 2:
+            # Two words - likely first name + surname
+            first, second = words
+
+            # Reversed order
+            reversed_order = f"{second} {first}"
+            variants.append(reversed_order)
+
+            # Lowercase versions
+            variants.append(text.lower())
+            variants.append(reversed_order.lower())
+
+        elif len(words) == 3:
+            # Three words - try different combinations
+            first, middle, third = words
+
+            # Surname first variations
+            variants.extend([
+                f"{third} {first} {middle}",
+                f"{third} {first}",
+                f"{third} {middle}",
+            ])
+
+            # Lowercase versions
+            variants.append(text.lower())
+            for variant in variants[:]:
+                variants.append(variant.lower())
+
+        # Remove duplicates and empty strings
+        unique_variants = []
+        for variant in variants:
+            if variant and variant.strip() and variant not in unique_variants and variant != text:
+                unique_variants.append(variant.strip())
+
+        return unique_variants
 
     def _create_empty_result(self) -> FilterResult:
         """Create empty result"""

@@ -19,6 +19,7 @@ import json
 import re
 import time
 import unicodedata
+from ..unicode.unicode_service import UnicodeService
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
@@ -161,12 +162,10 @@ class TextCanonicalizer:
         # 4. Collapse spaces and other whitespace
         text = re.sub(r'\s+', ' ', text)
 
-        # 5. Basic deglyphs (extend as needed)
-        deglyph_map = {
-            'а': 'a', 'е': 'e', 'о': 'o', 'р': 'p', 'с': 'c', 'х': 'x', 'у': 'y'
-        }
-        for cyrillic, latin in deglyph_map.items():
-            text = text.replace(cyrillic, latin)
+        # 5. Homoglyph normalization using UnicodeService
+        unicode_service = UnicodeService()
+        unicode_result = unicode_service.normalize_text(text, normalize_homoglyphs=True)
+        text = unicode_result["normalized"]
 
         # 6. Trim
         return text.strip()
@@ -503,14 +502,24 @@ class NamePatternGenerator:
 
         # Typically the last word is surname
         surname = words[-1]
+
+        # Skip patronymics (отчества) - they don't need gender variants
+        if self._is_patronymic(surname):
+            return patterns
+
+        # Skip mixed script words that cause regex errors
+        if self._has_mixed_script(surname):
+            return patterns
+
         variants = self.gender_variants[language]
 
         for pattern_male, pattern_female in variants:
             try:
                 # Male to female
-                if re.match(pattern_male, surname):
-                    female_surname = re.sub(pattern_male, pattern_female, surname)
-                    if female_surname != surname:  # Only if actually changed
+                match_result = self._safe_regex_match(pattern_male, surname)
+                if match_result:
+                    female_surname = self._safe_regex_sub(pattern_male, pattern_female, surname)
+                    if female_surname and female_surname != surname:  # Only if actually changed
                         new_words = words[:-1] + [female_surname]
 
                         metadata = PatternMetadata(
@@ -531,9 +540,10 @@ class NamePatternGenerator:
                         ))
 
                 # Female to male
-                if re.match(pattern_female, surname):
-                    male_surname = re.sub(pattern_female, pattern_male, surname)
-                    if male_surname != surname:  # Only if actually changed
+                match_result = self._safe_regex_match(pattern_female, surname)
+                if match_result:
+                    male_surname = self._safe_regex_sub(pattern_female, pattern_male, surname)
+                    if male_surname and male_surname != surname:  # Only if actually changed
                         new_words = words[:-1] + [male_surname]
 
                         metadata = PatternMetadata(
@@ -553,11 +563,65 @@ class NamePatternGenerator:
                             entity_type="person"
                         ))
 
-            except re.error as e:
-                self.logger.warning(f"Regex error in gender variants for {surname}: {e}")
+            except Exception as e:
+                self.logger.warning(f"Error in gender variants for {surname}: {e}")
                 continue
 
         return patterns
+
+    def _is_patronymic(self, word: str) -> bool:
+        """Check if word is a patronymic (отчество)"""
+        # Common patronymic endings - handle mixed scripts
+        patronymic_patterns = [
+            # Pure Cyrillic
+            r'.*ович$', r'.*евич$', r'.*івич$',  # male patronymics
+            r'.*овна$', r'.*евна$', r'.*івна$',  # female patronymics
+            # Mixed script variants (common in corrupted data)
+            r'.*o[в]ич$', r'.*e[в]ич$', r'.*і[в]ич$',  # latin 'o', 'e' + cyrillic
+            r'.*o[в]нa$', r'.*e[в]нa$', r'.*і[в]нa$',  # mixed female forms
+            r'.*ільєвнa$', r'.*[оо][в]іч$', r'.*[еe][в]іч$',  # other mixed combinations
+        ]
+
+        for pattern in patronymic_patterns:
+            if re.search(pattern, word, re.IGNORECASE):
+                return True
+        return False
+
+    def _has_mixed_script(self, word: str) -> bool:
+        """Check if word contains both Cyrillic and Latin characters"""
+        has_cyrillic = bool(re.search(r'[а-яёіїєґ]', word, re.IGNORECASE))
+        has_latin = bool(re.search(r'[a-z]', word, re.IGNORECASE))
+        return has_cyrillic and has_latin
+
+    def _safe_regex_match(self, pattern: str, text: str) -> bool:
+        """Safely check if regex pattern matches text"""
+        try:
+            return bool(re.match(pattern, text))
+        except re.error:
+            return False
+
+    def _safe_regex_sub(self, pattern: str, replacement: str, text: str) -> str:
+        """Safely apply regex substitution with group validation"""
+        try:
+            # First check if pattern matches
+            if not re.match(pattern, text):
+                return None
+
+            # Validate that replacement references valid groups
+            match = re.match(pattern, text)
+            if not match:
+                return None
+
+            # Check if replacement string references groups that exist
+            try:
+                # Test the substitution on a match
+                result = re.sub(pattern, replacement, text)
+                return result
+            except re.error:
+                # If substitution fails, return None
+                return None
+        except Exception:
+            return None
 
     def _generate_apostrophe_variants(self, name: str, language: str) -> List[GeneratedPattern]:
         """Generate apostrophe variants"""
@@ -1853,6 +1917,72 @@ class HighRecallACGenerator:
 
         return patterns
 
+    def generate_patterns_for_terrorism(self, terrorism_data: Dict[str, Any]) -> List[GeneratedPattern]:
+        """Generate all patterns for a terrorism entity (treated as person with terrorism entity_type)"""
+        patterns = []
+        entity_id = str(terrorism_data.get('id', ''))
+
+        # Tier 0: Documents
+        if terrorism_data.get('itn'):
+            doc_patterns = self.document_generator.generate_itn_patterns(terrorism_data['itn'])
+            for pattern in doc_patterns:
+                pattern.entity_id = entity_id
+                pattern.entity_type = "terrorism"
+            patterns.extend(doc_patterns)
+
+        if terrorism_data.get('passport_number'):
+            doc_patterns = self.document_generator.generate_passport_patterns(terrorism_data['passport_number'])
+            for pattern in doc_patterns:
+                pattern.entity_id = entity_id
+                pattern.entity_type = "terrorism"
+            patterns.extend(doc_patterns)
+
+        # Names
+        names_to_process = []
+        if terrorism_data.get('name'):
+            names_to_process.append(terrorism_data['name'])
+        if terrorism_data.get('name_en'):
+            names_to_process.append(terrorism_data['name_en'])
+
+        for name in names_to_process:
+            if not name or not name.strip():
+                continue
+
+            language = self.language_detector.detect_language(name)
+
+            # Tier 0: Canonical names
+            tier0_patterns = self.name_generator.generate_tier_0_patterns(name, language)
+            for pattern in tier0_patterns:
+                pattern.entity_id = entity_id
+                pattern.entity_type = "terrorism"
+            patterns.extend(tier0_patterns)
+
+            # Tier 1: Safe variants
+            tier1_patterns = self.name_generator.generate_tier_1_patterns(name, language)
+            for pattern in tier1_patterns:
+                pattern.entity_id = entity_id
+                pattern.entity_type = "terrorism"
+            patterns.extend(tier1_patterns)
+
+            # Tier 2: Morphological and structured variants
+            tier2_patterns = self.name_generator.generate_tier_2_patterns(name, language)
+            for pattern in tier2_patterns:
+                pattern.entity_id = entity_id
+                pattern.entity_type = "terrorism"
+            patterns.extend(tier2_patterns)
+
+            # Tier 3: Aggressive recall patterns
+            tier3_patterns = self.name_generator.generate_tier_3_patterns(name, language)
+            for pattern in tier3_patterns:
+                pattern.entity_id = entity_id
+                pattern.entity_type = "terrorism"
+            patterns.extend(tier3_patterns)
+
+        # Apply tier limits
+        patterns = self._apply_tier_limits(patterns)
+
+        return patterns
+
     def _apply_tier_limits(self, patterns: List[GeneratedPattern]) -> List[GeneratedPattern]:
         """Apply tier-specific limits to pattern generation"""
         tier_counts = defaultdict(int)
@@ -1892,7 +2022,8 @@ class HighRecallACGenerator:
 
     def generate_full_corpus(self,
                            persons_file: str = None,
-                           companies_file: str = None) -> Dict[str, Any]:
+                           companies_file: str = None,
+                           terrorism_file: str = None) -> Dict[str, Any]:
         """Generate full pattern corpus from sanctions data"""
         start_time = time.time()
 
@@ -1900,6 +2031,7 @@ class HighRecallACGenerator:
         stats = {
             "persons_processed": 0,
             "companies_processed": 0,
+            "terrorism_processed": 0,
             "patterns_generated": 0,
             "tier_distribution": defaultdict(int),
             "processing_time": 0
@@ -1940,6 +2072,24 @@ class HighRecallACGenerator:
 
             except Exception as e:
                 self.logger.error(f"Error processing companies file: {e}")
+
+        # Process terrorism blacklist
+        if terrorism_file:
+            try:
+                with open(terrorism_file, 'r', encoding='utf-8') as f:
+                    terrorism_data = json.load(f)
+
+                for entity in terrorism_data:
+                    patterns = self.generate_patterns_for_terrorism(entity)
+                    all_patterns.extend(patterns)
+                    stats["terrorism_processed"] += 1
+
+                    # Update tier distribution
+                    for pattern in patterns:
+                        stats["tier_distribution"][pattern.metadata.tier.value] += 1
+
+            except Exception as e:
+                self.logger.error(f"Error processing terrorism file: {e}")
 
         stats["patterns_generated"] = len(all_patterns)
         stats["processing_time"] = time.time() - start_time

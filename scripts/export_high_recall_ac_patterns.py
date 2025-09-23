@@ -62,6 +62,12 @@ def main():
     )
 
     parser.add_argument(
+        "--terrorism-file",
+        default="src/ai_service/data/terrorism_black_list.json",
+        help="Path to terrorism blacklist JSON file"
+    )
+
+    parser.add_argument(
         "--tier-limits",
         help="Custom tier limits in format '0:5,1:10,2:15,3:50'"
     )
@@ -114,7 +120,11 @@ def main():
         print(f"Warning: Companies file not found: {args.companies_file}")
         args.companies_file = None
 
-    if not args.persons_file and not args.companies_file:
+    if not os.path.exists(args.terrorism_file):
+        print(f"Warning: Terrorism file not found: {args.terrorism_file}")
+        args.terrorism_file = None
+
+    if not args.persons_file and not args.companies_file and not args.terrorism_file:
         print("Error: No valid input files found")
         return 1
 
@@ -157,7 +167,8 @@ def main():
     # Generate full corpus
     corpus = generator.generate_full_corpus(
         persons_file=args.persons_file,
-        companies_file=args.companies_file
+        companies_file=args.companies_file,
+        terrorism_file=args.terrorism_file
     )
 
     generation_time = time.time() - start_time
@@ -214,6 +225,8 @@ def main():
     print(f"\n=== GENERATION STATISTICS ===")
     print(f"Persons processed: {stats['persons_processed']}")
     print(f"Companies processed: {stats['companies_processed']}")
+    print(f"Terrorism processed: {stats['terrorism_processed']}")
+    print(f"Total entities: {stats['persons_processed'] + stats['companies_processed'] + stats['terrorism_processed']}")
     print(f"Total patterns generated: {stats['patterns_generated']}")
     print(f"Generation time: {stats['processing_time']:.2f}s")
 
@@ -239,11 +252,14 @@ def main():
         f.write("INPUT DATA:\n")
         f.write(f"  Persons file: {args.persons_file}\n")
         f.write(f"  Companies file: {args.companies_file}\n")
+        f.write(f"  Terrorism file: {args.terrorism_file}\n")
         f.write(f"  Sample size: {args.sample_size or 'Full dataset'}\n\n")
 
         f.write("PROCESSING:\n")
         f.write(f"  Persons processed: {stats['persons_processed']:,}\n")
         f.write(f"  Companies processed: {stats['companies_processed']:,}\n")
+        f.write(f"  Terrorism processed: {stats['terrorism_processed']:,}\n")
+        f.write(f"  Total entities: {stats['persons_processed'] + stats['companies_processed'] + stats['terrorism_processed']:,}\n")
         f.write(f"  Total patterns: {stats['patterns_generated']:,}\n")
         f.write(f"  Processing time: {stats['processing_time']:.2f}s\n")
         f.write(f"  Patterns per second: {stats['patterns_generated'] / stats['processing_time']:.0f}\n\n")
