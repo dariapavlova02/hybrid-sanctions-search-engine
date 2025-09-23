@@ -8,6 +8,19 @@ from ....data.dicts.stopwords import STOP_ALL
 from ....utils.logging_config import get_logger
 from ....utils.profiling import profile_function, profile_time
 
+# Import exclusion patterns at module level for efficiency
+try:
+    from ....data.dicts.smart_filter_patterns import EXCLUSION_PATTERNS
+    _EXCLUSION_PATTERNS = EXCLUSION_PATTERNS
+except ImportError:
+    # Fallback to basic date patterns if import fails
+    _EXCLUSION_PATTERNS = [
+        r'^\d{4}-\d{2}-\d{2}$',      # ISO date: 1980-01-01
+        r'^\d{2}\.\d{2}\.\d{4}$',    # European date: 01.01.1980
+        r'^\d{1,2}/\d{1,2}/\d{4}$',  # US date: 1/1/1980 or 01/01/1980
+        r'^\d{2}-\d{2}-\d{4}$',      # US date with dashes: 01-01-1980
+    ]
+
 
 class TokenProcessor:
     """Handles token-level operations like noise filtering and normalization-aware tokenization."""
@@ -111,20 +124,8 @@ class TokenProcessor:
                     continue
 
             # Filter patterns that should not appear in normalized names
-            # Import exclusion patterns from smart filter
-            try:
-                from ....data.dicts.smart_filter_patterns import EXCLUSION_PATTERNS
-                exclusion_patterns = EXCLUSION_PATTERNS
-            except ImportError:
-                # Fallback to basic date patterns if import fails
-                exclusion_patterns = [
-                    r'^\d{4}-\d{2}-\d{2}$',      # ISO date: 1980-01-01
-                    r'^\d{2}\.\d{2}\.\d{4}$',    # European date: 01.01.1980
-                    r'^\d{1,2}/\d{1,2}/\d{4}$',  # US date: 1/1/1980 or 01/01/1980
-                    r'^\d{2}-\d{2}-\d{4}$',      # US date with dashes: 01-01-1980
-                ]
-
-            is_excluded = any(re.match(pattern, token.lower(), re.IGNORECASE) for pattern in exclusion_patterns)
+            # Use module-level exclusion patterns for efficiency
+            is_excluded = any(re.match(pattern, token.lower(), re.IGNORECASE) for pattern in _EXCLUSION_PATTERNS)
             if is_excluded:
                 traces.append(f"Filtered exclusion pattern: '{token}'")
                 continue
