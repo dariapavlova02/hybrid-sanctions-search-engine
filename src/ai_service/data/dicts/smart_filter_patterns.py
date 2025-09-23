@@ -7,45 +7,49 @@ for company and name detection.
 """
 
 # Patterns for exclusion from processing
+# IMPORTANT: Only filter technical garbage, NOT business signals!
+# Business signals (IPN, dates, document types) must reach Signals Service
 EXCLUSION_PATTERNS = [
-    r"^\d+$",  # Only digits
+    # Pure technical garbage - no business value
     r"^[^\w\s]+$",  # Only special characters
-    r"^(оплата|платеж|платіж|перевод|счет|квитанция|документ)$",  # Common terms
+    r"^(оплата|платеж|платіж|перевод|счет|квитанция|документ)$",  # Generic payment terms
 
-    # Document and transaction codes (universal patterns)
+    # Technical document codes - pure garbage with no business meaning
     r"^[a-f0-9]{16,}$",  # Long hex codes (16+ chars): 68ccdc4cd19cabdee2eaa56c
-    r"^[a-z]{2,3}\d{6,}$",  # Code patterns: TV0015628, GM293232
-    r"^[a-z]{2,4}\d{4,}[a-z]*$",  # Mixed codes: OKPO30929821, TV0015628
-    r"^\d{8,}[a-z]+$",  # Numbers with letters: 30929821sichey, 2515321244ipn
-    r"^[a-z]+\d{8,}$",  # Letters with long numbers: ipn2515321244
-    r"^\d{10,}$",  # Very long numbers (10+ digits): 2515321244, 30929821
+    r"^[a-z]{2,3}\d{6,}$",  # System codes: TV0015628, GM293232 (NOT business IDs)
+    r"^\d+[a-z]{2,}$",  # Numbers with letter suffixes: 7sichey (mixed garbage)
 
-    # Common business/document abbreviations
-    r"^(okpo|едрпоу|edrpou|ipn|іпн|inn|інн|ogrn|огрн|kpp|кпп)$",  # Document type abbreviations
-    r"^(iban|bic|swift|cor|correspondent)$",  # Banking codes
-    r"^\d+[a-z]{2,}$",  # Numbers with letter suffixes: 7sichey
+    # Banking system codes (not business identifiers)
+    r"^(iban|bic|swift|cor|correspondent)$",  # Banking technical codes
 
-    # Date of birth patterns (should be extracted as signals, not normalized)
-    r"^д\.р\.$",  # д.р.
-    r"^(dob|date.of.birth|birth.date)$",  # English DOB markers
-    r"^(народ|нар|born|рођ)$",  # Birth markers
-    r"^\d{4}-\d{2}-\d{2}$",  # Only date YYYY-MM-DD
-    r"^\d{2}\.\d{2}\.\d{4}$",  # Only date DD.MM.YYYY
-    r"^\d{2}/\d{2}/\d{4}$",  # Only date DD/MM/YYYY
-    r"^\d{1,2}\s+(січня|лютого|березня|квітня|травня|червня|липня|серпня|вересня|жовтня|листопада|грудня)\s+\d{4}$",  # Ukrainian date
-    r"^\d{1,2}\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s+\d{4}$",  # Russian date
-    r"^\d{1,2}\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}$",  # English date
-    r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}$",  # English date (month first)
-    r"^(сьогодні|вчора|позавчора|завтра|післязавтра|сегодня|вчера|позавчера|послезавтра|today|yesterday|tomorrow)$",  # Relative dates
+    # Time-only patterns (not dates with business meaning)
     r"^\d{1,2}:\d{2}(:\d{2})?$",  # Only time HH:MM or HH:MM:SS
     r"^\d{1,2}\s*[чh]\s*\d{1,2}\s*[хмm]?$",  # Only time in Ukrainian format
-    r"^\d+\.\d+$",  # Only numbers with decimal point
+    r"^\d+\.\d+$",  # Only decimal numbers (prices, not IDs)
+
+    # Pure prepositions and common words
     r"^(за|на|від|до|для|про|щодо|стосовно)$",  # Prepositions
     r"^(послуги|товар|товари|продукт|продукти)$",  # Common goods/services
     r"^(робота|роботи|консультація|консультації)$",  # Common work
-    r"^(payment|transfer|invoice|receipt|document)$",  # English terms
+    r"^(payment|transfer|invoice|receipt|document)$",  # English generic terms
     r"^(services|goods|products|items|work)$",  # English goods/services
+
+    # Relative dates (not specific business dates)
+    r"^(сьогодні|вчора|позавчора|завтра|післязавтра|сегодня|вчера|позавчера|послезавтра|today|yesterday|tomorrow)$",
 ]
+
+# REMOVED BUSINESS SIGNALS - these must reach Signals Service:
+# ❌ r"^\d+$" - could be IPN/EDRPOU
+# ❌ r"^(okpo|едрпоу|edrpou|ipn|іпн|inn|інн|ogrn|огрн|kpp|кпп)$" - document type markers
+# ❌ r"^\d{8,}[a-z]+$" - could be IPN with suffix
+# ❌ r"^[a-z]+\d{8,}$" - could be prefixed IPN
+# ❌ r"^\d{10,}$" - could be IPN numbers
+# ❌ r"^[a-z]{2,4}\d{4,}[a-z]*$" - could be valid document codes
+# ❌ r"^д\.р\.$" - date of birth marker
+# ❌ r"^\d{4}-\d{2}-\d{2}$" - ISO dates
+# ❌ r"^\d{2}\.\d{2}\.\d{4}$" - European dates
+# ❌ r"^\d{2}/\d{2}/\d{4}$" - US dates
+# ❌ Month name patterns - business dates
 
 # Additional patterns for dates and time
 DATE_TIME_PATTERNS = {
