@@ -56,7 +56,8 @@ class DecisionEngine:
             language=inp.language,
             smartfilter=smartfilter,
             signals=signals,
-            similarity=similarity
+            similarity=similarity,
+            search=inp.search
         )
         
         # Calculate weighted score
