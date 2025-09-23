@@ -781,7 +781,12 @@ class NormalizationFactory(ErrorReportingMixin):
                 # Apply titlecase to person tokens
                 original_token = token_trace.token
                 normalized_token = token_trace.output
-                
+
+                # CRITICAL FIX: For initials and patronymics with empty output, use original token
+                if token_trace.role in ('initial', 'patronymic') and not normalized_token.strip():
+                    normalized_token = original_token
+                    self.logger.debug(f"INIT/PAT FIX: Using original token '{original_token}' for empty output {token_trace.role}")
+
                 # Check if token is already properly cased (avoid double processing)
                 already_cased = getattr(token_trace, 'already_cased', False)
                 
