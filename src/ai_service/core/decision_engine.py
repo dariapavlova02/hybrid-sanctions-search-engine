@@ -251,9 +251,12 @@ class DecisionEngine:
             "org_confidence": inp.signals.org_confidence,
             "similarity_cos_top": similarity_value,
             "date_match": inp.signals.date_match,
-            "id_match": inp.signals.id_match
+            "id_match": inp.signals.id_match,
+            "search_exact_matches": inp.search.has_exact_matches if inp.search else False,
+            "search_exact_confidence": inp.search.exact_confidence if inp.search else 0.0,
+            "search_total_matches": inp.search.total_matches if inp.search else 0
         }
-        
+
         # Evidence strength indicators
         evidence_strength = {
             "smartfilter_strong": inp.smartfilter.confidence >= 0.7,
@@ -261,7 +264,9 @@ class DecisionEngine:
             "org_strong": inp.signals.org_confidence >= 0.7,
             "similarity_high": inp.similarity.cos_top and inp.similarity.cos_top >= 0.9,
             "exact_id_match": inp.signals.id_match,
-            "exact_dob_match": inp.signals.date_match
+            "exact_dob_match": inp.signals.date_match,
+            "search_exact_match": inp.search and inp.search.has_exact_matches and inp.search.exact_confidence >= 0.95,
+            "search_high_confidence": inp.search and inp.search.high_confidence_matches > 0
         }
 
         return {
@@ -282,12 +287,22 @@ class DecisionEngine:
                 "w_person": self.config.w_person,
                 "w_org": self.config.w_org,
                 "w_similarity": self.config.w_similarity,
+                "w_search_exact": self.config.w_search_exact,
+                "w_search_phrase": self.config.w_search_phrase,
+                "w_search_ngram": self.config.w_search_ngram,
+                "w_search_vector": self.config.w_search_vector,
                 "bonus_date_match": self.config.bonus_date_match,
-                "bonus_id_match": self.config.bonus_id_match
+                "bonus_id_match": self.config.bonus_id_match,
+                "bonus_multiple_matches": self.config.bonus_multiple_matches,
+                "bonus_high_confidence": self.config.bonus_high_confidence
             },
             "thresholds": {
                 "thr_high": self.config.thr_high,
-                "thr_medium": self.config.thr_medium
+                "thr_medium": self.config.thr_medium,
+                "thr_search_exact": self.config.thr_search_exact,
+                "thr_search_phrase": self.config.thr_search_phrase,
+                "thr_search_ngram": self.config.thr_search_ngram,
+                "thr_search_vector": self.config.thr_search_vector
             },
             "normalized_features": normalized_features,
             "evidence_strength": evidence_strength,
@@ -297,6 +312,18 @@ class DecisionEngine:
                 "date_match": inp.signals.date_match,
                 "id_match": inp.signals.id_match,
                 "evidence_count": len(inp.signals.evidence)
+            },
+            "search_info": {
+                "has_exact_matches": inp.search.has_exact_matches if inp.search else False,
+                "exact_confidence": inp.search.exact_confidence if inp.search else 0.0,
+                "has_phrase_matches": inp.search.has_phrase_matches if inp.search else False,
+                "phrase_confidence": inp.search.phrase_confidence if inp.search else 0.0,
+                "has_ngram_matches": inp.search.has_ngram_matches if inp.search else False,
+                "ngram_confidence": inp.search.ngram_confidence if inp.search else 0.0,
+                "has_vector_matches": inp.search.has_vector_matches if inp.search else False,
+                "vector_confidence": inp.search.vector_confidence if inp.search else 0.0,
+                "total_matches": inp.search.total_matches if inp.search else 0,
+                "high_confidence_matches": inp.search.high_confidence_matches if inp.search else 0
             },
             "similarity": {
                 "cos_top": inp.similarity.cos_top,

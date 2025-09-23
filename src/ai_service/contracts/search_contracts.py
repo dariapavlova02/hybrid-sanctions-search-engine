@@ -338,32 +338,66 @@ def extract_search_candidates(signals_result: Any) -> List[SearchCandidate]:
 def create_search_info(search_result: SearchResult) -> SearchInfo:
     """
     Create SearchInfo from SearchResult for Decision layer
-    
+
     Args:
         search_result: Complete search result
-        
+
     Returns:
         SearchInfo for Decision layer
     """
-    # Analyze AC results
-    exact_matches = [r for r in search_result.ac_results if r.ac_type == SearchType.EXACT]
-    phrase_matches = [r for r in search_result.ac_results if r.ac_type == SearchType.PHRASE]
-    ngram_matches = [r for r in search_result.ac_results if r.ac_type == SearchType.NGRAM]
-    
-    # Calculate confidences
-    exact_confidence = max([r.ac_score for r in exact_matches], default=0.0)
-    phrase_confidence = max([r.ac_score for r in phrase_matches], default=0.0)
-    ngram_confidence = max([r.ac_score for r in ngram_matches], default=0.0)
-    vector_confidence = max([r.vector_score for r in search_result.vector_results], default=0.0)
-    
+    # If we have separate AC/vector results, use them
+    if search_result.ac_results or search_result.vector_results:
+        # Analyze AC results
+        exact_matches = [r for r in search_result.ac_results if r.ac_type == SearchType.EXACT]
+        phrase_matches = [r for r in search_result.ac_results if r.ac_type == SearchType.PHRASE]
+        ngram_matches = [r for r in search_result.ac_results if r.ac_type == SearchType.NGRAM]
+
+        # Calculate confidences
+        exact_confidence = max([r.ac_score for r in exact_matches], default=0.0)
+        phrase_confidence = max([r.ac_score for r in phrase_matches], default=0.0)
+        ngram_confidence = max([r.ac_score for r in ngram_matches], default=0.0)
+        vector_confidence = max([r.vector_score for r in search_result.vector_results], default=0.0)
+
+        has_exact = len(exact_matches) > 0
+        has_phrase = len(phrase_matches) > 0
+        has_ngram = len(ngram_matches) > 0
+        has_vector = len(search_result.vector_results) > 0
+
+    # Otherwise, analyze candidates directly
+    else:
+        # Use candidates to determine match types based on search_type and scores
+        exact_candidates = [c for c in search_result.candidates if c.search_type == SearchType.EXACT]
+        phrase_candidates = [c for c in search_result.candidates if c.search_type == SearchType.PHRASE]
+        ngram_candidates = [c for c in search_result.candidates if c.search_type == SearchType.NGRAM]
+        vector_candidates = [c for c in search_result.candidates if c.search_type == SearchType.VECTOR]
+
+        # Also check for high AC scores indicating exact matches (fallback heuristic)
+        if not exact_candidates:
+            exact_candidates = [c for c in search_result.candidates if c.ac_score >= 0.95]
+
+        # Calculate confidences from candidates
+        exact_confidence = max([c.ac_score for c in exact_candidates], default=0.0)
+        phrase_confidence = max([c.ac_score for c in phrase_candidates], default=0.0)
+        ngram_confidence = max([c.ac_score for c in ngram_candidates], default=0.0)
+        vector_confidence = max([c.vector_score for c in vector_candidates], default=0.0)
+
+        # If no vector candidates but we have candidates with vector scores, use them
+        if not vector_candidates and search_result.candidates:
+            vector_confidence = max([c.vector_score for c in search_result.candidates if c.vector_score > 0], default=0.0)
+
+        has_exact = len(exact_candidates) > 0 or exact_confidence >= 0.95
+        has_phrase = len(phrase_candidates) > 0 or phrase_confidence >= 0.8
+        has_ngram = len(ngram_candidates) > 0 or ngram_confidence >= 0.6
+        has_vector = vector_confidence > 0
+
     # Count high confidence matches
     high_confidence_matches = sum(1 for c in search_result.candidates if c.final_score >= 0.8)
-    
+
     return SearchInfo(
-        has_exact_matches=len(exact_matches) > 0,
-        has_phrase_matches=len(phrase_matches) > 0,
-        has_ngram_matches=len(ngram_matches) > 0,
-        has_vector_matches=len(search_result.vector_results) > 0,
+        has_exact_matches=has_exact,
+        has_phrase_matches=has_phrase,
+        has_ngram_matches=has_ngram,
+        has_vector_matches=has_vector,
 
         exact_confidence=exact_confidence,
         phrase_confidence=phrase_confidence,
