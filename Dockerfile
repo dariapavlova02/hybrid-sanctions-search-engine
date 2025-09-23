@@ -11,6 +11,9 @@ ENV HF_HOME=/app/.cache/huggingface
 ENV TRANSFORMERS_CACHE=/app/.cache/huggingface
 ENV SENTENCE_TRANSFORMERS_HOME=/app/.cache/sentence_transformers
 ENV EMBEDDING_MODEL="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+# Enable search functionality with partial name patterns
+ENV ENABLE_SEARCH=true
+ENV ENABLE_EMBEDDINGS=true
 
 # Set work directory
 WORKDIR /app
@@ -39,6 +42,9 @@ COPY config.py ./
 # Configure poetry to not create virtual environment
 RUN poetry config virtualenvs.create false
 
+# Fix httpx dependency conflict for elasticsearch BEFORE installing other dependencies
+RUN pip install --no-cache-dir httpx==0.25.2 elasticsearch==8.10.0
+
 # Install dependencies
 RUN poetry install --only=main --no-interaction --no-ansi
 
@@ -50,7 +56,8 @@ RUN pip install https://github.com/explosion/spacy-models/releases/download/en_c
 RUN pip install https://github.com/explosion/spacy-models/releases/download/ru_core_news_sm-3.8.0/ru_core_news_sm-3.8.0-py3-none-any.whl
 RUN pip install https://github.com/explosion/spacy-models/releases/download/uk_core_news_sm-3.8.0/uk_core_news_sm-3.8.0-py3-none-any.whl
 
-# Download NLTK data
+# Install NLTK and download data (after dependencies are installed)
+RUN pip install --no-cache-dir nltk
 RUN python -c "import nltk; nltk.download('stopwords'); nltk.download('punkt'); nltk.download('averaged_perceptron_tagger')"
 
 # Create non-root user
