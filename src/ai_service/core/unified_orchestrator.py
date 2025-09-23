@@ -42,12 +42,10 @@ from ..contracts.base_contracts import (
 try:
     from ..layers.search.hybrid_search_service import HybridSearchService
     from ..layers.search.contracts import SearchOpts
-    from ..contracts.search_contracts import SearchInfo
 except ImportError as e:
     logger.warning(f"Failed to import HybridSearchService: {e}")
     HybridSearchService = None
     SearchOpts = None
-    SearchInfo = None
 from ..contracts.decision_contracts import (
     DecisionInput,
     DecisionOutput,
@@ -1027,12 +1025,8 @@ class UnifiedOrchestrator:
             search=search_info
         )
 
-    def _create_search_info_from_results(self, search_results: dict) -> Optional[SearchInfo]:
+    def _create_search_info_from_results(self, search_results: dict):
         """Create SearchInfo from search_results dict format"""
-        if SearchInfo is None:
-            logger.warning("SearchInfo not available - search module not imported")
-            return None
-
         try:
             from ..contracts.search_contracts import (
                 SearchResult, Candidate, SearchType, SearchInfo, create_search_info
@@ -1083,6 +1077,9 @@ class UnifiedOrchestrator:
             # Create SearchInfo using existing function
             return create_search_info(search_result)
 
+        except ImportError:
+            logger.warning("Search contracts not available - search module not imported")
+            return None
         except Exception as e:
             logger.warning(f"Failed to create SearchInfo from search_results: {e}")
             return None
