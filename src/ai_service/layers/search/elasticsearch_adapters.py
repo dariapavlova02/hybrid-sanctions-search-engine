@@ -165,7 +165,7 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
             {
                 "term": {
                     "normalized_text.keyword": {
-                        "value": query,
+                        "value": query.lower(),
                         "boost": opts.ac_boost * weights.get("normalized_text", 1.0) * 2,
                     }
                 }
@@ -173,7 +173,7 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
             {
                 "term": {
                     self.AC_PATTERN_FIELD: {
-                        "value": query,
+                        "value": query.lower(),
                         "boost": opts.ac_boost * 3.0,
                     }
                 }
@@ -229,7 +229,7 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
         ac_queries.append({
             "term": {
                 "pattern": {
-                    "value": query,
+                    "value": query.lower(),
                     "boost": opts.ac_boost * 10.0 * self.config.ac_query_boost_factor,
                 }
             }
