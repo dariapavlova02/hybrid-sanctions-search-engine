@@ -127,3 +127,15 @@ statement
 report
 звіт
 отчет
+# Insurance context
+страховий
+страховой
+поліс
+полис
+policy
+insurance
+страхование
+страхування
+ОСЦПВ
+ОСАГО
+КАСКО
