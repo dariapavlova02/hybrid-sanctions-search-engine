@@ -1,0 +1,102 @@
+# Multi-stage build for AI Service with Elasticsearch support
+FROM python:3.11-slim AS base
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONPATH=/app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    gcc \
+    g++ \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /app
+
+# Install Poetry
+RUN pip install poetry
+
+# Copy application code FIRST
+COPY . .
+
+# Configure Poetry to NOT create virtual environments
+RUN poetry config virtualenvs.create false && \
+    poetry config virtualenvs.in-project false
+
+# Install all dependencies directly via pip (force global installation)
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+    fastapi>=0.116.1 \
+    uvicorn[standard]>=0.35.0 \
+    pydantic>=2.11.7 \
+    pydantic-settings>=2.10.1 \
+    pyahocorasick>=2.2.0 \
+    sentence-transformers>=5.1.0 \
+    scipy>=1.14.0 \
+    numpy>=1.24.0 \
+    pymorphy3>=2.0.4 \
+    pymorphy3-dicts-uk>=2.4.1.1.1663094765 \
+    pymorphy3-dicts-ru>=2.4.417150.4580142 \
+    pyyaml>=6.0.2 \
+    httpx>=0.27.0 \
+    nameparser>=1.1.0 \
+    elasticsearch==8.11.0 \
+    elastic-transport==8.10.0 \
+    aiohttp>=3.12.0 \
+    prometheus-client>=0.19.0 \
+    rapidfuzz>=3.5.0 \
+    spacy>=3.7.0 \
+    transliterate>=1.10.2 \
+    python-multipart>=0.0.6
+
+# Verify all critical dependencies are installed
+RUN echo "🔍 Verifying dependencies..." && \
+    python -c "import nameparser; print('✅ nameparser:', nameparser.__version__)" && \
+    python -c "import rapidfuzz; print('✅ rapidfuzz:', rapidfuzz.__version__)" && \
+    python -c "import spacy; print('✅ spacy:', spacy.__version__)" && \
+    python -c "import transliterate; print('✅ transliterate available')" && \
+    python -c "import prometheus_client; print('✅ prometheus_client available')" && \
+    python -c "import elasticsearch; print('✅ elasticsearch:', elasticsearch.__version__)" && \
+    python -c "import aiohttp; print('✅ aiohttp:', aiohttp.__version__)" && \
+    echo "🎉 All dependencies verified!"
+
+# Install spaCy models
+RUN echo "📦 Installing spaCy models..." && \
+    python -m spacy download en_core_web_sm && echo "✅ English model installed" || echo "❌ English model failed" && \
+    python -m spacy download ru_core_news_sm && echo "✅ Russian model installed" || echo "❌ Russian model failed" && \
+    python -m spacy download uk_core_news_sm && echo "✅ Ukrainian model installed" || echo "❌ Ukrainian model failed" && \
+    python -m spacy download xx_ent_wiki_sm && echo "✅ Multilingual model installed" || echo "❌ Multilingual model failed"
+
+# Verify spaCy models are properly installed
+RUN echo "🔍 Verifying spaCy models..." && \
+    python -c "import spacy; spacy.load('en_core_web_sm'); print('✅ English model working')" && \
+    python -c "import spacy; spacy.load('ru_core_news_sm'); print('✅ Russian model working')" && \
+    python -c "import spacy; spacy.load('uk_core_news_sm'); print('✅ Ukrainian model working')" && \
+    echo "🎉 All spaCy models verified!"
+
+# Copy production environment file
+COPY env.production.maximum_relevancy .env
+
+# Create logs directory for logging config
+RUN mkdir -p logs && chmod 755 logs
+
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash app && \
+    chown -R app:app /app
+USER app
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Default command - run directly without poetry
+CMD ["python", "-m", "uvicorn", "src.ai_service.main:app", "--host", "0.0.0.0", "--port", "8000"]

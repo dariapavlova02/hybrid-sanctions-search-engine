@@ -428,6 +428,9 @@ class NamePatternGenerator:
         # 3. Morphological variants (basic cases)
         patterns.extend(self._generate_morphological_variants(words, language))
 
+        # 4. Partial name matches (surname + firstname without patronymic)
+        patterns.extend(self._generate_partial_name_variants(words, language))
+
         return patterns
 
     def generate_tier_3_patterns(self, name: str, language: str) -> List[GeneratedPattern]:
@@ -1007,6 +1010,35 @@ class NamePatternGenerator:
                     entity_id="",
                     entity_type="person"
                 ))
+
+        return patterns
+
+    def _generate_partial_name_variants(self, words: List[str], language: str) -> List[GeneratedPattern]:
+        """Generate partial name matches for surname+firstname without patronymic"""
+        patterns = []
+
+        # Only for names with 3+ words (likely full name with patronymic)
+        if len(words) < 3:
+            return patterns
+
+        # Generate firstname + lastname (skip middle name/patronymic)
+        # For "Порошенко Петро Олексійович" -> "Порошенко Петро"
+        partial_name = f"{words[0]} {words[1]}"
+        metadata = PatternMetadata(
+            tier=PatternTier.TIER_2,
+            pattern_type=PatternType.PARTIAL_MATCH,
+            language=language,
+            confidence=0.75,
+            source_field="name",
+            hints={"partial": "surname_firstname"}
+        )
+        patterns.append(GeneratedPattern(
+            pattern=partial_name,
+            canonical=" ".join(words),
+            metadata=metadata,
+            entity_id="",
+            entity_type="person"
+        ))
 
         return patterns
 
