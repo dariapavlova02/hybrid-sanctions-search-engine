@@ -42,10 +42,12 @@ from ..contracts.base_contracts import (
 try:
     from ..layers.search.hybrid_search_service import HybridSearchService
     from ..layers.search.contracts import SearchOpts
+    from ..contracts.search_contracts import SearchInfo
 except ImportError as e:
     logger.warning(f"Failed to import HybridSearchService: {e}")
     HybridSearchService = None
     SearchOpts = None
+    SearchInfo = None
 from ..contracts.decision_contracts import (
     DecisionInput,
     DecisionOutput,
@@ -610,6 +612,7 @@ class UnifiedOrchestrator:
         signals_result: Any,
         variants: Optional[list],
         embeddings: Optional[list],
+        search_results: Optional[dict],
         errors: list,
         search_trace: Optional[SearchTrace] = None
     ) -> Optional[Any]:
@@ -652,7 +655,7 @@ class UnifiedOrchestrator:
             try:
                 # Create DecisionInput from processing results
                 decision_input = self._create_decision_input(
-                    context, temp_processing_result, signals_result
+                    context, temp_processing_result, signals_result, search_results
                 )
 
                 # Make decision using our new DecisionEngine
@@ -828,7 +831,7 @@ class UnifiedOrchestrator:
             # Layer 10: Decision & Response
             # ================================================================
             decision_result = await self._handle_decision_layer(
-                context, norm_result, signals_result, variants, embeddings, errors, search_trace
+                context, norm_result, signals_result, variants, embeddings, search_results, errors, search_trace
             )
 
             processing_time = time.time() - start_time
@@ -943,10 +946,11 @@ class UnifiedOrchestrator:
         )
 
     def _create_decision_input(
-        self, 
-        context: ProcessingContext, 
+        self,
+        context: ProcessingContext,
         processing_result: UnifiedProcessingResult,
-        signals_result: SignalsResult
+        signals_result: SignalsResult,
+        search_results: Optional[dict] = None
     ) -> DecisionInput:
         """Create DecisionInput from processing results"""
         
@@ -1008,14 +1012,80 @@ class UnifiedOrchestrator:
             # For now, we don't have similarity search implemented
             # This would be populated when similarity search is added
             similarity = SimilarityInfo(cos_top=None, cos_p95=None)
-        
+
+        # Create SearchInfo from search_results
+        search_info = None
+        if search_results:
+            search_info = self._create_search_info_from_results(search_results)
+
         return DecisionInput(
             text=context.original_text,
             language=context.language,
             smartfilter=smart_filter,
             signals=signals,
-            similarity=similarity
+            similarity=similarity,
+            search=search_info
         )
+
+    def _create_search_info_from_results(self, search_results: dict) -> Optional[SearchInfo]:
+        """Create SearchInfo from search_results dict format"""
+        if SearchInfo is None:
+            logger.warning("SearchInfo not available - search module not imported")
+            return None
+
+        try:
+            from ..contracts.search_contracts import (
+                SearchResult, Candidate, SearchType, SearchInfo, create_search_info
+            )
+
+            # Convert search_results dict to Candidate objects
+            candidates = []
+            for r in search_results.get("results", []):
+                # Determine search type from match fields
+                search_type = SearchType.EXACT
+                match_fields = r.get("match_fields", [])
+                if "normalized_text" in match_fields:
+                    search_type = SearchType.EXACT
+                elif "phrase" in match_fields:
+                    search_type = SearchType.PHRASE
+                elif "ngram" in match_fields:
+                    search_type = SearchType.NGRAM
+                elif "vector" in match_fields:
+                    search_type = SearchType.VECTOR
+
+                # Create candidate
+                candidate = Candidate(
+                    entity_id=r.get("doc_id", ""),
+                    entity_type=r.get("entity_type", ""),
+                    normalized_name=r.get("text", ""),
+                    aliases=[],
+                    country="",
+                    dob=None,
+                    meta=r.get("metadata", {}),
+                    final_score=r.get("confidence", 0.0),
+                    ac_score=r.get("confidence", 0.0) if r.get("search_mode") != "vector" else 0.0,
+                    vector_score=r.get("confidence", 0.0) if r.get("search_mode") == "vector" else 0.0,
+                    features={"match_fields": match_fields},
+                    search_type=search_type
+                )
+                candidates.append(candidate)
+
+            # Create SearchResult
+            search_result = SearchResult(
+                candidates=candidates,
+                ac_results=[],  # Empty as in production
+                vector_results=[],  # Empty as in production
+                search_metadata=search_results.get("search_metadata", {}),
+                processing_time=search_results.get("processing_time_ms", 0) / 1000.0,
+                success=True
+            )
+
+            # Create SearchInfo using existing function
+            return create_search_info(search_result)
+
+        except Exception as e:
+            logger.warning(f"Failed to create SearchInfo from search_results: {e}")
+            return None
 
     # Convenience methods for backward compatibility
 
