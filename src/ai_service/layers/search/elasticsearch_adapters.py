@@ -12,18 +12,27 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from functools import wraps
 
-from elasticsearch import AsyncElasticsearch
 try:
-    from elasticsearch.exceptions import ElasticsearchException, ConnectionError
+    from elasticsearch import AsyncElasticsearch
     try:
-        from elasticsearch.exceptions import TimeoutError
+        from elasticsearch.exceptions import ElasticsearchException, ConnectionError
+        try:
+            from elasticsearch.exceptions import TimeoutError
+        except ImportError:
+            # TimeoutError may not exist in some versions
+            TimeoutError = Exception
     except ImportError:
-        # TimeoutError may not exist in some versions
+        # Fallback for newer elasticsearch versions
+        from elasticsearch.exceptions import ConnectionError, RequestError as ElasticsearchException
         TimeoutError = Exception
-except ImportError:
-    # Fallback for newer elasticsearch versions
-    from elasticsearch.exceptions import ConnectionError, RequestError as ElasticsearchException
+    ELASTICSEARCH_AVAILABLE = True
+except ImportError as e:
+    # Elasticsearch not available - create dummy classes
+    AsyncElasticsearch = None
+    ElasticsearchException = Exception
+    ConnectionError = Exception
     TimeoutError = Exception
+    ELASTICSEARCH_AVAILABLE = False
 
 from ...utils.logging_config import get_logger
 
