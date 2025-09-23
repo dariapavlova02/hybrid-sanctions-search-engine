@@ -12,8 +12,8 @@ services:
       - APP_ENV=production
       - WORKERS=4
       - DEBUG=false
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - ENABLE_ELASTICSEARCH_AUTH=false
+      - ELASTICSEARCH_HOSTS=http://95.217.84.234:9200
+      - ENABLE_ELASTICSEARCH_AUTH=true
       - ENABLE_SEARCH_CACHE=true
       - SEARCH_CACHE_SIZE=2000
       - QUERY_CACHE_SIZE=5000
@@ -76,7 +76,7 @@ services:
     image: docker.elastic.co/kibana/kibana:8.11.0
     container_name: kibana-prod
     environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_HOSTS=http://95.217.84.234:9200
       - SERVER_NAME=kibana
     ports:
       - "5601:5601"
