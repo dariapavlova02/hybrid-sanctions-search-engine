@@ -44,10 +44,7 @@ class ElasticsearchClientFactory:
             "sniff_on_connection_fail": False,  # Disable sniffing for external ES
             "sniff_timeout": 10,  # Timeout for sniffing
             # Additional performance optimizations
-            "http_auth_timeout": 30,  # Authentication timeout
             "dead_timeout": 60,  # Time before retrying a dead node
-            "http_pool_connections": 25,  # Number of connection pools to cache
-            "http_pool_maxsize": 10,  # Maximum number of connections to save in the pool
             # Connection settings
             "http_auth": None,  # Will be set below if needed
             "headers": {
