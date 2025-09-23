@@ -38,7 +38,8 @@ class ElasticsearchConfig(BaseModel):
     ac_index: str = Field(default="watchlist_ac", description="AC search index name")
     vector_index: str = Field(default="watchlist_vector", description="Vector search index name")
     
-    @validator("hosts")
+    @field_validator("hosts")
+    @classmethod
     def validate_hosts(cls, v):
         """Validate hosts format"""
         if not v:
