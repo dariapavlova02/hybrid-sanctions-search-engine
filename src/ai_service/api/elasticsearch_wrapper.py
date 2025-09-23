@@ -31,7 +31,12 @@ class SimpleElasticsearchClient:
             es_port = int(os.environ.get('ELASTICSEARCH_PORT', '9200'))
             es_url = f"http://{es_host}:{es_port}"
 
-            self.client = AsyncElasticsearch([es_url])
+            # Simple client configuration without deprecated parameters
+            self.client = AsyncElasticsearch(
+                hosts=[es_url],
+                verify_certs=False,
+                timeout=30
+            )
         else:
             raise ImportError("elasticsearch package not available")
 

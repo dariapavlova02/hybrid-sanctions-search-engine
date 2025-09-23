@@ -1,0 +1,33 @@
+HIGH-RECALL AC PATTERNS GENERATION SUMMARY
+==================================================
+
+Generated: 2025-09-23 02:20:36
+Generator version: 1.0.0
+
+INPUT DATA:
+  Persons file: src/ai_service/data/sanctioned_persons.json
+  Companies file: src/ai_service/data/sanctioned_companies.json
+  Sample size: Full dataset
+
+PROCESSING:
+  Persons processed: 13,192
+  Companies processed: 7,603
+  Total patterns: 957,978
+  Processing time: 10.35s
+  Patterns per second: 92542
+
+TIER DISTRIBUTION:
+  Tier 0: 53,348 patterns (5.6%)
+  Tier 1: 134,056 patterns (14.0%)
+  Tier 2: 154,381 patterns (16.1%)
+  Tier 3: 616,193 patterns (64.3%)
+
+TIER DESCRIPTIONS:
+  Tier 0: Exact documents/IDs (100% precision)
+  Tier 1: High-precision names/companies
+  Tier 2: Morphological and structured variants
+  Tier 3: Broad recall patterns (requires post-filtering)
+
+OUTPUT FILES:
+  Patterns: patterns_full_new.json
+  Summary: patterns_full_new_summary.txt

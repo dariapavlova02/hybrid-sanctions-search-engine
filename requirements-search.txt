@@ -1,0 +1,16 @@
+# Search-specific requirements for production
+# Compatible versions that work together
+
+# Core search dependencies
+elasticsearch>=8.12.0,<8.15.0
+elastic-transport>=8.10.0,<8.15.0
+
+# HTTP dependencies (compatible versions)
+httpx>=0.25.0,<0.30.0
+httpcore>=1.0.0,<2.0.0
+h11>=0.14.0,<1.0.0
+
+# Additional search dependencies
+aiohttp>=3.8.0,<4.0.0
+certifi>=2023.0.0
+urllib3>=1.26.0,<3.0.0
