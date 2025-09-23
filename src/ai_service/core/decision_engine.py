@@ -8,6 +8,8 @@ from ..contracts.decision_contracts import DecisionInput, DecisionOutput, RiskLe
 from ..contracts.trace_models import SearchTrace
 from ..config.settings import DecisionConfig, DECISION_CONFIG
 from ..utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 from ..monitoring.metrics_service import MetricsService, MetricDefinition, MetricType
 
 
@@ -216,6 +218,7 @@ class DecisionEngine:
         
         # Calculate search contribution
         search_contribution = 0.0
+        logger.info(f"DEBUG: inp.search = {inp.search}")
         if inp.search:
             search = inp.search
             # Exact matches (highest priority)

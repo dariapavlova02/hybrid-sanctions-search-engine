@@ -86,10 +86,26 @@ class SearchIntegration:
             
             search_time = time.time() - search_start
             
+            # Convert search candidates to AC results for Decision layer
+            ac_results = []
+            for candidate in search_result:
+                if hasattr(candidate, 'search_mode') and candidate.search_mode == 'ac':
+                    # Convert to proper AC result
+                    from ..contracts.search_contracts import ACResult, SearchType
+                    ac_result = ACResult(
+                        doc_id=candidate.doc_id if hasattr(candidate, 'doc_id') else "",
+                        pattern="",  # Not available in current format
+                        ac_type=SearchType.EXACT,  # Assume exact for AC matches
+                        ac_score=candidate.confidence if hasattr(candidate, 'confidence') else 1.0,
+                        match_fields=candidate.match_fields if hasattr(candidate, 'match_fields') else [],
+                        metadata=candidate.metadata if hasattr(candidate, 'metadata') else {}
+                    )
+                    ac_results.append(ac_result)
+
             # Create SearchResult for processing
             search_result_obj = SearchResult(
                 candidates=search_result,
-                ac_results=[],  # Will be filled by HybridSearchService
+                ac_results=ac_results,  # Now filled with converted AC results
                 vector_results=[],  # Will be filled by HybridSearchService
                 search_metadata={
                     "candidates_count": len(search_candidates),
