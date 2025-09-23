@@ -110,18 +110,23 @@ class TokenProcessor:
                     traces.append(f"Filtered stop word: '{token}'")
                     continue
 
-            # Filter date patterns that should not appear in normalized names
-            # Common date patterns: YYYY-MM-DD, DD.MM.YYYY, MM/DD/YYYY, etc.
-            date_patterns = [
-                r'^\d{4}-\d{2}-\d{2}$',      # ISO date: 1980-01-01
-                r'^\d{2}\.\d{2}\.\d{4}$',    # European date: 01.01.1980
-                r'^\d{1,2}/\d{1,2}/\d{4}$',  # US date: 1/1/1980 or 01/01/1980
-                r'^\d{2}-\d{2}-\d{4}$',      # US date with dashes: 01-01-1980
-            ]
+            # Filter patterns that should not appear in normalized names
+            # Import exclusion patterns from smart filter
+            try:
+                from ....data.dicts.smart_filter_patterns import EXCLUSION_PATTERNS
+                exclusion_patterns = EXCLUSION_PATTERNS
+            except ImportError:
+                # Fallback to basic date patterns if import fails
+                exclusion_patterns = [
+                    r'^\d{4}-\d{2}-\d{2}$',      # ISO date: 1980-01-01
+                    r'^\d{2}\.\d{2}\.\d{4}$',    # European date: 01.01.1980
+                    r'^\d{1,2}/\d{1,2}/\d{4}$',  # US date: 1/1/1980 or 01/01/1980
+                    r'^\d{2}-\d{2}-\d{4}$',      # US date with dashes: 01-01-1980
+                ]
 
-            is_date = any(re.match(pattern, token) for pattern in date_patterns)
-            if is_date:
-                traces.append(f"Filtered date pattern: '{token}'")
+            is_excluded = any(re.match(pattern, token.lower(), re.IGNORECASE) for pattern in exclusion_patterns)
+            if is_excluded:
+                traces.append(f"Filtered exclusion pattern: '{token}'")
                 continue
 
             filtered.append(token)
