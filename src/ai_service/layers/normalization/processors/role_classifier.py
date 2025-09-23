@@ -10,6 +10,13 @@ from ....utils.profiling import profile_function, profile_time
 from ....utils.cache_utils import lru_cache_with_metrics
 from ..morphology.gender_rules import convert_surname_to_nominative
 
+# Import exclusion patterns to prevent classification of garbage as names
+try:
+    from ....data.dicts.smart_filter_patterns import EXCLUSION_PATTERNS
+    _EXCLUSION_PATTERNS = EXCLUSION_PATTERNS
+except ImportError:
+    _EXCLUSION_PATTERNS = []
+
 try:  # Optional dependency for Russian NER
     from natasha import MorphVocab, NewsEmbedding, NamesExtractor
 except ImportError:  # pragma: no cover
@@ -408,6 +415,12 @@ class RoleClassifier:
     def _classify_personal_role(self, token: str, language: str, policy_flags: Optional[Dict[str, Any]] = None) -> str:
         if not token:
             return "unknown"
+
+        # Check exclusion patterns FIRST - prevent garbage from being classified as names
+        token_lower = token.lower()
+        for pattern in _EXCLUSION_PATTERNS:
+            if re.match(pattern, token_lower, re.IGNORECASE):
+                return "unknown"  # Mark as unknown instead of given/surname
 
         if self._is_initial(token):
             return "initial"

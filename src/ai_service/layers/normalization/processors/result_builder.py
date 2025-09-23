@@ -53,13 +53,46 @@ class ResultBuilder:
         errors: Optional[List[str]] = None
     ) -> NormalizationResult:
         """Build a complete NormalizationResult from processed components."""
+        # Filter out tokens with 'unknown' role for normalized text construction
+        # Keep valid name roles: given, surname, patronymic, initial
+        # Exclude org tokens that match exclusion patterns (garbage codes)
+        valid_tokens = []
+        valid_roles = {"given", "surname", "patronymic", "initial"}
+
+        # Import exclusion patterns to filter out garbage org tokens
+        try:
+            from ....data.dicts.smart_filter_patterns import EXCLUSION_PATTERNS
+            exclusion_patterns = EXCLUSION_PATTERNS
+        except ImportError:
+            exclusion_patterns = []
+
+        for i, token in enumerate(normalized_tokens):
+            if i < len(token_traces):
+                trace = token_traces[i]
+
+                # Check if it's a valid name role
+                if hasattr(trace, 'role') and trace.role in valid_roles:
+                    valid_tokens.append(token)
+                # Also exclude org tokens that match exclusion patterns (garbage)
+                elif hasattr(trace, 'role') and trace.role == 'org':
+                    # Check if this org token is actually garbage
+                    import re
+                    is_garbage = any(re.match(pattern, token.lower(), re.IGNORECASE) for pattern in exclusion_patterns)
+                    if not is_garbage:
+                        # It's a legitimate org token, might be needed for context
+                        pass  # Don't include org tokens in normalized names anyway
+                    # Skip both garbage and legitimate org tokens from normalized text
+            else:
+                # If no trace available, include token (backward compatibility)
+                valid_tokens.append(token)
+
         # Finalize metrics
         metrics.end_time = time.time()
-        metrics.token_count = len(normalized_tokens)
+        metrics.token_count = len(normalized_tokens)  # Keep original count for metrics
         metrics.original_length = len(original_text)
 
-        # Build normalized text
-        normalized_text = self._reconstruct_normalized_text(normalized_tokens)
+        # Build normalized text from valid tokens only
+        normalized_text = self._reconstruct_normalized_text(valid_tokens)
         metrics.normalized_length = len(normalized_text)
         metrics.persons_detected = len(persons)
 
