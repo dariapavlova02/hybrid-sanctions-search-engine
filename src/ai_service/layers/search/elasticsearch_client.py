@@ -40,12 +40,9 @@ class ElasticsearchClientFactory:
             # Enhanced connection pooling settings for production
             "maxsize": 50,  # Increased from 25 - Maximum number of connections in the pool
             "http_compress": True,  # Enable HTTP compression
-            "sniff_on_start": True,  # Sniff cluster nodes on startup
-            "sniff_on_connection_fail": True,  # Sniff on connection failure
+            "sniff_on_start": False,  # Disable sniffing for external ES
+            "sniff_on_connection_fail": False,  # Disable sniffing for external ES
             "sniff_timeout": 10,  # Timeout for sniffing
-            "sniff_interval": 60,  # Interval between sniffing attempts
-            "min_delay_between_sniffing": 5,  # Minimum delay between sniffing
-            "max_delay_between_sniffing": 30,  # Maximum delay between sniffing
             # Additional performance optimizations
             "http_auth_timeout": 30,  # Authentication timeout
             "dead_timeout": 60,  # Time before retrying a dead node
