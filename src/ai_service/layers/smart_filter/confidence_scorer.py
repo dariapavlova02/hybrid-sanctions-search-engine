@@ -245,13 +245,15 @@ class ConfidenceScorer:
         quality_penalty = self._calculate_quality_penalty(signals)
         normalized -= quality_penalty
 
-        # Apply logarithmic normalization for smoothing
-        if normalized > 0.5:
-            # For high values use square root
+        # Apply smart normalization that preserves low values
+        if normalized > 0.8:
+            # For very high values use square root to prevent overshooting
             normalized = math.sqrt(normalized)
-        else:
-            # For low values use square
-            normalized = normalized**2
+        elif normalized > 0 and normalized < 0.1:
+            # For very low positive values use square root to boost them slightly
+            normalized = math.sqrt(normalized)
+        # For middle values (0.1 - 0.8) keep as-is to preserve name detection
+        # For negative or zero values, keep as max(0.0, normalized)
 
         return max(0.0, min(normalized, 1.0))
 
@@ -298,14 +300,15 @@ class ConfidenceScorer:
         """Calculate penalty for low quality text"""
         penalty = 0.0
 
-        # Penalty for very short texts
+        # Penalty for very short texts (reduced penalties for simple names)
         for signal_type, signal_data in signals.items():
             if isinstance(signal_data, dict) and "text_length" in signal_data:
                 text_length = signal_data["text_length"]
-                if text_length < 10:
-                    penalty += 0.3
-                elif text_length < 20:
+                # Reduced penalties - simple names like "Дарья Павлова" are valid
+                if text_length < 5:  # Only very short
                     penalty += 0.1
+                elif text_length < 10:  # Short but possibly valid names
+                    penalty += 0.05
 
         return penalty
 
