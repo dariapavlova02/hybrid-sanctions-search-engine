@@ -273,3 +273,26 @@ src/ai_service/data/processed_sanctioned_persons_*.json
 src/ai_service/data/templates/*.json
 src/ai_service/data/templates/*.txt
 src/ai_service/data/sanctioned_*.json
+
+# Large pattern files
+patterns*.json
+test_patterns*.json
+*_patterns.json
+*_templates.json
+
+# Large log and report files
+*generation_log.txt
+*variants_report*.txt
+*cleanup_report*.txt
+*upload*log.txt
+*vectors*log.txt
+*_log.txt
+*_report*.txt
+
+# Large data files (>10MB)
+*.json
+!tests/**/*.json
+!config/**/*.json
+!templates/**/*.json
+!src/ai_service/data/dicts/**/*.json
+!src/ai_service/data/lexicons/**/*.json
