@@ -45,6 +45,9 @@ RUN poetry config virtualenvs.create false
 # Fix httpx dependency conflict for elasticsearch BEFORE installing other dependencies
 RUN pip install --no-cache-dir httpx==0.25.2 elasticsearch==8.10.0
 
+# Install additional required dependencies for FastAPI
+RUN pip install --no-cache-dir python-multipart
+
 # Install dependencies
 RUN poetry install --only=main --no-interaction --no-ansi
 
