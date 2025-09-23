@@ -78,6 +78,13 @@ class ElasticsearchConfig(BaseModel):
         # Environment overrides
         if env.get("ES_HOSTS"):
             payload["hosts"] = [h.strip() for h in env["ES_HOSTS"].split(",") if h.strip()]
+        elif env.get("ELASTICSEARCH_HOSTS"):
+            # Support ELASTICSEARCH_HOSTS for backward compatibility
+            hosts_str = env["ELASTICSEARCH_HOSTS"]
+            if hosts_str.startswith("http://") or hosts_str.startswith("https://"):
+                payload["hosts"] = [hosts_str.strip()]
+            else:
+                payload["hosts"] = [h.strip() for h in hosts_str.split(",") if h.strip()]
 
         str_overrides = {
             "username": "ES_USERNAME",
