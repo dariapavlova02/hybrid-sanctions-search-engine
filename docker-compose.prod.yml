@@ -12,13 +12,18 @@ services:
       - APP_ENV=production
       - WORKERS=4
       - DEBUG=false
-      - ELASTICSEARCH_HOSTS=http://95.217.84.234:9200
-      - ENABLE_ELASTICSEARCH_AUTH=true
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ENABLE_ELASTICSEARCH_AUTH=false
       - ENABLE_SEARCH_CACHE=true
       - SEARCH_CACHE_SIZE=2000
       - QUERY_CACHE_SIZE=5000
+      # Critical escalation settings
+      - ENABLE_SEARCH=true
+      - SEARCH_ESCALATION_THRESHOLD=0.6
+      - VECTOR_SEARCH_THRESHOLD=0.3
+      - ENABLE_VECTOR_FALLBACK=true
     env_file:
-      - env.production
+      - .env.production
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data

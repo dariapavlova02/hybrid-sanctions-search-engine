@@ -48,19 +48,19 @@ IDENTIFIER_PATTERNS = [
     IdentifierPattern(
         name="INN_UA_8",
         type="inn",
-        pattern=r"\b(?:ИНН|інн|inn|ідентифікаційний\s+номер)[:\s]*(\d{8})\b",
+        pattern=r"\b(?:ИНН|інн|ІПН|inn|ідентифікаційний\s+номер)[:\s]*(\d{8})\b",
         description="Ukrainian INN 8 digits"
     ),
     IdentifierPattern(
         name="INN_UA_10", 
         type="inn",
-        pattern=r"\b(?:ИНН|інн|inn|ідентифікаційний\s+номер)[:\s]*(\d{10})\b",
+        pattern=r"\b(?:ИНН|інн|ІПН|inn|ідентифікаційний\s+номер)[:\s]*(\d{10})\b",
         description="Ukrainian INN 10 digits"
     ),
     IdentifierPattern(
         name="INN_UA_12",
         type="inn", 
-        pattern=r"\b(?:ИНН|інн|inn|ідентифікаційний\s+номер)[:\s]*(\d{12})\b",
+        pattern=r"\b(?:ИНН|інн|ІПН|inn|ідентифікаційний\s+номер)[:\s]*(\d{12})\b",
         description="Ukrainian INN 12 digits"
     ),
     IdentifierPattern(
@@ -133,6 +133,21 @@ IDENTIFIER_PATTERNS = [
         pattern=r"\b(?:EIN|ein|федеральный\s+налоговый\s+номер)[:\s]*(\d{2}-\d{7})\b",
         description="US Employer Identification Number"
     ),
+
+    # TIN patterns (Taxpayer Identification Number)
+    IdentifierPattern(
+        name="TIN_US_9",
+        type="inn",
+        pattern=r"\b(?:TIN|tin|taxpayer\s+identification\s+number)[:\s]*(\d{9})\b",
+        description="US TIN 9 digits"
+    ),
+    IdentifierPattern(
+        name="TIN_US_10",
+        type="inn",
+        pattern=r"\b(?:TIN|tin|taxpayer\s+identification\s+number)[:\s]*(\d{10})\b",
+        description="US TIN 10 digits"
+    ),
+
     IdentifierPattern(
         name="SSN_US",
         type="ssn",
@@ -182,19 +197,19 @@ IDENTIFIER_PATTERNS = [
     IdentifierPattern(
         name="INN_GENERIC_8",
         type="inn",
-        pattern=r"\b(\d{8})\b(?=.*(?:ИНН|інн|inn|идентификационный|ідентифікаційний))",
+        pattern=r"\b(\d{8})\b(?=.*(?:ИНН|інн|ІПН|inn|tin|идентификационный|ідентифікаційний))",
         description="Generic 8-digit INN in context"
     ),
     IdentifierPattern(
         name="INN_GENERIC_10",
         type="inn", 
-        pattern=r"\b(\d{10})\b(?=.*(?:ИНН|інн|inn|идентификационный|ідентифікаційний))",
+        pattern=r"\b(\d{10})\b(?=.*(?:ИНН|інн|ІПН|inn|tin|идентификационный|ідентифікаційний))",
         description="Generic 10-digit INN in context"
     ),
     IdentifierPattern(
         name="INN_GENERIC_12",
         type="inn",
-        pattern=r"\b(\d{12})\b(?=.*(?:ИНН|інн|inn|идентификационный|ідентифікаційний))",
+        pattern=r"\b(\d{12})\b(?=.*(?:ИНН|інн|ІПН|inn|tin|идентификационный|ідентифікаційний))",
         description="Generic 12-digit INN in context"
     ),
     IdentifierPattern(

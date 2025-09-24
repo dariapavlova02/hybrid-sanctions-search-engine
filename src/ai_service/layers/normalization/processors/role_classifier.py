@@ -71,6 +71,48 @@ ORG_LEGAL_FORMS: Set[str] = {
 
 ORG_TOKEN_RE = re.compile(r"^(?:[A-ZА-ЯЁІЇЄҐ0-9][A-ZА-ЯЁІЇЄҐ0-9\-&\.']{1,39})$", re.U)
 
+# Business document type markers (should be preserved for Signals Service)
+BUSINESS_DOCUMENT_MARKERS: Set[str] = {
+    # Ukrainian
+    "іпн", "інн", "едрпоу", "edrpou", "okpo", "окпо",
+    # Russian
+    "ипн", "инн", "едрпоу", "огрн", "ogrn", "кпп", "kpp",
+    # English/International
+    "ipn", "inn", "edrpou", "ogrn", "kpp", "okpo", "tin",
+    # Homoglyph variations (after normalization)
+    "еdrроu", "еdrpou", "ерrроu",  # Cyrillic variations of EDRPOU
+    # Common abbreviations
+    "д.р.", "д/р", "др", "dob", "born", "birth",
+    # Document types
+    "паспорт", "passport", "удостоверение", "свидетельство",
+    # Date markers
+    "дата", "народження", "рождения"
+}
+
+def _is_business_document_marker(token: str) -> bool:
+    """Check if token is a business document type marker."""
+    return token.lower().replace(".", "") in BUSINESS_DOCUMENT_MARKERS
+
+def _is_potential_business_id(token: str) -> bool:
+    """Check if token could be a business identifier (IPN, EDRPOU, etc.)."""
+    if not token or not token.strip():
+        return False
+
+    # Check for numeric patterns that could be business IDs
+    # IPN: typically 10-12 digits
+    # EDRPOU: typically 8-14 digits
+    # OGRN: typically 13-15 digits
+    if re.match(r'^\d{8,15}$', token):
+        return True
+
+    # Check for mixed alphanumeric business codes
+    if re.match(r'^[A-Za-z]{1,4}\d{6,12}$', token):
+        return True
+    if re.match(r'^\d{6,12}[A-Za-z]{1,4}$', token):
+        return True
+
+    return False
+
 _CONTEXT_WORDS: Set[str] = {
     "и",
     "та",
@@ -170,7 +212,7 @@ _PATRONYMIC_SUFFIXES = {
 
 
 class RoleClassifier:
-    """Determines token roles (given/surname/patronymic/org/initial/unknown)."""
+    """Determines token roles (given/surname/patronymic/org/initial/document/candidate:identifier/unknown)."""
 
     def __init__(
         self,
@@ -238,6 +280,34 @@ class RoleClassifier:
             cf = base.casefold()
 
             quoted_phrase = quoted_word_map.get(cf)
+
+            # Check for business document markers FIRST (before NER)
+            if _is_business_document_marker(base):
+                tagged.append((base, "document"))
+                traces.append(f"Business document marker detected for '{base}'")
+                continue
+
+            # Special case: detect "д." followed by "р." as date birth marker
+            if (base.lower() == "д." and
+                index + 1 < len(tokens) and
+                tokens[index + 1].lower() == "р."):
+                tagged.append((base, "document"))
+                traces.append(f"Date birth marker detected: '{base}' (part of д.р.)")
+                continue
+
+            # Special case: detect "р." when preceded by "д." as date birth marker
+            if (base.lower() == "р." and
+                index > 0 and
+                tokens[index - 1].lower() == "д."):
+                tagged.append((base, "document"))
+                traces.append(f"Date birth marker detected: '{base}' (part of д.р.)")
+                continue
+
+            # Check for potential business IDs
+            if _is_potential_business_id(base):
+                tagged.append((base, "candidate:identifier"))
+                traces.append(f"Potential business ID detected for '{base}'")
+                continue
 
             if ner_roles.get(index):
                 role = ner_roles[index]
@@ -421,6 +491,14 @@ class RoleClassifier:
         for pattern in _EXCLUSION_PATTERNS:
             if re.match(pattern, token_lower, re.IGNORECASE):
                 return "unknown"  # Mark as unknown instead of given/surname
+
+        # Check if this is a business document marker (ІПН, EDRPOU, etc.)
+        if _is_business_document_marker(token):
+            return "document"
+
+        # Check if this could be a business identifier (IPN number, etc.)
+        if _is_potential_business_id(token):
+            return "candidate:identifier"
 
         if self._is_initial(token):
             return "initial"

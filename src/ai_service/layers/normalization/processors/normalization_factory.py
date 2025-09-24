@@ -622,7 +622,22 @@ class NormalizationFactory(ErrorReportingMixin):
         )
         persons_core = [person["tokens"] for person in persons] if persons else ([] if not filtered_person_tokens else [filtered_person_tokens])
 
-        output_tokens = filtered_person_tokens + organizations
+        # Include ALL processed tokens for Signals Service (person tokens + organizations + business signals)
+        all_processed_tokens = []
+
+        # Add personal name tokens for normalized text
+        all_processed_tokens.extend(filtered_person_tokens)
+
+        # Add organization tokens
+        all_processed_tokens.extend(organizations)
+
+        # Add business signals (document markers and business IDs) from traces
+        for token_trace in trace:
+            if isinstance(token_trace, TokenTrace) and token_trace.role in {"document", "candidate:identifier"}:
+                if token_trace.output and token_trace.output not in all_processed_tokens:
+                    all_processed_tokens.append(token_trace.output)
+
+        output_tokens = all_processed_tokens
 
         result = NormalizationResult(
             normalized=final_normalized_text,

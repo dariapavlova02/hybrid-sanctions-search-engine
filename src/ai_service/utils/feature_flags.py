@@ -52,13 +52,13 @@ class FeatureFlags:
     enable_en_nicknames: bool = True  # Enable English nickname resolution
 
     # Validation and NER flags
-    enable_spacy_ner: bool = False  # Enable spaCy NER processing
-    enable_spacy_uk_ner: bool = False  # Enable spaCy Ukrainian NER
-    enable_spacy_en_ner: bool = False  # Enable spaCy English NER
-    enable_fsm_tuned_roles: bool = False  # Use FSM-tuned role detection
+    enable_spacy_ner: bool = True   # Enable spaCy NER processing - ВАЖНО для качества!
+    enable_spacy_uk_ner: bool = True  # Enable spaCy Ukrainian NER - КРИТИЧНО для украинского!
+    enable_spacy_en_ner: bool = True  # Enable spaCy English NER - ВАЖНО для английского!
+    enable_fsm_tuned_roles: bool = True  # Use FSM-tuned role detection - улучшенная логика
     enable_enhanced_diminutives: bool = True  # Enhanced diminutive handling
-    enable_enhanced_gender_rules: bool = False  # Enhanced gender rule processing
-    preserve_feminine_suffix_uk: bool = False  # Preserve Ukrainian feminine suffixes
+    enable_enhanced_gender_rules: bool = True  # Enhanced gender rule processing - ВАЖНО!
+    preserve_feminine_suffix_uk: bool = True  # Preserve Ukrainian feminine suffixes - КРИТИЧНО!
     en_use_nameparser: bool = True  # Use nameparser for English names
     enable_en_nickname_expansion: bool = True  # Expand English nicknames
     filter_titles_suffixes: bool = True  # Filter out titles and suffixes from EN names

@@ -55,9 +55,11 @@ class ResultBuilder:
         """Build a complete NormalizationResult from processed components."""
         # Filter out tokens with 'unknown' role for normalized text construction
         # Keep valid name roles: given, surname, patronymic, initial
+        # Also preserve business signals (document, candidate:identifier) for Signals Service
         # Exclude org tokens that match exclusion patterns (garbage codes)
         valid_tokens = []
-        valid_roles = {"given", "surname", "patronymic", "initial"}
+        valid_name_roles = {"given", "surname", "patronymic", "initial"}
+        business_signal_roles = {"document", "candidate:identifier"}
 
         # Import exclusion patterns to filter out garbage org tokens
         try:
@@ -70,8 +72,8 @@ class ResultBuilder:
             if i < len(token_traces):
                 trace = token_traces[i]
 
-                # Check if it's a valid name role
-                if hasattr(trace, 'role') and trace.role in valid_roles:
+                # Check if it's a valid name role (include in normalized text)
+                if hasattr(trace, 'role') and trace.role in valid_name_roles:
                     valid_tokens.append(token)
                 # Also exclude org tokens that match exclusion patterns (garbage)
                 elif hasattr(trace, 'role') and trace.role == 'org':
@@ -114,9 +116,20 @@ class ResultBuilder:
             language
         )
 
+        # Build final tokens array including ALL processed tokens (business signals + names)
+        # This ensures Signals Service can access business identifiers like IPN numbers
+        all_processed_tokens = []
+        for i, trace in enumerate(token_traces):
+            # Include all tokens that have been processed and have a valid output
+            if hasattr(trace, 'output') and trace.output:
+                all_processed_tokens.append(trace.output)
+            elif i < len(normalized_tokens):
+                # Fallback to normalized_tokens for backward compatibility
+                all_processed_tokens.append(normalized_tokens[i])
+
         return NormalizationResult(
             normalized=normalized_text,
-            tokens=normalized_tokens,
+            tokens=all_processed_tokens,  # Include ALL processed tokens for Signals Service
             trace=token_traces,
             errors=all_errors,
             language=language,

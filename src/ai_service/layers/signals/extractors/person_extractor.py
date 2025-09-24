@@ -52,14 +52,20 @@ class PersonExtractor(BaseExtractor):
         for match in cyrillic_pattern.finditer(text):
             name_tokens = match.group(0).split()
             if not self._contains_legal_form(name_tokens):
-                found_names.append(name_tokens)
+                # Filter out document markers from person names
+                clean_tokens = self._filter_document_markers(name_tokens)
+                if len(clean_tokens) >= 2:  # Need at least 2 tokens for a person name
+                    found_names.append(clean_tokens)
 
         # Extract Latin names using cached pattern
         latin_pattern = self._get_compiled_pattern("latin")
         for match in latin_pattern.finditer(text):
             name_tokens = match.group(0).split()
             if not self._contains_legal_form(name_tokens):
-                found_names.append(name_tokens)
+                # Filter out document markers from person names
+                clean_tokens = self._filter_document_markers(name_tokens)
+                if len(clean_tokens) >= 2:  # Need at least 2 tokens for a person name
+                    found_names.append(clean_tokens)
 
         self._log_extraction_result(text, len(found_names), "person")
         return found_names
@@ -84,3 +90,30 @@ class PersonExtractor(BaseExtractor):
                 "CORP",
             }
             return any(token.upper() in common_legal_forms for token in tokens)
+
+    def _contains_document_marker(self, tokens: List[str]) -> bool:
+        """Check if tokens contain business document markers."""
+        try:
+            from ....layers.normalization.processors.role_classifier import BUSINESS_DOCUMENT_MARKERS
+            return any(token.lower() in BUSINESS_DOCUMENT_MARKERS for token in tokens)
+        except ImportError:
+            # Fallback with common document markers
+            common_document_markers = {
+                "іпн", "ипн", "inn", "inн", "tin", "edrpou", "едрпоу",
+                "паспорт", "passport", "д.р.", "д/р", "dob", "born"
+            }
+            return any(token.lower() in common_document_markers for token in tokens)
+
+    def _filter_document_markers(self, tokens: List[str]) -> List[str]:
+        """Filter out document markers from tokens, keeping only person name parts."""
+        try:
+            from ....layers.normalization.processors.role_classifier import BUSINESS_DOCUMENT_MARKERS
+            document_markers = BUSINESS_DOCUMENT_MARKERS
+        except ImportError:
+            # Fallback with common document markers
+            document_markers = {
+                "іпн", "ипн", "inn", "inн", "tin", "edrpou", "едрпоу",
+                "паспорт", "passport", "д.р.", "д/р", "dob", "born"
+            }
+
+        return [token for token in tokens if token.lower() not in document_markers]
