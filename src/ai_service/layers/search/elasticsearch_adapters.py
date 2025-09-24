@@ -529,7 +529,7 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
 class ElasticsearchVectorAdapter(ElasticsearchAdapter):
     """Elasticsearch adapter for Vector (kNN) search."""
 
-    VECTOR_INDEX = "vector_index"
+    # VECTOR_INDEX = "vector_index"  # Removed hardcoded constant - use config.vector_search.index_name
 
     def __init__(
         self,
@@ -638,7 +638,7 @@ class ElasticsearchVectorAdapter(ElasticsearchAdapter):
             # Build hybrid query combining kNN and BM25
             search_body = self._build_vector_fallback_query(query_vector, query_text, opts)
             
-            response = await client.search(index=self.VECTOR_INDEX, body=search_body)
+            response = await client.search(index=self.config.vector_search.index_name, body=search_body)
             candidates = self._parse_vector_fallback_candidates(response, query_text)
             
         except ElasticsearchException as exc:
