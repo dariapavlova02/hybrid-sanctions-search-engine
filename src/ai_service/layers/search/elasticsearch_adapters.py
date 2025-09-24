@@ -291,8 +291,16 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
         return filters
 
     def _build_ac_query(self, query: str, opts: SearchOpts) -> Dict[str, Any]:
+        should_queries = self._build_should_queries(query, opts)
+
+        # Защита от пустых should запросов
+        if not should_queries:
+            should_queries = [{
+                "match_all": {}  # Fallback запрос
+            }]
+
         bool_query: Dict[str, Any] = {
-            "should": self._build_should_queries(query, opts),
+            "should": should_queries,
             "minimum_should_match": 1,
         }
 
@@ -366,10 +374,18 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
         
         try:
             # Search AC patterns index
+            ac_pattern_queries = self._build_ac_pattern_queries(query, opts)
+
+            # Защита от пустых should запросов
+            if not ac_pattern_queries:
+                ac_pattern_queries = [{
+                    "match_all": {}  # Fallback запрос
+                }]
+
             pattern_query = {
                 "query": {
                     "bool": {
-                        "should": self._build_ac_pattern_queries(query, opts),
+                        "should": ac_pattern_queries,
                         "minimum_should_match": 1
                     }
                 },
@@ -817,7 +833,8 @@ class ElasticsearchVectorAdapter(ElasticsearchAdapter):
                 "query_vector": query_vector,
                 "k": opts.top_k,
                 "num_candidates": max_candidates,
-                "ef_search": opts.vector_ef_search,
+                # Note: ef_search не поддерживается в Elasticsearch 8+ KNN запросах
+                # Используется num_candidates для контроля точности
             },
             "size": opts.top_k,
             "min_score": opts.vector_min_score,
