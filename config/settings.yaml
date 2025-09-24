@@ -13,8 +13,8 @@ search:
     healthcheck_path: "/_cluster/health"
     smoke_test_timeout: 5
     default_index: "watchlist"
-    ac_index: "watchlist_ac"
-    vector_index: "watchlist_vector"
+    ac_index: "ai_service_ac_patterns"
+    vector_index: "vectors"
   ac_search:
     boost: 1.2
     fuzziness: 1
@@ -28,7 +28,7 @@ search:
     boost: 1.0
     min_score: 0.5
     ef_search: 100
-    vector_field: "dense_vector"
+    vector_field: "vector"
     vector_dimension: 384
     similarity_type: "cosine"
     similarity_threshold: 0.7
