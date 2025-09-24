@@ -231,6 +231,10 @@ class UnifiedProcessingResult:
     # Decision engine result (Layer 9)
     decision: Optional["DecisionResult"] = None
 
+    # Security fields
+    homoglyph_detected: bool = False
+    homoglyph_analysis: Optional[Dict[str, Any]] = None
+
     # Metadata
     processing_time: float = 0.0
     success: bool = True

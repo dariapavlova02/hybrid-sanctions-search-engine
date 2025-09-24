@@ -676,6 +676,9 @@ class UnifiedOrchestrator:
             processing_time=0.0,  # Will be set below
             success=self._safe_len(errors) == 0,
             errors=errors,
+            # Copy homoglyph fields from normalization result
+            homoglyph_detected=getattr(norm_result, 'homoglyph_detected', False),
+            homoglyph_analysis=getattr(norm_result, 'homoglyph_analysis', None),
         )
 
         # Run decision engine if enabled
@@ -907,6 +910,9 @@ class UnifiedOrchestrator:
                 processing_time=processing_time,
                 success=self._safe_len(errors) == 0,
                 errors=errors,
+                # Copy homoglyph fields from normalization result
+                homoglyph_detected=getattr(norm_result, 'homoglyph_detected', False),
+                homoglyph_analysis=getattr(norm_result, 'homoglyph_analysis', None),
             )
 
             # Cache the result if caching is enabled and successful

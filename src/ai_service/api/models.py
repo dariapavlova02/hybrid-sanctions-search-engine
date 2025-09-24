@@ -275,6 +275,10 @@ class ProcessResponse(BaseModel):
     errors: List[str] = []
     warnings: List[str] = []
 
+    # Security fields
+    homoglyph_detected: bool = False
+    homoglyph_analysis: Optional[Dict[str, Any]] = None
+
     # Debug information
     trace: Optional[List[Dict[str, Any]]] = None
     metrics: Optional[Dict[str, Any]] = None

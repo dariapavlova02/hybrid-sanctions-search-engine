@@ -629,6 +629,9 @@ async def process_text(request: ProcessTextRequest):
             decision=_extract_decision_dict(result) if result.decision else None,
             search_results=result.search_results,
             embedding=result.embeddings if request.generate_embeddings else None,
+            # Add homoglyph fields from normalization data
+            homoglyph_detected=getattr(result, 'homoglyph_detected', False),
+            homoglyph_analysis=getattr(result, 'homoglyph_analysis', None),
         )
     except ServiceUnavailableError as e:
         logger.error(f"Service unavailable: {e}")
