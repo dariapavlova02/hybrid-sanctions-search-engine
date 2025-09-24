@@ -73,13 +73,14 @@ class SimilarityInfo:
 @dataclass
 class DecisionInput:
     """Input contract for decision engine"""
-    
+
     text: str
     language: Optional[str] = None
     smartfilter: SmartFilterInfo = field(default_factory=lambda: SmartFilterInfo(should_process=True, confidence=1.0))
     signals: SignalsInfo = field(default_factory=lambda: SignalsInfo(person_confidence=0.0, org_confidence=0.0))
     similarity: SimilarityInfo = field(default_factory=SimilarityInfo)
     search: Optional[SearchInfo] = None
+    normalization: Optional[Any] = None  # NormalizationResult for homoglyph detection
 
 
 @dataclass

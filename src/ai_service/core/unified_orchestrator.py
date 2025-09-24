@@ -173,7 +173,7 @@ class UnifiedOrchestrator:
         )
         self.enable_search = (
             (enable_search if enable_search is not None else SERVICE_CONFIG.enable_search)
-            and search_service is not None
+            and self.search_service is not None  # Use self.search_service (after auto-init)
         )
         self.allow_smart_filter_skip = (
             allow_smart_filter_skip if allow_smart_filter_skip is not None else SERVICE_CONFIG.allow_smart_filter_skip
@@ -1058,7 +1058,8 @@ class UnifiedOrchestrator:
             smartfilter=smart_filter,
             signals=signals,
             similarity=similarity,
-            search=search_info
+            search=search_info,
+            normalization=getattr(processing_result, 'normalization_data', None)  # Add normalization data
         )
 
     def _create_search_info_from_results(self, search_results: dict):

@@ -434,6 +434,9 @@ class NormalizationService:
         start_time = time.time()
         self._stats['total_requests'] += 1
 
+        # Initialize homoglyph analysis (will be populated in try block)
+        homoglyph_analysis = None
+
         try:
             # Input validation
             validation_result = self._validate_input(text)
