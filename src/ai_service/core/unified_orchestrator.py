@@ -589,15 +589,18 @@ class UnifiedOrchestrator:
                     )
                     print(f"🔧 SEARCH OPTS: escalation={search_opts.enable_escalation}, threshold={search_opts.escalation_threshold}")
 
+                    search_start_time = time.time()
                     try:
                         candidates = await self.search_service.find_candidates(
                             normalized=norm_result,
                             text=original_text,
                             opts=search_opts
                         )
-                        print(f"✅ SEARCH COMPLETED: {len(candidates)} candidates")
+                        search_processing_time = (time.time() - search_start_time) * 1000
+                        print(f"✅ SEARCH COMPLETED: {len(candidates)} candidates in {search_processing_time:.2f}ms")
                     except Exception as e:
-                        print(f"❌ SEARCH FAILED: {e}")
+                        search_processing_time = (time.time() - search_start_time) * 1000
+                        print(f"❌ SEARCH FAILED: {e} after {search_processing_time:.2f}ms")
                         candidates = []
 
                     # Convert candidates to the expected search_results format
@@ -606,7 +609,7 @@ class UnifiedOrchestrator:
                         "results": [candidate.to_dict() for candidate in candidates],
                         "total_hits": len(candidates),
                         "search_type": "hybrid",
-                        "processing_time_ms": 0  # Will be updated by search service
+                        "processing_time_ms": search_processing_time
                     }
 
                     if search_trace:
