@@ -80,7 +80,7 @@ class SearchOpts(BaseModel):
     
     # Hybrid search parameters
     enable_escalation: bool = Field(default=True, description="Enable AC->Vector escalation")
-    escalation_threshold: float = Field(default=0.8, ge=0.0, le=1.0, description="AC score threshold for escalation")
+    escalation_threshold: float = Field(default=0.6, ge=0.0, le=1.0, description="AC score threshold for escalation")
     max_escalation_results: int = Field(default=100, ge=10, le=500, description="Max results for escalation")
     
     # Filtering parameters

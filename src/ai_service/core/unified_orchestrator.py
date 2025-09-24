@@ -581,7 +581,8 @@ class UnifiedOrchestrator:
                     search_opts = SearchOpts(
                         top_k=10,
                         threshold=0.7,
-                        enable_escalation=True
+                        enable_escalation=True,
+                        escalation_threshold=0.6
                     )
                     candidates = await self.search_service.find_candidates(
                         normalized=norm_result,

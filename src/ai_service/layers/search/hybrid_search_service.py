@@ -817,12 +817,14 @@ class HybridSearchService(BaseService, SearchService):
     
     def _should_escalate(self, ac_candidates: List[Candidate], opts: SearchOpts) -> bool:
         """Determine if escalation to vector search is needed."""
+        self.logger.info(f"Checking escalation: enable={opts.enable_escalation}, ac_count={len(ac_candidates)}, threshold={opts.escalation_threshold}")
+
         if not opts.enable_escalation:
             self.logger.info("Escalation disabled in SearchOpts")
             return False
 
         if not ac_candidates:
-            self.logger.info("No AC candidates found - escalating to vector search")
+            self.logger.info("No AC candidates found - escalating to fuzzy/vector search")
             return True
 
         # Check if best AC score is below escalation threshold
