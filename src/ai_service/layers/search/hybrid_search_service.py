@@ -724,7 +724,10 @@ class HybridSearchService(BaseService, SearchService):
         ac_candidates = await self._ac_search_only(normalized, text, opts, search_trace)
         
         # Check if AC results are sufficient
-        if self._should_escalate(ac_candidates, opts):
+        should_escalate = self._should_escalate(ac_candidates, opts)
+        print(f"🔥 ESCALATION DEBUG: ac_count={len(ac_candidates)}, should_escalate={should_escalate}, threshold={opts.escalation_threshold}")
+        if should_escalate:
+            print(f"🚀 ESCALATING: AC results insufficient, trying fuzzy search first")
             self.logger.info("AC results insufficient, trying fuzzy search first")
             self._metrics.escalation_triggered += 1
 
@@ -817,19 +820,23 @@ class HybridSearchService(BaseService, SearchService):
     
     def _should_escalate(self, ac_candidates: List[Candidate], opts: SearchOpts) -> bool:
         """Determine if escalation to vector search is needed."""
+        print(f"🔍 _should_escalate: enable={opts.enable_escalation}, ac_count={len(ac_candidates)}, threshold={opts.escalation_threshold}")
         self.logger.info(f"Checking escalation: enable={opts.enable_escalation}, ac_count={len(ac_candidates)}, threshold={opts.escalation_threshold}")
 
         if not opts.enable_escalation:
+            print(f"❌ Escalation disabled in SearchOpts")
             self.logger.info("Escalation disabled in SearchOpts")
             return False
 
         if not ac_candidates:
+            print(f"✅ No AC candidates found - escalating to fuzzy/vector search")
             self.logger.info("No AC candidates found - escalating to fuzzy/vector search")
             return True
 
         # Check if best AC score is below escalation threshold
         best_score = max(candidate.score for candidate in ac_candidates)
         escalate = best_score < opts.escalation_threshold
+        print(f"📊 AC best score: {best_score:.3f}, threshold: {opts.escalation_threshold:.3f}, escalate: {escalate}")
         self.logger.info(f"AC best score: {best_score:.3f}, threshold: {opts.escalation_threshold:.3f}, escalate: {escalate}")
         return escalate
 
