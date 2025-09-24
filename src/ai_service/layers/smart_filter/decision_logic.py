@@ -74,9 +74,6 @@ class DecisionLogic:
         )
         self.confidence_scorer = ConfidenceScorer()
 
-        # Load name dictionaries for better language detection
-        self._load_name_dictionaries()
-
         # Simple language patterns for optimization (Ukrainian, Russian, English)
         self.language_patterns = {
             "ukrainian": {
@@ -119,6 +116,9 @@ class DecisionLogic:
         
         # Exclusion patterns (do not require verification)
         self.exclusion_patterns = EXCLUSION_PATTERNS
+
+        # Load name dictionaries for better language detection
+        self._load_name_dictionaries()
 
         self.logger.info(
             f"DecisionLogic initialized (terrorism detection: {enable_terrorism_detection})"
