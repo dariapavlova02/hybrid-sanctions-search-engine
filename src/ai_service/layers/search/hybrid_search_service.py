@@ -360,9 +360,13 @@ class HybridSearchService(BaseService, SearchService):
         Returns:
             List of search candidates sorted by score (descending)
         """
+        print(f"🔍 find_candidates CALLED: text='{text}', normalized='{normalized.normalized_text}', mode={opts.search_mode}")
+
         if not self._initialized:
+            print(f"🔧 Search service not initialized, initializing...")
             self.initialize()
-        
+            print(f"✅ Search service initialized")
+
         # Create dummy trace if none provided
         if search_trace is None:
             search_trace = SearchTrace(enabled=False)
@@ -469,7 +473,8 @@ class HybridSearchService(BaseService, SearchService):
             self.logger.info(
                 f"Search completed: {len(candidates)} candidates found in {processing_time:.2f}ms"
             )
-            
+
+            print(f"🎯 find_candidates RESULT: {len(candidates)} candidates, {processing_time:.2f}ms")
             return candidates
             
         except Exception as e:
