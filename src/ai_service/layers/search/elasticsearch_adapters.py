@@ -689,39 +689,26 @@ class ElasticsearchVectorAdapter(ElasticsearchAdapter):
             }
         }
         
-        # Hybrid query combining kNN and BM25
-        hybrid_query = {
-            "bool": {
-                "should": [
-                    {
-                        "knn": knn_query
-                    },
-                    {
-                        "script_score": {
-                            "query": bm25_query,
-                            "script": {
-                                "source": "Math.log(2 + _score)",
-                                "lang": "painless"
-                            }
-                        }
-                    }
-                ],
-                "minimum_should_match": 1
-            }
-        }
-        
-        # Add filters
-        filters = self._build_filters(opts)
-        if filters:
-            hybrid_query["bool"]["filter"] = filters
-        
+        # В Elasticsearch 8+ kNN должен быть на верхнем уровне, не в bool/should
+        # Используем только kNN запрос для vector fallback
         search_body = {
-            "query": hybrid_query,
+            "knn": knn_query,
+            "query": {
+                "bool": {
+                    "should": [bm25_query],
+                    "minimum_should_match": 1
+                }
+            },
             "size": max_results,
             "min_score": cos_threshold,
             "timeout": f"{opts.timeout_ms}ms",
             "_source": ["text", "normalized_text", "entity_type", "metadata", "dob_anchor", "id_anchor"]
         }
+
+        # Добавляем фильтры
+        filters = self._build_filters(opts)
+        if filters:
+            search_body["query"]["bool"]["filter"] = filters
         
         return search_body
 
