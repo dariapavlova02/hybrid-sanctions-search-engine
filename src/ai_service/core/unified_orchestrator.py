@@ -126,7 +126,7 @@ class UnifiedOrchestrator:
                 from ai_service.layers.search.hybrid_search_service import HybridSearchService
                 from ai_service.layers.search.config import HybridSearchConfig
 
-                search_config = HybridSearchConfig()
+                search_config = HybridSearchConfig.from_env()
                 self.search_service = HybridSearchService(config=search_config)
                 logger.info("Auto-initialized HybridSearchService (search enabled, no service provided)")
             except Exception as e:
