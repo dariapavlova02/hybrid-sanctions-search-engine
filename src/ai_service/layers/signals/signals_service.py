@@ -209,6 +209,25 @@ class SignalsService:
             persons_core = normalization_result["persons_core"]
             self.logger.info(f"🟢 SIGNALS FIX: Using normalized persons_core: {persons_core}")
             print(f"🟢 SIGNALS FIX: Using normalized persons_core: {persons_core}")
+
+            # ДИАГНОСТИКА: проверим что в persons_core и отфильтруем неправильные токены
+            filtered_persons_core = []
+            for person_tokens in persons_core:
+                filtered_tokens = []
+                for token in person_tokens:
+                    # Проверяем не является ли токен payment/stopword
+                    if self._is_valid_person_token(token, language):
+                        filtered_tokens.append(token)
+                    else:
+                        self.logger.warning(f"🔴 FILTERING OUT invalid person token: '{token}'")
+                        print(f"🔴 FILTERING OUT invalid person token: '{token}'")
+
+                if filtered_tokens:  # Добавляем только если остались валидные токены
+                    filtered_persons_core.append(filtered_tokens)
+
+            persons_core = filtered_persons_core
+            self.logger.info(f"🟢 AFTER FILTERING: persons_core: {persons_core}")
+            print(f"🟢 AFTER FILTERING: persons_core: {persons_core}")
         else:
             # FALLBACK: используем PersonExtractor только если нет нормализованных данных
             self.logger.warning(f"🔴 SIGNALS FALLBACK: No persons_core in normalization_result, falling back to PersonExtractor. normalization_result keys: {list(normalization_result.keys()) if normalization_result else 'None'}")
@@ -233,6 +252,35 @@ class SignalsService:
             organizations_core = []
 
         return persons_core, organizations_core
+
+    def _is_valid_person_token(self, token: str, language: str) -> bool:
+        """Проверяет является ли токен валидным для персоны (не stopword/payment context)."""
+        if not token or len(token) < 2:
+            return False
+
+        token_lower = token.lower()
+
+        # Проверяем payment context слова
+        payment_words = {
+            "сплата", "платеж", "оплата", "платіж", "договор", "договору", "контракт",
+            "соглашение", "угода", "абон", "плата", "плати", "услуг", "послуг",
+        }
+        if token_lower in payment_words:
+            return False
+
+        # Проверяем stopwords
+        stopwords = {
+            "по", "от", "для", "в", "на", "с", "к", "у", "з", "від", "та", "і",
+            "и", "а", "но", "или", "либо", "чи", "або", "№", "номер",
+        }
+        if token_lower in stopwords:
+            return False
+
+        # Проверяем даты и номера
+        if re.match(r'^\d+[\.\-/]\d+[\.\-/]\d+', token) or re.match(r'^\d{8,}', token):
+            return False
+
+        return True
 
     def _create_person_signals(
         self, persons_core: List[List[str]]
