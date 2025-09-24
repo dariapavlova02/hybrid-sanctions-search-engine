@@ -33,7 +33,7 @@ class NormalizationResponse(BaseModel):
 
 class ProcessResponse(BaseModel):
     """Response model for process endpoint with full processing pipeline"""
-    
+
     # Core fields
     normalized_text: str
     tokens: List[str]
@@ -42,7 +42,11 @@ class ProcessResponse(BaseModel):
     success: bool
     errors: List[str] = []
     processing_time: float = 0.0
-    
+
+    # Security fields
+    homoglyph_detected: bool = False
+    homoglyph_analysis: Optional[Dict[str, Any]] = None
+
     # Additional sections for /process endpoint
     signals: Optional[Dict[str, Any]] = None
     decision: Optional[Dict[str, Any]] = None
