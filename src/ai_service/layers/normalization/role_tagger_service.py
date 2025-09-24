@@ -563,17 +563,38 @@ class SingleCharNumberRule(FSMTransitionRule):
 class DefaultPersonRule(FSMTransitionRule):
     """Default rule for person name tokens that considers morphology and dictionaries."""
 
-    def __init__(self, role_classifier=None, language="ru"):
+    def __init__(self, role_classifier=None, language="ru", lexicons=None):
         self.role_classifier = role_classifier
         self.language = language
+        self.lexicons = lexicons
 
     def can_apply(self, state: FSMState, token: Token, context: List[Token]) -> bool:
         # Accept both capitalized and non-capitalized names
         # but exclude punctuation, all-caps, and single characters
-        return (not token.is_punct and
-                not token.is_all_caps and
-                len(token.text) > 1 and
-                token.text.isalpha())  # Only alphabetic characters
+        basic_checks = (not token.is_punct and
+                       not token.is_all_caps and
+                       len(token.text) > 1 and
+                       token.text.isalpha())  # Only alphabetic characters
+
+        if not basic_checks:
+            return False
+
+        # Additional exclusions to prevent non-names from getting person roles
+        if self.lexicons:
+            # Exclude payment context words
+            if (self.lexicons.payment_context and
+                token.text.lower() in self.lexicons.payment_context):
+                return False
+
+            # Exclude legal forms
+            if is_legal_form(token.text, self.lexicons):
+                return False
+
+            # Exclude general stopwords (already handled by StopwordRule, but double-check)
+            if is_stopword(token.text, token.lang, self.lexicons):
+                return False
+
+        return True
 
     def apply(self, state: FSMState, token: Token, context: List[Token]) -> Tuple[FSMState, TokenRole, str, List[str]]:
         evidence = ["person_heuristic"]
@@ -704,7 +725,7 @@ class RoleTaggerService:
             SurnameSuffixRule(self.rules.surname_suffixes),
             PatronymicSuffixRule(self.rules.patronymic_suffixes),
             SingleCharNumberRule(),  # Handle single characters and numbers as 'other'
-            DefaultPersonRule(self.role_classifier, self.lang),  # Pass role classifier and language
+            DefaultPersonRule(self.role_classifier, self.lang, self.lexicons),  # Pass role classifier, language, and lexicons
         ]
     
     def tag(self, tokens: List[str], lang: str, flags: Any = None) -> List[RoleTag]:

@@ -223,7 +223,11 @@ class PersonExtractor:
     def _is_person_role(self, role: str) -> bool:
         """Check if a role belongs to a person."""
         person_roles = {"given", "surname", "patronymic", "initial", "suffix"}
-        return role in person_roles
+        # Explicitly exclude non-person roles
+        non_person_roles = {"unknown", "context", "stopword", "legal_form", "org", "numeric", "date"}
+
+        # Must be a person role AND not explicitly a non-person role
+        return role in person_roles and role not in non_person_roles
 
     def _create_person_candidate(
         self,
