@@ -170,7 +170,7 @@ class VectorSearchConfig(BaseModel):
     ef_search: int = Field(default=100, ge=10, le=1000, description="HNSW ef_search parameter")
     
     # Vector field settings
-    vector_field: str = Field(default="dense_vector", description="Vector field name")
+    vector_field: str = Field(default="vector", description="Vector field name")
     vector_dimension: int = Field(default=384, ge=64, le=4096, description="Vector dimension")
     
     # Similarity settings

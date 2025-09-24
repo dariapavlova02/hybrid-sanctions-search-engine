@@ -669,7 +669,7 @@ class ElasticsearchVectorAdapter(ElasticsearchAdapter):
         
         # Optimized kNN query for vector similarity
         knn_query = {
-            "field": "dense_vector",
+            "field": self.config.vector_search.vector_field,
             "query_vector": query_vector,
             "k": max_results,
             "num_candidates": max_results * 3,  # Increased candidates for better recall
@@ -769,7 +769,7 @@ class ElasticsearchVectorAdapter(ElasticsearchAdapter):
                     entity_type=source.get("entity_type", metadata.get("entity_type", "unknown")),
                     metadata=metadata,
                     search_mode=SearchMode.VECTOR,
-                    match_fields=["dense_vector", "text"],
+                    match_fields=["vector", "text"],
                     confidence=confidence,
                     trace=trace
                 )
