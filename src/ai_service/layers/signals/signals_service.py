@@ -189,10 +189,12 @@ class SignalsService:
         # Извлекаем персоны - ПРИОРИТЕТ нормализованным данным
         if normalization_result and "persons_core" in normalization_result:
             persons_core = normalization_result["persons_core"]
-            self.logger.debug(f"Using normalized persons_core: {persons_core}")
+            self.logger.info(f"🟢 SIGNALS FIX: Using normalized persons_core: {persons_core}")
+            print(f"🟢 SIGNALS FIX: Using normalized persons_core: {persons_core}")
         else:
             # FALLBACK: используем PersonExtractor только если нет нормализованных данных
-            self.logger.warning("No persons_core in normalization_result, falling back to PersonExtractor")
+            self.logger.warning(f"🔴 SIGNALS FALLBACK: No persons_core in normalization_result, falling back to PersonExtractor. normalization_result keys: {list(normalization_result.keys()) if normalization_result else 'None'}")
+            print(f"🔴 SIGNALS FALLBACK: No persons_core in normalization_result, falling back to PersonExtractor")
             persons_core = self.person_extractor.extract(text, language)
 
         # Ensure persons_core is not None
