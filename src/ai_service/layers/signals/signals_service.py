@@ -228,6 +228,24 @@ class SignalsService:
             persons_core = filtered_persons_core
             self.logger.info(f"🟢 AFTER FILTERING: persons_core: {persons_core}")
             print(f"🟢 AFTER FILTERING: persons_core: {persons_core}")
+
+            # FALLBACK: если после фильтрации ничего не осталось, попробуем PersonExtractor
+            if not persons_core:
+                self.logger.warning(f"⚠️ EMPTY AFTER FILTERING: Trying PersonExtractor as fallback")
+                print(f"⚠️ EMPTY AFTER FILTERING: Trying PersonExtractor as fallback")
+                fallback_persons = self.person_extractor.extract(text, language)
+
+                # Применяем такую же фильтрацию к fallback результатам
+                for person_tokens in fallback_persons:
+                    filtered_tokens = []
+                    for token in person_tokens:
+                        if self._is_valid_person_token(token, language):
+                            filtered_tokens.append(token)
+                    if filtered_tokens:
+                        persons_core.append(filtered_tokens)
+
+                self.logger.info(f"⚠️ FALLBACK RESULT: persons_core: {persons_core}")
+                print(f"⚠️ FALLBACK RESULT: persons_core: {persons_core}")
         else:
             # FALLBACK: используем PersonExtractor только если нет нормализованных данных
             self.logger.warning(f"🔴 SIGNALS FALLBACK: No persons_core in normalization_result, falling back to PersonExtractor. normalization_result keys: {list(normalization_result.keys()) if normalization_result else 'None'}")
