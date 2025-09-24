@@ -119,6 +119,20 @@ class UnifiedOrchestrator:
         self.decision_engine = decision_engine
         self.metrics_service = metrics_service
         self.search_service = search_service
+
+        # Auto-initialize search service if enabled but not provided
+        if self.search_service is None and SERVICE_CONFIG.enable_search:
+            try:
+                from ai_service.layers.search.hybrid_search_service import HybridSearchService
+                from ai_service.layers.search.config import HybridSearchConfig
+
+                search_config = HybridSearchConfig()
+                self.search_service = HybridSearchService(config=search_config)
+                logger.info("Auto-initialized HybridSearchService (search enabled, no service provided)")
+            except Exception as e:
+                logger.warning(f"Failed to auto-initialize search service: {e}")
+                self.search_service = None
+
         self.default_feature_flags = default_feature_flags or FeatureFlags()
         
         # Legacy compatibility attributes for old tests

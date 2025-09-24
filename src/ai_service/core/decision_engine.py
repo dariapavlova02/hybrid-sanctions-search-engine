@@ -160,7 +160,13 @@ class DecisionEngine:
             score += self.config.bonus_date_match
         if inp.signals.id_match:
             score += self.config.bonus_id_match
-            
+
+        # CRITICAL: Homoglyph attack detected = major score boost
+        if (inp and hasattr(inp, 'normalization') and hasattr(inp.normalization, 'homoglyph_detected') and
+            inp.normalization.homoglyph_detected):
+            score += 0.85  # Boost score to ensure HIGH risk classification
+            self.logger.warning(f"🚨 HOMOGLYPH ATTACK - adding +0.85 to score (now: {score:.3f})")
+
         return score
     
     def _determine_risk_level(self, score: float, inp: Optional[DecisionInput] = None) -> RiskLevel:
@@ -201,7 +207,7 @@ class DecisionEngine:
 
         # CRITICAL: Check for homoglyph attack
         if (inp and hasattr(inp, 'normalization') and hasattr(inp.normalization, 'homoglyph_detected') and
-            inp.normalization.homoglyph_detected and risk == RiskLevel.HIGH):
+            inp.normalization.homoglyph_detected):
             reasons.append("🚨 HOMOGLYPH ATTACK DETECTED - HIGH RISK")
 
         # Smart filter evidence

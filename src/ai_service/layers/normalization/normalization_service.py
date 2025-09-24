@@ -516,6 +516,16 @@ class NormalizationService:
             elif role_trace_entries:
                 result.trace = role_trace_entries
 
+            # Add homoglyph analysis to result
+            if homoglyph_analysis:
+                result.homoglyph_detected = homoglyph_analysis.get('warnings', []) != []
+                result.homoglyph_analysis = {
+                    'warnings': homoglyph_analysis.get('warnings', []),
+                    'transformations': homoglyph_analysis.get('transformations', []),
+                    'detection': homoglyph_analysis.get('detection', {}),
+                    'changed': homoglyph_analysis.get('changed', False)
+                }
+
             # Update statistics
             processing_time = time.time() - start_time
             self._update_stats(processing_time, success=result.success)
