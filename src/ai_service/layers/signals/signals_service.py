@@ -138,9 +138,27 @@ class SignalsService:
         if not text or not text.strip():
             return self._empty_result()
 
+        # ДИАГНОСТИКА: логируем что получили на вход
+        self.logger.info(f"🔍 SIGNALS DEBUG: extract_signals called with text='{text}', language='{language}'")
+        self.logger.info(f"🔍 SIGNALS DEBUG: normalization_result type: {type(normalization_result)}")
+        print(f"🔍 SIGNALS DEBUG: extract_signals called with text='{text}', language='{language}'")
+        print(f"🔍 SIGNALS DEBUG: normalization_result type: {type(normalization_result)}")
+
         # Convert NormalizationResult object to dict if needed
         if normalization_result and hasattr(normalization_result, 'to_dict'):
+            self.logger.info(f"🔍 SIGNALS DEBUG: Converting NormalizationResult to dict")
+            print(f"🔍 SIGNALS DEBUG: Converting NormalizationResult to dict")
             normalization_result = normalization_result.to_dict()
+
+        # Логируем что в итоге передано в _get_entity_cores
+        if normalization_result:
+            self.logger.info(f"🔍 SIGNALS DEBUG: normalization_result keys: {list(normalization_result.keys())}")
+            self.logger.info(f"🔍 SIGNALS DEBUG: persons_core present: {'persons_core' in normalization_result}")
+            print(f"🔍 SIGNALS DEBUG: normalization_result keys: {list(normalization_result.keys())}")
+            print(f"🔍 SIGNALS DEBUG: persons_core present: {'persons_core' in normalization_result}")
+        else:
+            self.logger.warning(f"🔍 SIGNALS DEBUG: normalization_result is None/empty!")
+            print(f"🔍 SIGNALS DEBUG: normalization_result is None/empty!")
 
         # Сохраняем текст для proximity matching
         self._current_text = text
