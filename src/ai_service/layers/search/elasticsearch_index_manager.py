@@ -206,7 +206,7 @@ class ElasticsearchIndexManager:
                             }
                         }
                     },
-                    "dense_vector": {
+                    "vector": {
                         "type": "dense_vector",
                         "dims": vector_dim,
                         "index": True,
