@@ -186,20 +186,26 @@ class SignalsService:
         language: str,
     ) -> tuple[List[List[str]], List[str]]:
         """Извлекает базовые токены персон и организаций."""
-        # Извлекаем персоны
+        # Извлекаем персоны - ПРИОРИТЕТ нормализованным данным
         if normalization_result and "persons_core" in normalization_result:
             persons_core = normalization_result["persons_core"]
+            self.logger.debug(f"Using normalized persons_core: {persons_core}")
         else:
+            # FALLBACK: используем PersonExtractor только если нет нормализованных данных
+            self.logger.warning("No persons_core in normalization_result, falling back to PersonExtractor")
             persons_core = self.person_extractor.extract(text, language)
 
         # Ensure persons_core is not None
         if persons_core is None:
             persons_core = []
 
-        # Извлекаем организации
+        # Извлекаем организации - ПРИОРИТЕТ нормализованным данным
         if normalization_result and "organizations_core" in normalization_result:
             organizations_core = normalization_result["organizations_core"]
+            self.logger.debug(f"Using normalized organizations_core: {organizations_core}")
         else:
+            # FALLBACK: используем OrganizationExtractor только если нет нормализованных данных
+            self.logger.warning("No organizations_core in normalization_result, falling back to OrganizationExtractor")
             organizations_core = self.organization_extractor.extract(text, language)
 
         # Ensure organizations_core is not None
