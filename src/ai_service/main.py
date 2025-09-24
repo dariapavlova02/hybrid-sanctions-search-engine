@@ -380,6 +380,22 @@ async def startup_event():
         # Initialize unified orchestrator with production configuration
         orchestrator = await OrchestratorFactory.create_production_orchestrator()
         logger.info("Unified orchestrator successfully initialized")
+
+        # Pre-load sanctions data for fuzzy search
+        try:
+            from ai_service.layers.search.sanctions_data_loader import SanctionsDataLoader
+            sanctions_loader = SanctionsDataLoader()
+            dataset = await sanctions_loader.load_dataset(force_reload=False)
+            logger.info(f"✅ Sanctions data preloaded on startup: {dataset.total_entries} entries, {len(dataset.all_names)} unique names")
+
+            # Also preload fuzzy candidates for faster first searches
+            person_candidates = await sanctions_loader.get_fuzzy_candidates("person")
+            org_candidates = await sanctions_loader.get_fuzzy_candidates("organization")
+            logger.info(f"✅ Fuzzy candidates preloaded: {len(person_candidates)} persons, {len(org_candidates)} organizations")
+
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to preload sanctions data (fuzzy search will load on first use): {e}")
+
     except Exception as e:
         logger.error(f"Error initializing orchestrator: {e}")
         raise

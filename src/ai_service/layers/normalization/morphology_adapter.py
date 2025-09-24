@@ -645,12 +645,30 @@ class MorphologyAdapter:
                 self._logger.debug(f"Failed to load diminutive dictionaries: {e}")
                 return token
         
+        # Step 0: Handle Russian names in Ukrainian context (critical fix for Петр -> Петро)
+        if lang == "uk" and role == 'given':
+            # Check if this is a known Russian name that has a Ukrainian equivalent
+            try:
+                from ...data.dicts.russian_names import RUSSIAN_NAMES
+                if token in RUSSIAN_NAMES:
+                    ru_data = RUSSIAN_NAMES[token]
+                    variants = ru_data.get("variants", [])
+                    # If this Russian name has Ukrainian variants, use the first one
+                    if variants:
+                        ukrainian_variant = variants[0]
+                        self._logger.debug(f"Russian->Ukrainian mapping: '{token}' -> '{ukrainian_variant}'")
+                        return ukrainian_variant
+            except ImportError:
+                pass
+            except Exception as e:
+                self._logger.debug(f"Russian->Ukrainian mapping failed for '{token}': {e}")
+
         # Step 1: Check diminutive dictionary for original token FIRST
         canonical = self._diminutive_dicts.get(lang, {}).get(token.lower())
         if canonical:
             self._logger.debug(f"Diminutive mapping: '{token}' -> '{canonical}'")
             return canonical
-        
+
         # Step 2: Apply gender rules only for given names (for case-sensitive rules like "Вики" -> "Вика")
         if role == 'given':
             try:
@@ -661,7 +679,7 @@ class MorphologyAdapter:
                     return converted
             except Exception as e:
                 self._logger.debug(f"Gender rules failed for '{token}': {e}")
-        
+
         return token
 
     def _to_nominative_uncached_with_flags(self, token: str, lang: str, flags: 'FeatureFlags', role: str = 'unknown') -> Tuple[str, str]:
@@ -852,6 +870,20 @@ class MorphologyAdapter:
         """Prefer masculine nominative form for Ukrainian declensions when available."""
         base_lower = base_token.lower()
         candidates: List[Tuple[int, MorphParse]] = []
+
+        # CRITICAL FIX: Check if this is a known feminine name first
+        # Do not convert feminine names to masculine
+        try:
+            from ...data.dicts.ukrainian_names import UKRAINIAN_NAMES
+            for name_key in [base_token.capitalize(), base_token]:
+                if name_key in UKRAINIAN_NAMES:
+                    name_data = UKRAINIAN_NAMES[name_key]
+                    if name_data.get("gender") == "femn":
+                        # This is a feminine name - do not prefer masculine parse!
+                        self._logger.debug("Skipping masculine preference for feminine name '%s'", base_token)
+                        return None
+        except ImportError:
+            pass
 
         for parse in parses:
             if not parse.nominative:

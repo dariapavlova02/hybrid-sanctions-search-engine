@@ -605,12 +605,14 @@ class DecisionConfig(BaseModel):
     w_search_exact: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SEARCH_EXACT", "0.4")))
     w_search_phrase: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SEARCH_PHRASE", "0.25")))
     w_search_ngram: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SEARCH_NGRAM", "0.2")))
+    w_search_fuzzy: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SEARCH_FUZZY", "0.18")))
     w_search_vector: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SEARCH_VECTOR", "0.15")))
-    
+
     # Search thresholds (NEW)
     thr_search_exact: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_EXACT", "0.8")))
     thr_search_phrase: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_PHRASE", "0.7")))
     thr_search_ngram: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_NGRAM", "0.6")))
+    thr_search_fuzzy: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_FUZZY", "0.65")))
     thr_search_vector: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_VECTOR", "0.5")))
     
     # Search bonuses (NEW)
@@ -637,10 +639,12 @@ class DecisionConfig(BaseModel):
             "w_search_exact": self.w_search_exact,
             "w_search_phrase": self.w_search_phrase,
             "w_search_ngram": self.w_search_ngram,
+            "w_search_fuzzy": self.w_search_fuzzy,
             "w_search_vector": self.w_search_vector,
             "thr_search_exact": self.thr_search_exact,
             "thr_search_phrase": self.thr_search_phrase,
             "thr_search_ngram": self.thr_search_ngram,
+            "thr_search_fuzzy": self.thr_search_fuzzy,
             "thr_search_vector": self.thr_search_vector,
             "bonus_multiple_matches": self.bonus_multiple_matches,
             "bonus_high_confidence": self.bonus_high_confidence,

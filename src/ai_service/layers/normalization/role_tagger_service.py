@@ -15,6 +15,7 @@ from abc import ABC, abstractmethod
 
 from .lexicon_loader import Lexicons, get_lexicons
 from .token_ops import is_hyphenated_surname
+from ...utils.logging_config import get_logger
 
 
 def is_stopword(token: str, lang: str, lexicons: Lexicons) -> bool:
@@ -567,6 +568,7 @@ class DefaultPersonRule(FSMTransitionRule):
         self.role_classifier = role_classifier
         self.language = language
         self.lexicons = lexicons
+        self.logger = get_logger(__name__)  # Add logger for debugging
 
     def can_apply(self, state: FSMState, token: Token, context: List[Token]) -> bool:
         # Accept both capitalized and non-capitalized names
@@ -605,6 +607,18 @@ class DefaultPersonRule(FSMTransitionRule):
             lang = getattr(token, 'lang', self.language) or self.language
             predicted_role = self.role_classifier._classify_personal_role(token.text, lang)
 
+            # Debug logging for classification issues
+            if token.text == "Катерина":
+                self.logger.info(f"🔍 ROLE TAGGER DEBUG: Token='Катерина', lang='{lang}', predicted_role='{predicted_role}'")
+                self.logger.info(f"🔍 Available given_names for {lang}: {len(self.role_classifier.given_names.get(lang, set()))} names")
+                if 'катерина' in self.role_classifier.given_names.get(lang, set()):
+                    self.logger.info(f"✅ 'катерина' IS in given_names[{lang}]")
+                else:
+                    self.logger.info(f"❌ 'катерина' NOT in given_names[{lang}]")
+                    # Show first few names for debugging
+                    sample_names = list(self.role_classifier.given_names.get(lang, set()))[:10]
+                    self.logger.info(f"🔍 Sample names in given_names[{lang}]: {sample_names}")
+
             if predicted_role == "surname":
                 if state == FSMState.START:
                     return FSMState.SURNAME_EXPECTED, TokenRole.SURNAME, "surname_detected", evidence + [f"morphology_{predicted_role}"]
@@ -629,7 +643,44 @@ class DefaultPersonRule(FSMTransitionRule):
             elif predicted_role == "patronymic":
                 return FSMState.DONE, TokenRole.PATRONYMIC, "patronymic_detected", evidence + [f"morphology_{predicted_role}"]
 
-        # Fallback to original positional logic if no classifier or unknown role
+        # Enhanced fallback logic - check dictionaries directly if classifier failed
+        if self.role_classifier:
+            # If classifier returned "unknown", try direct dictionary lookup
+            lang = getattr(token, 'lang', self.language) or self.language
+            token_lower = token.text.lower()
+
+            # Debug logging for fallback logic
+            if token.text == "Катерина":
+                self.logger.info(f"🔧 FALLBACK DEBUG: Checking dictionaries directly for 'катерина' in lang='{lang}'")
+
+            # Check if it's in given names dictionary
+            if token_lower in self.role_classifier.given_names.get(lang, set()):
+                if state == FSMState.START:
+                    return FSMState.SURNAME_EXPECTED, TokenRole.GIVEN, "given_detected", evidence + [f"dict_lookup_given_{lang}"]
+                elif state == FSMState.SURNAME_EXPECTED:
+                    return FSMState.PATRONYMIC_EXPECTED, TokenRole.GIVEN, "given_detected", evidence + [f"dict_lookup_given_{lang}"]
+                elif state == FSMState.GIVEN_EXPECTED:
+                    return FSMState.SURNAME_EXPECTED, TokenRole.GIVEN, "given_detected", evidence + [f"dict_lookup_given_{lang}"]
+
+            # Check if it's in surnames dictionary
+            if token_lower in self.role_classifier.surnames.get(lang, set()):
+                if state == FSMState.START:
+                    return FSMState.SURNAME_EXPECTED, TokenRole.SURNAME, "surname_detected", evidence + [f"dict_lookup_surname_{lang}"]
+                elif state == FSMState.GIVEN_EXPECTED:
+                    return FSMState.PATRONYMIC_EXPECTED, TokenRole.SURNAME, "surname_detected", evidence + [f"dict_lookup_surname_{lang}"]
+                elif state == FSMState.SURNAME_EXPECTED:
+                    return FSMState.PATRONYMIC_EXPECTED, TokenRole.SURNAME, "surname_detected", evidence + [f"dict_lookup_surname_{lang}"]
+
+            # Check diminutives
+            if token_lower in self.role_classifier.diminutives.get(lang, set()):
+                if state == FSMState.START:
+                    return FSMState.SURNAME_EXPECTED, TokenRole.GIVEN, "given_detected", evidence + [f"dict_lookup_diminutive_{lang}"]
+                elif state == FSMState.SURNAME_EXPECTED:
+                    return FSMState.PATRONYMIC_EXPECTED, TokenRole.GIVEN, "given_detected", evidence + [f"dict_lookup_diminutive_{lang}"]
+                elif state == FSMState.GIVEN_EXPECTED:
+                    return FSMState.SURNAME_EXPECTED, TokenRole.GIVEN, "given_detected", evidence + [f"dict_lookup_diminutive_{lang}"]
+
+        # Fallback to original positional logic if no classifier or still unknown role
         if state == FSMState.START:
             return FSMState.GIVEN_EXPECTED, TokenRole.GIVEN, "given_detected", evidence + ["positional_fallback"]
         elif state == FSMState.GIVEN_EXPECTED:

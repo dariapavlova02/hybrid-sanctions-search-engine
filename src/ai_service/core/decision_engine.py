@@ -65,8 +65,8 @@ class DecisionEngine:
         # Calculate weighted score
         score = self._calculate_weighted_score(safe_input)
         
-        # Determine risk level based on thresholds
-        risk = self._determine_risk_level(score)
+        # Determine risk level based on thresholds and special conditions
+        risk = self._determine_risk_level(score, inp)
         
         # Generate reasons based on contributing factors
         reasons = self._generate_reasons(safe_input, score, risk)
@@ -163,8 +163,18 @@ class DecisionEngine:
             
         return score
     
-    def _determine_risk_level(self, score: float) -> RiskLevel:
-        """Determine risk level based on score"""
+    def _determine_risk_level(self, score: float, inp: Optional[DecisionInput] = None) -> RiskLevel:
+        """Determine risk level based on score and special conditions"""
+
+        # CRITICAL: Exact match in sanctions = automatic HIGH RISK
+        if inp and inp.search:
+            if (inp.search.has_exact_matches and
+                inp.search.exact_confidence >= 0.95 and
+                inp.search.total_matches >= 1):
+                self.logger.info(f"🚨 EXACT SANCTIONS MATCH - forcing HIGH RISK (score: {score:.3f})")
+                return RiskLevel.HIGH
+
+        # Standard score-based thresholds
         if score >= self.config.thr_high:
             return RiskLevel.HIGH
         elif score >= self.config.thr_medium:
@@ -176,7 +186,12 @@ class DecisionEngine:
         """Generate human-readable reasons for the decision"""
         reasons = []
         reasons.append(f"Overall risk score: {score:.3f}")
-        
+
+        # CRITICAL: Check for exact sanctions match first
+        if (inp.search and inp.search.has_exact_matches and
+            inp.search.exact_confidence >= 0.95 and risk == RiskLevel.HIGH):
+            reasons.append("🚨 EXACT MATCH IN SANCTIONS LIST - HIGH RISK")
+
         # Smart filter evidence
         if inp.smartfilter.confidence >= 0.7:
             reasons.append("strong_smartfilter_signal")

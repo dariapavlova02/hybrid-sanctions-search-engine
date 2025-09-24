@@ -181,6 +181,24 @@ class MorphologyProcessor:
                     if best and getattr(best, "normal_form", None):
                         normal_form = best.normal_form
                         if normal_form:
+                            # CRITICAL FIX: Check if original token is a known feminine name
+                            # Do not convert feminine names to masculine via morphology
+                            if language == "uk" and token.lower() != normal_form.lower():
+                                try:
+                                    from ....data.dicts.ukrainian_names import UKRAINIAN_NAMES
+                                    # Check if original token is a known feminine name
+                                    for name_key in [token.capitalize(), token]:
+                                        if name_key in UKRAINIAN_NAMES:
+                                            name_data = UKRAINIAN_NAMES[name_key]
+                                            if name_data.get("gender") == "femn":
+                                                # CRITICAL: Do not convert feminine names to masculine
+                                                # Олександра should stay Олександра, not become Олександр
+                                                self.logger.debug("Preserving feminine name '%s' instead of morphology result '%s'",
+                                                                token, normal_form)
+                                                return token  # Return original feminine name
+                                except ImportError:
+                                    pass  # No Ukrainian names dict available
+
                             return self._title_case(normal_form)
         except Exception as exc:  # pragma: no cover - analyzer specific failures
             self.logger.debug("Analyzer normalization failed for '%s': %s", token, exc)

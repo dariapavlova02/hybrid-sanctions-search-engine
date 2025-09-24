@@ -129,6 +129,19 @@ UKRAINIAN_NAMES = {
             "Олександрові",
         ],
     },
+    "Олександра": {
+        "gender": "femn",
+        "variants": ["Александра", "Александра"],
+        "diminutives": ["Саша", "Сашенька", "Сашка", "Лесь", "Олеся"],
+        "transliterations": ["Oleksandra", "Alexandra", "Aleksandra"],
+        "declensions": [
+            "Олександри",
+            "Олександрі",
+            "Олександру",
+            "Олександрою",
+            "Олександрі",
+        ],
+    },
     "Дмитро": {
         "gender": "masc",
         "variants": ["Дмитрий"],

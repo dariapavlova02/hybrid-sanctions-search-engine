@@ -19,6 +19,7 @@ class SearchMode(Enum):
     AC = "ac"  # Exact/almost-exact search
     VECTOR = "vector"  # kNN vector search
     HYBRID = "hybrid"  # Both modes with escalation
+    FUZZY = "fuzzy"  # Fuzzy search using rapidfuzz
     FALLBACK_AC = "fallback_ac"
     FALLBACK_VECTOR = "fallback_vector"
 
@@ -61,6 +62,11 @@ class SearchOpts(BaseModel):
     top_k: int = Field(default=50, ge=1, le=1000, description="Maximum number of results")
     threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="Minimum score threshold")
     search_mode: SearchMode = Field(default=SearchMode.HYBRID, description="Search mode")
+
+    @property
+    def max_results(self) -> int:
+        """Alias for top_k for backwards compatibility"""
+        return self.top_k
     
     # AC search parameters
     ac_boost: float = Field(default=1.2, ge=0.1, le=5.0, description="AC search score boost")

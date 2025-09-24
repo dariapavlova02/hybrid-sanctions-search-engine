@@ -12,6 +12,14 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from functools import wraps
 
+# Fix httpx version compatibility issue with elasticsearch
+try:
+    import httpx
+    if not hasattr(httpx, '__version__'):
+        httpx.__version__ = "0.13.3"  # Patch missing __version__ attribute
+except ImportError:
+    pass
+
 try:
     from elasticsearch import AsyncElasticsearch
     try:

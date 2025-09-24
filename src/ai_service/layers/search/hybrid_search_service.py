@@ -23,6 +23,8 @@ from ...contracts.trace_models import SearchTrace, SearchTraceHit, SearchTraceSt
 from .config import HybridSearchConfig
 from .elasticsearch_adapters import ElasticsearchACAdapter, ElasticsearchVectorAdapter
 from .elasticsearch_client import ElasticsearchClientFactory
+from .fuzzy_search_service import FuzzySearchService, FuzzyConfig
+from .sanctions_data_loader import SanctionsDataLoader
 from ..embeddings.indexing.watchlist_index_service import WatchlistIndexService
 from ..embeddings.indexing.enhanced_vector_index_service import EnhancedVectorIndex
 
@@ -74,7 +76,22 @@ class HybridSearchService(BaseService, SearchService):
         # Embedding service for vector queries (lazy init)
         self._embedding_service = None
         self._embedding_service_checked = False
-        
+
+        # Fuzzy search service for typo handling
+        fuzzy_config = FuzzyConfig(
+            min_score_threshold=0.65,  # Slightly higher for names
+            high_confidence_threshold=0.85,
+            partial_match_threshold=0.75,
+            enable_name_fuzzy=True,
+            name_boost_factor=1.2
+        )
+        self._fuzzy_service = FuzzySearchService(fuzzy_config)
+        self._fuzzy_candidates_cache: Dict[str, List[str]] = {}  # Cache for candidates
+
+        # Sanctions data loader for fuzzy candidates
+        self._sanctions_loader = SanctionsDataLoader()
+        self._sanctions_loaded = False
+
         # Embedding cache
         self._embedding_cache: Dict[str, Tuple[List[float], datetime]] = {}
         self._cache_lock = asyncio.Lock()
@@ -708,13 +725,41 @@ class HybridSearchService(BaseService, SearchService):
         
         # Check if AC results are sufficient
         if self._should_escalate(ac_candidates, opts):
-            self.logger.info("AC results insufficient, escalating to vector search")
+            self.logger.info("AC results insufficient, trying fuzzy search first")
             self._metrics.escalation_triggered += 1
-            
-            # Step 2: Execute vector search
+
+            # Step 2: Try fuzzy search before vector search
+            fuzzy_candidates = await self._fuzzy_search(query_text, opts, search_trace)
+
+            # Check if fuzzy results are good enough
+            if self._fuzzy_results_sufficient(fuzzy_candidates, opts):
+                self.logger.info(f"Fuzzy search found {len(fuzzy_candidates)} good matches - skipping vector search")
+                # Combine AC and fuzzy results
+                all_candidates = self._combine_results(ac_candidates, fuzzy_candidates, opts)
+
+                # Add hybrid step to trace
+                hybrid_time = (time.perf_counter() - hybrid_start_time) * 1000
+                self._add_hybrid_trace_step(search_trace, query_text, opts, all_candidates, hybrid_time, {
+                    "escalation_triggered": True,
+                    "fuzzy_search_used": True,
+                    "vector_search_skipped": True,
+                    "ac_candidates": len(ac_candidates),
+                    "fuzzy_candidates": len(fuzzy_candidates),
+                    "final_candidates": len(all_candidates)
+                })
+
+                return all_candidates
+            else:
+                self.logger.info("Fuzzy search insufficient, escalating to vector search")
+
+            # Step 3: Execute vector search (fuzzy wasn't sufficient)
             vector_candidates = await self._vector_search_only(normalized, text, opts, search_trace)
+
+            # Combine all three result sets
+            all_candidates = self._combine_results(ac_candidates, fuzzy_candidates, opts)
+            all_candidates = self._combine_results(all_candidates, vector_candidates, opts)
             
-            # Step 3: Check if vector fallback is needed
+            # Step 4: Check if vector fallback is needed
             if self._should_use_vector_fallback(ac_candidates, vector_candidates, opts):
                 self.logger.info("Using vector fallback for better results")
                 fallback_candidates = await self._vector_fallback_search(normalized, text, opts, search_trace)
@@ -730,8 +775,10 @@ class HybridSearchService(BaseService, SearchService):
                 hybrid_time = (time.perf_counter() - hybrid_start_time) * 1000
                 self._add_hybrid_trace_step(search_trace, query_text, opts, all_candidates, hybrid_time, {
                     "escalation_triggered": True,
+                    "fuzzy_search_used": True,
                     "vector_fallback_used": True,
                     "ac_candidates": len(ac_candidates),
+                    "fuzzy_candidates": len(fuzzy_candidates),
                     "vector_candidates": len(vector_candidates),
                     "fallback_candidates": len(fallback_candidates),
                     "final_candidates": len(all_candidates)
@@ -746,8 +793,10 @@ class HybridSearchService(BaseService, SearchService):
                 hybrid_time = (time.perf_counter() - hybrid_start_time) * 1000
                 self._add_hybrid_trace_step(search_trace, query_text, opts, all_candidates, hybrid_time, {
                     "escalation_triggered": True,
+                    "fuzzy_search_used": True,
                     "vector_fallback_used": False,
                     "ac_candidates": len(ac_candidates),
+                    "fuzzy_candidates": len(fuzzy_candidates),
                     "vector_candidates": len(vector_candidates),
                     "final_candidates": len(all_candidates)
                 })
@@ -2066,7 +2115,222 @@ class HybridSearchService(BaseService, SearchService):
                 raise ValueError("Embedding cache size should be at least 100")
             
             self.logger.info("Configuration validation passed")
-            
+
         except Exception as e:
             self.logger.error(f"Configuration validation failed: {e}")
             raise ValueError(f"Invalid configuration: {e}")
+
+    # ==========================================
+    # Fuzzy Search Methods
+    # ==========================================
+
+    async def _fuzzy_search(
+        self,
+        query_text: str,
+        opts: SearchOpts,
+        search_trace: Optional[SearchTrace] = None
+    ) -> List[Candidate]:
+        """
+        Execute fuzzy search for typo tolerance.
+
+        Args:
+            query_text: The search query (potentially with typos)
+            opts: Search options
+            search_trace: Optional search trace for debugging
+
+        Returns:
+            List of fuzzy match candidates
+        """
+        if not self._fuzzy_service.enabled:
+            self.logger.debug("Fuzzy search disabled - rapidfuzz not available")
+            return []
+
+        start_time = time.perf_counter()
+
+        try:
+            # Get candidates for fuzzy matching (from watchlist or cache)
+            candidates = await self._get_fuzzy_candidates()
+
+            if not candidates:
+                self.logger.debug("No candidates available for fuzzy search")
+                return []
+
+            # Perform fuzzy search
+            fuzzy_results = await self._fuzzy_service.search_async(
+                query=query_text,
+                candidates=candidates,
+                doc_mapping=None,  # We'll map later
+                metadata_mapping=None
+            )
+
+            # Convert fuzzy results to Candidates
+            fuzzy_candidates = []
+            for fuzzy_result in fuzzy_results:
+                candidate = Candidate(
+                    doc_id=f"fuzzy_{hash(fuzzy_result.matched_text)}",
+                    name=fuzzy_result.matched_text,
+                    score=fuzzy_result.score,
+                    text=fuzzy_result.matched_text,
+                    entity_type="person",  # Assume person names for now
+                    metadata={
+                        "fuzzy_algorithm": fuzzy_result.algorithm,
+                        "original_query": fuzzy_result.original_query,
+                        "fuzzy_score": fuzzy_result.score
+                    },
+                    search_mode=SearchMode.AC,  # Mark as AC-like for now
+                    match_fields=["fuzzy_name"],
+                    confidence=fuzzy_result.score,
+                    trace={
+                        "reason": "fuzzy_match",
+                        "algorithm": fuzzy_result.algorithm,
+                        "original_query": query_text
+                    }
+                )
+                fuzzy_candidates.append(candidate)
+
+            # Calculate timing for logging and tracing
+            took_ms = (time.perf_counter() - start_time) * 1000
+
+            # Add trace step if tracing enabled
+            if search_trace and search_trace.enabled:
+                trace_step = SearchTraceStep(
+                    step="fuzzy_search",
+                    took_ms=took_ms,
+                    query=query_text,
+                    total_hits=len(fuzzy_candidates),
+                    candidates_count=len(candidates),
+                    details={
+                        "algorithm": "rapidfuzz",
+                        "candidate_count": len(candidates),
+                        "result_count": len(fuzzy_candidates),
+                        "min_score": min(c.score for c in fuzzy_candidates) if fuzzy_candidates else 0,
+                        "max_score": max(c.score for c in fuzzy_candidates) if fuzzy_candidates else 0
+                    }
+                )
+                search_trace.steps.append(trace_step)
+
+            self.logger.debug(f"Fuzzy search completed: {len(fuzzy_candidates)} results in {took_ms:.2f}ms")
+            return fuzzy_candidates[:opts.max_results]  # Limit results
+
+        except Exception as e:
+            self.logger.error(f"Fuzzy search failed: {e}")
+            return []
+
+    async def _get_fuzzy_candidates(self) -> List[str]:
+        """
+        Get candidates for fuzzy matching from sanctions data.
+
+        Priority:
+        1. Sanctions data (primary source)
+        2. Watchlist service (fallback)
+        3. Common names (last resort)
+
+        Returns:
+            List of candidate strings for fuzzy matching
+        """
+        # Check cache first
+        cache_key = "fuzzy_candidates"
+        if cache_key in self._fuzzy_candidates_cache:
+            return self._fuzzy_candidates_cache[cache_key]
+
+        candidates = []
+
+        # Primary source: Sanctions data
+        try:
+            self.logger.debug("Loading fuzzy candidates from sanctions data...")
+            sanctions_candidates = await self._sanctions_loader.get_fuzzy_candidates()
+
+            if sanctions_candidates:
+                candidates.extend(sanctions_candidates)
+                self._sanctions_loaded = True
+                self.logger.info(f"Loaded {len(sanctions_candidates)} names from sanctions data for fuzzy search")
+
+                # Get additional stats
+                stats = await self._sanctions_loader.get_stats()
+                self.logger.debug(f"Sanctions data: {stats['persons']} persons, {stats['organizations']} orgs from {len(stats['sources'])} sources")
+
+        except Exception as e:
+            self.logger.error(f"Failed to load sanctions data for fuzzy search: {e}")
+
+        # Fallback: Try watchlist service
+        if not candidates:
+            try:
+                if self._fallback_watchlist_service and self._fallback_watchlist_service.ready():
+                    all_docs = await self._get_watchlist_names()
+                    candidates.extend(all_docs)
+                    self.logger.debug(f"Fallback: loaded {len(all_docs)} names from watchlist service")
+            except Exception as e:
+                self.logger.warning(f"Failed to load watchlist names for fuzzy search: {e}")
+
+        # Last resort: Common names
+        if not candidates:
+            candidates = self._get_common_names()
+            self.logger.warning(f"Using fallback common names: {len(candidates)} entries")
+
+        # Cache the candidates (limit for performance)
+        cached_candidates = candidates[:20000]  # Increased limit for sanctions data
+        self._fuzzy_candidates_cache[cache_key] = cached_candidates
+
+        self.logger.info(f"Fuzzy search initialized with {len(cached_candidates)} candidates")
+        return cached_candidates
+
+    async def _get_watchlist_names(self) -> List[str]:
+        """Extract all names from watchlist for fuzzy matching."""
+        try:
+            # This is a placeholder - actual implementation would depend on watchlist service API
+            # You might want to extract this from your sanctioned persons data
+            return []
+        except Exception as e:
+            self.logger.warning(f"Failed to extract watchlist names: {e}")
+            return []
+
+    def _get_common_names(self) -> List[str]:
+        """Get common Ukrainian/Russian names for fuzzy matching."""
+        return [
+            # Ukrainian politicians and public figures
+            "Петро Порошенко", "Володимир Зеленський", "Юлія Тимошенко",
+            "Віталій Кличко", "Ігор Коломойський", "Рінат Ахметов",
+            "Павло Фукс", "Вадим Новинський", "Дмитро Фірташ",
+
+            # Russian names
+            "Владимир Путин", "Сергей Лавров", "Михаил Мишустин",
+            "Дмитрий Медведев", "Алексей Навальный",
+
+            # Common Ukrainian names
+            "Андрій Іванов", "Олександр Петров", "Микола Сидоров",
+            "Ігор Коваленко", "Сергій Бондаренко", "Олексій Мельник",
+            "Катерина Шевченко", "Наталія Коваль", "Марія Петренко",
+            "Оксана Ткачук", "Тетяна Білоус", "Інна Гавриленко"
+        ]
+
+    def _fuzzy_results_sufficient(self, fuzzy_candidates: List[Candidate], opts: SearchOpts) -> bool:
+        """
+        Determine if fuzzy search results are good enough to skip vector search.
+
+        Args:
+            fuzzy_candidates: Results from fuzzy search
+            opts: Search options
+
+        Returns:
+            True if fuzzy results are sufficient, False otherwise
+        """
+        if not fuzzy_candidates:
+            return False
+
+        # Check if we have enough high-confidence results
+        high_confidence_results = [
+            c for c in fuzzy_candidates
+            if c.score >= self._fuzzy_service.config.high_confidence_threshold
+        ]
+
+        if len(high_confidence_results) >= 1:  # At least one high-confidence match
+            self.logger.debug(f"Fuzzy search found {len(high_confidence_results)} high-confidence matches")
+            return True
+
+        # Check if best score is above minimum threshold
+        best_score = max(c.score for c in fuzzy_candidates)
+        if best_score >= self._fuzzy_service.config.min_score_threshold * 1.1:  # 10% above minimum
+            self.logger.debug(f"Fuzzy search best score {best_score:.3f} is sufficient")
+            return True
+
+        return False

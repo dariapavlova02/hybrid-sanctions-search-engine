@@ -1394,9 +1394,35 @@ def convert_surname_to_nominative_uk(token: str, preserve_feminine_suffix_uk: bo
 
     # 5. Surnames ending in -ов/-ев (masculine patterns)
     elif token_lower.endswith("ова") and len(token) > 4:
+        # CRITICAL FIX: Check if this is actually a feminine given name, not a surname
+        try:
+            from ....data.dicts.ukrainian_names import UKRAINIAN_NAMES
+            # Check if token is a known feminine given name (like "Олександра")
+            for name_key in [token.capitalize(), token]:
+                if name_key in UKRAINIAN_NAMES:
+                    name_data = UKRAINIAN_NAMES[name_key]
+                    if name_data.get("gender") == "femn":
+                        # This is a feminine given name, not a surname - do not convert!
+                        return token  # Keep "Олександра" as "Олександра"
+        except ImportError:
+            pass
+
         # This should have been caught above, but if not feminine context, convert to masculine
         return token[:-1]  # Петрова -> Петров (only if no feminine context)
     elif token_lower.endswith("ева") and len(token) > 4:
+        # CRITICAL FIX: Check if this is actually a feminine given name, not a surname
+        try:
+            from ....data.dicts.ukrainian_names import UKRAINIAN_NAMES
+            # Check if token is a known feminine given name
+            for name_key in [token.capitalize(), token]:
+                if name_key in UKRAINIAN_NAMES:
+                    name_data = UKRAINIAN_NAMES[name_key]
+                    if name_data.get("gender") == "femn":
+                        # This is a feminine given name, not a surname - do not convert!
+                        return token  # Keep feminine name as-is
+        except ImportError:
+            pass
+
         # This should have been caught above, but if not feminine context, convert to masculine
         return token[:-1]  # Сергеева -> Сергеев (only if no feminine context)
     elif token_lower.endswith("ової") and len(token) > 5:
@@ -1513,10 +1539,19 @@ def convert_given_name_to_nominative_uk(token: str) -> str:
     # Accusative case patterns
     elif token_lower.endswith("а") and len(token) > 2:
         # Could be masculine accusative or already nominative feminine
-        # Use Ukrainian name dictionary validation for masculine names
-        potential_nom = token[:-1]
+        # CRITICAL FIX: Check if current token is already a feminine name in nominative
         try:
             from ....data.dicts.ukrainian_names import UKRAINIAN_NAMES
+            # First check if the original token is a known feminine name
+            for name_key in [token.capitalize(), token]:
+                if name_key in UKRAINIAN_NAMES:
+                    name_data = UKRAINIAN_NAMES[name_key]
+                    if name_data.get("gender") == "femn":
+                        # Already feminine nominative - DO NOT CONVERT
+                        return token  # Олександра stays Олександра
+
+            # Only then check if it could be masculine accusative
+            potential_nom = token[:-1]
             for name_key in [potential_nom.capitalize(), potential_nom]:
                 if name_key in UKRAINIAN_NAMES:
                     name_data = UKRAINIAN_NAMES[name_key]

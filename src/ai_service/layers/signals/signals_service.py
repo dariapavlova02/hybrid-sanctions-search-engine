@@ -298,7 +298,45 @@ class SignalsService:
         if re.match(r'^\d+[\.\-/]\d+[\.\-/]\d+', token) or re.match(r'^\d{8,}', token):
             return False
 
-        return True
+        # Дополнительная проверка - это ли имя?
+        if self._looks_like_person_name(token, language):
+            return True
+
+        # Если не определили как имя, проверяем базовые характеристики
+        return len(token) >= 3 and token[0].isupper() and token[1:].islower()
+
+    def _looks_like_person_name(self, token: str, language: str) -> bool:
+        """Проверяет похож ли токен на имя человека."""
+        if not token:
+            return False
+
+        token_lower = token.lower()
+
+        # Известные украинские и русские имена
+        common_names = {
+            # Женские имена
+            "катерина", "екатерина", "анна", "марія", "мария", "ольга", "наталія", "наталья",
+            "юлія", "юлия", "ірина", "ирина", "світлана", "светлана", "тетяна", "татьяна",
+            "людмила", "валерия", "валентина", "оксана", "лариса", "віра", "вера", "надія", "надежда",
+            # Мужские имена
+            "олександр", "александр", "дмитро", "дмитрий", "андрій", "андрей", "сергій", "сергей",
+            "володимир", "владимир", "іван", "иван", "петро", "петр", "максим", "михайло", "михаил",
+            "артем", "роман", "віталій", "виталий", "игорь", "ігор", "юрій", "юрий", "євген", "евгений",
+        }
+
+        if token_lower in common_names:
+            return True
+
+        # Проверка на типичные окончания имен
+        if language in ["uk", "ru"]:
+            # Женские окончания
+            if token_lower.endswith(("на", "ина", "ія", "я", "ка", "ла")):
+                return len(token) >= 4
+            # Мужские окончания
+            if token_lower.endswith(("ій", "ич", "им", "ро", "ій", "ко", "ан", "ін")):
+                return len(token) >= 4
+
+        return False
 
     def _create_person_signals(
         self, persons_core: List[List[str]]
