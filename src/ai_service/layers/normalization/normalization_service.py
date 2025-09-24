@@ -28,7 +28,7 @@ from .morphology_adapter import MorphologyAdapter, get_global_adapter
 from .processors.normalization_factory import NormalizationFactory, NormalizationConfig
 from .lexicon_loader import get_lexicons
 from .role_tagger import RoleTagger, TokenRole
-from .homoglyph_detector import homoglyph_detector
+from .homoglyph_detector import HomoglyphDetector
 
 # Check for optional dependencies
 try:
@@ -64,6 +64,7 @@ class NormalizationService:
         self.unicode_service = UnicodeService()
         # Use global adapter for better caching across requests
         self.morphology_adapter = get_global_adapter()
+        self.homoglyph_detector = HomoglyphDetector()
 
         # Load resources for factory
         name_dictionaries = self._load_name_dictionaries()
@@ -445,11 +446,13 @@ class NormalizationService:
                 return validation_result
 
             # Homoglyph detection and normalization (security preprocessing)
-            normalized_text, homoglyph_analysis = homoglyph_detector.secure_normalize(text)
-            if homoglyph_analysis['warnings']:
+            homoglyph_analysis = self.homoglyph_detector.detect_homoglyphs(text)
+            normalized_text = text  # Keep original text for now
+            if homoglyph_analysis.get('has_homoglyphs', False):
                 # Log security warnings for potential homoglyph attacks
-                self.logger.warning(f"Homoglyph attack detected: {homoglyph_analysis['warnings']}")
-                self.logger.warning(f"Original: '{text}' -> Normalized: '{normalized_text}'")
+                suspicious_chars = homoglyph_analysis.get('suspicious_chars', [])
+                self.logger.warning(f"Homoglyph attack detected: {len(suspicious_chars)} suspicious characters")
+                self.logger.warning(f"Original text: '{text}'")
 
             # Use the normalized text for further processing
             text = normalized_text
@@ -521,12 +524,12 @@ class NormalizationService:
 
             # Add homoglyph analysis to result
             if homoglyph_analysis:
-                result.homoglyph_detected = homoglyph_analysis.get('warnings', []) != []
+                result.homoglyph_detected = homoglyph_analysis.get('has_homoglyphs', False)
                 result.homoglyph_analysis = {
-                    'warnings': homoglyph_analysis.get('warnings', []),
-                    'transformations': homoglyph_analysis.get('transformations', []),
-                    'detection': homoglyph_analysis.get('detection', {}),
-                    'changed': homoglyph_analysis.get('changed', False)
+                    'has_homoglyphs': homoglyph_analysis.get('has_homoglyphs', False),
+                    'confidence': homoglyph_analysis.get('confidence', 0.0),
+                    'suspicious_chars': homoglyph_analysis.get('suspicious_chars', []),
+                    'details': homoglyph_analysis.get('details', [])
                 }
 
             # Update statistics

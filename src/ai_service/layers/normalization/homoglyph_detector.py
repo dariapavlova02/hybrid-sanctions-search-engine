@@ -109,40 +109,57 @@ class HomoglyphDetector:
         suspicious_words = []
         details = []
 
-        # Check for homoglyph characters
-        for i, char in enumerate(text):
-            if char in self.homoglyph_map:
-                suspicious_chars.append({
-                    'char': char,
-                    'position': i,
-                    'unicode': f'U+{ord(char):04X}',
-                    'suggested': self.homoglyph_map[char],
-                    'type': 'homoglyph'
-                })
-                details.append(f"Character '{char}' at position {i} looks like '{self.homoglyph_map[char]}'")
-
-        # Check for mixed-script words
+        # Check for mixed-script words first (this is the real attack)
         words = text.split()
+        text_scripts = set()
+
         for word_idx, word in enumerate(words):
+            word_scripts = self._get_scripts(word)
+            text_scripts.update(word_scripts)
+
             if self._is_mixed_script(word):
                 suspicious_words.append({
                     'word': word,
                     'position': word_idx,
-                    'type': 'mixed_script',
-                    'scripts': self._get_scripts(word)
+                    'type': 'mixed_script_word',
+                    'scripts': word_scripts
                 })
-                details.append(f"Word '{word}' contains mixed scripts: {self._get_scripts(word)}")
+                details.append(f"Word '{word}' contains mixed scripts: {word_scripts}")
 
-        # Calculate confidence score
-        total_chars = len(text)
-        suspicious_char_count = len(suspicious_chars)
-        confidence = min(1.0, suspicious_char_count / max(1, total_chars) * 10)  # Scale to 0-1
+                # For mixed script words, identify specific suspicious characters
+                for i, char in enumerate(word):
+                    if char in self.homoglyph_map:
+                        char_pos_in_text = text.find(word) + i
+                        suspicious_chars.append({
+                            'char': char,
+                            'position': char_pos_in_text,
+                            'unicode': f'U+{ord(char):04X}',
+                            'suggested': self.homoglyph_map[char],
+                            'type': 'homoglyph'
+                        })
+                        details.append(f"Character '{char}' at position {char_pos_in_text} looks like '{self.homoglyph_map[char]}'")
+
+        # Check for mixed scripts across the entire text (different words using different scripts)
+        suspicious_scripts = {'Latin', 'Cyrillic'}.intersection(text_scripts)
+        if len(suspicious_scripts) > 1:
+            # Flag as suspicious if we have both Latin and Cyrillic across different words
+            details.append(f"Text contains mixed scripts across words: {list(text_scripts)}")
+            if not suspicious_words:  # Only add if we don't already have mixed script words
+                suspicious_words.append({
+                    'word': text,  # Entire text
+                    'position': 0,
+                    'type': 'mixed_script_text',
+                    'scripts': list(text_scripts)
+                })
+
+        # Calculate confidence score based on mixed scripts
+        confidence = len(suspicious_words) * 0.3  # Each mixed script detection adds 30% confidence
 
         return {
-            'has_homoglyphs': len(suspicious_chars) > 0 or len(suspicious_words) > 0,
+            'has_homoglyphs': len(suspicious_words) > 0,  # Flag if there are any mixed script detections
             'suspicious_chars': suspicious_chars,
             'suspicious_words': suspicious_words,
-            'confidence': confidence,
+            'confidence': min(1.0, confidence),
             'details': details
         }
 
