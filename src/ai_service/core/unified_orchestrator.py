@@ -577,18 +577,28 @@ class UnifiedOrchestrator:
 
                 # Perform search using normalized text
                 query = norm_result.normalized if norm_result.normalized else ""
+                print(f"🔍 SEARCH DEBUG: query='{query}', search_service={self.search_service is not None}, SearchOpts={SearchOpts is not None}")
+
                 if query.strip() and SearchOpts:
+                    print(f"🚀 CALLING SEARCH: query='{query.strip()}'")
                     search_opts = SearchOpts(
                         top_k=10,
                         threshold=0.7,
                         enable_escalation=True,
                         escalation_threshold=0.6
                     )
-                    candidates = await self.search_service.find_candidates(
-                        normalized=norm_result,
-                        text=original_text,
-                        opts=search_opts
-                    )
+                    print(f"🔧 SEARCH OPTS: escalation={search_opts.enable_escalation}, threshold={search_opts.escalation_threshold}")
+
+                    try:
+                        candidates = await self.search_service.find_candidates(
+                            normalized=norm_result,
+                            text=original_text,
+                            opts=search_opts
+                        )
+                        print(f"✅ SEARCH COMPLETED: {len(candidates)} candidates")
+                    except Exception as e:
+                        print(f"❌ SEARCH FAILED: {e}")
+                        candidates = []
 
                     # Convert candidates to the expected search_results format
                     search_results = {
