@@ -592,20 +592,27 @@ class UnifiedOrchestrator:
                     search_start_time = time.time()
                     candidates = []
 
+                    # Check for sanctioned IDs first (critical security check)
+                    id_candidates = await self._search_by_extracted_ids(signals_result, search_opts)
+                    if id_candidates:
+                        candidates.extend(id_candidates)
+                        print(f"🚨 SANCTIONED ID DETECTED: {len(id_candidates)} matches found")
+
                     # Try full search service first
                     if self.search_service:
                         try:
-                            candidates = await self.search_service.find_candidates(
+                            name_candidates = await self.search_service.find_candidates(
                                 normalized=norm_result,
                                 text=original_text,
                                 opts=search_opts
                             )
+                            candidates.extend(name_candidates)
                             search_processing_time = (time.time() - search_start_time) * 1000
-                            print(f"✅ FULL SEARCH COMPLETED: {len(candidates)} candidates in {search_processing_time:.2f}ms")
+                            print(f"✅ FULL SEARCH COMPLETED: {len(name_candidates)} name candidates + {len(id_candidates)} ID candidates in {search_processing_time:.2f}ms")
                         except Exception as e:
                             search_processing_time = (time.time() - search_start_time) * 1000
                             print(f"❌ FULL SEARCH FAILED: {e} after {search_processing_time:.2f}ms")
-                            candidates = []
+                            # Keep ID candidates even if name search fails
                     else:
                         print(f"⚠️ SEARCH SERVICE IS NONE - using fallback fuzzy search")
                         search_processing_time = (time.time() - search_start_time) * 1000
@@ -1430,6 +1437,85 @@ class UnifiedOrchestrator:
             "word_count": word_count,
             "character_count": len(text)
         }
+
+    async def _search_by_extracted_ids(self, signals_result, search_opts) -> List[Dict[str, Any]]:
+        """Search for sanctioned persons by extracted IDs (INN, EDRPOU, etc.)."""
+        try:
+            if not signals_result or not signals_result.persons:
+                return []
+
+            id_candidates = []
+
+            # Check each person's IDs
+            for person in signals_result.persons:
+                if not person.get('ids'):
+                    continue
+
+                for id_info in person['ids']:
+                    id_value = id_info.get('value', '').strip()
+                    id_type = id_info.get('type', '').lower()
+
+                    if not id_value:
+                        continue
+
+                    print(f"🔍 Checking {id_type.upper()}: {id_value}")
+
+                    # Search in mock database for this ID
+                    candidates = await self._find_candidates_by_id(id_value, id_type)
+                    if candidates:
+                        print(f"🚨 SANCTIONED {id_type.upper()} FOUND: {id_value} -> {len(candidates)} matches")
+                        id_candidates.extend(candidates)
+
+            return id_candidates
+        except Exception as e:
+            print(f"❌ ID search failed: {e}")
+            return []
+
+    async def _find_candidates_by_id(self, id_value: str, id_type: str) -> List[Dict[str, Any]]:
+        """Find candidates in sanctions database by specific ID."""
+        try:
+            # Use mock search service to find by ID
+            if hasattr(self.search_service, '_test_persons'):
+                candidates = []
+
+                for test_person in self.search_service._test_persons:
+                    metadata = test_person.metadata or {}
+
+                    # Check different ID field names based on type
+                    id_field_mapping = {
+                        'inn': ['itn', 'inn', 'tax_id'],
+                        'edrpou': ['edrpou', 'registration_id'],
+                        'ogrn': ['ogrn', 'reg_number'],
+                        'vat': ['vat', 'vat_id']
+                    }
+
+                    possible_fields = id_field_mapping.get(id_type, [id_type])
+
+                    for field_name in possible_fields:
+                        if field_name in metadata and str(metadata[field_name]) == str(id_value):
+                            # Found sanctioned person with this ID
+                            candidate = {
+                                "doc_id": test_person.doc_id,
+                                "score": 1.0,  # Perfect match on ID
+                                "text": test_person.text,
+                                "entity_type": "person",
+                                "metadata": metadata,
+                                "search_mode": "id_exact",
+                                "match_fields": [field_name],
+                                "confidence": 1.0
+                            }
+                            candidates.append(candidate)
+                            print(f"✅ Match found: {test_person.text} ({field_name}: {id_value})")
+                            break
+
+                return candidates
+            else:
+                print("⚠️ Mock search service not available")
+                return []
+
+        except Exception as e:
+            print(f"❌ Find candidates by ID failed: {e}")
+            return []
 
     def _emergency_fuzzy_search(self, query: str, original_text: str) -> list:
         """Emergency fuzzy search for critical names when main search fails."""

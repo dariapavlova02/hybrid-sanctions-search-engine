@@ -167,6 +167,18 @@ class DecisionEngine:
             score += 0.85  # Boost score to ensure HIGH risk classification
             self.logger.warning(f"🚨 HOMOGLYPH ATTACK - adding +0.85 to score (now: {score:.3f})")
 
+        # CRITICAL: Sanctioned ID detected = automatic HIGH score
+        if inp and inp.search and inp.search.total_matches > 0:
+            # Check if any search matches were ID-based (exact ID match)
+            if hasattr(inp, 'search_candidates'):
+                for candidate in inp.search_candidates:
+                    if (candidate.get('search_mode') == 'id_exact' or
+                        'itn' in candidate.get('match_fields', []) or
+                        'inn' in candidate.get('match_fields', [])):
+                        score += 1.5  # Massive boost for sanctioned ID
+                        self.logger.warning(f"🚨 SANCTIONED ID DETECTED - adding +1.5 to score (now: {score:.3f})")
+                        break
+
         return score
     
     def _determine_risk_level(self, score: float, inp: Optional[DecisionInput] = None) -> RiskLevel:
@@ -179,6 +191,16 @@ class DecisionEngine:
                 inp.search.total_matches >= 1):
                 self.logger.info(f"🚨 EXACT SANCTIONS MATCH - forcing HIGH RISK (score: {score:.3f})")
                 return RiskLevel.HIGH
+
+        # CRITICAL: Sanctioned ID detected = automatic HIGH RISK
+        if inp and inp.search and inp.search.total_matches > 0:
+            if hasattr(inp, 'search_candidates'):
+                for candidate in inp.search_candidates:
+                    if (candidate.get('search_mode') == 'id_exact' or
+                        'itn' in candidate.get('match_fields', []) or
+                        'inn' in candidate.get('match_fields', [])):
+                        self.logger.warning(f"🚨 SANCTIONED ID DETECTED - forcing HIGH RISK (score: {score:.3f})")
+                        return RiskLevel.HIGH
 
         # CRITICAL: Homoglyph attack detected = automatic HIGH RISK
         # Homoglyph attacks are security threats that should always be flagged as high risk
