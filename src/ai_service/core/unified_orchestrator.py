@@ -529,7 +529,8 @@ class UnifiedOrchestrator:
         embeddings: Optional[list],
         errors: list,
         original_text: str,
-        search_trace: Optional[SearchTrace] = None
+        search_trace: Optional[SearchTrace] = None,
+        signals_result: Optional[Any] = None
     ) -> Optional[Dict[str, Any]]:
         """
         Handle Layer 9: Search (optional)
@@ -545,7 +546,16 @@ class UnifiedOrchestrator:
         """
         search_results = None
 
-        if self.enable_search and self.search_service:
+        # Check if search should be forced due to ID match (critical for sanctions screening)
+        force_search_for_id_match = False
+        if signals_result and hasattr(signals_result, 'persons'):
+            for person in signals_result.persons:
+                if hasattr(person, 'ids') and person.ids:
+                    force_search_for_id_match = True
+                    logger.info(f"🚨 CRITICAL: ID match detected - forcing search regardless of risk score: {person.ids}")
+                    break
+
+        if (self.enable_search or force_search_for_id_match) and self.search_service:
             layer_start = time.time()
             try:
                 if self.metrics_service:
@@ -835,7 +845,7 @@ class UnifiedOrchestrator:
             # ================================================================
             # Layer 9: Search (optional)
             # ================================================================
-            search_results = await self._handle_search_layer(norm_result, embeddings, errors, text, search_trace)
+            search_results = await self._handle_search_layer(norm_result, embeddings, errors, text, search_trace, signals_result)
 
             # ================================================================
             # Layer 10: Decision & Response
