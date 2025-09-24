@@ -124,6 +124,58 @@ def extract_inns_from_sanctions():
 
         stats["files_processed"].append(str(terrorism_file))
 
+    # Process all other JSON files in data directory
+    for json_file in data_dir.glob("*.json"):
+        # Skip already processed files
+        if json_file.name in ["sanctioned_persons.json", "sanctioned_companies.json", "terrorism_black_list.json", "sanctioned_inns_cache.json"]:
+            continue
+
+        print(f"📋 Processing additional file: {json_file}")
+        try:
+            with open(json_file, 'r', encoding='utf-8') as f:
+                additional_data = json.load(f)
+
+            # Handle different JSON structures
+            if isinstance(additional_data, list):
+                entries = additional_data
+            elif isinstance(additional_data, dict) and 'data' in additional_data:
+                entries = additional_data['data']
+            else:
+                entries = [additional_data] if isinstance(additional_data, dict) else []
+
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+
+                # Look for various ID fields
+                inn = None
+                for field in ['itn', 'inn', 'tax_id', 'tax_number', 'edrpou', 'registration_number', 'passport', 'id_number']:
+                    if entry.get(field):
+                        candidate_inn = str(entry[field]).strip()
+                        if len(candidate_inn) >= 8 and candidate_inn.isdigit():
+                            inn = candidate_inn
+                            break
+
+                if inn and inn not in inn_cache:  # Avoid duplicates
+                    # Determine type based on available fields
+                    entry_type = "organization" if any(field in entry for field in ['company', 'organization', 'org', 'business']) else "person"
+
+                    inn_cache[inn] = {
+                        "type": entry_type,
+                        "name": entry.get('name', entry.get('company', entry.get('organization', ''))).strip(),
+                        "source": f"additional_sanctions_{json_file.stem}",
+                        "status": entry.get('status', 1),
+                        "risk_level": "high"
+                    }
+
+                    stats["inns_extracted"] += 1
+                    print(f"  ✓ {inn} -> {inn_cache[inn]['name']} ({json_file.stem})")
+
+            stats["files_processed"].append(str(json_file))
+
+        except Exception as e:
+            print(f"  ⚠️ Error processing {json_file}: {e}")
+
     # Save INN cache
     output_file = data_dir / "sanctioned_inns_cache.json"
     with open(output_file, 'w', encoding='utf-8') as f:
