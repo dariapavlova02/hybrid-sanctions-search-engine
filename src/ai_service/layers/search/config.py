@@ -35,8 +35,8 @@ class ElasticsearchConfig(BaseModel):
 
     # Index settings
     default_index: str = Field(default="watchlist", description="Default index name")
-    ac_index: str = Field(default="watchlist_ac", description="AC search index name")
-    vector_index: str = Field(default="watchlist_vector", description="Vector search index name")
+    ac_index: str = Field(default="ai_service_ac_patterns", description="AC search index name")
+    vector_index: str = Field(default="vectors", description="Vector search index name")
     
     @field_validator("hosts")
     @classmethod
@@ -85,6 +85,18 @@ class ElasticsearchConfig(BaseModel):
                 payload["hosts"] = [hosts_str.strip()]
             else:
                 payload["hosts"] = [h.strip() for h in hosts_str.split(",") if h.strip()]
+        else:
+            # Auto-detect production server
+            import socket
+            try:
+                hostname = socket.gethostname()
+                local_ip = socket.gethostbyname(hostname)
+
+                # If we're on the known production server, use its public IP
+                if local_ip == "95.217.84.234":
+                    payload["hosts"] = ["95.217.84.234:9200"]
+            except Exception:
+                pass
 
         str_overrides = {
             "username": "ES_USERNAME",
