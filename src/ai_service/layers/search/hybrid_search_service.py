@@ -2168,7 +2168,6 @@ class HybridSearchService(BaseService, SearchService):
             for fuzzy_result in fuzzy_results:
                 candidate = Candidate(
                     doc_id=f"fuzzy_{hash(fuzzy_result.matched_text)}",
-                    name=fuzzy_result.matched_text,
                     score=fuzzy_result.score,
                     text=fuzzy_result.matched_text,
                     entity_type="person",  # Assume person names for now
@@ -2177,7 +2176,7 @@ class HybridSearchService(BaseService, SearchService):
                         "original_query": fuzzy_result.original_query,
                         "fuzzy_score": fuzzy_result.score
                     },
-                    search_mode=SearchMode.AC,  # Mark as AC-like for now
+                    search_mode=SearchMode.FUZZY,  # Use correct SearchMode for fuzzy
                     match_fields=["fuzzy_name"],
                     confidence=fuzzy_result.score,
                     trace={
