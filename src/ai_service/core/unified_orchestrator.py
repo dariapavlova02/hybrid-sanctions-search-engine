@@ -1472,9 +1472,39 @@ class UnifiedOrchestrator:
             return []
 
     async def _find_candidates_by_id(self, id_value: str, id_type: str) -> List[Dict[str, Any]]:
-        """Find candidates in sanctions database by specific ID."""
+        """Find candidates in sanctions database by specific ID using fast INN cache."""
         try:
-            # Use mock search service to find by ID
+            from ..layers.search.sanctioned_inn_cache import lookup_sanctioned_inn
+
+            # For INN/ITN, use fast cache lookup
+            if id_type.lower() in ['inn', 'itn', 'tax_id']:
+                sanctioned_data = lookup_sanctioned_inn(id_value)
+                if sanctioned_data:
+                    # Convert cached data to candidate format
+                    candidate = {
+                        "doc_id": f"sanctioned_inn_{id_value}",
+                        "score": 1.0,  # Perfect match on sanctioned INN
+                        "text": sanctioned_data.get('name', 'Unknown'),
+                        "entity_type": sanctioned_data.get('type', 'person'),
+                        "metadata": {
+                            'itn': id_value,
+                            'name_en': sanctioned_data.get('name_en', ''),
+                            'birthdate': sanctioned_data.get('birthdate'),
+                            'person_id': sanctioned_data.get('person_id'),
+                            'org_id': sanctioned_data.get('org_id'),
+                            'source': sanctioned_data.get('source', 'sanctioned_inn_cache'),
+                            'status': sanctioned_data.get('status', 1),
+                            'risk_level': sanctioned_data.get('risk_level', 'high')
+                        },
+                        "search_mode": "inn_cache",
+                        "match_fields": ["itn"],
+                        "confidence": 1.0
+                    }
+
+                    print(f"🚨 SANCTIONED INN CACHE HIT: {id_value} -> {sanctioned_data.get('name', 'Unknown')}")
+                    return [candidate]
+
+            # Fallback to mock search for other ID types
             if hasattr(self.search_service, '_test_persons'):
                 candidates = []
 
@@ -1483,7 +1513,6 @@ class UnifiedOrchestrator:
 
                     # Check different ID field names based on type
                     id_field_mapping = {
-                        'inn': ['itn', 'inn', 'tax_id'],
                         'edrpou': ['edrpou', 'registration_id'],
                         'ogrn': ['ogrn', 'reg_number'],
                         'vat': ['vat', 'vat_id']
@@ -1505,13 +1534,12 @@ class UnifiedOrchestrator:
                                 "confidence": 1.0
                             }
                             candidates.append(candidate)
-                            print(f"✅ Match found: {test_person.text} ({field_name}: {id_value})")
+                            print(f"✅ Mock match found: {test_person.text} ({field_name}: {id_value})")
                             break
 
                 return candidates
-            else:
-                print("⚠️ Mock search service not available")
-                return []
+
+            return []
 
         except Exception as e:
             print(f"❌ Find candidates by ID failed: {e}")
