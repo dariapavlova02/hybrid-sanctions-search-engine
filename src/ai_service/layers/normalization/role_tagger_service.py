@@ -122,7 +122,7 @@ class RoleRules:
     
     # Feature detection rules
     surname_suffixes: Set[str] = field(default_factory=lambda: {
-        "енко", "ук", "юк", "чук", "ов", "ова", "ев", "ева", 
+        "енко", "енк", "ук", "юк", "чук", "ов", "ова", "ев", "ева",
         "ін", "іна", "ский", "ская", "ський", "ська", "ян", "дзе"
     })
     
@@ -572,14 +572,42 @@ class DefaultPersonRule(FSMTransitionRule):
 
     def can_apply(self, state: FSMState, token: Token, context: List[Token]) -> bool:
         # Accept both capitalized and non-capitalized names
-        # but exclude punctuation, all-caps, and single characters
+        # but exclude punctuation and single characters
         basic_checks = (not token.is_punct and
-                       not token.is_all_caps and
                        len(token.text) > 1 and
                        token.text.isalpha())  # Only alphabetic characters
 
         if not basic_checks:
             return False
+
+        # Handle all-caps tokens more intelligently
+        if token.is_all_caps:
+            # Exclude very short all-caps tokens that are likely acronyms
+            if len(token.text) <= 2:
+                return False
+
+            # For longer all-caps tokens, check if they might be names using the role classifier
+            if self.role_classifier:
+                lang = getattr(token, 'lang', self.language) or self.language
+                predicted_role = self.role_classifier._classify_personal_role(token.text, lang)
+                # If the role classifier recognizes it as a person role, allow it
+                if predicted_role in ["given", "surname", "patronymic"]:
+                    return True
+
+                # Also check dictionaries directly
+                token_lower = token.text.lower()
+                if (token_lower in self.role_classifier.given_names.get(lang, set()) or
+                    token_lower in self.role_classifier.surnames.get(lang, set()) or
+                    token_lower in self.role_classifier.diminutives.get(lang, set())):
+                    return True
+
+            # If no role classifier or it doesn't recognize it, be more conservative
+            # Allow all-caps tokens of reasonable length (3+ chars) for Ukrainian/Russian names
+            lang = getattr(token, 'lang', self.language) or self.language
+            if len(token.text) >= 3 and lang in ['uk', 'ru']:
+                # Check if it contains Cyrillic characters (likely Ukrainian/Russian name)
+                if any(ord(c) >= 0x0400 and ord(c) <= 0x04FF for c in token.text):
+                    return True
 
         # Additional exclusions to prevent non-names from getting person roles
         if self.lexicons:
