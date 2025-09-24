@@ -109,6 +109,8 @@ class NormalizationResult(BaseModel):
     
     # Processing flags
     ner_disabled: bool = False  # Flag indicating NER was disabled due to missing models
+    homoglyph_detected: bool = False  # Flag indicating potential homoglyph attack detected
+    homoglyph_analysis: Optional[Dict[str, Any]] = None  # Details about homoglyph detection
 
     @property
     def normalized_text(self) -> str:

@@ -174,6 +174,13 @@ class DecisionEngine:
                 self.logger.info(f"🚨 EXACT SANCTIONS MATCH - forcing HIGH RISK (score: {score:.3f})")
                 return RiskLevel.HIGH
 
+        # CRITICAL: Homoglyph attack detected = automatic HIGH RISK
+        # Homoglyph attacks are security threats that should always be flagged as high risk
+        if inp and hasattr(inp, 'normalization') and hasattr(inp.normalization, 'homoglyph_detected'):
+            if inp.normalization.homoglyph_detected:
+                self.logger.warning(f"🚨 HOMOGLYPH ATTACK DETECTED - forcing HIGH RISK (score: {score:.3f})")
+                return RiskLevel.HIGH
+
         # Standard score-based thresholds
         if score >= self.config.thr_high:
             return RiskLevel.HIGH
@@ -191,6 +198,11 @@ class DecisionEngine:
         if (inp.search and inp.search.has_exact_matches and
             inp.search.exact_confidence >= 0.95 and risk == RiskLevel.HIGH):
             reasons.append("🚨 EXACT MATCH IN SANCTIONS LIST - HIGH RISK")
+
+        # CRITICAL: Check for homoglyph attack
+        if (inp and hasattr(inp, 'normalization') and hasattr(inp.normalization, 'homoglyph_detected') and
+            inp.normalization.homoglyph_detected and risk == RiskLevel.HIGH):
+            reasons.append("🚨 HOMOGLYPH ATTACK DETECTED - HIGH RISK")
 
         # Smart filter evidence
         if inp.smartfilter.confidence >= 0.7:

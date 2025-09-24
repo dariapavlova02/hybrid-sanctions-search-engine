@@ -2303,7 +2303,18 @@ class NormalizationFactory(ErrorReportingMixin):
                 continue
 
             # Check if token should be excluded based on FSM role
-            if getattr(effective_flags, 'strict_stopwords', False) and tag.role.value in excluded_roles:
+            # CRITICAL FIX: Don't exclude tokens that role_classifier identified as personal names
+            should_exclude = (getattr(effective_flags, 'strict_stopwords', False) and
+                            tag.role.value in excluded_roles)
+
+            # Preserve tokens that role_classifier identified as given/surname/patronymic
+            # even if FSM marked them as unknown (prevents losing valid names like "АНДРІЙ")
+            if should_exclude and tag.role.value == "unknown":
+                if role in ["given", "surname", "patronymic", "initial"]:
+                    traces.append(f"FSM filtering: preserving '{token}' (FSM: {tag.role.value}, original: {role})")
+                    should_exclude = False
+
+            if should_exclude:
                 removed_count += 1
 
                 if tag.role.value == "unknown" and tag.reason in ["stopword", "payment_context_filtered"]:
