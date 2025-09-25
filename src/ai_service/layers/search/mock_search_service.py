@@ -232,41 +232,66 @@ class MockSearchService(SearchService):
             print(f"  Checking person: {person.text}")
 
             # Exact substring matching
-            if (query_lower in person.text.lower() or
-                query_lower in (person.metadata.get("name_en") or "").lower() or
-                query_lower in (person.metadata.get("itn") or "")):
+            exact_match = (query_lower in person.text.lower() or
+                          query_lower in (person.metadata.get("name_en") or "").lower() or
+                          query_lower in (person.metadata.get("itn") or ""))
+
+            if exact_match:
                 matched = True
                 score = person.score
+                print(f"    ✅ EXACT MATCH! Score: {score:.3f}")
 
             # Fuzzy matching for typos (e.g., "Порошенк" matches "Порошенко")
-            elif opts.search_mode in [SearchMode.VECTOR, SearchMode.HYBRID]:
-                print(f"  Fuzzy matching for '{person.text}'")
-                person_lower = person.text.lower()
-                query_tokens = query_lower.split()
-                person_tokens = person_lower.split()
+            else:
+                mode_str = opts.search_mode.value if hasattr(opts.search_mode, 'value') else str(opts.search_mode)
+                # Support both enum objects and string values for compatibility
+                mode_matches = (opts.search_mode in [SearchMode.AC, SearchMode.VECTOR, SearchMode.HYBRID] or
+                              mode_str in ["ac", "vector", "hybrid"])
 
-                # Check if query tokens are partial matches or have similar prefixes
-                matching_tokens = 0
-                for q_token in query_tokens:
-                    for p_token in person_tokens:
-                        # Prefix matching (e.g., "Порошенк" matches "Порошенко")
-                        if len(q_token) >= 3 and (p_token.startswith(q_token) or q_token.startswith(p_token)):
-                            matching_tokens += 1
-                            break
-                        # Exact token match
-                        elif q_token == p_token:
-                            matching_tokens += 1
-                            break
+                if mode_matches:
+                    print(f"  Fuzzy matching for '{person.text}'")
+                    person_lower = person.text.lower()
+                    query_tokens = query_lower.split()
+                    person_tokens = person_lower.split()
 
-                # Calculate fuzzy match score
-                if matching_tokens > 0:
-                    match_ratio = matching_tokens / max(len(query_tokens), len(person_tokens))
-                    print(f"    Tokens: {matching_tokens}/{max(len(query_tokens), len(person_tokens))}, ratio: {match_ratio:.3f}")
-                    if match_ratio >= 0.5:  # At least 50% tokens match
-                        matched = True
-                        # Minimal penalty for fuzzy matches to ensure good matches pass threshold
-                        score = person.score * match_ratio * 1.05  # 105% of original score for fuzzy (boost good matches)
-                        print(f"    ✅ FUZZY MATCH! Score: {person.score} * {match_ratio:.3f} * 1.05 = {score:.3f}")
+                    # Check if query tokens are partial matches or have similar prefixes
+                    matching_tokens = 0
+                    for q_token in query_tokens:
+                        for p_token in person_tokens:
+                            # Enhanced fuzzy matching (prefix, suffix, or significant overlap)
+                            if len(q_token) >= 3 and len(p_token) >= 3:
+                                # Prefix matching (e.g., "Порошенк" matches "Порошенко")
+                                if p_token.startswith(q_token) or q_token.startswith(p_token):
+                                    matching_tokens += 1
+                                    break
+                                # Common prefix matching (e.g., "Коврико" matches "Ковриков" - both start with "Коврик")
+                                elif len(q_token) >= 5 and len(p_token) >= 5:
+                                    common_prefix = 0
+                                    for i in range(min(len(q_token), len(p_token))):
+                                        if q_token[i] == p_token[i]:
+                                            common_prefix += 1
+                                        else:
+                                            break
+                                    if common_prefix >= 4:  # At least 4 matching characters from start
+                                        matching_tokens += 1
+                                        break
+                            elif len(q_token) >= 3 and (p_token.startswith(q_token) or q_token.startswith(p_token)):
+                                matching_tokens += 1
+                                break
+                            # Exact token match
+                            elif q_token == p_token:
+                                matching_tokens += 1
+                                break
+
+                    # Calculate fuzzy match score
+                    if matching_tokens > 0:
+                        match_ratio = matching_tokens / max(len(query_tokens), len(person_tokens))
+                        print(f"    Tokens: {matching_tokens}/{max(len(query_tokens), len(person_tokens))}, ratio: {match_ratio:.3f}")
+                        if match_ratio >= 0.5:  # At least 50% tokens match
+                            matched = True
+                            # Minimal penalty for fuzzy matches to ensure good matches pass threshold
+                            score = person.score * match_ratio * 1.05  # 105% of original score for fuzzy (boost good matches)
+                            print(f"    ✅ FUZZY MATCH! Score: {person.score} * {match_ratio:.3f} * 1.05 = {score:.3f}")
 
             if matched:
                 # Create a copy with updated score and search mode

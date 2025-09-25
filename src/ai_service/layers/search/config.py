@@ -86,17 +86,29 @@ class ElasticsearchConfig(BaseModel):
             else:
                 payload["hosts"] = [h.strip() for h in hosts_str.split(",") if h.strip()]
         else:
-            # Auto-detect production server
+            # Auto-detect environment and set appropriate Elasticsearch host
             import socket
-            try:
-                hostname = socket.gethostname()
-                local_ip = socket.gethostbyname(hostname)
+            import os
 
-                # If we're on the known production server, use its public IP
-                if local_ip == "95.217.84.234":
-                    payload["hosts"] = ["95.217.84.234:9200"]
+            try:
+                # First check if we're running in Docker (production)
+                if os.path.exists('/.dockerenv') or os.environ.get('APP_ENV') == 'production':
+                    # Inside Docker container - use service name for internal communication
+                    payload["hosts"] = ["http://elasticsearch:9200"]
+                else:
+                    # Local development - check if we can detect production server
+                    hostname = socket.gethostname()
+                    local_ip = socket.gethostbyname(hostname)
+
+                    if local_ip == "95.217.84.234":
+                        # On production server but outside Docker - use external IP
+                        payload["hosts"] = ["http://95.217.84.234:9200"]
+                    else:
+                        # Local development environment
+                        payload["hosts"] = ["http://localhost:9200"]
             except Exception:
-                pass
+                # Fallback for any detection issues
+                payload["hosts"] = ["http://localhost:9200"]
 
         str_overrides = {
             "username": "ES_USERNAME",

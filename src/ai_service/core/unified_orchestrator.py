@@ -956,13 +956,14 @@ class UnifiedOrchestrator:
             
             # Add trace note for AC patterns after normalization
             if search_trace and hasattr(norm_result, 'tokens') and norm_result.tokens:
-                # Simple check for potential AC patterns
-                has_tier0_patterns = any(
-                    len(token) > 3 and token.isupper() 
+                # Check if we have meaningful name tokens for AC search
+                # AC search should run for any person names (surnames, given names)
+                has_searchable_patterns = any(
+                    len(token) >= 2 and token.isalpha()  # Any alphabetic token ≥2 chars
                     for token in norm_result.tokens
                 )
-                if not has_tier0_patterns:
-                    search_trace.note("AC skipped - no tier0/1 patterns detected")
+                if not has_searchable_patterns:
+                    search_trace.note("AC skipped - no searchable patterns detected")
                 else:
                     search_trace.note("AC patterns detected - proceeding with search")
 
