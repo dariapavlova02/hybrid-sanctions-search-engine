@@ -397,6 +397,15 @@ class UnifiedOrchestrator:
         logger.debug("Stage 5: Name Normalization")
         layer_start = time.time()
 
+        # Initialize metrics tracking for this layer
+        metrics = None
+        try:
+            from ..monitoring.prometheus_exporter import get_exporter
+            metrics = get_exporter()
+        except Exception as e:
+            logger.debug(f"Metrics not available in normalization layer: {e}")
+            metrics = None
+
         # Align legacy flags with feature flag directives
         remove_stop_words = feature_flags.strict_stopwords
         if feature_flags.preserve_hyphenated_case:

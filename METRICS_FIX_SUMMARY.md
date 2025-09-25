@@ -7,6 +7,7 @@ All `'metrics' is not defined` errors have been identified and fixed in the code
 ### 📍 **Fixed Locations:**
 
 1. **UnifiedOrchestrator (`src/ai_service/core/unified_orchestrator.py`)**
+   - `_handle_name_normalization_layer()` - ⭐ **ROOT CAUSE FIX** - Added metrics initialization
    - `_handle_signals_layer()` - Added metrics initialization
    - `_handle_decision_layer()` - Added metrics initialization
    - Main `process()` method - Enhanced error handling
@@ -39,10 +40,15 @@ if metrics is not None:
 
 ### ✅ **Local Testing Results:**
 
-- ✅ **Normalization Service**: No metrics errors
+- ✅ **Normalization Service**: No metrics errors ⭐ **ROOT CAUSE CONFIRMED FIXED**
+- ✅ **Normalization Layer**: `_handle_name_normalization_layer()` metrics initialization working
 - ✅ **Signals Service**: Fast path cache works without errors
 - ✅ **ResultBuilder**: Handles None metrics gracefully
 - ✅ **All conditional checks**: Properly implemented
+
+### 🎯 **ROOT CAUSE IDENTIFIED:**
+
+The persistent `'metrics' is not defined` error was caused by **missing metrics initialization in the `_handle_name_normalization_layer()` method** in unified_orchestrator.py. This method used `metrics.record_pipeline_stage_duration()` on line 426 without properly initializing the metrics variable first.
 
 ## 🚀 **REQUIRED ACTION: SERVICE RESTART**
 
