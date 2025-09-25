@@ -627,17 +627,22 @@ class UnifiedOrchestrator:
                 # Perform search using normalized text
                 query = norm_result.normalized if norm_result.normalized else ""
 
-                # Apply homoglyph normalization for search if homoglyphs detected
-                if (hasattr(norm_result, 'homoglyph_detected') and norm_result.homoglyph_detected and
-                    self.homoglyph_detector and query.strip()):
+                # ALWAYS check for homoglyphs in search query and normalize them
+                if self.homoglyph_detector and query.strip():
                     original_query = query
-                    normalized_query, transformations = self.homoglyph_detector.normalize_homoglyphs(query)
-                    if normalized_query != original_query:
-                        query = normalized_query
-                        logger.warning(f"🔧 HOMOGLYPH NORMALIZATION: '{original_query}' → '{query}' (transformations: {len(transformations)})")
-                        print(f"🔧 HOMOGLYPH SEARCH: '{original_query}' → '{query}'")
+                    # Detect homoglyphs first
+                    homoglyph_result = self.homoglyph_detector.detect_homoglyphs(query)
+                    if homoglyph_result and homoglyph_result.get('has_homoglyphs', False):
+                        # Normalize homoglyphs for search
+                        normalized_query, transformations = self.homoglyph_detector.normalize_homoglyphs(query)
+                        if normalized_query != original_query:
+                            query = normalized_query
+                            logger.warning(f"🔧 HOMOGLYPH NORMALIZATION FOR SEARCH: '{original_query}' → '{query}' (transformations: {len(transformations)})")
+                            print(f"🔧 HOMOGLYPH SEARCH: '{original_query}' → '{query}' - normalized for search")
+                        else:
+                            logger.debug("Homoglyphs detected but no normalization needed")
                     else:
-                        logger.debug("No homoglyph transformations needed for search query")
+                        logger.debug("No homoglyphs detected in search query")
                 print(f"🔍 SEARCH DEBUG: query='{query}', search_service={self.search_service is not None}, SearchOpts={SearchOpts is not None}")
 
                 if query.strip() and SearchOpts:

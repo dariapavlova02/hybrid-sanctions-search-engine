@@ -238,12 +238,8 @@ class DecisionEngine:
                         )
                         return RiskLevel.HIGH
 
-        # CRITICAL: Homoglyph attack detected = HIGH RISK if sanctions found
-        # Homoglyph attacks with sanctions matches are serious security threats
-        if inp and inp.normalization and hasattr(inp.normalization, 'homoglyph_detected'):
-            if inp.normalization.homoglyph_detected and inp.search and inp.search.total_matches > 0:
-                self.logger.warning(f"🚨 HOMOGLYPH ATTACK + SANCTIONS MATCH - forcing HIGH RISK (score: {score:.3f})")
-                return RiskLevel.HIGH
+        # REMOVED: Homoglyph normalization now happens before search
+        # No longer automatically blocking homoglyphs - they get normalized and searched normally
 
         # Standard score-based thresholds
         if score >= self.config.thr_high:
