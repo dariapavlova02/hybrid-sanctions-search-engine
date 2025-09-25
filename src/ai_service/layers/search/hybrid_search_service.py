@@ -2283,6 +2283,7 @@ class HybridSearchService(BaseService, SearchService):
                 return []
 
             # Use ES fuzzy query on AC patterns index
+            # Note: pattern field is keyword type, canonical is text type
             es_query = {
                 "query": {
                     "bool": {
@@ -2293,14 +2294,25 @@ class HybridSearchService(BaseService, SearchService):
                                         "value": query_text,
                                         "fuzziness": "AUTO",
                                         "prefix_length": 1,
-                                        "max_expansions": 50,  # Reduce for performance
+                                        "max_expansions": 50,
+                                        "boost": 3.0
+                                    }
+                                }
+                            },
+                            {
+                                "fuzzy": {
+                                    "canonical": {
+                                        "value": query_text,
+                                        "fuzziness": "AUTO",
+                                        "prefix_length": 1,
+                                        "max_expansions": 50,
                                         "boost": 2.0
                                     }
                                 }
                             },
                             {
                                 "match": {
-                                    "pattern": {
+                                    "canonical": {
                                         "query": query_text,
                                         "fuzziness": "AUTO",
                                         "boost": 1.5
@@ -2308,10 +2320,10 @@ class HybridSearchService(BaseService, SearchService):
                                 }
                             },
                             {
-                                "match_phrase_prefix": {
+                                "wildcard": {
                                     "pattern": {
-                                        "query": query_text,
-                                        "boost": 1.2
+                                        "value": f"*{query_text.lower()}*",
+                                        "boost": 1.0
                                     }
                                 }
                             }
@@ -2319,9 +2331,9 @@ class HybridSearchService(BaseService, SearchService):
                         "minimum_should_match": 1
                     }
                 },
-                "size": min(opts.top_k * 3, 100),  # Limit for performance
-                "_source": ["pattern", "entity_id", "entity_name", "metadata"],
-                "timeout": "2s"  # Prevent long-running queries
+                "size": min(opts.top_k * 3, 100),
+                "_source": ["pattern", "canonical", "entity_id", "entity_type", "confidence", "tier"],
+                "timeout": "2s"
             }
 
             # Execute ES query through AC adapter
@@ -2348,17 +2360,19 @@ class HybridSearchService(BaseService, SearchService):
                 candidate = Candidate(
                     doc_id=hit.get('_id', f"es_fuzzy_{len(fuzzy_candidates)}"),
                     score=normalized_score,
-                    text=source.get('entity_name', source.get('pattern', '')),
-                    entity_type="person",  # Default, could be in metadata
+                    text=source.get('canonical', source.get('pattern', '')),
+                    entity_type=source.get('entity_type', 'person'),
                     metadata={
                         "fuzzy_algorithm": "elasticsearch",
                         "original_query": query_text,
                         "es_score": score,
                         "pattern": source.get('pattern', ''),
-                        **source.get('metadata', {})
+                        "canonical": source.get('canonical', ''),
+                        "tier": source.get('tier', 0),
+                        "confidence": source.get('confidence', 0.0)
                     },
                     search_mode=SearchMode.FUZZY,
-                    match_fields=["fuzzy_name"],
+                    match_fields=["es_fuzzy"],
                     confidence=normalized_score,
                     trace={
                         "reason": "es_fuzzy_match",
