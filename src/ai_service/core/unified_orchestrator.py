@@ -128,10 +128,24 @@ class UnifiedOrchestrator:
 
                 search_config = HybridSearchConfig.from_env()
                 self.search_service = HybridSearchService(config=search_config)
-                logger.info("Auto-initialized HybridSearchService (search enabled, no service provided)")
+
+                # Initialize the service (this may throw if Elasticsearch unavailable)
+                self.search_service.initialize()
+
+                logger.info("✅ Auto-initialized HybridSearchService (search enabled, no service provided)")
             except Exception as e:
-                logger.warning(f"Failed to auto-initialize search service: {e}")
-                self.search_service = None
+                logger.warning(f"❌ Failed to auto-initialize HybridSearchService: {e}")
+                logger.info("🔄 Falling back to MockSearchService for development/testing")
+
+                # Fallback to MockSearchService
+                try:
+                    from ai_service.layers.search.mock_search_service import MockSearchService
+                    self.search_service = MockSearchService()
+                    self.search_service.initialize()
+                    logger.info("✅ MockSearchService initialized successfully - search escalation available")
+                except Exception as mock_e:
+                    logger.error(f"❌ Critical: Failed to initialize MockSearchService: {mock_e}")
+                    self.search_service = None
 
         self.default_feature_flags = default_feature_flags or FeatureFlags()
         
@@ -179,12 +193,17 @@ class UnifiedOrchestrator:
             allow_smart_filter_skip if allow_smart_filter_skip is not None else SERVICE_CONFIG.allow_smart_filter_skip
         )
 
+        # Log search service type for debugging
+        search_service_type = "None"
+        if self.search_service:
+            search_service_type = type(self.search_service).__name__
+
         logger.info(
             f"UnifiedOrchestrator initialized with stages: "
             f"validation=True, smart_filter={self.enable_smart_filter}, "
             f"language=True, unicode=True, normalization=True, signals=True, "
             f"variants={self.enable_variants}, embeddings={self.enable_embeddings}, "
-            f"search={self.enable_search}"
+            f"search={self.enable_search}, search_service={search_service_type}"
         )
 
     async def _maybe_await(self, x):
@@ -391,6 +410,7 @@ class UnifiedOrchestrator:
             logger.debug(f"Skipping morphology for short text: {token_count} tokens, {len(text_u)} chars")
 
         # Use unicode-normalized text for normalization
+        norm_start = time.time()
         norm_result = await self._maybe_await(self.normalization_service.normalize_async(
             text_u,  # Use unicode-normalized text
             language=context.language,
@@ -399,6 +419,11 @@ class UnifiedOrchestrator:
             enable_advanced_features=enable_advanced_features,
             feature_flags=feature_flags,
         ))
+
+        # Record normalization metrics
+        if metrics:
+            norm_duration = (time.time() - norm_start) * 1000  # Convert to ms
+            metrics.record_pipeline_stage_duration("normalization", norm_duration)
         
         # Add flag reasons to trace if debug_trace is enabled
         if hasattr(norm_result, 'debug_trace') and norm_result.debug_trace:
@@ -452,6 +477,11 @@ class UnifiedOrchestrator:
 
         if self.metrics_service:
             self.metrics_service.record_timer('processing.layer.signals', time.time() - layer_start)
+
+        # Record signals processing metrics
+        if metrics:
+            signals_duration = (time.time() - layer_start) * 1000  # Convert to ms
+            metrics.record_pipeline_stage_duration("signals", signals_duration)
             self.metrics_service.record_histogram('signals.confidence', signals_result.confidence)
             self.metrics_service.record_histogram('signals.persons_count', self._safe_len(signals_result.persons))
             self.metrics_service.record_histogram('signals.organizations_count', self._safe_len(signals_result.organizations))
@@ -632,6 +662,25 @@ class UnifiedOrchestrator:
                         "processing_time_ms": search_processing_time
                     }
 
+                    # Add search trace if available
+                    if search_trace and search_trace.enabled:
+                        search_results["trace"] = {
+                            "steps": [
+                                {
+                                    "stage": step.stage,
+                                    "query": step.query,
+                                    "took_ms": step.took_ms,
+                                    "hits_count": len(step.hits),
+                                    "best_score": max((hit.score for hit in step.hits), default=0.0),
+                                    "meta": step.meta
+                                }
+                                for step in search_trace.steps
+                            ],
+                            "total_time_ms": search_trace.get_total_time_ms(),
+                            "total_hits": search_trace.get_hit_count(),
+                            "notes": search_trace.notes
+                        }
+
                     if search_trace:
                         result_count = search_results.get('total_hits', 0) if search_results else 0
                         search_trace.note(f"Search completed: {result_count} results for '{query}'")
@@ -736,6 +785,15 @@ class UnifiedOrchestrator:
                     self.metrics_service.record_timer('processing.layer.decision', time.time() - layer_start)
                     self.metrics_service.record_histogram('decision.score', decision_result.score)
                     self.metrics_service.record_counter(f'decision.result.{decision_result.risk.value.lower()}', 1)
+
+                # Record sanctions decision metrics
+                if metrics:
+                    # Detect if fast path was used by checking for fast path sanctions in signals
+                    fast_path_used = any(
+                        getattr(result, 'fast_path_sanctions', {}).get('cache_hit', False)
+                        for result in [signals_result] if hasattr(result, '__dict__')
+                    )
+                    metrics.record_sanctions_decision(decision_result.risk.value, fast_path_used)
             except Exception as e:
                 logger.warning(f"Decision engine failed: {e}")
                 if self.metrics_service:
@@ -758,7 +816,7 @@ class UnifiedOrchestrator:
         generate_embeddings: Optional[bool] = None,
         feature_flags: Optional[FeatureFlags] = None,
         # Search tracing
-        search_trace_enabled: bool = False,
+        search_trace_enabled: bool = True,  # Enable by default for debugging
         # Legacy compatibility kwargs (ignored but accepted)
         cache_result: Optional[bool] = None,
         embeddings: Optional[bool] = None,
@@ -783,6 +841,13 @@ class UnifiedOrchestrator:
         start_time = time.time()
         context = ProcessingContext(original_text=text)
         errors = []
+
+        # Initialize metrics tracking
+        try:
+            from ..monitoring.prometheus_exporter import get_exporter
+            metrics = get_exporter()
+        except ImportError:
+            metrics = None
         
         # Initialize search trace if enabled
         search_trace = None
@@ -1046,20 +1111,32 @@ class UnifiedOrchestrator:
         if signals_result.persons:
             # Use the highest person confidence
             person_confidence = max(p.confidence for p in signals_result.persons)
-            # Check for ID matches in person data
+            # Check for SANCTIONED ID matches in person data (FAST PATH logic)
             for person in signals_result.persons:
                 if hasattr(person, 'ids') and person.ids:
-                    id_match = True
-                    break
+                    # Only set id_match=True if we found sanctioned IDs (not just any IDs)
+                    for id_info in person.ids:
+                        if isinstance(id_info, dict) and id_info.get('sanctioned', False):
+                            id_match = True
+                            logger.warning(f"🚨 FAST PATH: Sanctioned person ID detected: {id_info.get('value')}")
+                            break
+                    if id_match:
+                        break
         
         if signals_result.organizations:
             # Use the highest organization confidence
             org_confidence = max(o.confidence for o in signals_result.organizations)
-            # Check for ID matches in organization data
+            # Check for SANCTIONED ID matches in organization data (FAST PATH logic)
             for org in signals_result.organizations:
                 if hasattr(org, 'ids') and org.ids:
-                    id_match = True
-                    break
+                    # Only set id_match=True if we found sanctioned IDs (not just any IDs)
+                    for id_info in org.ids:
+                        if isinstance(id_info, dict) and id_info.get('sanctioned', False):
+                            id_match = True
+                            logger.warning(f"🚨 FAST PATH: Sanctioned org ID detected: {id_info.get('value')}")
+                            break
+                    if id_match:
+                        break
         
         # Check for date matches in extras
         if hasattr(signals_result, 'extras') and isinstance(signals_result.extras, dict) and signals_result.extras.get('dates'):

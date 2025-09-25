@@ -70,64 +70,103 @@ class MockSearchService(SearchService):
         self._test_persons = self._create_test_persons()
 
     def _create_test_persons(self) -> List[Candidate]:
-        """Create test person records based on actual sanctions data structure."""
-        return [
-            Candidate(
-                doc_id="mock_person_1",
-                score=0.95,
-                text="Ковриков Роман Валерійович",
-                entity_type="person",
-                metadata={
-                    "name": "Ковриков Роман Валерійович",
-                    "name_en": "Kovrykov Roman Valeriiovych",
-                    "birthdate": "1976-08-09",
-                    "dob": "1976-08-09",
-                    "itn": "782611846337",
-                    "person_id": 32450,
-                    "status": 1
-                },
-                search_mode=SearchMode.AC,
-                match_fields=["name", "name_en"],
-                confidence=0.95
-            ),
-            Candidate(
-                doc_id="mock_person_2",
-                score=0.90,
-                text="Гаркушев Євген Миколайович",
-                entity_type="person",
-                metadata={
-                    "name": "Гаркушев Євген Миколайович",
-                    "name_en": "Harkushev Yevhen Mykolaiovych",
-                    "birthdate": "1972-04-18",
-                    "dob": "1972-04-18",
-                    "itn": "614401250400",
-                    "person_id": 32449,
-                    "status": 1
-                },
-                search_mode=SearchMode.AC,
-                match_fields=["name", "name_en"],
-                confidence=0.90
-            ),
-            # Add Poroshenko for testing vector search escalation
-            Candidate(
-                doc_id="mock_person_poroshenko",
-                score=0.85,
-                text="Порошенко Петро Олексійович",
-                entity_type="person",
-                metadata={
-                    "name": "Порошенко Петро Олексійович",
-                    "name_en": "Poroshenko Petro Oleksiyovych",
-                    "birthdate": "1965-09-26",
-                    "dob": "1965-09-26",
-                    "itn": "2847003745",
-                    "person_id": 10001,
-                    "status": 1
-                },
-                search_mode=SearchMode.VECTOR,  # Found via vector search
-                match_fields=["name", "name_en"],
-                confidence=0.85
-            )
-        ]
+        """Load real sanctions data instead of hardcoded test records."""
+        try:
+            import json
+            from pathlib import Path
+
+            # Get path to data directory
+            data_dir = Path(__file__).parent.parent.parent / "data"
+            candidates = []
+
+            # Load sanctioned persons
+            persons_file = data_dir / "sanctioned_persons.json"
+            if persons_file.exists():
+                with open(persons_file, 'r', encoding='utf-8') as f:
+                    persons_data = json.load(f)
+
+                # Take first 500 persons for mock search (enough for testing, not too many)
+                for i, person in enumerate(persons_data[:500]):
+                    name = person.get('name', '').strip()
+                    name_en = person.get('name_en', '').strip()
+
+                    if name:  # Only add persons with valid names
+                        candidate = Candidate(
+                            doc_id=f"mock_person_{person.get('person_id', i)}",
+                            score=0.95,  # High score for exact matches
+                            text=name,
+                            entity_type="person",
+                            metadata={
+                                "name": name,
+                                "name_en": name_en,
+                                "birthdate": person.get('birthdate', ''),
+                                "dob": person.get('birthdate', ''),
+                                "itn": person.get('itn', person.get('inn', '')),
+                                "person_id": person.get('person_id', i),
+                                "status": person.get('status', 1)
+                            },
+                            search_mode=SearchMode.AC,
+                            match_fields=["name", "name_en"],
+                            confidence=0.95
+                        )
+                        candidates.append(candidate)
+
+            # Load sanctioned companies
+            companies_file = data_dir / "sanctioned_companies.json"
+            if companies_file.exists():
+                with open(companies_file, 'r', encoding='utf-8') as f:
+                    companies_data = json.load(f)
+
+                # Take first 200 companies
+                for i, company in enumerate(companies_data[:200]):
+                    name = company.get('name', '').strip()
+                    name_en = company.get('name_en', '').strip()
+
+                    if name:  # Only add companies with valid names
+                        candidate = Candidate(
+                            doc_id=f"mock_company_{company.get('org_id', i)}",
+                            score=0.90,  # Slightly lower score for companies
+                            text=name,
+                            entity_type="organization",
+                            metadata={
+                                "name": name,
+                                "name_en": name_en,
+                                "tax_number": company.get('tax_number', ''),
+                                "edrpou": company.get('edrpou', ''),
+                                "org_id": company.get('org_id', i),
+                                "status": company.get('status', 1)
+                            },
+                            search_mode=SearchMode.AC,
+                            match_fields=["name", "name_en"],
+                            confidence=0.90
+                        )
+                        candidates.append(candidate)
+
+            print(f"✅ MockSearchService loaded {len(candidates)} real sanctions records")
+            return candidates
+
+        except Exception as e:
+            print(f"⚠️ Failed to load real sanctions data: {e}, falling back to minimal hardcoded records")
+            # Fallback to minimal hardcoded data
+            return [
+                Candidate(
+                    doc_id="fallback_person_1",
+                    score=0.95,
+                    text="Ковриков Роман Валерійович",
+                    entity_type="person",
+                    metadata={
+                        "name": "Ковриков Роман Валерійович",
+                        "name_en": "Kovrykov Roman Valeriiovych",
+                        "birthdate": "1976-08-09",
+                        "itn": "782611846337",
+                        "person_id": 32450,
+                        "status": 1
+                    },
+                    search_mode=SearchMode.AC,
+                    match_fields=["name", "name_en"],
+                    confidence=0.95
+                )
+            ]
 
     def initialize(self):
         """Mock initialization."""
@@ -156,8 +195,8 @@ class MockSearchService(SearchService):
 
         for person in self._test_persons:
             if (query_lower in person.text.lower() or
-                query_lower in person.metadata.get("name_en", "").lower() or
-                query_lower in person.metadata.get("itn", "")):
+                query_lower in (person.metadata.get("name_en") or "").lower() or
+                query_lower in (person.metadata.get("itn") or "")):
                 results.append({
                     "doc_id": person.doc_id,
                     "score": person.score,
@@ -184,19 +223,24 @@ class MockSearchService(SearchService):
         query_lower = text.lower()
         candidates = []
 
+        print(f"🔍 MockSearchService.find_candidates: query='{text}', mode={opts.search_mode}, threshold={opts.threshold}")
+
         for person in self._test_persons:
             score = 0.0
             matched = False
 
+            print(f"  Checking person: {person.text}")
+
             # Exact substring matching
             if (query_lower in person.text.lower() or
-                query_lower in person.metadata.get("name_en", "").lower() or
-                query_lower in person.metadata.get("itn", "")):
+                query_lower in (person.metadata.get("name_en") or "").lower() or
+                query_lower in (person.metadata.get("itn") or "")):
                 matched = True
                 score = person.score
 
             # Fuzzy matching for typos (e.g., "Порошенк" matches "Порошенко")
             elif opts.search_mode in [SearchMode.VECTOR, SearchMode.HYBRID]:
+                print(f"  Fuzzy matching for '{person.text}'")
                 person_lower = person.text.lower()
                 query_tokens = query_lower.split()
                 person_tokens = person_lower.split()
@@ -217,10 +261,12 @@ class MockSearchService(SearchService):
                 # Calculate fuzzy match score
                 if matching_tokens > 0:
                     match_ratio = matching_tokens / max(len(query_tokens), len(person_tokens))
+                    print(f"    Tokens: {matching_tokens}/{max(len(query_tokens), len(person_tokens))}, ratio: {match_ratio:.3f}")
                     if match_ratio >= 0.5:  # At least 50% tokens match
                         matched = True
-                        # Reduce score for fuzzy matches
-                        score = person.score * match_ratio * 0.8  # 80% of original score for fuzzy
+                        # Minimal penalty for fuzzy matches to ensure good matches pass threshold
+                        score = person.score * match_ratio * 1.05  # 105% of original score for fuzzy (boost good matches)
+                        print(f"    ✅ FUZZY MATCH! Score: {person.score} * {match_ratio:.3f} * 1.05 = {score:.3f}")
 
             if matched:
                 # Create a copy with updated score and search mode
@@ -241,7 +287,9 @@ class MockSearchService(SearchService):
 
         # Apply threshold filtering
         threshold = getattr(opts, 'threshold', 0.7)
+        print(f"  Pre-threshold: {len(candidates)} candidates")
         candidates = [c for c in candidates if c.score >= threshold]
+        print(f"  Post-threshold ({threshold}): {len(candidates)} candidates")
 
         # Limit results
         limit = getattr(opts, 'top_k', 10)

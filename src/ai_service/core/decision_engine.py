@@ -192,14 +192,38 @@ class DecisionEngine:
                 self.logger.info(f"🚨 EXACT SANCTIONS MATCH - forcing HIGH RISK (score: {score:.3f})")
                 return RiskLevel.HIGH
 
-        # CRITICAL: Sanctioned ID detected = automatic HIGH RISK
-        if inp and inp.search and inp.search.total_matches > 0:
-            if hasattr(inp, 'search_candidates'):
-                for candidate in inp.search_candidates:
-                    if (candidate.get('search_mode') == 'id_exact' or
-                        'itn' in candidate.get('match_fields', []) or
-                        'inn' in candidate.get('match_fields', [])):
-                        self.logger.warning(f"🚨 SANCTIONED ID DETECTED - forcing HIGH RISK (score: {score:.3f})")
+        # PRIORITY 1: ID match with exact sanctions = immediate HIGH RISK
+        if inp and inp.signals and inp.signals.id_match:
+            self.logger.warning(f"🚨 SANCTIONED ID MATCH - forcing HIGH RISK (ID match confirmed, score: {score:.3f})")
+            return RiskLevel.HIGH
+
+        # PRIORITY 2: TIN/DOB combination match = immediate HIGH RISK
+        if inp and inp.search and inp.search.fusion_candidates:
+            for candidate in inp.search.fusion_candidates:
+                # Check if candidate has both TIN-like ID and DOB that match our signals
+                candidate_has_tin = any(
+                    key in candidate.meta for key in ['inn', 'itn', 'tin', 'edrpou', 'taxpayer_id']
+                )
+                candidate_has_dob = candidate.dob is not None
+
+                if candidate_has_tin and candidate_has_dob and candidate.final_score >= 0.8:
+                    self.logger.warning(
+                        f"🚨 TIN+DOB SANCTIONS MATCH - forcing HIGH RISK "
+                        f"(candidate: {candidate.entity_id}, score: {candidate.final_score:.3f}, "
+                        f"overall_score: {score:.3f})"
+                    )
+                    return RiskLevel.HIGH
+
+        # PRIORITY 3: High confidence search matches = automatic HIGH RISK
+        if inp and inp.search and inp.search.high_confidence_matches > 0:
+            # Check if any fusion candidates have very high scores
+            if inp.search.fusion_candidates:
+                for candidate in inp.search.fusion_candidates:
+                    if candidate.final_score >= 0.9:  # Very high confidence match
+                        self.logger.warning(
+                            f"🚨 HIGH CONFIDENCE SANCTIONS MATCH - forcing HIGH RISK "
+                            f"(candidate: {candidate.entity_id}, score: {candidate.final_score:.3f})"
+                        )
                         return RiskLevel.HIGH
 
         # CRITICAL: Homoglyph attack detected = automatic HIGH RISK
@@ -222,12 +246,37 @@ class DecisionEngine:
         reasons = []
         reasons.append(f"Overall risk score: {score:.3f}")
 
-        # CRITICAL: Check for exact sanctions match first
+        # PRIORITY 1: ID match reasons
+        if inp.signals.id_match:
+            reasons.append("🚨 SANCTIONED ID MATCH CONFIRMED - HIGH RISK")
+
+        # PRIORITY 2: TIN+DOB combination match
+        tin_dob_match_found = False
+        if inp.search and inp.search.fusion_candidates and risk == RiskLevel.HIGH:
+            for candidate in inp.search.fusion_candidates:
+                candidate_has_tin = any(
+                    key in candidate.meta for key in ['inn', 'itn', 'tin', 'edrpou', 'taxpayer_id']
+                )
+                candidate_has_dob = candidate.dob is not None
+
+                if candidate_has_tin and candidate_has_dob and candidate.final_score >= 0.8:
+                    reasons.append(f"🚨 TIN+DOB SANCTIONS MATCH - HIGH RISK (candidate: {candidate.entity_id})")
+                    tin_dob_match_found = True
+                    break
+
+        # PRIORITY 3: Exact sanctions match
         if (inp.search and inp.search.has_exact_matches and
             inp.search.exact_confidence >= 0.95 and risk == RiskLevel.HIGH):
             reasons.append("🚨 EXACT MATCH IN SANCTIONS LIST - HIGH RISK")
 
-        # CRITICAL: Check for homoglyph attack
+        # PRIORITY 4: High confidence search matches
+        if inp.search and inp.search.fusion_candidates and risk == RiskLevel.HIGH and not tin_dob_match_found:
+            for candidate in inp.search.fusion_candidates:
+                if candidate.final_score >= 0.9:
+                    reasons.append(f"🚨 HIGH CONFIDENCE SANCTIONS MATCH - HIGH RISK (score: {candidate.final_score:.3f})")
+                    break
+
+        # PRIORITY 5: Homoglyph attack
         if (inp and hasattr(inp, 'normalization') and hasattr(inp.normalization, 'homoglyph_detected') and
             inp.normalization.homoglyph_detected):
             reasons.append("🚨 HOMOGLYPH ATTACK DETECTED - HIGH RISK")
@@ -537,61 +586,93 @@ class DecisionEngine:
     def _should_request_additional_fields(self, inp: DecisionInput, risk: RiskLevel, score: float) -> tuple[bool, List[str]]:
         """
         Determine if additional fields (TIN/DOB) are required for decision.
-        
+
         Business rule:
+        - If exact ID match found → NO additional fields needed (immediate HIGH risk)
+        - If TIN+DOB match found → NO additional fields needed (immediate HIGH risk)
         - If strong name match but missing TIN/DOB → mark REVIEW and request fields
         - Exception: if sanction record has neither TIN nor DOB → allow reject by full name
-        
+
         Args:
             inp: Decision input with signals
             risk: Current risk level
             score: Current decision score
-            
+
         Returns:
             Tuple of (review_required, required_fields)
         """
         # Check if TIN/DOB gate is enabled
         if not getattr(self.config, 'require_tin_dob_gate', True):
             return False, []
-        
+
+        # EXCEPTION 1: If ID match already confirmed, no additional fields needed
+        if inp.signals.id_match:
+            self.logger.debug("ID match confirmed - no additional fields required")
+            return False, []
+
+        # EXCEPTION 2: If we already found TIN+DOB match in search candidates, no additional fields needed
+        if inp.search and inp.search.fusion_candidates:
+            for candidate in inp.search.fusion_candidates:
+                candidate_has_tin = any(
+                    key in candidate.meta for key in ['inn', 'itn', 'tin', 'edrpou', 'taxpayer_id']
+                )
+                candidate_has_dob = candidate.dob is not None
+
+                if candidate_has_tin and candidate_has_dob and candidate.final_score >= 0.8:
+                    self.logger.debug(
+                        f"TIN+DOB match confirmed in candidate {candidate.entity_id} - no additional fields required"
+                    )
+                    return False, []
+
         # Only apply to high-risk decisions (strong matches)
         if risk != RiskLevel.HIGH:
             return False, []
-        
+
         # Check if we have strong name match indicators
         has_strong_name_match = (
-            inp.signals.person_confidence >= 0.8 or 
+            inp.signals.person_confidence >= 0.8 or
             inp.signals.org_confidence >= 0.8 or
             (inp.similarity.cos_top and inp.similarity.cos_top >= 0.8)
         )
-        
+
         if not has_strong_name_match:
             return False, []
-        
-        # Check if we have TIN/DOB evidence
-        has_tin = inp.signals.id_match or 'inn' in inp.signals.evidence.get('extracted_ids', [])
-        has_dob = inp.signals.date_match or 'dob' in inp.signals.evidence.get('extracted_dates', [])
-        
-        # If we have both TIN and DOB, no additional fields needed
-        if has_tin and has_dob:
+
+        # Check if we have TIN/DOB evidence in our signals
+        has_tin_evidence = (
+            inp.signals.id_match or
+            'inn' in inp.signals.evidence.get('extracted_ids', []) or
+            'tin' in inp.signals.evidence.get('extracted_ids', []) or
+            'edrpou' in inp.signals.evidence.get('extracted_ids', [])
+        )
+        has_dob_evidence = (
+            inp.signals.date_match or
+            'dob' in inp.signals.evidence.get('extracted_dates', [])
+        )
+
+        # If we have both TIN and DOB evidence, no additional fields needed
+        if has_tin_evidence and has_dob_evidence:
+            self.logger.debug("Both TIN and DOB evidence found - no additional fields required")
             return False, []
-        
+
         # Check if sanction record lacks both TIN and DOB (exception case)
         sanction_has_no_identifiers = (
             'sanction_record' in inp.signals.evidence and
             not inp.signals.evidence.get('sanction_record', {}).get('has_tin', False) and
             not inp.signals.evidence.get('sanction_record', {}).get('has_dob', False)
         )
-        
+
         if sanction_has_no_identifiers:
             # Allow reject by full name - no additional fields required
+            self.logger.debug("Sanction record has no identifiers - allowing name-only match")
             return False, []
-        
-        # Request missing fields
+
+        # Request missing fields for strong name matches
         required_fields = []
-        if not has_tin:
+        if not has_tin_evidence:
             required_fields.append('TIN')
-        if not has_dob:
+        if not has_dob_evidence:
             required_fields.append('DOB')
-        
+
+        self.logger.debug(f"Strong name match but missing identifiers - requesting: {required_fields}")
         return True, required_fields

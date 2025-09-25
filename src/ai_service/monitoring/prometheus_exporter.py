@@ -192,6 +192,41 @@ class SearchPrometheusExporter:
             'Search cache hit rate (0-1)',
             registry=self.registry
         )
+
+        # Fast path INN cache metrics
+        self.fast_path_cache_hits_total = Counter(
+            'fast_path_cache_hits_total',
+            'Total number of fast path INN cache hits',
+            registry=self.registry
+        )
+
+        self.fast_path_cache_lookups_total = Counter(
+            'fast_path_cache_lookups_total',
+            'Total number of fast path INN cache lookups',
+            registry=self.registry
+        )
+
+        self.fast_path_cache_hit_rate = Gauge(
+            'fast_path_cache_hit_rate',
+            'Fast path INN cache hit rate (0-1)',
+            registry=self.registry
+        )
+
+        # Pipeline performance metrics
+        self.pipeline_stage_duration_ms = Histogram(
+            'pipeline_stage_duration_ms',
+            'Duration of each pipeline stage in milliseconds',
+            ['stage'],
+            buckets=[1, 2, 5, 10, 25, 50, 100, 250, 500, 1000],
+            registry=self.registry
+        )
+
+        self.sanctions_screening_decisions_total = Counter(
+            'sanctions_screening_decisions_total',
+            'Total number of sanctions screening decisions',
+            ['risk_level', 'fast_path'],
+            registry=self.registry
+        )
     
     def record_search_request(
         self,
@@ -281,11 +316,55 @@ class SearchPrometheusExporter:
     def update_cache_hit_rate(self, rate: float) -> None:
         """
         Update search cache hit rate.
-        
+
         Args:
             rate: Cache hit rate (0-1)
         """
         self.search_cache_hit_rate.set(rate)
+
+    def record_fast_path_cache_lookup(self, hit: bool) -> None:
+        """
+        Record a fast path INN cache lookup.
+
+        Args:
+            hit: Whether the lookup was a cache hit
+        """
+        self.fast_path_cache_lookups_total.inc()
+        if hit:
+            self.fast_path_cache_hits_total.inc()
+
+    def update_fast_path_cache_hit_rate(self, rate: float) -> None:
+        """
+        Update fast path INN cache hit rate.
+
+        Args:
+            rate: Cache hit rate (0-1)
+        """
+        self.fast_path_cache_hit_rate.set(rate)
+
+    def record_pipeline_stage_duration(self, stage: str, duration_ms: float) -> None:
+        """
+        Record duration of a pipeline stage.
+
+        Args:
+            stage: Pipeline stage name
+            duration_ms: Duration in milliseconds
+        """
+        self.pipeline_stage_duration_ms.labels(stage=stage).observe(duration_ms)
+
+    def record_sanctions_decision(self, risk_level: str, fast_path_used: bool) -> None:
+        """
+        Record a sanctions screening decision.
+
+        Args:
+            risk_level: Risk level (low/medium/high)
+            fast_path_used: Whether fast path was used
+        """
+        fast_path_label = "true" if fast_path_used else "false"
+        self.sanctions_screening_decisions_total.labels(
+            risk_level=risk_level.lower(),
+            fast_path=fast_path_label
+        ).inc()
     
     def record_search_metrics(self, metrics: SearchMetrics) -> None:
         """

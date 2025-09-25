@@ -73,6 +73,7 @@ class TokenRole(Enum):
     INITIAL = "initial"
     ORG = "org"
     OTHER = "other"
+    ID = "id"  # For numeric identifiers like INN/ITN
     UNKNOWN = "unknown"
 
 
@@ -561,6 +562,60 @@ class SingleCharNumberRule(FSMTransitionRule):
         return state, TokenRole.OTHER, "single_char_number", evidence
 
 
+class NumericIdentifierRule(FSMTransitionRule):
+    """Rule for detecting numeric identifiers (INN/ITN/EDRPOU etc.) and keeping them as ID tokens."""
+
+    def __init__(self):
+        self.logger = get_logger(__name__)
+
+    def can_apply(self, state: FSMState, token: Token, context: List[Token]) -> bool:
+        # Check if token is numeric
+        if not token.text.isdigit():
+            return False
+
+        length = len(token.text)
+
+        # Check if there's an ID marker nearby (within 2 positions)
+        id_markers = {"іпн", "инн", "inn", "itn", "єдрпоу", "едрпоу", "edrpou", "окпо", "okpo", "огрн", "ogrn", "кпп", "kpp"}
+        has_id_marker = False
+
+        # Check previous and next tokens for ID markers
+        for i in range(max(0, token.pos - 2), min(len(context), token.pos + 3)):
+            if i != token.pos and i < len(context):
+                check_token = context[i].text.lower()
+                if check_token in id_markers:
+                    self.logger.debug(f"Found ID marker '{check_token}' near numeric token '{token.text}'")
+                    has_id_marker = True
+                    break
+
+        # Apply different length rules based on context
+        if has_id_marker:
+            # With ID marker: allow 6-16 digits (e.g., EDRPOU can be 8 digits)
+            if not (6 <= length <= 16):
+                return False
+        else:
+            # Without ID marker: require 10-16 digits (typical for INN/TIN)
+            if not (10 <= length <= 16):
+                return False
+
+        return True
+
+    def apply(self, state: FSMState, token: Token, context: List[Token]) -> Tuple[FSMState, TokenRole, str, List[str]]:
+        evidence = ["numeric_id_detected", f"length_{len(token.text)}"]
+
+        # Check for nearby ID markers for better evidence
+        id_markers = {"іпн", "инн", "inn", "itn", "єдрпоу", "едрпоу", "edrpou", "окпо", "okpo", "огрн", "ogrn", "кпп", "kpp"}
+        for i in range(max(0, token.pos - 2), min(len(context), token.pos + 3)):
+            if i != token.pos and i < len(context):
+                check_token = context[i].text.lower()
+                if check_token in id_markers:
+                    evidence.append(f"marker_{check_token}_nearby")
+                    break
+
+        self.logger.debug(f"Classified '{token.text}' as ID with evidence: {evidence}")
+        return state, TokenRole.ID, "numeric_identifier", evidence
+
+
 class DefaultPersonRule(FSMTransitionRule):
     """Default rule for person name tokens that considers morphology and dictionaries."""
 
@@ -792,6 +847,7 @@ class RoleTaggerService:
         """Initialize FSM transition rules."""
         # Order matters - higher priority rules first
         self.rules_list = [
+            NumericIdentifierRule(),  # HIGH PRIORITY: Preserve numeric IDs
             RussianStopwordInitRule(self.lexicons, False),
             UkrainianInitPrepositionRule(self.lexicons, False),
             StopwordRule(self.lexicons, False),

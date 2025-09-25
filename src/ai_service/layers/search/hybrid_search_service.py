@@ -118,15 +118,29 @@ class HybridSearchService(BaseService, SearchService):
     def _do_initialize(self) -> None:
         """Initialize search adapters and fallback services."""
         try:
-            self._client_factory = ElasticsearchClientFactory(self.config)
-            self._ac_adapter = ElasticsearchACAdapter(
-                self.config,
-                client_factory=self._client_factory,
-            )
-            self._vector_adapter = ElasticsearchVectorAdapter(
-                self.config,
-                client_factory=self._client_factory,
-            )
+            # Try to initialize Elasticsearch components
+            try:
+                self._client_factory = ElasticsearchClientFactory(self.config)
+                self._ac_adapter = ElasticsearchACAdapter(
+                    self.config,
+                    client_factory=self._client_factory,
+                )
+                self._vector_adapter = ElasticsearchVectorAdapter(
+                    self.config,
+                    client_factory=self._client_factory,
+                )
+                self.logger.info("✅ Elasticsearch adapters initialized successfully")
+            except Exception as es_e:
+                self.logger.warning(f"⚠️ Failed to initialize Elasticsearch adapters: {es_e}")
+                self.logger.info("📝 Will use fallback services for search")
+                # Don't raise - continue with fallback services
+
+            # Initialize fallback services (always try these)
+            try:
+                self._ensure_fallback_services()
+                self.logger.info("✅ Fallback services initialized")
+            except Exception as fallback_e:
+                self.logger.warning(f"⚠️ Failed to initialize fallback services: {fallback_e}")
 
             # Start hot-reloading if supported
             if hasattr(self.config, 'start_hot_reload'):
@@ -140,10 +154,10 @@ class HybridSearchService(BaseService, SearchService):
                     self.logger.warning(f"Failed to enable hot-reloading: {e}")
 
             self._initialized = True
-            self.logger.info("Hybrid search service initialized successfully")
+            self.logger.info("✅ Hybrid search service initialized successfully (with available components)")
 
         except Exception as e:
-            self.logger.error(f"Failed to initialize hybrid search service: {e}")
+            self.logger.error(f"❌ Failed to initialize hybrid search service: {e}")
             raise
 
     async def _get_embedding_service(self):
@@ -726,8 +740,26 @@ class HybridSearchService(BaseService, SearchService):
         hybrid_start_time = time.perf_counter()
         
         # Step 1: Try AC search first
+        ac_start_time = time.perf_counter()
         ac_candidates = await self._ac_search_only(normalized, text, opts, search_trace)
-        
+        ac_time = (time.perf_counter() - ac_start_time) * 1000
+
+        # Add AC trace step
+        ac_best_score = max((c.score for c in ac_candidates), default=0.0)
+        search_trace.add_step(SearchTraceStep(
+            stage="AC",
+            query=query_text,
+            topk=opts.top_k,
+            took_ms=ac_time,
+            hits=[SearchTraceHit(doc_id=c.doc_id, score=c.score, rank=i+1, source="AC")
+                  for i, c in enumerate(ac_candidates[:10])],
+            meta={
+                "threshold": opts.threshold,
+                "best_score": ac_best_score,
+                "total_hits": len(ac_candidates)
+            }
+        ))
+
         # Check if AC results are sufficient
         should_escalate = self._should_escalate(ac_candidates, opts)
         print(f"🔥 ESCALATION DEBUG: ac_count={len(ac_candidates)}, should_escalate={should_escalate}, threshold={opts.escalation_threshold}")
@@ -737,7 +769,26 @@ class HybridSearchService(BaseService, SearchService):
             self._metrics.escalation_triggered += 1
 
             # Step 2: Try fuzzy search before vector search
+            fuzzy_start_time = time.perf_counter()
             fuzzy_candidates = await self._fuzzy_search(query_text, opts, search_trace)
+            fuzzy_time = (time.perf_counter() - fuzzy_start_time) * 1000
+
+            # Add fuzzy trace step
+            fuzzy_best_score = max((c.score for c in fuzzy_candidates), default=0.0)
+            search_trace.add_step(SearchTraceStep(
+                stage="LEXICAL",  # Fuzzy is lexical search
+                query=query_text,
+                topk=opts.top_k,
+                took_ms=fuzzy_time,
+                hits=[SearchTraceHit(doc_id=c.doc_id, score=c.score, rank=i+1, source="LEXICAL")
+                      for i, c in enumerate(fuzzy_candidates[:10])],
+                meta={
+                    "search_type": "fuzzy",
+                    "best_score": fuzzy_best_score,
+                    "total_hits": len(fuzzy_candidates),
+                    "escalation_triggered": True
+                }
+            ))
 
             # Check if fuzzy results are good enough
             if self._fuzzy_results_sufficient(fuzzy_candidates, opts):
@@ -761,7 +812,26 @@ class HybridSearchService(BaseService, SearchService):
                 self.logger.info("Fuzzy search insufficient, escalating to vector search")
 
             # Step 3: Execute vector search (fuzzy wasn't sufficient)
+            vector_start_time = time.perf_counter()
             vector_candidates = await self._vector_search_only(normalized, text, opts, search_trace)
+            vector_time = (time.perf_counter() - vector_start_time) * 1000
+
+            # Add vector trace step
+            vector_best_score = max((c.score for c in vector_candidates), default=0.0)
+            search_trace.add_step(SearchTraceStep(
+                stage="SEMANTIC",  # Vector is semantic search
+                query=query_text,
+                topk=opts.top_k,
+                took_ms=vector_time,
+                hits=[SearchTraceHit(doc_id=c.doc_id, score=c.score, rank=i+1, source="SEMANTIC")
+                      for i, c in enumerate(vector_candidates[:10])],
+                meta={
+                    "search_type": "vector",
+                    "best_score": vector_best_score,
+                    "total_hits": len(vector_candidates),
+                    "fuzzy_insufficient": True
+                }
+            ))
 
             # Combine all three result sets
             all_candidates = self._combine_results(ac_candidates, fuzzy_candidates, opts)

@@ -176,7 +176,7 @@ class SignalsService:
             organizations = self._create_organization_signals(text, organizations_core, persons_core)
 
             # 4. Обогащаем сущности идентификаторами
-            self._enrich_with_identifiers(text, persons, organizations)
+            self._enrich_with_identifiers(text, persons, organizations, normalization_result)
 
             # 5. Обогащаем персоны датами рождения
             self._enrich_with_birthdates(text, persons)
@@ -457,13 +457,31 @@ class SignalsService:
         text: str,
         persons: List[PersonSignal],
         organizations: List[OrganizationSignal],
+        normalization_result: Optional[Dict[str, Any]] = None,
     ):
         """Обогащает сущности найденными идентификаторами."""
+        # 1. Извлекаем ID из trace нормализации (приоритетный источник)
+        trace_ids = self._extract_ids_from_normalization_trace(normalization_result, text)
+
+        # 2. Дополняем regex-извлечением из текста (fallback и дополнение)
         org_ids = self.identifier_extractor.extract_organization_ids(text)
         person_ids = self.identifier_extractor.extract_person_ids(text)
 
-        self._enrich_organizations_with_ids(organizations, org_ids)
-        self._enrich_persons_with_ids(persons, person_ids)
+        # 3. Объединяем ID из trace с regex-извлеченными
+        all_org_ids = trace_ids.get('organization_ids', []) + org_ids
+        all_person_ids = trace_ids.get('person_ids', []) + person_ids
+
+        # 4. Удаляем дубликаты по значению
+        unique_org_ids = self._deduplicate_ids(all_org_ids)
+        unique_person_ids = self._deduplicate_ids(all_person_ids)
+
+        self.logger.debug(f"🔍 ID ENRICHMENT: Found {len(unique_person_ids)} person IDs, {len(unique_org_ids)} org IDs")
+
+        # 5. FAST PATH: Проверяем INN cache для быстрого обнаружения санкций
+        self._check_sanctioned_inn_cache(unique_person_ids, unique_org_ids, persons, organizations)
+
+        self._enrich_organizations_with_ids(organizations, unique_org_ids)
+        self._enrich_persons_with_ids(persons, unique_person_ids)
 
     def _enrich_with_birthdates(self, text: str, persons: List[PersonSignal]):
         """Обогащает персоны найденными датами рождения."""
@@ -483,12 +501,38 @@ class SignalsService:
 
         overall_confidence = sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
 
-        return {
+        # Check for sanctioned IDs (FAST PATH markers)
+        sanctioned_id_found = False
+        sanctioned_count = 0
+
+        for person in persons:
+            for id_info in person.ids:
+                if id_info.get('sanctioned', False):
+                    sanctioned_id_found = True
+                    sanctioned_count += 1
+
+        for org in organizations:
+            for id_info in org.ids:
+                if id_info.get('sanctioned', False):
+                    sanctioned_id_found = True
+                    sanctioned_count += 1
+
+        result = {
             "persons": [self._person_to_dict(p) for p in persons],
             "organizations": [self._org_to_dict(o) for o in organizations],
             "extras": {"dates": [], "amounts": []},
             "confidence": overall_confidence,
         }
+
+        # Add fast path sanctions info
+        if sanctioned_id_found:
+            result["fast_path_sanctions"] = {
+                "sanctioned_ids_found": sanctioned_count,
+                "cache_hit": True
+            }
+            self.logger.warning(f"🚨 FAST PATH: {sanctioned_count} sanctioned IDs found via cache")
+
+        return result
 
     def _extract_legal_forms(
         self, text: str, organizations_core: List[str], persons_core: List[List[str]]
@@ -1468,6 +1512,224 @@ class SignalsService:
             text, normalization_result, language
         )
     
+    def _extract_ids_from_normalization_trace(
+        self, normalization_result: Optional[Dict[str, Any]], text: str
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Извлекает ID из trace нормализации.
+
+        Args:
+            normalization_result: Результат нормализации с trace
+            text: Исходный текст для определения позиций
+
+        Returns:
+            Dict с ключами 'person_ids' и 'organization_ids'
+        """
+        if not normalization_result or 'trace' not in normalization_result:
+            self.logger.debug("🔍 ID TRACE: No trace in normalization_result")
+            return {'person_ids': [], 'organization_ids': []}
+
+        trace = normalization_result['trace']
+        person_ids = []
+        organization_ids = []
+
+        self.logger.debug(f"🔍 ID TRACE: Processing {len(trace)} trace entries")
+
+        for entry in trace:
+            # Ищем токены с ролью 'id'
+            if entry.get('role') == 'id' or entry.get('type') == 'role' and entry.get('role') == 'id':
+                token_text = entry.get('token', '')
+
+                if token_text and token_text.isdigit():
+                    # Найдем позицию токена в исходном тексте
+                    import re
+                    matches = list(re.finditer(re.escape(token_text), text))
+                    position = matches[0].span() if matches else (0, len(token_text))
+
+                    # Определяем тип ID на основе длины и контекста
+                    id_length = len(token_text)
+
+                    # Универсальный ID для персон и организаций
+                    id_info = {
+                        "type": "numeric_id",  # Общий тип для всех numeric ID из trace
+                        "value": token_text,
+                        "raw": token_text,
+                        "name": f"Numeric ID ({id_length} digits)",
+                        "confidence": 0.95,  # Высокая уверенность - найдено нормализацией
+                        "position": position,
+                        "valid": True,
+                        "source": "normalization_trace"  # Отметка что из trace
+                    }
+
+                    # Добавляем и в person_ids и в organization_ids
+                    # так как из trace неясно к чему относится ID
+                    person_ids.append(id_info.copy())
+                    organization_ids.append(id_info.copy())
+
+                    self.logger.debug(f"🔍 ID TRACE: Found numeric ID '{token_text}' in trace")
+
+        self.logger.debug(f"🔍 ID TRACE: Extracted {len(person_ids)} person IDs, {len(organization_ids)} org IDs from trace")
+        return {'person_ids': person_ids, 'organization_ids': organization_ids}
+
+    def _deduplicate_ids(self, ids: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Удаляет дубликаты ID по значению, сохраняя приоритет trace > regex.
+
+        Args:
+            ids: Список ID для дедупликации
+
+        Returns:
+            Список уникальных ID
+        """
+        if not ids:
+            return []
+
+        # Группируем по значению
+        id_groups = {}
+        for id_info in ids:
+            value = id_info.get('value', '')
+            if value not in id_groups:
+                id_groups[value] = []
+            id_groups[value].append(id_info)
+
+        # Выбираем лучший ID из каждой группы (trace > regex)
+        unique_ids = []
+        for value, group in id_groups.items():
+            # Сортируем: trace источники первыми, потом по confidence
+            group.sort(key=lambda x: (
+                x.get('source') != 'normalization_trace',  # trace первые (False < True)
+                -x.get('confidence', 0)  # потом по убывающей confidence
+            ))
+
+            # Берем лучший
+            best_id = group[0]
+            unique_ids.append(best_id)
+
+            self.logger.debug(f"🔍 ID DEDUP: Selected {best_id.get('source', 'regex')} source for ID '{value}'")
+
+        return unique_ids
+
+    def _check_sanctioned_inn_cache(
+        self,
+        person_ids: List[Dict[str, Any]],
+        org_ids: List[Dict[str, Any]],
+        persons: List[PersonSignal],
+        organizations: List[OrganizationSignal]
+    ):
+        """
+        FAST PATH: Проверяет ID в sanctioned INN cache и сразу помечает как matched.
+
+        Args:
+            person_ids: Список ID персон
+            org_ids: Список ID организаций
+            persons: Список персон для обогащения
+            organizations: Список организаций для обогащения
+        """
+        try:
+            from ...layers.search.sanctioned_inn_cache import get_inn_cache
+            from ...monitoring.prometheus_exporter import get_exporter
+
+            inn_cache = get_inn_cache()
+            metrics = get_exporter()
+
+            # Собираем все ID для проверки
+            all_ids_to_check = []
+
+            # Добавляем person IDs
+            for id_info in person_ids:
+                id_value = id_info.get('value', '')
+                if id_value and id_value.isdigit() and len(id_value) >= 10:  # Минимальная длина для ІПН
+                    all_ids_to_check.append((id_value, 'person', id_info))
+
+            # Добавляем org IDs
+            for id_info in org_ids:
+                id_value = id_info.get('value', '')
+                if id_value and id_value.isdigit() and len(id_value) >= 8:  # Минимальная длина для ЄДРПОУ
+                    all_ids_to_check.append((id_value, 'org', id_info))
+
+            if not all_ids_to_check:
+                return
+
+            self.logger.debug(f"🚀 FAST PATH: Checking {len(all_ids_to_check)} IDs against sanctions cache")
+
+            # Проверяем каждый ID в cache
+            sanctioned_matches = 0
+            for id_value, entity_type, id_info in all_ids_to_check:
+                sanctioned_data = inn_cache.lookup(id_value)
+
+                # Record cache lookup metrics
+                cache_hit = sanctioned_data is not None
+                metrics.record_fast_path_cache_lookup(cache_hit)
+
+                if sanctioned_data:
+                    sanctioned_matches += 1
+                    self.logger.warning(
+                        f"🚨 FAST PATH SANCTION HIT: {id_value} -> {sanctioned_data.get('name', 'Unknown')} "
+                        f"(type: {sanctioned_data.get('type', 'unknown')})"
+                    )
+
+                    # Обогащаем соответствующие сущности санкционной информацией
+                    if entity_type == 'person' and persons:
+                        self._enrich_person_with_sanctioned_data(persons[0], sanctioned_data, id_info)
+                    elif entity_type == 'org' and organizations:
+                        self._enrich_organization_with_sanctioned_data(organizations[0], sanctioned_data, id_info)
+
+            if sanctioned_matches > 0:
+                self.logger.warning(f"🚨 FAST PATH: Found {sanctioned_matches} sanctioned ID matches in cache")
+            else:
+                self.logger.debug("✅ FAST PATH: No sanctions found in INN cache")
+
+        except ImportError:
+            self.logger.warning("INN cache not available - falling back to regular search")
+        except Exception as e:
+            self.logger.error(f"Error in sanctioned INN cache check: {e}")
+
+    def _enrich_person_with_sanctioned_data(
+        self, person: PersonSignal, sanctioned_data: Dict[str, Any], id_info: Dict[str, Any]
+    ):
+        """Обогащает персону санкционными данными из cache."""
+        # Добавляем ID к персоне с санкционной пометкой
+        sanctioned_id = {
+            **id_info,
+            'sanctioned': True,
+            'sanctioned_name': sanctioned_data.get('name'),
+            'sanctioned_source': sanctioned_data.get('source', 'sanctions_cache'),
+            'confidence': 1.0  # Максимальная уверенность для точного совпадения
+        }
+
+        person.ids.append(sanctioned_id)
+
+        # Обогащаем evidence
+        person.evidence.append(f"sanctioned_inn_cache_hit_{id_info.get('value')}")
+
+        # Повышаем confidence персоны
+        person.confidence = max(person.confidence, 0.95)
+
+        self.logger.debug(f"Enriched person '{person.full_name}' with sanctioned INN data")
+
+    def _enrich_organization_with_sanctioned_data(
+        self, org: OrganizationSignal, sanctioned_data: Dict[str, Any], id_info: Dict[str, Any]
+    ):
+        """Обогащает организацию санкционными данными из cache."""
+        # Добавляем ID к организации с санкционной пометкой
+        sanctioned_id = {
+            **id_info,
+            'sanctioned': True,
+            'sanctioned_name': sanctioned_data.get('name'),
+            'sanctioned_source': sanctioned_data.get('source', 'sanctions_cache'),
+            'confidence': 1.0  # Максимальная уверенность для точного совпадения
+        }
+
+        org.ids.append(sanctioned_id)
+
+        # Обогащаем evidence
+        org.evidence.append(f"sanctioned_inn_cache_hit_{id_info.get('value')}")
+
+        # Повышаем confidence организации
+        org.confidence = max(org.confidence, 0.95)
+
+        self.logger.debug(f"Enriched organization '{org.core}' with sanctioned INN data")
+
     def _is_mixed_language_text(self, text: str) -> bool:
         """
         Check if text contains mixed language (both Cyrillic and Latin scripts)
