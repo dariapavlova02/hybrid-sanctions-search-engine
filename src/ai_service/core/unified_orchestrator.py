@@ -1553,10 +1553,10 @@ class UnifiedOrchestrator:
 
             # Check each person's IDs
             for person in signals_result.persons:
-                if not person.get('ids'):
+                if not hasattr(person, 'ids') or not person.ids:
                     continue
 
-                for id_info in person['ids']:
+                for id_info in person.ids:
                     id_value = id_info.get('value', '').strip()
                     id_type = id_info.get('type', '').lower()
 
