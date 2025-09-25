@@ -87,6 +87,13 @@ class SanctionsDataLoader:
 
         self.logger.info(f"SanctionsDataLoader initialized with data_dir: {self.data_dir}")
 
+        # Log available files
+        if self.data_dir.exists():
+            files = list(self.data_dir.glob("*.json"))
+            self.logger.info(f"Available sanctions files: {[f.name for f in files]}")
+        else:
+            self.logger.warning(f"Sanctions data directory does not exist: {self.data_dir}")
+
     @profile_function("sanctions.load_dataset")
     async def load_dataset(self, force_reload: bool = False) -> SanctionsDataset:
         """
@@ -106,10 +113,11 @@ class SanctionsDataLoader:
 
         # Try to load from cache file
         if not force_reload and await self._load_from_cache():
+            self.logger.info(f"✅ Loaded from cache: {self._cached_dataset.total_entries} entries")
             return self._cached_dataset
 
         # Load from source files
-        self.logger.info("Loading sanctions data from source files...")
+        self.logger.info("Loading sanctions data from source files (cache miss or expired)...")
         dataset = await self._load_from_sources()
 
         # Cache the dataset
@@ -231,7 +239,9 @@ class SanctionsDataLoader:
                 if entries:
                     all_entries.extend(entries)
                     sources.append(source_name)
-                    self.logger.debug(f"Loaded {len(entries)} entries from {source_name}")
+                    self.logger.info(f"Loaded {len(entries)} entries from {source_name}")
+                else:
+                    self.logger.debug(f"No entries from {loader.__name__}")
             except Exception as e:
                 self.logger.warning(f"Failed to load from {loader.__name__}: {e}")
 
@@ -308,6 +318,15 @@ class SanctionsDataLoader:
                 aliases=["Alexei Navalny", "Навальный Алексей Анатольевич"],
                 birth_date="1976-06-04",
                 nationality="Russia"
+            ),
+            # Test entry for fuzzy search
+            SanctionEntry(
+                name="Ковриков Роман Валерійович",
+                entity_type="person",
+                source="sample",
+                list_name="Sample List",
+                aliases=["Kovrykov Roman", "Роман Ковриков"],
+                nationality="Ukraine"
             ),
 
             # Organizations

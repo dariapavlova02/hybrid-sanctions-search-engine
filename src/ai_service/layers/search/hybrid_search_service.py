@@ -92,6 +92,11 @@ class HybridSearchService(BaseService, SearchService):
         self._sanctions_loader = SanctionsDataLoader()
         self._sanctions_loaded = False
 
+        # Force reload sanctions in production if needed
+        import os
+        if os.getenv("FORCE_RELOAD_SANCTIONS", "false").lower() == "true":
+            self.logger.warning("🔄 FORCE_RELOAD_SANCTIONS=true, will force reload sanctions data")
+
         # Embedding cache
         self._embedding_cache: Dict[str, Tuple[List[float], datetime]] = {}
         self._cache_lock = asyncio.Lock()
@@ -2348,20 +2353,33 @@ class HybridSearchService(BaseService, SearchService):
 
         # Primary source: Sanctions data
         try:
-            self.logger.debug("Loading fuzzy candidates from sanctions data...")
+            self.logger.info("Loading fuzzy candidates from sanctions data...")
+
+            # Check if force reload is needed
+            import os
+            force_reload = os.getenv("FORCE_RELOAD_SANCTIONS", "false").lower() == "true"
+            if force_reload:
+                await self._sanctions_loader.clear_cache()
+                self.logger.warning("🗑️ Cleared sanctions cache due to FORCE_RELOAD_SANCTIONS")
+
             sanctions_candidates = await self._sanctions_loader.get_fuzzy_candidates()
 
             if sanctions_candidates:
                 candidates.extend(sanctions_candidates)
                 self._sanctions_loaded = True
-                self.logger.info(f"Loaded {len(sanctions_candidates)} names from sanctions data for fuzzy search")
+                self.logger.info(f"✅ Loaded {len(sanctions_candidates)} names from sanctions data for fuzzy search")
 
                 # Get additional stats
                 stats = await self._sanctions_loader.get_stats()
-                self.logger.debug(f"Sanctions data: {stats['persons']} persons, {stats['organizations']} orgs from {len(stats['sources'])} sources")
+                self.logger.info(f"Sanctions stats: {stats['persons']} persons, {stats['organizations']} orgs from {len(stats['sources'])} sources")
+
+            else:
+                self.logger.warning("❌ No sanctions candidates loaded from primary source")
 
         except Exception as e:
-            self.logger.error(f"Failed to load sanctions data for fuzzy search: {e}")
+            self.logger.error(f"❌ Failed to load sanctions data for fuzzy search: {e}")
+            import traceback
+            self.logger.error(f"Full traceback: {traceback.format_exc()}")
 
         # Fallback: Try watchlist service
         if not candidates:

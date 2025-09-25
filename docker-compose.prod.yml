@@ -25,6 +25,8 @@ services:
       # Elasticsearch index configuration
       - ES_AC_INDEX=ai_service_ac_patterns
       - ES_VECTOR_INDEX=vectors
+      # Force reload sanctions for debugging
+      - FORCE_RELOAD_SANCTIONS=true
     env_file:
       - .env.production
     volumes:
