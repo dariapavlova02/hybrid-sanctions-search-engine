@@ -2292,10 +2292,10 @@ class HybridSearchService(BaseService, SearchService):
                                 "fuzzy": {
                                     "pattern": {
                                         "value": query_text,
-                                        "fuzziness": "AUTO",
-                                        "prefix_length": 1,
-                                        "max_expansions": 50,
-                                        "boost": 3.0
+                                        "fuzziness": 1,  # Limit to 1 character difference
+                                        "prefix_length": 2,  # More strict prefix matching
+                                        "max_expansions": 20,  # Reduce expansions
+                                        "boost": 2.0  # Reduce boost
                                     }
                                 }
                             },
@@ -2303,10 +2303,10 @@ class HybridSearchService(BaseService, SearchService):
                                 "fuzzy": {
                                     "canonical": {
                                         "value": query_text,
-                                        "fuzziness": "AUTO",
-                                        "prefix_length": 1,
-                                        "max_expansions": 50,
-                                        "boost": 2.0
+                                        "fuzziness": 1,  # Limit to 1 character difference
+                                        "prefix_length": 2,  # More strict prefix matching
+                                        "max_expansions": 20,  # Reduce expansions
+                                        "boost": 1.5  # Reduce boost
                                     }
                                 }
                             },
@@ -2314,16 +2314,8 @@ class HybridSearchService(BaseService, SearchService):
                                 "match": {
                                     "canonical": {
                                         "query": query_text,
-                                        "fuzziness": "AUTO",
-                                        "boost": 1.5
-                                    }
-                                }
-                            },
-                            {
-                                "wildcard": {
-                                    "pattern": {
-                                        "value": f"*{query_text.lower()}*",
-                                        "boost": 1.0
+                                        "fuzziness": 1,  # Limit fuzziness
+                                        "boost": 1.2  # Reduce boost
                                     }
                                 }
                             }
@@ -2354,8 +2346,66 @@ class HybridSearchService(BaseService, SearchService):
                 source = hit.get('_source', {})
                 score = hit.get('_score', 0.0)
 
-                # Normalize ES score to 0-1 range (ES scores can be > 1)
-                normalized_score = min(score / 10.0, 1.0)
+                # More conservative ES score normalization with edit distance check
+                result_text = source.get('canonical', source.get('pattern', ''))
+
+                # Calculate edit distance (Levenshtein distance)
+                def edit_distance(s1, s2):
+                    s1, s2 = s1.lower(), s2.lower()
+                    if len(s1) > len(s2):
+                        s1, s2 = s2, s1
+                    distances = range(len(s1) + 1)
+                    for i2, c2 in enumerate(s2):
+                        distances_ = [i2 + 1]
+                        for i1, c1 in enumerate(s1):
+                            if c1 == c2:
+                                distances_.append(distances[i1])
+                            else:
+                                distances_.append(1 + min((distances[i1], distances[i1 + 1], distances_[-1])))
+                        distances = distances_
+                    return distances[-1]
+
+                # Calculate edit distance and ratio
+                edit_dist = edit_distance(query_text, result_text)
+                max_len = max(len(query_text), len(result_text))
+                edit_ratio = 1.0 - (edit_dist / max_len) if max_len > 0 else 0
+
+                # Word-level similarity for additional validation
+                query_parts = set(query_text.lower().split())
+                result_parts = set(result_text.lower().split())
+                if query_parts and result_parts:
+                    overlap = len(query_parts.intersection(result_parts))
+                    total_unique = len(query_parts.union(result_parts))
+                    word_similarity = overlap / total_unique if total_unique > 0 else 0
+                else:
+                    word_similarity = 0
+
+                # Strict filtering: require reasonable edit distance
+                # For short queries (< 15 chars): allow up to 3 edits
+                # For longer queries: allow 1 edit per 5 characters
+                if len(query_text) < 15:
+                    max_allowed_edits = 3
+                else:
+                    max_allowed_edits = max(3, len(query_text) // 5)
+
+                if edit_dist > max_allowed_edits:
+                    continue  # Skip if too many differences
+
+                # Normalize ES score more conservatively
+                es_normalized = min(score / 50.0, 1.0)
+
+                # Combine different similarity measures
+                normalized_score = (es_normalized * 0.2) + (edit_ratio * 0.5) + (word_similarity * 0.3)
+
+                # Apply penalty for low edit ratio
+                if edit_ratio < 0.6:  # Less than 60% character similarity
+                    normalized_score *= 0.7
+
+                # Skip candidates with very low similarity
+                # Lower threshold for good fuzzy matches
+                min_threshold = 0.4 if edit_ratio > 0.8 else 0.5
+                if normalized_score < min_threshold:
+                    continue
 
                 candidate = Candidate(
                     doc_id=hit.get('_id', f"es_fuzzy_{len(fuzzy_candidates)}"),
@@ -2366,6 +2416,10 @@ class HybridSearchService(BaseService, SearchService):
                         "fuzzy_algorithm": "elasticsearch",
                         "original_query": query_text,
                         "es_score": score,
+                        "es_normalized": es_normalized,
+                        "edit_distance": edit_dist,
+                        "edit_ratio": edit_ratio,
+                        "word_similarity": word_similarity,
                         "pattern": source.get('pattern', ''),
                         "canonical": source.get('canonical', ''),
                         "tier": source.get('tier', 0),
