@@ -466,6 +466,15 @@ class UnifiedOrchestrator:
         logger.debug("Stage 6: Signals Extraction")
         layer_start = time.time()
 
+        # Initialize metrics tracking for this layer
+        metrics = None
+        try:
+            from ..monitoring.prometheus_exporter import get_exporter
+            metrics = get_exporter()
+        except Exception as e:
+            logger.debug(f"Metrics not available in signals layer: {e}")
+            metrics = None
+
         signals_result = await self._maybe_await(self.signals_service.extract_signals(
             text=text_u, normalization_result=norm_result, language=context.language  # Use unicode-normalized text
         ))
@@ -482,9 +491,6 @@ class UnifiedOrchestrator:
         if metrics:
             signals_duration = (time.time() - layer_start) * 1000  # Convert to ms
             metrics.record_pipeline_stage_duration("signals", signals_duration)
-            self.metrics_service.record_histogram('signals.confidence', signals_result.confidence)
-            self.metrics_service.record_histogram('signals.persons_count', self._safe_len(signals_result.persons))
-            self.metrics_service.record_histogram('signals.organizations_count', self._safe_len(signals_result.organizations))
 
         return signals_result
 
@@ -744,6 +750,15 @@ class UnifiedOrchestrator:
             Decision result or None if disabled/failed
         """
         decision_result = None
+
+        # Initialize metrics tracking for this layer
+        metrics = None
+        try:
+            from ..monitoring.prometheus_exporter import get_exporter
+            metrics = get_exporter()
+        except Exception as e:
+            logger.debug(f"Metrics not available in decision layer: {e}")
+            metrics = None
 
         # Create processing result for decision engine
         temp_processing_result = UnifiedProcessingResult(
