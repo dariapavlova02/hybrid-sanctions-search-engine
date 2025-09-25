@@ -391,7 +391,7 @@ def create_search_info(search_result: SearchResult) -> SearchInfo:
         has_vector = vector_confidence > 0
 
     # Count high confidence matches
-    high_confidence_matches = sum(1 for c in search_result.candidates if c.final_score >= 0.8)
+    high_confidence_matches = sum(1 for c in search_result.candidates if c.final_score >= 0.9)
 
     return SearchInfo(
         has_exact_matches=has_exact,

@@ -606,14 +606,14 @@ class DecisionConfig(BaseModel):
     w_search_phrase: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SEARCH_PHRASE", "0.25")))
     w_search_ngram: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SEARCH_NGRAM", "0.2")))
     w_search_fuzzy: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SEARCH_FUZZY", "0.18")))
-    w_search_vector: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SEARCH_VECTOR", "0.15")))
+    w_search_vector: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__W_SEARCH_VECTOR", "0.2")))
 
     # Search thresholds (NEW)
     thr_search_exact: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_EXACT", "0.8")))
     thr_search_phrase: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_PHRASE", "0.7")))
     thr_search_ngram: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_NGRAM", "0.6")))
     thr_search_fuzzy: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_FUZZY", "0.65")))
-    thr_search_vector: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_VECTOR", "0.7")))
+    thr_search_vector: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_VECTOR", "0.9")))
     
     # Search bonuses (NEW)
     bonus_multiple_matches: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__BONUS_MULTIPLE_MATCHES", "0.1")))
@@ -621,7 +621,7 @@ class DecisionConfig(BaseModel):
     bonus_exact_match: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__BONUS_EXACT_MATCH", "0.2")))
     
     # Thresholds for risk levels (with ENV overrides)
-    thr_high: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_HIGH", "0.85")))
+    thr_high: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_HIGH", "0.7")))
     thr_medium: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_MEDIUM", "0.5")))
     
     # Business gates

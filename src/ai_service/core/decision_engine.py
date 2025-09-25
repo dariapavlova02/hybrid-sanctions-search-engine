@@ -162,7 +162,7 @@ class DecisionEngine:
             score += self.config.bonus_id_match
 
         # CRITICAL: Homoglyph attack detected = major score boost
-        if (inp and hasattr(inp, 'normalization') and hasattr(inp.normalization, 'homoglyph_detected') and
+        if (inp and inp.normalization and hasattr(inp.normalization, 'homoglyph_detected') and
             inp.normalization.homoglyph_detected):
             score += 0.85  # Boost score to ensure HIGH risk classification
             self.logger.warning(f"🚨 HOMOGLYPH ATTACK - adding +0.85 to score (now: {score:.3f})")
@@ -219,16 +219,26 @@ class DecisionEngine:
             # Check if any fusion candidates have very high scores
             if inp.search.fusion_candidates:
                 for candidate in inp.search.fusion_candidates:
-                    if candidate.final_score >= 0.9:  # Very high confidence match
+                    # For vector matches, require even higher threshold due to semantic similarity risks
+                    is_vector_match = (
+                        hasattr(candidate, 'search_type') and candidate.search_type == 'vector'
+                    ) or (
+                        candidate.vector_score > candidate.ac_score and candidate.vector_score > 0.5
+                    )
+
+                    required_threshold = 0.95 if is_vector_match else 0.9
+
+                    if candidate.final_score >= required_threshold:  # Very high confidence match
                         self.logger.warning(
                             f"🚨 HIGH CONFIDENCE SANCTIONS MATCH - forcing HIGH RISK "
-                            f"(candidate: {candidate.entity_id}, score: {candidate.final_score:.3f})"
+                            f"(candidate: {candidate.entity_id}, score: {candidate.final_score:.3f}, "
+                            f"vector_match: {is_vector_match}, threshold: {required_threshold})"
                         )
                         return RiskLevel.HIGH
 
         # CRITICAL: Homoglyph attack detected = automatic HIGH RISK
         # Homoglyph attacks are security threats that should always be flagged as high risk
-        if inp and hasattr(inp, 'normalization') and hasattr(inp.normalization, 'homoglyph_detected'):
+        if inp and inp.normalization and hasattr(inp.normalization, 'homoglyph_detected'):
             if inp.normalization.homoglyph_detected:
                 self.logger.warning(f"🚨 HOMOGLYPH ATTACK DETECTED - forcing HIGH RISK (score: {score:.3f})")
                 return RiskLevel.HIGH
@@ -272,12 +282,21 @@ class DecisionEngine:
         # PRIORITY 4: High confidence search matches
         if inp.search and inp.search.fusion_candidates and risk == RiskLevel.HIGH and not tin_dob_match_found:
             for candidate in inp.search.fusion_candidates:
-                if candidate.final_score >= 0.9:
-                    reasons.append(f"🚨 HIGH CONFIDENCE SANCTIONS MATCH - HIGH RISK (score: {candidate.final_score:.3f})")
+                # For vector matches, require even higher threshold due to semantic similarity risks
+                is_vector_match = (
+                    hasattr(candidate, 'search_type') and candidate.search_type == 'vector'
+                ) or (
+                    candidate.vector_score > candidate.ac_score and candidate.vector_score > 0.5
+                )
+
+                required_threshold = 0.95 if is_vector_match else 0.9
+
+                if candidate.final_score >= required_threshold:
+                    reasons.append(f"🚨 HIGH CONFIDENCE SANCTIONS MATCH - HIGH RISK (score: {candidate.final_score:.3f}, vector: {is_vector_match})")
                     break
 
         # PRIORITY 5: Homoglyph attack
-        if (inp and hasattr(inp, 'normalization') and hasattr(inp.normalization, 'homoglyph_detected') and
+        if (inp and inp.normalization and hasattr(inp.normalization, 'homoglyph_detected') and
             inp.normalization.homoglyph_detected):
             reasons.append("🚨 HOMOGLYPH ATTACK DETECTED - HIGH RISK")
 

@@ -1197,6 +1197,13 @@ class UnifiedOrchestrator:
         if search_results:
             search_info = self._create_search_info_from_results(search_results)
 
+        # Create normalization object with homoglyph detection
+        normalization_obj = type('NormalizationObj', (), {
+            'homoglyph_detected': getattr(processing_result, 'homoglyph_detected', False),
+            'homoglyph_analysis': getattr(processing_result, 'homoglyph_analysis', None),
+            'normalized_text': getattr(processing_result, 'normalized_text', ''),
+        })()
+
         return DecisionInput(
             text=context.original_text,
             language=context.language,
@@ -1204,7 +1211,7 @@ class UnifiedOrchestrator:
             signals=signals,
             similarity=similarity,
             search=search_info,
-            normalization=getattr(processing_result, 'normalization_data', None)  # Add normalization data
+            normalization=normalization_obj  # Pass normalization with homoglyph data
         )
 
     def _create_search_info_from_results(self, search_results: dict):
