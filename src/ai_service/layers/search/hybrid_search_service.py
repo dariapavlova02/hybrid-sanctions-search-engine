@@ -375,13 +375,9 @@ class HybridSearchService(BaseService, SearchService):
             List of search candidates sorted by score (descending)
         """
         # Validate search mode (no modification needed)
-        # opts.search_mode = opts.search_mode
-        print(f"🔍 find_candidates CALLED: text='{text}', normalized='{normalized.normalized_text}', mode={opts.search_mode}")
 
         if not self._initialized:
-            print(f"🔧 Search service not initialized, initializing...")
             self.initialize()
-            print(f"✅ Search service initialized")
 
         # Create dummy trace if none provided
         if search_trace is None:
@@ -910,23 +906,19 @@ class HybridSearchService(BaseService, SearchService):
     
     def _should_escalate(self, ac_candidates: List[Candidate], opts: SearchOpts) -> bool:
         """Determine if escalation to vector search is needed."""
-        print(f"🔍 _should_escalate: enable={opts.enable_escalation}, ac_count={len(ac_candidates)}, threshold={opts.escalation_threshold}")
         self.logger.info(f"Checking escalation: enable={opts.enable_escalation}, ac_count={len(ac_candidates)}, threshold={opts.escalation_threshold}")
 
         if not opts.enable_escalation:
-            print(f"❌ Escalation disabled in SearchOpts")
             self.logger.info("Escalation disabled in SearchOpts")
             return False
 
         if not ac_candidates:
-            print(f"✅ No AC candidates found - escalating to fuzzy/vector search")
             self.logger.info("No AC candidates found - escalating to fuzzy/vector search")
             return True
 
         # Check if best AC score is below escalation threshold
         best_score = max(candidate.score for candidate in ac_candidates)
         escalate = best_score < opts.escalation_threshold
-        print(f"📊 AC best score: {best_score:.3f}, threshold: {opts.escalation_threshold:.3f}, escalate: {escalate}")
         self.logger.info(f"AC best score: {best_score:.3f}, threshold: {opts.escalation_threshold:.3f}, escalate: {escalate}")
         return escalate
 
