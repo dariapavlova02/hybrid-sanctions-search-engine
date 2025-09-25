@@ -2347,7 +2347,8 @@ class HybridSearchService(BaseService, SearchService):
                 score = hit.get('_score', 0.0)
 
                 # More conservative ES score normalization with edit distance check
-                result_text = source.get('canonical', source.get('pattern', ''))
+                # Compare with the actual pattern that was matched, not canonical
+                result_text = source.get('pattern', source.get('canonical', ''))
 
                 # Calculate edit distance (Levenshtein distance)
                 def edit_distance(s1, s2):
