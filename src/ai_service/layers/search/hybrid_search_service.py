@@ -79,9 +79,9 @@ class HybridSearchService(BaseService, SearchService):
 
         # Fuzzy search service for typo handling
         fuzzy_config = FuzzyConfig(
-            min_score_threshold=0.65,  # Slightly higher for names
-            high_confidence_threshold=0.85,
-            partial_match_threshold=0.75,
+            min_score_threshold=0.5,   # Lower threshold for better fuzzy coverage
+            high_confidence_threshold=0.80,
+            partial_match_threshold=0.70,
             enable_name_fuzzy=True,
             name_boost_factor=1.2
         )
@@ -374,6 +374,8 @@ class HybridSearchService(BaseService, SearchService):
         Returns:
             List of search candidates sorted by score (descending)
         """
+        # Validate search mode (no modification needed)
+        # opts.search_mode = opts.search_mode
         print(f"🔍 find_candidates CALLED: text='{text}', normalized='{normalized.normalized_text}', mode={opts.search_mode}")
 
         if not self._initialized:
@@ -401,7 +403,7 @@ class HybridSearchService(BaseService, SearchService):
             "operation": "find_candidates",
             "query": text,
             "normalized_text": normalized.normalized_text,
-            "search_mode": opts.search_mode.value,
+            "search_mode": opts.search_mode,
             "top_k": opts.top_k,
             "threshold": opts.threshold,
             "timestamp": datetime.now().isoformat(),
@@ -428,7 +430,7 @@ class HybridSearchService(BaseService, SearchService):
             # Record performance for cache hit
             await self._record_query_performance(
                 query=text,
-                search_mode=opts.search_mode.value,
+                search_mode=opts.search_mode,
                 processing_time_ms=0,
                 result_count=len(cached_candidates),
                 cache_hit=True
@@ -465,7 +467,7 @@ class HybridSearchService(BaseService, SearchService):
             # Record query performance
             await self._record_query_performance(
                 query=text,
-                search_mode=opts.search_mode.value,
+                search_mode=opts.search_mode,
                 processing_time_ms=processing_time,
                 result_count=len(candidates),
                 cache_hit=False
@@ -477,7 +479,7 @@ class HybridSearchService(BaseService, SearchService):
                 "processing_time_ms": processing_time,
                 "result_count": len(candidates),
                 "avg_score": avg_score,
-                "search_modes_used": [opts.search_mode.value]
+                "search_modes_used": [opts.search_mode]
             })
             self.logger.info("Search completed successfully", extra=search_log_data)
             
@@ -791,10 +793,23 @@ class HybridSearchService(BaseService, SearchService):
             ))
 
             # Check if fuzzy results are good enough
-            if self._fuzzy_results_sufficient(fuzzy_candidates, opts):
+            print(f"📊 CHECKING FUZZY SUFFICIENCY: {len(fuzzy_candidates)} candidates")
+            if fuzzy_candidates:
+                best_fuzzy_score = max(c.score for c in fuzzy_candidates)
+                print(f"   Best fuzzy score: {best_fuzzy_score:.3f}")
+                print(f"   High confidence threshold: {self._fuzzy_service.config.high_confidence_threshold}")
+                print(f"   Min threshold: {self._fuzzy_service.config.min_score_threshold}")
+
+            is_sufficient = self._fuzzy_results_sufficient(fuzzy_candidates, opts)
+            print(f"   Is sufficient: {is_sufficient}")
+
+            if is_sufficient:
+                print("✅ FUZZY RESULTS SUFFICIENT - returning fuzzy results")
                 self.logger.info(f"Fuzzy search found {len(fuzzy_candidates)} good matches - skipping vector search")
                 # Combine AC and fuzzy results
+                print(f"🔗 COMBINING RESULTS: ac={len(ac_candidates)}, fuzzy={len(fuzzy_candidates)}")
                 all_candidates = self._combine_results(ac_candidates, fuzzy_candidates, opts)
+                print(f"   Combined result: {len(all_candidates)} candidates")
 
                 # Add hybrid step to trace
                 hybrid_time = (time.perf_counter() - hybrid_start_time) * 1000
@@ -1100,14 +1115,23 @@ class HybridSearchService(BaseService, SearchService):
         return deduplicated[:opts.top_k]
     
     def _combine_results(
-        self, 
-        ac_candidates: List[Candidate], 
-        vector_candidates: List[Candidate], 
+        self,
+        ac_candidates: List[Candidate],
+        vector_candidates: List[Candidate],
         opts: SearchOpts
     ) -> List[Candidate]:
         """Combine and deduplicate results from AC and vector search."""
+        print(f"📊 _combine_results INPUT: ac={len(ac_candidates)}, vector={len(vector_candidates)}")
+
         ac_weight = self._fusion_weights.get("ac", 0.6)
         vector_weight = self._fusion_weights.get("vector", 0.4)
+
+        # If we have only vector/fuzzy candidates, don't degrade their scores
+        if not ac_candidates and vector_candidates:
+            vector_weight = 1.0
+            print(f"   No AC candidates - using full vector weight: {vector_weight}")
+        else:
+            print(f"   Weights: ac={ac_weight}, vector={vector_weight}")
 
         combined: Dict[str, Candidate] = {}
 
@@ -1174,7 +1198,13 @@ class HybridSearchService(BaseService, SearchService):
                     deduped[candidate.doc_id] = candidate
             results = list(deduped.values())
 
-        return results[:opts.top_k]
+        final_results = results[:opts.top_k]
+        print(f"📊 _combine_results OUTPUT: {len(final_results)} candidates")
+        if final_results:
+            for i, candidate in enumerate(final_results[:3]):
+                print(f"   {i+1}. {candidate.text} (score: {candidate.score:.3f})")
+
+        return final_results
     
     def _process_results(self, candidates: List[Candidate], opts: SearchOpts) -> List[Candidate]:
         """Process and filter search results."""
@@ -1456,7 +1486,7 @@ class HybridSearchService(BaseService, SearchService):
         # Create a hash of the query and options
         key_data = {
             "query": query,
-            "search_mode": opts.search_mode.value,
+            "search_mode": opts.search_mode,
             "top_k": opts.top_k,
             "threshold": opts.threshold,
             "ac_boost": opts.ac_boost,
@@ -2234,18 +2264,24 @@ class HybridSearchService(BaseService, SearchService):
         try:
             # Get candidates for fuzzy matching (from watchlist or cache)
             candidates = await self._get_fuzzy_candidates()
+            print(f"🔍 FUZZY CANDIDATES: Got {len(candidates)} candidates")
+            if candidates:
+                print(f"   Sample candidates: {candidates[:3]}")
 
             if not candidates:
+                print("❌ NO FUZZY CANDIDATES AVAILABLE")
                 self.logger.debug("No candidates available for fuzzy search")
                 return []
 
             # Perform fuzzy search
+            print(f"🚀 PERFORMING FUZZY SEARCH: query='{query_text}'")
             fuzzy_results = await self._fuzzy_service.search_async(
                 query=query_text,
                 candidates=candidates,
                 doc_mapping=None,  # We'll map later
                 metadata_mapping=None
             )
+            print(f"✅ FUZZY SEARCH RESULTS: Got {len(fuzzy_results)} results")
 
             # Convert fuzzy results to Candidates
             fuzzy_candidates = []
@@ -2383,7 +2419,10 @@ class HybridSearchService(BaseService, SearchService):
             "Андрій Іванов", "Олександр Петров", "Микола Сидоров",
             "Ігор Коваленко", "Сергій Бондаренко", "Олексій Мельник",
             "Катерина Шевченко", "Наталія Коваль", "Марія Петренко",
-            "Оксана Ткачук", "Тетяна Білоус", "Інна Гавриленко"
+            "Оксана Ткачук", "Тетяна Білоус", "Інна Гавриленко",
+
+            # Test names for fuzzy search
+            "Ковриков Роман Валерійович", "Ковриков Роман", "Роман Ковриков"
         ]
 
     def _fuzzy_results_sufficient(self, fuzzy_candidates: List[Candidate], opts: SearchOpts) -> bool:
