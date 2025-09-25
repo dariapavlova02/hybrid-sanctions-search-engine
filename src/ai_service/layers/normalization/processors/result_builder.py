@@ -88,15 +88,18 @@ class ResultBuilder:
                 # If no trace available, include token (backward compatibility)
                 valid_tokens.append(token)
 
-        # Finalize metrics
-        metrics.end_time = time.time()
-        metrics.token_count = len(normalized_tokens)  # Keep original count for metrics
-        metrics.original_length = len(original_text)
+        # Finalize metrics (with defensive check)
+        if metrics is not None:
+            metrics.end_time = time.time()
+            metrics.token_count = len(normalized_tokens)  # Keep original count for metrics
+            metrics.original_length = len(original_text)
 
         # Build normalized text from valid tokens only
         normalized_text = self._reconstruct_normalized_text(valid_tokens)
-        metrics.normalized_length = len(normalized_text)
-        metrics.persons_detected = len(persons)
+
+        if metrics is not None:
+            metrics.normalized_length = len(normalized_text)
+            metrics.persons_detected = len(persons)
 
         # Build person structures
         persons_core = self._build_persons_core(persons)
@@ -105,7 +108,7 @@ class ResultBuilder:
         all_errors = []
         if errors:
             all_errors.extend(errors)
-        if metrics.errors:
+        if metrics is not None and metrics.errors:
             all_errors.extend(metrics.errors)
 
         # Calculate confidence
@@ -134,10 +137,10 @@ class ResultBuilder:
             errors=all_errors,
             language=language,
             confidence=confidence,
-            original_length=metrics.original_length,
-            normalized_length=metrics.normalized_length,
-            token_count=metrics.token_count,
-            processing_time=metrics.processing_time,
+            original_length=metrics.original_length if metrics is not None else len(original_text),
+            normalized_length=metrics.normalized_length if metrics is not None else len(normalized_text),
+            token_count=metrics.token_count if metrics is not None else len(normalized_tokens),
+            processing_time=metrics.processing_time if metrics is not None else 0.0,
             success=len(all_errors) == 0,
             persons_core=persons_core,
             organizations_core=organizations_core or []
@@ -286,6 +289,8 @@ class ResultBuilder:
 
     def add_error_to_metrics(self, metrics: ProcessingMetrics, error: str):
         """Add an error to processing metrics."""
+        if metrics is None:
+            return  # Skip if metrics is None
         if metrics.errors is None:
             metrics.errors = []
         metrics.errors.append(error)
