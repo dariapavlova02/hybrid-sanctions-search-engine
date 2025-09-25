@@ -1,0 +1,115 @@
+# Production Dockerfile with registry-agnostic approach
+# Uses Ubuntu LTS instead of Python-specific images to avoid Docker Hub issues
+
+FROM ubuntu:22.04 AS base
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONPATH=/app \
+    DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies including Python 3.11
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    gcc \
+    g++ \
+    python3.11 \
+    python3.11-dev \
+    python3.11-distutils \
+    python3.11-venv \
+    python3-pip \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/bin/python3.11 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3 /usr/bin/python \
+    && python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Create app directory
+WORKDIR /app
+
+# Copy application code
+COPY . .
+
+# Install Python dependencies directly via pip
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+    fastapi>=0.116.1 \
+    uvicorn[standard]>=0.35.0 \
+    pydantic>=2.11.7 \
+    pydantic-settings>=2.10.1 \
+    pyahocorasick>=2.2.0 \
+    sentence-transformers>=5.1.0 \
+    scipy>=1.14.0 \
+    numpy>=1.24.0 \
+    pymorphy3>=2.0.4 \
+    pymorphy3-dicts-uk>=2.4.1.1.1663094765 \
+    pymorphy3-dicts-ru>=2.4.417150.4580142 \
+    pyyaml>=6.0.2 \
+    httpx>=0.27.0 \
+    nameparser>=1.1.0 \
+    elasticsearch==8.11.0 \
+    elastic-transport==8.10.0 \
+    aiohttp>=3.12.0 \
+    prometheus-client>=0.19.0 \
+    rapidfuzz>=3.5.0 \
+    spacy>=3.7.0 \
+    transliterate>=1.10.2 \
+    python-multipart>=0.0.6 \
+    requests>=2.31.0
+
+# Verify critical dependencies
+RUN echo "🔍 Verifying dependencies..." && \
+    python -c "import fastapi; print('✅ fastapi:', fastapi.__version__)" && \
+    python -c "import uvicorn; print('✅ uvicorn available')" && \
+    python -c "import pydantic; print('✅ pydantic:', pydantic.__version__)" && \
+    python -c "import nameparser; print('✅ nameparser:', nameparser.__version__)" && \
+    python -c "import rapidfuzz; print('✅ rapidfuzz:', rapidfuzz.__version__)" && \
+    python -c "import spacy; print('✅ spacy:', spacy.__version__)" && \
+    python -c "import transliterate; print('✅ transliterate available')" && \
+    python -c "import prometheus_client; print('✅ prometheus_client available')" && \
+    python -c "import elasticsearch; print('✅ elasticsearch:', elasticsearch.__version__)" && \
+    python -c "import aiohttp; print('✅ aiohttp:', aiohttp.__version__)" && \
+    python -c "import pymorphy3; print('✅ pymorphy3 available')" && \
+    echo "🎉 All core dependencies verified!"
+
+# Install spaCy models (optional, continue on failure)
+RUN echo "📦 Installing spaCy models..." && \
+    (python -m spacy download en_core_web_sm && echo "✅ English model installed") || echo "⚠️ English model failed" && \
+    (python -m spacy download ru_core_news_sm && echo "✅ Russian model installed") || echo "⚠️ Russian model failed" && \
+    (python -m spacy download uk_core_news_sm && echo "✅ Ukrainian model installed") || echo "⚠️ Ukrainian model failed"
+
+# Verify spaCy models (non-blocking)
+RUN echo "🔍 Verifying spaCy models..." && \
+    (python -c "import spacy; spacy.load('en_core_web_sm'); print('✅ English model working')" || echo "⚠️ English model not working") && \
+    (python -c "import spacy; spacy.load('ru_core_news_sm'); print('✅ Russian model working')" || echo "⚠️ Russian model not working") && \
+    (python -c "import spacy; spacy.load('uk_core_news_sm'); print('✅ Ukrainian model working')" || echo "⚠️ Ukrainian model not working")
+
+# Copy production environment file if it exists
+RUN if [ -f "env.production.maximum_relevancy" ]; then \
+        cp env.production.maximum_relevancy .env; \
+        echo "✅ Production environment file copied"; \
+    else \
+        echo "⚠️ No production environment file found, using defaults"; \
+    fi
+
+# Create logs directory
+RUN mkdir -p logs && chmod 755 logs
+
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash app && \
+    chown -R app:app /app
+USER app
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Default command
+CMD ["python", "-m", "uvicorn", "src.ai_service.main:app", "--host", "0.0.0.0", "--port", "8000"]

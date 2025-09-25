@@ -1,5 +1,5 @@
 # Multi-stage build for AI Service with Elasticsearch support
-FROM ghcr.io/python/cpython:3.11-slim AS base
+FROM debian:bookworm-slim AS base
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -8,13 +8,17 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONPATH=/app
 
-# Install system dependencies
+# Install system dependencies including Python
 RUN apt-get update && apt-get install -y \
     curl \
     gcc \
     g++ \
+    python3 \
+    python3-pip \
     python3-dev \
-    && rm -rf /var/lib/apt/lists/*
+    python3-venv \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -s /usr/bin/python3 /usr/bin/python
 
 # Create app directory
 WORKDIR /app

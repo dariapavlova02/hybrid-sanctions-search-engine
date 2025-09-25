@@ -4,7 +4,7 @@ services:
   ai-service:
     build:
       context: .
-      dockerfile: Dockerfile.search
+      dockerfile: Dockerfile.prod
     container_name: ai-service-prod
     ports:
       - "8000:8000"
