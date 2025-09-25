@@ -2325,8 +2325,10 @@ class HybridSearchService(BaseService, SearchService):
             }
 
             # Execute ES query through AC adapter
-            response = await self._ac_adapter.client.search(
-                index=self._ac_adapter.index_name,
+            client = await self._ac_adapter._ensure_connection()
+            index_name = getattr(self._ac_adapter, 'index_name', self.config.elasticsearch.ac_index)
+            response = await client.search(
+                index=index_name,
                 body=es_query
             )
 
@@ -2388,6 +2390,8 @@ class HybridSearchService(BaseService, SearchService):
         """
         Fallback in-memory fuzzy search using sanctions data.
         """
+        start_time = time.perf_counter()
+
         if not self._fuzzy_service.enabled:
             self.logger.debug("Fuzzy search disabled - rapidfuzz not available")
             return []
