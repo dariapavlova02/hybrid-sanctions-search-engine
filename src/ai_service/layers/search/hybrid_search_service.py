@@ -2242,7 +2242,7 @@ class HybridSearchService(BaseService, SearchService):
         search_trace: Optional[SearchTrace] = None
     ) -> List[Candidate]:
         """
-        Execute fuzzy search for typo tolerance.
+        Execute fuzzy search for typo tolerance using Elasticsearch AC patterns.
 
         Args:
             query_text: The search query (potentially with typos)
@@ -2252,11 +2252,145 @@ class HybridSearchService(BaseService, SearchService):
         Returns:
             List of fuzzy match candidates
         """
+        start_time = time.perf_counter()
+
+        try:
+            # Try ES-based fuzzy search first (more efficient for 1M+ patterns)
+            es_fuzzy_results = await self._elasticsearch_fuzzy_search(query_text, opts)
+            if es_fuzzy_results:
+                print(f"🎯 ES FUZZY SEARCH: Got {len(es_fuzzy_results)} results")
+                return es_fuzzy_results
+
+            # Fallback to in-memory fuzzy search
+            return await self._in_memory_fuzzy_search(query_text, opts, search_trace)
+
+        except Exception as e:
+            self.logger.error(f"Fuzzy search failed: {e}")
+            return []
+
+    async def _elasticsearch_fuzzy_search(
+        self,
+        query_text: str,
+        opts: SearchOpts
+    ) -> List[Candidate]:
+        """
+        Execute fuzzy search using Elasticsearch on AC patterns index.
+        Much more efficient than in-memory search for 1M+ patterns.
+        """
+        try:
+            if not hasattr(self, '_ac_adapter') or not self._ac_adapter:
+                self.logger.debug("AC adapter not available for ES fuzzy search")
+                return []
+
+            # Use ES fuzzy query on AC patterns index
+            es_query = {
+                "query": {
+                    "bool": {
+                        "should": [
+                            {
+                                "fuzzy": {
+                                    "pattern": {
+                                        "value": query_text,
+                                        "fuzziness": "AUTO",
+                                        "prefix_length": 1,
+                                        "max_expansions": 50,  # Reduce for performance
+                                        "boost": 2.0
+                                    }
+                                }
+                            },
+                            {
+                                "match": {
+                                    "pattern": {
+                                        "query": query_text,
+                                        "fuzziness": "AUTO",
+                                        "boost": 1.5
+                                    }
+                                }
+                            },
+                            {
+                                "match_phrase_prefix": {
+                                    "pattern": {
+                                        "query": query_text,
+                                        "boost": 1.2
+                                    }
+                                }
+                            }
+                        ],
+                        "minimum_should_match": 1
+                    }
+                },
+                "size": min(opts.top_k * 3, 100),  # Limit for performance
+                "_source": ["pattern", "entity_id", "entity_name", "metadata"],
+                "timeout": "2s"  # Prevent long-running queries
+            }
+
+            # Execute ES query through AC adapter
+            response = await self._ac_adapter.client.search(
+                index=self._ac_adapter.index_name,
+                body=es_query
+            )
+
+            if not response or 'hits' not in response:
+                self.logger.debug("No ES fuzzy results found")
+                return []
+
+            # Convert ES results to Candidates
+            fuzzy_candidates = []
+            for hit in response['hits']['hits']:
+                source = hit.get('_source', {})
+                score = hit.get('_score', 0.0)
+
+                # Normalize ES score to 0-1 range (ES scores can be > 1)
+                normalized_score = min(score / 10.0, 1.0)
+
+                candidate = Candidate(
+                    doc_id=hit.get('_id', f"es_fuzzy_{len(fuzzy_candidates)}"),
+                    score=normalized_score,
+                    text=source.get('entity_name', source.get('pattern', '')),
+                    entity_type="person",  # Default, could be in metadata
+                    metadata={
+                        "fuzzy_algorithm": "elasticsearch",
+                        "original_query": query_text,
+                        "es_score": score,
+                        "pattern": source.get('pattern', ''),
+                        **source.get('metadata', {})
+                    },
+                    search_mode=SearchMode.FUZZY,
+                    match_fields=["fuzzy_name"],
+                    confidence=normalized_score,
+                    trace={
+                        "reason": "es_fuzzy_match",
+                        "algorithm": "elasticsearch",
+                        "original_query": query_text
+                    }
+                )
+                fuzzy_candidates.append(candidate)
+
+            # Filter by score threshold
+            filtered_candidates = [
+                c for c in fuzzy_candidates
+                if c.score >= (opts.threshold * 0.8)  # Slightly lower for fuzzy
+            ]
+
+            self.logger.info(f"ES fuzzy search: {len(response['hits']['hits'])} hits, {len(filtered_candidates)} after filtering")
+            return filtered_candidates[:opts.top_k]
+
+        except Exception as e:
+            self.logger.warning(f"ES fuzzy search failed, falling back: {e}")
+            return []
+
+    async def _in_memory_fuzzy_search(
+        self,
+        query_text: str,
+        opts: SearchOpts,
+        search_trace: Optional[SearchTrace] = None
+    ) -> List[Candidate]:
+        """
+        Fallback in-memory fuzzy search using sanctions data.
+        """
         if not self._fuzzy_service.enabled:
             self.logger.debug("Fuzzy search disabled - rapidfuzz not available")
             return []
-
-        start_time = time.perf_counter()
 
         try:
             # Get candidates for fuzzy matching (from watchlist or cache)

@@ -27,6 +27,8 @@ services:
       - ES_VECTOR_INDEX=vectors
       # Force reload sanctions for debugging
       - FORCE_RELOAD_SANCTIONS=true
+      # Enable ES-based fuzzy search for better performance
+      - ENABLE_ES_FUZZY_SEARCH=true
     env_file:
       - .env.production
     volumes:
