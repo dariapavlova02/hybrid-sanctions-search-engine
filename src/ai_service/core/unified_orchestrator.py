@@ -1252,7 +1252,8 @@ class UnifiedOrchestrator:
                 elif "vector" in match_fields:
                     search_type = SearchType.VECTOR
 
-                # Create candidate
+                # Create candidate - use real ES score, not normalized confidence
+                real_score = r.get("score", 0.0)  # Use actual ES score instead of normalized confidence
                 candidate = Candidate(
                     entity_id=r.get("doc_id", ""),
                     entity_type=r.get("entity_type", ""),
@@ -1261,9 +1262,9 @@ class UnifiedOrchestrator:
                     country="",
                     dob=None,
                     meta=r.get("metadata", {}),
-                    final_score=r.get("confidence", 0.0),
-                    ac_score=r.get("confidence", 0.0) if r.get("search_mode") != "vector" else 0.0,
-                    vector_score=r.get("confidence", 0.0) if r.get("search_mode") == "vector" else 0.0,
+                    final_score=real_score,  # Use actual ES score
+                    ac_score=real_score if r.get("search_mode") != "vector" else 0.0,
+                    vector_score=real_score if r.get("search_mode") == "vector" else 0.0,
                     features={"match_fields": match_fields},
                     search_type=search_type
                 )
@@ -1280,7 +1281,10 @@ class UnifiedOrchestrator:
             )
 
             # Create SearchInfo using existing function
-            return create_search_info(search_result)
+            logger.debug(f"Creating SearchInfo from {len(candidates)} candidates")
+            search_info = create_search_info(search_result)
+            logger.debug(f"SearchInfo created: high_confidence_matches={search_info.high_confidence_matches}")
+            return search_info
 
         except ImportError:
             logger.warning("Search contracts not available - search module not imported")

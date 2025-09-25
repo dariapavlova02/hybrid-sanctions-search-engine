@@ -392,7 +392,11 @@ def create_search_info(search_result: SearchResult) -> SearchInfo:
 
     # Count high confidence matches - use strict thresholds based on search type
     high_confidence_matches = 0
-    for c in search_result.candidates:
+
+    # Debug logging
+    print(f"🔍 DEBUG: Processing {len(search_result.candidates)} candidates for high_confidence_matches")
+
+    for i, c in enumerate(search_result.candidates):
         # Determine if this is a vector match based on search_mode or search_type
         is_vector_match = False
         if hasattr(c, 'search_mode') and c.search_mode == 'vector':
@@ -410,15 +414,30 @@ def create_search_info(search_result: SearchResult) -> SearchInfo:
         else:
             actual_score = 0.0
 
+        # Debug candidate details
+        print(f"   Candidate {i}: score={actual_score:.3f}, is_vector={is_vector_match}")
+        if hasattr(c, 'search_mode'):
+            print(f"      search_mode={c.search_mode}")
+        if hasattr(c, 'search_type'):
+            print(f"      search_type={c.search_type}")
+
         # Apply strict thresholds
         if is_vector_match:
             # Vector match - very high threshold to prevent false positives
-            if actual_score >= 0.90:
+            threshold = 0.90
+            passes = actual_score >= threshold
+            print(f"      Vector threshold: {actual_score:.3f} >= {threshold} = {passes}")
+            if passes:
                 high_confidence_matches += 1
         else:
             # AC/fuzzy/exact match - moderate threshold
-            if actual_score >= 0.80:
+            threshold = 0.80
+            passes = actual_score >= threshold
+            print(f"      AC/Fuzzy threshold: {actual_score:.3f} >= {threshold} = {passes}")
+            if passes:
                 high_confidence_matches += 1
+
+    print(f"🎯 FINAL: high_confidence_matches = {high_confidence_matches}")
 
     return SearchInfo(
         has_exact_matches=has_exact,
