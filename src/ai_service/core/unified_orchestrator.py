@@ -843,10 +843,13 @@ class UnifiedOrchestrator:
         errors = []
 
         # Initialize metrics tracking
+        metrics = None
         try:
             from ..monitoring.prometheus_exporter import get_exporter
             metrics = get_exporter()
-        except ImportError:
+        except Exception as e:
+            # Catch all exceptions to ensure metrics is always defined
+            logger.debug(f"Metrics not available: {e}")
             metrics = None
         
         # Initialize search trace if enabled

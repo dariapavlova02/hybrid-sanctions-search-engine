@@ -1627,10 +1627,16 @@ class SignalsService:
         """
         try:
             from ...layers.search.sanctioned_inn_cache import get_inn_cache
-            from ...monitoring.prometheus_exporter import get_exporter
-
             inn_cache = get_inn_cache()
-            metrics = get_exporter()
+
+            # Try to get metrics exporter, but don't fail if not available
+            metrics = None
+            try:
+                from ...monitoring.prometheus_exporter import get_exporter
+                metrics = get_exporter()
+            except Exception:
+                # Metrics not available, continue without them
+                pass
 
             # Собираем все ID для проверки
             all_ids_to_check = []
@@ -1659,7 +1665,8 @@ class SignalsService:
 
                 # Record cache lookup metrics
                 cache_hit = sanctioned_data is not None
-                metrics.record_fast_path_cache_lookup(cache_hit)
+                if metrics:
+                    metrics.record_fast_path_cache_lookup(cache_hit)
 
                 if sanctioned_data:
                     sanctioned_matches += 1
