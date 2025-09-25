@@ -613,7 +613,7 @@ class DecisionConfig(BaseModel):
     thr_search_phrase: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_PHRASE", "0.7")))
     thr_search_ngram: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_NGRAM", "0.6")))
     thr_search_fuzzy: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_FUZZY", "0.65")))
-    thr_search_vector: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_VECTOR", "0.5")))
+    thr_search_vector: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__THR_SEARCH_VECTOR", "0.7")))
     
     # Search bonuses (NEW)
     bonus_multiple_matches: float = Field(default_factory=lambda: float(os.getenv("AI_DECISION__BONUS_MULTIPLE_MATCHES", "0.1")))
