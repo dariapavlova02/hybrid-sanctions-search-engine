@@ -57,6 +57,7 @@ from ..contracts.decision_contracts import (
 from ..contracts.trace_models import SearchTrace, SearchTraceBuilder
 from ..core.decision_engine import DecisionEngine
 from ..config.settings import DecisionConfig
+from ..layers.normalization.homoglyph_detector import HomoglyphDetector
 from ..exceptions import InternalServerError, ServiceInitializationError
 from ..utils import get_logger
 from ..monitoring.metrics_service import MetricsService, MetricType, AlertSeverity
@@ -148,7 +149,10 @@ class UnifiedOrchestrator:
                     self.search_service = None
 
         self.default_feature_flags = default_feature_flags or FeatureFlags()
-        
+
+        # Initialize homoglyph detector for search query normalization
+        self.homoglyph_detector = HomoglyphDetector()
+
         # Legacy compatibility attributes for old tests
         self.cache_service = getattr(self, "cache_service", None)
         self.embedding_service = getattr(self, "embedding_service", None) or embeddings_service
@@ -622,6 +626,18 @@ class UnifiedOrchestrator:
 
                 # Perform search using normalized text
                 query = norm_result.normalized if norm_result.normalized else ""
+
+                # Apply homoglyph normalization for search if homoglyphs detected
+                if (hasattr(norm_result, 'homoglyph_detected') and norm_result.homoglyph_detected and
+                    self.homoglyph_detector and query.strip()):
+                    original_query = query
+                    normalized_query, transformations = self.homoglyph_detector.normalize_homoglyphs(query)
+                    if normalized_query != original_query:
+                        query = normalized_query
+                        logger.warning(f"🔧 HOMOGLYPH NORMALIZATION: '{original_query}' → '{query}' (transformations: {len(transformations)})")
+                        print(f"🔧 HOMOGLYPH SEARCH: '{original_query}' → '{query}'")
+                    else:
+                        logger.debug("No homoglyph transformations needed for search query")
                 print(f"🔍 SEARCH DEBUG: query='{query}', search_service={self.search_service is not None}, SearchOpts={SearchOpts is not None}")
 
                 if query.strip() and SearchOpts:

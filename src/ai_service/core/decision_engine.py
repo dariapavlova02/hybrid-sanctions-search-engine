@@ -161,11 +161,13 @@ class DecisionEngine:
         if inp.signals.id_match:
             score += self.config.bonus_id_match
 
-        # CRITICAL: Homoglyph attack detected = major score boost
+        # CRITICAL: Homoglyph attack detected = moderate score boost
         if (inp and inp.normalization and hasattr(inp.normalization, 'homoglyph_detected') and
             inp.normalization.homoglyph_detected):
-            score += 0.85  # Boost score to ensure HIGH risk classification
-            self.logger.warning(f"🚨 HOMOGLYPH ATTACK - adding +0.85 to score (now: {score:.3f})")
+            # Lower bonus if no sanctions found (just suspicious activity)
+            homoglyph_bonus = 0.3 if (inp.search and inp.search.total_matches > 0) else 0.15
+            score += homoglyph_bonus
+            self.logger.warning(f"🚨 HOMOGLYPH ATTACK - adding +{homoglyph_bonus} to score (now: {score:.3f})")
 
         # CRITICAL: Sanctioned ID detected = automatic HIGH score
         if inp and inp.search and inp.search.total_matches > 0:
@@ -236,11 +238,11 @@ class DecisionEngine:
                         )
                         return RiskLevel.HIGH
 
-        # CRITICAL: Homoglyph attack detected = automatic HIGH RISK
-        # Homoglyph attacks are security threats that should always be flagged as high risk
+        # CRITICAL: Homoglyph attack detected = HIGH RISK if sanctions found
+        # Homoglyph attacks with sanctions matches are serious security threats
         if inp and inp.normalization and hasattr(inp.normalization, 'homoglyph_detected'):
-            if inp.normalization.homoglyph_detected:
-                self.logger.warning(f"🚨 HOMOGLYPH ATTACK DETECTED - forcing HIGH RISK (score: {score:.3f})")
+            if inp.normalization.homoglyph_detected and inp.search and inp.search.total_matches > 0:
+                self.logger.warning(f"🚨 HOMOGLYPH ATTACK + SANCTIONS MATCH - forcing HIGH RISK (score: {score:.3f})")
                 return RiskLevel.HIGH
 
         # Standard score-based thresholds

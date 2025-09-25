@@ -390,8 +390,35 @@ def create_search_info(search_result: SearchResult) -> SearchInfo:
         has_ngram = len(ngram_candidates) > 0 or ngram_confidence >= 0.6
         has_vector = vector_confidence > 0
 
-    # Count high confidence matches
-    high_confidence_matches = sum(1 for c in search_result.candidates if c.final_score >= 0.9)
+    # Count high confidence matches - use strict thresholds based on search type
+    high_confidence_matches = 0
+    for c in search_result.candidates:
+        # Determine if this is a vector match based on search_mode or search_type
+        is_vector_match = False
+        if hasattr(c, 'search_mode') and c.search_mode == 'vector':
+            is_vector_match = True
+        elif hasattr(c, 'search_type') and c.search_type in ['vector', 'VECTOR']:
+            is_vector_match = True
+        elif (hasattr(c, 'vector_score') and hasattr(c, 'ac_score') and c.vector_score > c.ac_score):
+            is_vector_match = True
+
+        # Use appropriate score
+        if hasattr(c, 'final_score'):
+            actual_score = c.final_score
+        elif hasattr(c, 'score'):
+            actual_score = getattr(c, 'score', 0.0)
+        else:
+            actual_score = 0.0
+
+        # Apply strict thresholds
+        if is_vector_match:
+            # Vector match - very high threshold to prevent false positives
+            if actual_score >= 0.90:
+                high_confidence_matches += 1
+        else:
+            # AC/fuzzy/exact match - moderate threshold
+            if actual_score >= 0.80:
+                high_confidence_matches += 1
 
     return SearchInfo(
         has_exact_matches=has_exact,
