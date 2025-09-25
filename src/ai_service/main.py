@@ -258,6 +258,8 @@ def _extract_decision_dict(result: UnifiedProcessingResult) -> Dict[str, Any]:
         "risk_score": result.decision.score,
         "decision_reasons": result.decision.reasons,
         "decision_details": result.decision.details,
+        "review_required": result.decision.review_required,
+        "required_additional_fields": result.decision.required_additional_fields,
     }
 
 

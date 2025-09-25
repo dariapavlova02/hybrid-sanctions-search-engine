@@ -286,7 +286,7 @@ class UnifiedProcessingResult:
             "variants": self.variants,
             "embeddings": self.embeddings,
             "search_results": self.search_results,
-            "decision": self.decision.model_dump() if self.decision else None,
+            "decision": self.decision.to_dict() if self.decision else None,
             "processing_time": self.processing_time,
             "success": self.success,
             "errors": self.errors,
