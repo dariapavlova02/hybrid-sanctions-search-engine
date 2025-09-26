@@ -460,12 +460,16 @@ class MorphologyAdapter:
 
     def get_cache_stats(self) -> Dict[str, int]:
         """Get cache statistics."""
+        parse_info = self._parse_cached.cache_info()
+        nominative_info = self._to_nominative_cached.cache_info()
+        gender_info = self._detect_gender_cached.cache_info()
+
         return {
-            "parse_cache_size": self._parse_cached.cache_info().currsize,
-            "parse_cache_hits": self._parse_cached.cache_info().hits,
-            "parse_cache_misses": self._parse_cached.cache_info().misses,
-            "nominative_cache_size": self._to_nominative_cached.cache_info().currsize,
-            "gender_cache_size": self._detect_gender_cached.cache_info().currsize,
+            "parse_cache_size": getattr(parse_info, 'currsize', parse_info.get('currsize', 0) if isinstance(parse_info, dict) else 0),
+            "parse_cache_hits": getattr(parse_info, 'hits', parse_info.get('hits', 0) if isinstance(parse_info, dict) else 0),
+            "parse_cache_misses": getattr(parse_info, 'misses', parse_info.get('misses', 0) if isinstance(parse_info, dict) else 0),
+            "nominative_cache_size": getattr(nominative_info, 'currsize', nominative_info.get('currsize', 0) if isinstance(nominative_info, dict) else 0),
+            "gender_cache_size": getattr(gender_info, 'currsize', gender_info.get('currsize', 0) if isinstance(gender_info, dict) else 0),
         }
     
     def get_stats(self) -> Dict[str, int]:

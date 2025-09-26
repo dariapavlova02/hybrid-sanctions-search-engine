@@ -112,8 +112,11 @@ class WarmupService:
             # Check cache statistics if available
             if hasattr(self.service, '_morph_cache') and hasattr(self.service._morph_cache, 'cache_info'):
                 cache_info = self.service._morph_cache.cache_info()
-                self.stats["cache_hits"] += cache_info.hits
-                self.stats["cache_misses"] += cache_info.misses
+                # Defensive access to cache_info attributes
+                hits = getattr(cache_info, 'hits', cache_info.get('hits', 0) if isinstance(cache_info, dict) else 0)
+                misses = getattr(cache_info, 'misses', cache_info.get('misses', 0) if isinstance(cache_info, dict) else 0)
+                self.stats["cache_hits"] += hits
+                self.stats["cache_misses"] += misses
             
             return {
                 "text": text,

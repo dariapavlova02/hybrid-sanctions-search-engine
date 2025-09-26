@@ -181,12 +181,15 @@ class PerformanceTestService:
             # Cache statistics if available
             if hasattr(self.service, '_morph_cache') and hasattr(self.service._morph_cache, 'cache_info'):
                 cache_info = self.service._morph_cache.cache_info()
-                total_cache_requests = cache_info.hits + cache_info.misses
+                # Defensive access to cache_info attributes
+                hits = getattr(cache_info, 'hits', cache_info.get('hits', 0) if isinstance(cache_info, dict) else 0)
+                misses = getattr(cache_info, 'misses', cache_info.get('misses', 0) if isinstance(cache_info, dict) else 0)
+                total_cache_requests = hits + misses
                 if total_cache_requests > 0:
-                    cache_hit_rate = cache_info.hits / total_cache_requests * 100
+                    cache_hit_rate = hits / total_cache_requests * 100
                     logger.info(f"Cache hit rate: {cache_hit_rate:.1f}%")
-                    logger.info(f"Cache hits: {cache_info.hits}")
-                    logger.info(f"Cache misses: {cache_info.misses}")
+                    logger.info(f"Cache hits: {hits}")
+                    logger.info(f"Cache misses: {misses}")
     
     def _percentile(self, data: List[float], percentile: int) -> float:
         """Calculate percentile of data."""
