@@ -216,7 +216,7 @@ class MemoryAwareLRUCache:
 
                 logger.debug(f"Memory pressure cleanup: removed {entries_to_remove} cache entries")
 
-def memory_aware_lru_cache(maxsize: int = 128, typed: bool = False) -> Callable:
+def memory_aware_lru_cache(maxsize=128, typed=False):
     """
     Memory-aware LRU cache decorator that automatically manages memory pressure.
 
@@ -226,14 +226,22 @@ def memory_aware_lru_cache(maxsize: int = 128, typed: bool = False) -> Callable:
     - Statistics and introspection
 
     Args:
-        maxsize: Maximum number of cached entries
+        maxsize: Maximum number of cached entries or function (if used without parentheses)
         typed: Whether to cache based on argument types
 
     Returns:
-        Decorator function
+        Decorator function or decorated function (Pydantic-compatible)
     """
+    # Support both @memory_aware_lru_cache and @memory_aware_lru_cache() syntax
+    # This is needed for Pydantic compatibility
     def decorator(func: Callable) -> Callable:
         cache = MemoryAwareLRUCache(maxsize=maxsize, typed=typed)
+        return cache(func)
+
+    # If called without parentheses, maxsize is actually the function
+    if callable(maxsize):
+        func = maxsize
+        cache = MemoryAwareLRUCache(maxsize=128, typed=False)  # default values
         return cache(func)
 
     return decorator
@@ -250,14 +258,13 @@ def patch_lru_cache_with_memory_awareness():
 
     This can be called at startup to automatically upgrade all lru_cache usage.
     """
+
     import functools
 
     # Store original for fallback
     functools._original_lru_cache = functools.lru_cache
 
-    def memory_aware_lru_cache_wrapper(maxsize: int = 128, typed: bool = False):
-        return memory_aware_lru_cache(maxsize=maxsize, typed=typed)
-
-    # Replace lru_cache with memory-aware version
-    functools.lru_cache = memory_aware_lru_cache_wrapper
+    # Replace lru_cache with our memory-aware version
+    # This now supports both @lru_cache and @lru_cache() syntax
+    functools.lru_cache = memory_aware_lru_cache
     logger.info("Patched functools.lru_cache with memory-aware version")
