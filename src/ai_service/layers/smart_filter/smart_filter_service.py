@@ -6,6 +6,7 @@ Intelligent pre-filtering service for Aho-Corasick search decisions.
 
 # Standard library imports
 import asyncio
+import os
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -357,12 +358,22 @@ class SmartFilterService:
             from requests.auth import HTTPBasicAuth
             start_time = time.time()
 
-            # ES connection details
-            ES_HOST = "95.217.84.234"
-            ES_PORT = 9200
-            ES_USER = "elastic"
-            ES_PASSWORD = "AiServiceElastic2024!"
-            ES_INDEX = "ai_service_ac_patterns"
+            # ES connection details - using environment variables for security
+            ES_HOST = os.getenv("ES_HOST", "localhost")
+            ES_PORT = int(os.getenv("ES_PORT", "9200"))
+            ES_USER = os.getenv("ES_USERNAME", os.getenv("ES_USER"))
+            ES_PASSWORD = os.getenv("ES_PASSWORD")
+            ES_INDEX = os.getenv("ES_AC_PATTERNS_INDEX", "ai_service_ac_patterns")
+
+            # Check if credentials are available, skip ES lookup if not
+            if not ES_PASSWORD or not ES_USER:
+                # Fallback to basic detection without ES lookup
+                return {
+                    "should_use_ac": False,
+                    "confidence": 0.5,
+                    "reason": "ES credentials not configured",
+                    "processing_time": time.time() - start_time
+                }
 
             # Normalize text for search (same as AC patterns)
             from ..unicode.unicode_service import UnicodeService

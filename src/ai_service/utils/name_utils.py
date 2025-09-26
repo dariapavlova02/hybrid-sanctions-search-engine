@@ -6,7 +6,8 @@ from typing import Optional, Dict, Any, List, Tuple
 import re
 import logging
 
-from .lazy_imports import NAMEPARSER, RAPIDFUZZ, NLP_EN, NLP_UK, NLP_RU
+from .lazy_imports import NAMEPARSER, RAPIDFUZZ
+from .async_model_loader import get_spacy_en_sync, get_spacy_uk_sync, get_spacy_ru_sync
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +17,10 @@ class NameParser:
     def __init__(self):
         self.nameparser = NAMEPARSER
         self.rapidfuzz = RAPIDFUZZ
-        self.nlp_en = NLP_EN
-        self.nlp_uk = NLP_UK
-        self.nlp_ru = NLP_RU
+        # Use sync getters - models are loaded in background
+        self.nlp_en = get_spacy_en_sync()
+        self.nlp_uk = get_spacy_uk_sync()
+        self.nlp_ru = get_spacy_ru_sync()
         
         if self.nameparser is None:
             logger.warning("nameparser not available, using fallback parsing")

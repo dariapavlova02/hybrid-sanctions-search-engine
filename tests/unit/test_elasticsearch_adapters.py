@@ -15,7 +15,7 @@ from src.ai_service.layers.search.elasticsearch_adapters import (
 )
 from src.ai_service.layers.search.config import HybridSearchConfig
 from src.ai_service.layers.search.contracts import SearchOpts, SearchMode, Candidate
-from elasticsearch.exceptions import ElasticsearchException, ConnectionError, TimeoutError
+from elasticsearch.exceptions import ApiError, ConnectionError, ConnectionTimeout
 
 
 class TestElasticsearchACAdapter:
@@ -154,7 +154,7 @@ class TestElasticsearchACAdapter:
     @pytest.mark.asyncio
     async def test_search_error_handling(self, ac_adapter, mock_client):
         """Test error handling in search operations"""
-        mock_client.search.side_effect = ElasticsearchException("Search failed")
+        mock_client.search.side_effect = ApiError("Search failed")
         
         opts = SearchOpts(top_k=10, threshold=0.7)
         result = await ac_adapter.search("test query", opts)
@@ -184,7 +184,7 @@ class TestElasticsearchACAdapter:
     @pytest.mark.asyncio
     async def test_timeout_error_handling(self, ac_adapter, mock_client):
         """Test timeout error handling"""
-        mock_client.search.side_effect = TimeoutError("Request timeout")
+        mock_client.search.side_effect = ConnectionTimeout("Request timeout")
         
         opts = SearchOpts(top_k=10, threshold=0.7)
         result = await ac_adapter.search("test query", opts)
@@ -330,7 +330,7 @@ class TestElasticsearchVectorAdapter:
     @pytest.mark.asyncio
     async def test_search_error_handling(self, vector_adapter, mock_client):
         """Test error handling in search operations"""
-        mock_client.search.side_effect = ElasticsearchException("Search failed")
+        mock_client.search.side_effect = ApiError("Search failed")
         
         query_vector = [0.1] * 384
         opts = SearchOpts(top_k=10, threshold=0.7)
@@ -362,7 +362,7 @@ class TestElasticsearchVectorAdapter:
     @pytest.mark.asyncio
     async def test_timeout_error_handling(self, vector_adapter, mock_client):
         """Test timeout error handling"""
-        mock_client.search.side_effect = TimeoutError("Request timeout")
+        mock_client.search.side_effect = ConnectionTimeout("Request timeout")
         
         query_vector = [0.1] * 384
         opts = SearchOpts(top_k=10, threshold=0.7)

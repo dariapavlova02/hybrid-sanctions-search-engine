@@ -1692,37 +1692,24 @@ class UnifiedOrchestrator:
                 "Владимир Путин", "Сергей Лавров", "Михаил Мишустин"
             ]
 
-            # Simple fuzzy matching
-            matches = []
-            query_tokens = set(query.lower().split())
+            # Efficient fuzzy matching - replaces O(n³) algorithm
+            from ..utils.efficient_fuzzy_matcher import find_fuzzy_matches_efficient
 
-            for name in known_names:
-                name_tokens = set(name.lower().split())
+            try:
+                match_results = find_fuzzy_matches_efficient(query, known_names, min_overlap=1)
+                matches = []
 
-                # Check for token overlap or partial matches
-                overlap = 0
-                for query_token in query_tokens:
-                    for name_token in name_tokens:
-                        # Exact match
-                        if query_token == name_token:
-                            overlap += 2
-                        # Partial match (for truncated names)
-                        elif len(query_token) >= 4 and name_token.startswith(query_token):
-                            overlap += 1
-                        elif len(name_token) >= 4 and query_token.startswith(name_token):
-                            overlap += 1
-
-                if overlap >= 1:  # At least some match
-                    # Create a simple candidate-like object
+                for match in match_results:
+                    # Create a simple candidate-like object compatible with existing code
                     candidate = type('Candidate', (), {
-                        'doc_id': f"emergency_{len(matches)}",
-                        'score': overlap * 50,  # Simple scoring
-                        'text': name,
+                        'doc_id': match.doc_id,
+                        'score': match.score,  # Already scaled by 50 in the matcher
+                        'text': match.name,
                         'entity_type': 'person',
-                        'metadata': {'emergency_match': True},
+                        'metadata': {'emergency_match': True, 'overlap_tokens': len(match.overlap_tokens)},
                         'search_mode': 'fuzzy',
                         'match_fields': ['emergency'],
-                        'confidence': min(overlap / 2.0, 1.0),
+                        'confidence': min(match.score / 100.0, 1.0),  # Score is scaled by 50, so /100 for normalized confidence
                         'trace': None,
                         'to_dict': lambda self: {
                             'doc_id': self.doc_id,
@@ -1737,8 +1724,47 @@ class UnifiedOrchestrator:
                     })()
                     matches.append(candidate)
 
-            return sorted(matches, key=lambda x: x.score, reverse=True)[:5]
+                return sorted(matches, key=lambda x: x.score, reverse=True)[:5]
+
+            except Exception as e:
+                # Fallback to simple matching if efficient matcher fails
+                logger.warning(f"Efficient fuzzy matcher failed, using fallback: {e}")
+
+                matches = []
+                query_tokens = set(query.lower().split())
+
+                for idx, name in enumerate(known_names):
+                    name_tokens = set(name.lower().split())
+
+                    # Simple intersection-based matching
+                    exact_matches = len(query_tokens.intersection(name_tokens))
+                    if exact_matches > 0:
+                        score = exact_matches * 50
+                        candidate = type('Candidate', (), {
+                            'doc_id': f"fallback_{idx}",
+                            'score': score,
+                            'text': name,
+                            'entity_type': 'person',
+                            'metadata': {'emergency_match': True, 'fallback': True},
+                            'search_mode': 'fallback',
+                            'match_fields': ['emergency'],
+                            'confidence': min(score / 100.0, 1.0),
+                            'trace': None,
+                            'to_dict': lambda self: {
+                                'doc_id': self.doc_id,
+                                'score': self.score,
+                                'text': self.text,
+                                'entity_type': self.entity_type,
+                                'metadata': self.metadata,
+                                'search_mode': self.search_mode,
+                                'match_fields': self.match_fields,
+                                'confidence': self.confidence
+                            }
+                        })()
+                        matches.append(candidate)
+
+                return sorted(matches, key=lambda x: x.score, reverse=True)[:5]
 
         except Exception as e:
-            print(f"❌ Emergency fuzzy search failed: {e}")
+            logger.error(f"Emergency fuzzy search completely failed: {e}")
             return []

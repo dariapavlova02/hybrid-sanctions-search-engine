@@ -645,11 +645,18 @@ class DecisionEngine:
         if risk != RiskLevel.HIGH:
             return False, []
 
-        # Check if we have strong name match indicators
+        # For HIGH RISK cases, always request TIN/DOB if we have sanctions matches
+        has_sanctions_match = (
+            inp.search and inp.search.total_matches > 0 and
+            (inp.search.has_exact_matches or inp.search.high_confidence_matches > 0)
+        )
+
+        # Check if we have strong name match indicators OR sanctions match
         has_strong_name_match = (
-            inp.signals.person_confidence >= 0.8 or
-            inp.signals.org_confidence >= 0.8 or
-            (inp.similarity.cos_top and inp.similarity.cos_top >= 0.8)
+            inp.signals.person_confidence >= 0.6 or  # Lowered from 0.8 to 0.6
+            inp.signals.org_confidence >= 0.6 or    # Lowered from 0.8 to 0.6
+            (inp.similarity.cos_top and inp.similarity.cos_top >= 0.8) or
+            has_sanctions_match  # HIGH RISK from sanctions = always strong match
         )
 
         if not has_strong_name_match:
@@ -667,10 +674,8 @@ class DecisionEngine:
             'dob' in inp.signals.evidence.get('extracted_dates', [])
         )
 
-        # If we have both TIN and DOB evidence, no additional fields needed
-        if has_tin_evidence and has_dob_evidence:
-            self.logger.debug("Both TIN and DOB evidence found - no additional fields required")
-            return False, []
+        # If we have sufficient evidence (at least TIN OR DOB), check if we need more
+        # Note: We'll determine specific missing fields below
 
         # Check if sanction record lacks both TIN and DOB (exception case)
         sanction_has_no_identifiers = (
@@ -690,6 +695,15 @@ class DecisionEngine:
             required_fields.append('TIN')
         if not has_dob_evidence:
             required_fields.append('DOB')
+
+        # If we have both TIN and DOB, no additional fields needed
+        if has_tin_evidence and has_dob_evidence:
+            self.logger.debug("Both TIN and DOB evidence found - no additional fields required")
+            return False, []
+
+        # If no additional fields needed (shouldn't happen, but safety check)
+        if not required_fields:
+            return False, []
 
         self.logger.debug(f"Strong name match but missing identifiers - requesting: {required_fields}")
         return True, required_fields

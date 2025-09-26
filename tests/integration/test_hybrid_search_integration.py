@@ -14,7 +14,7 @@ from src.ai_service.layers.search.config import HybridSearchConfig
 from src.ai_service.layers.search.enhanced_elasticsearch_client import EnhancedElasticsearchClient, HealthStatus
 from src.ai_service.layers.search.search_trace_validator import SearchTraceValidator, ValidationSeverity
 from src.ai_service.contracts.trace_models import SearchTrace
-from src.ai_service.contracts.search_contracts import SearchQuery, SearchResult
+from src.ai_service.contracts.search_contracts import SearchOpts, SearchResult
 
 
 @pytest.fixture
@@ -142,7 +142,7 @@ class TestHybridSearchIntegration:
     async def test_ac_search_execution(self, hybrid_search_service):
         """Test AC (Autocomplete) search execution."""
         # Create test search query
-        query = SearchQuery(
+        query = SearchOpts(
             text="John Doe",
             strategy="ac_only",
             max_results=10
@@ -167,7 +167,7 @@ class TestHybridSearchIntegration:
 
     async def test_vector_search_execution(self, hybrid_search_service):
         """Test vector search execution."""
-        query = SearchQuery(
+        query = SearchOpts(
             text="John Doe",
             strategy="vector_only",
             max_results=10
@@ -192,7 +192,7 @@ class TestHybridSearchIntegration:
 
     async def test_hybrid_search_with_fallback(self, hybrid_search_service):
         """Test hybrid search with fallback mechanism."""
-        query = SearchQuery(
+        query = SearchOpts(
             text="John Doe",
             strategy="hybrid_with_fallback",
             max_results=10
@@ -224,7 +224,7 @@ class TestHybridSearchIntegration:
 
     async def test_search_result_consistency(self, hybrid_search_service):
         """Test search result consistency across multiple calls."""
-        query = SearchQuery(
+        query = SearchOpts(
             text="consistent_test_query",
             strategy="hybrid",
             max_results=5
@@ -409,7 +409,7 @@ class TestSearchSystemResilience:
 
     async def test_search_timeout_handling(self, hybrid_search_service):
         """Test search timeout handling."""
-        query = SearchQuery(
+        query = SearchOpts(
             text="timeout_test_query",
             strategy="hybrid",
             max_results=10,
@@ -432,7 +432,7 @@ class TestSearchSystemResilience:
 
     async def test_large_result_set_handling(self, hybrid_search_service):
         """Test handling of large result sets."""
-        query = SearchQuery(
+        query = SearchOpts(
             text="*",  # Broad query that might return many results
             strategy="ac_only",
             max_results=1000  # Large limit
@@ -466,7 +466,7 @@ class TestEndToEndSearchWorkflow:
     async def test_complete_hybrid_search_workflow(self, hybrid_search_service, search_trace_validator):
         """Test complete workflow from query to validated results."""
         # Step 1: Execute hybrid search
-        query = SearchQuery(
+        query = SearchOpts(
             text="John Smith",
             strategy="hybrid_with_fallback",
             max_results=10
@@ -512,7 +512,7 @@ class TestEndToEndSearchWorkflow:
         """Test creation of deterministic search trace snapshots."""
         from src.ai_service.layers.search.search_trace_validator import create_deterministic_trace_snapshot
 
-        query = SearchQuery(
+        query = SearchOpts(
             text="snapshot_test",
             strategy="hybrid",
             max_results=5
@@ -558,7 +558,7 @@ class TestSearchPerformance:
     async def test_concurrent_search_performance(self, hybrid_search_service):
         """Test performance under concurrent search load."""
         queries = [
-            SearchQuery(text=f"test_query_{i}", strategy="ac_only", max_results=5)
+            SearchOpts(text=f"test_query_{i}", strategy="ac_only", max_results=5)
             for i in range(10)  # 10 concurrent queries
         ]
 
@@ -596,7 +596,7 @@ class TestSearchPerformance:
 
     async def test_search_latency_distribution(self, hybrid_search_service, search_trace_validator):
         """Test search latency distribution across multiple searches."""
-        query = SearchQuery(
+        query = SearchOpts(
             text="latency_test",
             strategy="hybrid",
             max_results=10

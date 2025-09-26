@@ -14,52 +14,53 @@ logger = get_logger(__name__)
 
 # Common homoglyph mappings for Cyrillic/Latin substitution attacks
 CYRILLIC_LATIN_HOMOGLYPHS = {
-    # Latin to Cyrillic mappings (for normalization)
-    'A': 'А',  # Latin A (U+0041) -> Cyrillic А (U+0410)
-    'B': 'В',  # Latin B (U+0042) -> Cyrillic В (U+0412)
-    'C': 'С',  # Latin C (U+0043) -> Cyrillic С (U+0421)
-    'E': 'Е',  # Latin E (U+0045) -> Cyrillic Е (U+0415)
-    'H': 'Н',  # Latin H (U+0048) -> Cyrillic Н (U+041D)
-    'K': 'К',  # Latin K (U+004B) -> Cyrillic К (U+041A)
-    'M': 'М',  # Latin M (U+004D) -> Cyrillic М (U+041C)
-    'O': 'О',  # Latin O (U+004F) -> Cyrillic О (U+041E)
-    'P': 'Р',  # Latin P (U+0050) -> Cyrillic Р (U+0420)
-    'T': 'Т',  # Latin T (U+0054) -> Cyrillic Т (U+0422)
-    'X': 'Х',  # Latin X (U+0058) -> Cyrillic Х (U+0425)
-    'Y': 'У',  # Latin Y (U+0059) -> Cyrillic У (U+0423)
+    # Cyrillic to Latin mappings (for normalization to Latin)
+    'А': 'A',  # Cyrillic А (U+0410) -> Latin A (U+0041)
+    'В': 'B',  # Cyrillic В (U+0412) -> Latin B (U+0042)
+    'С': 'C',  # Cyrillic С (U+0421) -> Latin C (U+0043)
+    'Е': 'E',  # Cyrillic Е (U+0415) -> Latin E (U+0045)
+    'Н': 'H',  # Cyrillic Н (U+041D) -> Latin H (U+0048)
+    'К': 'K',  # Cyrillic К (U+041A) -> Latin K (U+004B)
+    'М': 'M',  # Cyrillic М (U+041C) -> Latin M (U+004D)
+    'О': 'O',  # Cyrillic О (U+041E) -> Latin O (U+004F)
+    'Р': 'P',  # Cyrillic Р (U+0420) -> Latin P (U+0050)
+    'Т': 'T',  # Cyrillic Т (U+0422) -> Latin T (U+0054)
+    'Х': 'X',  # Cyrillic Х (U+0425) -> Latin X (U+0058)
+    'У': 'Y',  # Cyrillic У (U+0423) -> Latin Y (U+0059)
 
     # Lowercase variants
-    'a': 'а',  # Latin a (U+0061) -> Cyrillic а (U+0430)
-    'c': 'с',  # Latin c (U+0063) -> Cyrillic с (U+0441)
-    'e': 'е',  # Latin e (U+0065) -> Cyrillic е (U+0435)
-    'o': 'о',  # Latin o (U+006F) -> Cyrillic о (U+043E)
-    'p': 'р',  # Latin p (U+0070) -> Cyrillic р (U+0440)
-    'x': 'х',  # Latin x (U+0078) -> Cyrillic х (U+0445)
-    'y': 'у',  # Latin y (U+0079) -> Cyrillic у (U+0443)
+    'а': 'a',  # Cyrillic а (U+0430) -> Latin a (U+0061)
+    'с': 'c',  # Cyrillic с (U+0441) -> Latin c (U+0063)
+    'е': 'e',  # Cyrillic е (U+0435) -> Latin e (U+0065)
+    'о': 'o',  # Cyrillic о (U+043E) -> Latin o (U+006F)
+    'р': 'p',  # Cyrillic р (U+0440) -> Latin p (U+0070)
+    'х': 'x',  # Cyrillic х (U+0445) -> Latin x (U+0078)
+    'у': 'y',  # Cyrillic у (U+0443) -> Latin y (U+0079)
+    'м': 'm',  # Cyrillic м (U+043C) -> Latin m (U+006D)
 }
 
 # Additional lookalike characters
 ADDITIONAL_HOMOGLYPHS = {
-    # Greek letters often confused with Latin/Cyrillic
-    'Α': 'А',  # Greek Alpha -> Cyrillic А
-    'Β': 'В',  # Greek Beta -> Cyrillic В
-    'Ε': 'Е',  # Greek Epsilon -> Cyrillic Е
-    'Η': 'Н',  # Greek Eta -> Cyrillic Н
-    'Κ': 'К',  # Greek Kappa -> Cyrillic К
-    'Μ': 'М',  # Greek Mu -> Cyrillic М
-    'Ο': 'О',  # Greek Omicron -> Cyrillic О
-    'Ρ': 'Р',  # Greek Rho -> Cyrillic Р
-    'Τ': 'Т',  # Greek Tau -> Cyrillic Т
-    'Υ': 'У',  # Greek Upsilon -> Cyrillic У
-    'Χ': 'Х',  # Greek Chi -> Cyrillic Х
+    # Greek letters often confused with Latin (normalize to Latin)
+    'Α': 'A',  # Greek Alpha -> Latin A
+    'Β': 'B',  # Greek Beta -> Latin B
+    'Ε': 'E',  # Greek Epsilon -> Latin E
+    'Η': 'H',  # Greek Eta -> Latin H
+    'Κ': 'K',  # Greek Kappa -> Latin K
+    'Μ': 'M',  # Greek Mu -> Latin M
+    'Ο': 'O',  # Greek Omicron -> Latin O
+    'Ρ': 'P',  # Greek Rho -> Latin P
+    'Τ': 'T',  # Greek Tau -> Latin T
+    'Υ': 'Y',  # Greek Upsilon -> Latin Y
+    'Χ': 'X',  # Greek Chi -> Latin X
 
     # Lowercase Greek
-    'α': 'а',  # Greek alpha -> Cyrillic а
-    'ε': 'е',  # Greek epsilon -> Cyrillic е
-    'ο': 'о',  # Greek omicron -> Cyrillic о
-    'ρ': 'р',  # Greek rho -> Cyrillic р
-    'υ': 'у',  # Greek upsilon -> Cyrillic у
-    'χ': 'х',  # Greek chi -> Cyrillic х
+    'α': 'a',  # Greek alpha -> Latin a
+    'ε': 'e',  # Greek epsilon -> Latin e
+    'ο': 'o',  # Greek omicron -> Latin o
+    'ρ': 'p',  # Greek rho -> Latin p
+    'υ': 'y',  # Greek upsilon -> Latin y
+    'χ': 'x',  # Greek chi -> Latin x
 }
 
 # Combined homoglyph mapping

@@ -141,7 +141,8 @@ services:
       - PROMETHEUS_PORT=8080
       - ES_URL=http://elasticsearch:9200
       - ES_AUTH=
-      - ES_VERIFY_SSL=false
+      # SECURITY: Use ES_VERIFY_SSL=true in production with proper certificates
+      - ES_VERIFY_SSL=false  # Set to true in production
     restart: unless-stopped
     networks:
       - monitoring

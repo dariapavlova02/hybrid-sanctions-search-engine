@@ -3735,4 +3735,4 @@ spacy-models = []
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.14"
-content-hash = "f868673cbfd7376d2c1160d3b9e3f08f246ce44e6b251f9fe55417eba0443a33"
+content-hash = "e19aa90bbcca6dc297fdbac5705500e8fe117b961ad8f7a8d8aad48a3295bb37"

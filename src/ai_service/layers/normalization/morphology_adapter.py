@@ -11,6 +11,7 @@ import threading
 import unicodedata
 from dataclasses import dataclass
 from functools import lru_cache
+from ...utils.memory_aware_cache import memory_aware_lru_cache
 from typing import Dict, List, Optional, Tuple, Any, TYPE_CHECKING
 
 from ...utils.logging_config import get_logger
@@ -65,10 +66,10 @@ class MorphologyAdapter:
         # Initialize analyzers
         self._initialize_analyzers()
         
-        # Create cached methods
-        self._parse_cached = lru_cache(maxsize=cache_size)(self._parse_uncached)
-        self._to_nominative_cached = lru_cache(maxsize=cache_size)(self._to_nominative_uncached)
-        self._detect_gender_cached = lru_cache(maxsize=cache_size)(self._detect_gender_uncached)
+        # Create memory-aware cached methods with pressure handling
+        self._parse_cached = memory_aware_lru_cache(maxsize=cache_size)(self._parse_uncached)
+        self._to_nominative_cached = memory_aware_lru_cache(maxsize=cache_size)(self._to_nominative_uncached)
+        self._detect_gender_cached = memory_aware_lru_cache(maxsize=cache_size)(self._detect_gender_uncached)
 
     def parse(self, token: str, lang: str) -> List[MorphParse]:
         """

@@ -14,6 +14,13 @@ services:
       - DEBUG=false
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
       - ENABLE_ELASTICSEARCH_AUTH=false
+      # 🔒 SECURITY: CRITICAL environment variables
+      - ES_HOST=${ES_HOST:-elasticsearch}
+      - ES_PORT=${ES_PORT:-9200}
+      - ES_USERNAME=${ES_USERNAME:-}
+      - ES_PASSWORD=${ES_PASSWORD:-}
+      - ES_VERIFY_CERTS=${ES_VERIFY_CERTS:-true}
+      - ADMIN_API_KEY=${ADMIN_API_KEY:-}
       - ENABLE_SEARCH_CACHE=true
       - SEARCH_CACHE_SIZE=2000
       - QUERY_CACHE_SIZE=5000

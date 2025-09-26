@@ -4,6 +4,7 @@ Structured configuration classes with validation and type hints
 """
 
 import os
+import secrets
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -16,6 +17,11 @@ from ..constants import (
     DEFAULT_MAX_INPUT_LENGTH,
     FALLBACK_LANGUAGE,
 )
+
+
+def generate_secure_api_key() -> str:
+    """Generate a cryptographically secure API key"""
+    return secrets.token_urlsafe(32)
 from ..constants import INTEGRATION_CONFIG as INT_CONSTANTS
 from ..constants import LOGGING_CONFIG as LOG_CONSTANTS
 from ..constants import PERFORMANCE_CONFIG as PERF_CONSTANTS
@@ -153,7 +159,9 @@ class SecurityConfig:
     sanitize_input: bool = True
     rate_limit_enabled: bool = True
     max_requests_per_minute: int = 100
-    admin_api_key: str = "your-secure-api-key-here"
+    admin_api_key: str = field(
+        default_factory=lambda: os.getenv("ADMIN_API_KEY") or generate_secure_api_key()
+    )
     enable_cors: bool = True
     allowed_origins: List[str] = field(
         default_factory=lambda: ["http://localhost:3000", "http://localhost:8080"]

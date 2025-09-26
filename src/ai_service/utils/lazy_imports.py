@@ -79,10 +79,20 @@ logger.info("Initializing lazy imports on module load...")
 NAMEPARSER = lazy_import("nameparser")
 RAPIDFUZZ = lazy_import("rapidfuzz")
 
-# Initialize spacy models
-NLP_EN = get_spacy_en()
-NLP_UK = get_spacy_uk()
-NLP_RU = get_spacy_ru()
+# WARNING: DO NOT initialize spacy models here as they block startup!
+# Use async_model_loader.py for non-blocking model loading
+# These are kept as None for backward compatibility
+NLP_EN = None
+NLP_UK = None
+NLP_RU = None
+
+# Start background model loading
+try:
+    from .async_model_loader import start_model_preloading
+    start_model_preloading()
+    logger.info("Started async model preloading")
+except ImportError as e:
+    logger.warning(f"Async model loading not available: {e}")
 
 # Log final status
 _status = {
