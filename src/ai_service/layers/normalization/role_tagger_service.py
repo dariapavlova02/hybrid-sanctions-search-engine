@@ -29,19 +29,16 @@ def is_stopword(token: str, lang: str, lexicons: Lexicons) -> bool:
 
 def is_legal_form(token: str, lexicons: Lexicons) -> bool:
     """Check if token is a legal form."""
-    if not lexicons or not lexicons.legal_forms:
-        return False
-    
-    return token.lower() in lexicons.legal_forms
+    # Use the legal_forms module directly
+    from ...data.patterns.legal_forms import is_legal_form as check_legal_form
+    return check_legal_form(token, "auto")
 
 
 def is_legal_form_lang(token: str, lang: str, lexicons: Lexicons) -> bool:
     """Check if token is a legal form for specific language."""
-    if not lexicons or not lexicons.legal_forms_lang:
-        return False
-    
-    lang_legal_forms = lexicons.legal_forms_lang.get(lang, set())
-    return token.lower() in lang_legal_forms
+    # Use the legal_forms module directly
+    from ...data.patterns.legal_forms import is_legal_form as check_legal_form
+    return check_legal_form(token, lang)
 
 
 def is_person_stopword(token: str, lang: str, lexicons: Lexicons) -> bool:
@@ -415,6 +412,25 @@ class PaymentContextRule(FSMTransitionRule):
             return state, TokenRole.UNKNOWN, "payment_context_filtered", evidence
         else:
             return state, TokenRole.UNKNOWN, "payment_context_detected", evidence
+
+
+class LegalFormRule(FSMTransitionRule):
+    """Rule for classifying legal forms as UNKNOWN to prevent them being treated as names."""
+
+    def __init__(self, lexicons: Lexicons):
+        self.lexicons = lexicons
+
+    def can_apply(self, state: FSMState, token: Token, context: List[Token]) -> bool:
+        # Check if token is a legal form
+        return (is_legal_form(token.text, self.lexicons) or
+                is_legal_form_lang(token.text, token.lang, self.lexicons))
+
+    def apply(self, state: FSMState, token: Token, context: List[Token]) -> Tuple[FSMState, TokenRole, str, List[str]]:
+        evidence = ["legal_form_detected"]
+        evidence.append(f"form_{token.text}")
+        evidence.append(f"lang_{token.lang}")
+
+        return state, TokenRole.UNKNOWN, "legal_form_detected", evidence
 
 
 class PersonStopwordRule(FSMTransitionRule):
@@ -848,6 +864,7 @@ class RoleTaggerService:
         # Order matters - higher priority rules first
         self.rules_list = [
             NumericIdentifierRule(),  # HIGH PRIORITY: Preserve numeric IDs
+            LegalFormRule(self.lexicons),  # HIGH PRIORITY: Classify legal forms as UNKNOWN
             RussianStopwordInitRule(self.lexicons, False),
             UkrainianInitPrepositionRule(self.lexicons, False),
             StopwordRule(self.lexicons, False),

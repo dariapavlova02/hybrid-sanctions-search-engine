@@ -29,7 +29,8 @@ async def test_odin_marin_full_pipeline():
         preserve_names=True,
         enable_advanced_features=True,
         enable_morphology=True,
-        enable_cache=True
+        enable_cache=True,
+        enable_fsm_tuned_roles=True  # Enable FSM role tagger!
     )
 
     test_text = "Одін Марін Інкорпорейтед"
@@ -46,12 +47,14 @@ async def test_odin_marin_full_pipeline():
         print(f"\nToken trace:")
         for i, trace in enumerate(norm_result.trace):
             print(f"  {i+1}. '{trace.token}' -> '{trace.output}' (role: {trace.role})")
+            if trace.notes:
+                print(f"      Notes: {trace.notes[:100]}...")  # First 100 chars
 
         # Step 2: Signals extraction
         print(f"\n🔄 Step 2: Signals Extraction")
-        signals_extractor = SignalsExtractor()
+        signals_service = SignalsService()
 
-        signals_result = signals_extractor.extract_signals(
+        signals_result = signals_service.extract_signals(
             original_text=test_text,
             normalized_result=norm_result,
             language="uk"

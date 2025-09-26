@@ -82,7 +82,7 @@ class NormalizationConfig:
     # Validation flags (default OFF, for validation only)
     enable_spacy_ner: bool = False
     enable_nameparser_en: bool = False
-    enable_fsm_tuned_roles: bool = False
+    enable_fsm_tuned_roles: bool = True  # Enable FSM role tagger by default
     enable_enhanced_diminutives: bool = True
     enable_enhanced_gender_rules: bool = False
     enable_ac_tier0: bool = False
@@ -301,7 +301,7 @@ class NormalizationFactory(ErrorReportingMixin):
         quoted_segments = token_meta.get("quoted_segments", [])
 
         # Step 1.6: Role tagging with FSM-based service (skip for English nameparser or if disabled)
-        if (config.language == "en" and config.enable_nameparser_en) or not getattr(effective_flags, 'enable_fsm_tuned_roles', False):
+        if (config.language == "en" and config.enable_nameparser_en) or not getattr(config, 'enable_fsm_tuned_roles', False):
             # Skip FSM role tagger for English nameparser mode or if FSM is disabled
             role_tags = []
             role_tagger_traces = []
