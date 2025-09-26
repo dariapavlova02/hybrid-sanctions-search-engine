@@ -1021,9 +1021,9 @@ class NamePatternGenerator:
         if len(words) < 3:
             return patterns
 
-        # Generate firstname + lastname (skip middle name/patronymic)
-        # For "Порошенко Петро Олексійович" -> "Порошенко Петро"
-        partial_name = f"{words[0]} {words[1]}"
+        # Generate surname + firstname (skip middle name/patronymic)
+        # For "Ulianova Liudmyla Oleksandrivna" -> "Ulianova Liudmyla"
+        surname_first = f"{words[0]} {words[1]}"
         metadata = PatternMetadata(
             tier=PatternTier.TIER_2,
             pattern_type=PatternType.PARTIAL_MATCH,
@@ -1033,9 +1033,28 @@ class NamePatternGenerator:
             hints={"partial": "surname_firstname"}
         )
         patterns.append(GeneratedPattern(
-            pattern=partial_name,
+            pattern=surname_first,
             canonical=" ".join(words),
             metadata=metadata,
+            entity_id="",
+            entity_type="person"
+        ))
+
+        # Generate firstname + surname (for homoglyph detection)
+        # For "Ulianova Liudmyla Oleksandrivna" -> "Liudmyla Ulianova"
+        firstname_surname = f"{words[1]} {words[0]}"
+        metadata_reversed = PatternMetadata(
+            tier=PatternTier.TIER_2,
+            pattern_type=PatternType.PARTIAL_MATCH,
+            language=language,
+            confidence=0.75,
+            source_field="name",
+            hints={"partial": "firstname_surname"}
+        )
+        patterns.append(GeneratedPattern(
+            pattern=firstname_surname,
+            canonical=" ".join(words),
+            metadata=metadata_reversed,
             entity_id="",
             entity_type="person"
         ))

@@ -181,7 +181,7 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
             {
                 "term": {
                     self.AC_PATTERN_FIELD: {
-                        "value": query.lower(),
+                        "value": query,
                         "boost": opts.ac_boost * 3.0,
                     }
                 }
@@ -237,7 +237,7 @@ class ElasticsearchACAdapter(ElasticsearchAdapter):
         ac_queries.append({
             "term": {
                 "pattern": {
-                    "value": query.lower(),
+                    "value": query,
                     "boost": opts.ac_boost * 10.0 * self.config.ac_query_boost_factor,
                 }
             }

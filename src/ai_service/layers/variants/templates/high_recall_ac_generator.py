@@ -189,25 +189,26 @@ class HighRecallACGenerator:
         self._diminutives_cache = {}
         self._nicknames_cache = {}
 
-    def normalize_for_ac(self, text: str) -> str:
+    def normalize_for_ac(self, text: str, preserve_case: bool = False) -> str:
         """
         Нормализация текста для Aho-Corasick
         Только NFKC, casefold, унификация символов - БЕЗ транслитерации
-        
+
         Args:
             text: Входная строка для нормализации
-            
+            preserve_case: Сохранять регистр для Title Case паттернов
+
         Returns:
             Нормализованная строка для использования в AC
         """
         if not text:
             return ""
-        
+
         # Graceful fallback: если UnicodeService недоступен, используем локальную нормализацию
         try:
             if hasattr(self, 'unicode_service') and self.unicode_service:
                 result = self.unicode_service.normalize_text(
-                    text, 
+                    text,
                     aggressive=True,
                     normalize_homoglyphs=False
                 )
@@ -216,29 +217,30 @@ class HighRecallACGenerator:
                 normalized = text
         except Exception:
             normalized = text
-        
+
         # NFKC нормализация
         import unicodedata
         normalized = unicodedata.normalize('NFKC', normalized)
-        
-        # Casefold для унификации регистра
-        normalized = normalized.casefold()
-        
+
+        # Casefold для унификации регистра (только если не сохраняем регистр)
+        if not preserve_case:
+            normalized = normalized.casefold()
+
         # Дополнительная нормализация для AC
         # Заменяем двойные кавычки на одинарные для унификации
         normalized = normalized.replace('"', "'")
-        
+
         # Заменяем оставшиеся дефисы
         hyphen_variants = ['‐', '–', '—', '―', '‒', '‑', '‗', '⁃', '⁻', '₋']
         for variant in hyphen_variants:
             normalized = normalized.replace(variant, '-')
-        
+
         # Коллапс кратных пробелов
         normalized = re.sub(r'\s+', ' ', normalized)
-        
+
         # Обрезка крайних пробелов
         normalized = normalized.strip()
-        
+
         return normalized
 
     def generate_high_recall_patterns_from_sanctions_data(self, sanctions_record: Dict[str, Any]) -> List[RecallOptimizedPattern]:
@@ -705,6 +707,62 @@ class HighRecallACGenerator:
                     language=language
                 ))
         
+        # Генерируем перестановки имен для Tier 1
+        # Извлекаем компоненты из оригинального текста (до нормализации) для Title Case
+        original_parts = self._extract_name_components(text, language)  # text is from parameter, before normalization
+        normalized_parts = self._extract_name_components(normalized_text, language)
+
+        if len(original_parts) >= 2 and len(normalized_parts) >= 2:
+            # Original case versions for Title Case patterns
+            orig_surname = original_parts[0] if original_parts else ""
+            orig_first_name = original_parts[1] if len(original_parts) > 1 else ""
+            orig_patronymic = original_parts[2] if len(original_parts) > 2 else ""
+
+            # Normalized versions for lowercase patterns
+            norm_surname = normalized_parts[0] if normalized_parts else ""
+            norm_first_name = normalized_parts[1] if len(normalized_parts) > 1 else ""
+            norm_patronymic = normalized_parts[2] if len(normalized_parts) > 2 else ""
+
+            if orig_surname and orig_first_name:
+                # Генерируем Title Case перестановки
+                title_case_permutations = self._generate_name_permutations(orig_surname, orig_first_name, orig_patronymic, language)
+                for variant in title_case_permutations:
+                    title_case_variant = self.normalize_for_ac(variant, preserve_case=True)
+                    tier_1_patterns.append(RecallOptimizedPattern(
+                        pattern=title_case_variant,
+                        pattern_type="name_permutation_title_case",
+                        recall_tier=1,
+                        precision_hint=0.8,
+                        variants=[],
+                        language=language
+                    ))
+
+                # Генерируем lowercase перестановки
+                lowercase_permutations = self._generate_name_permutations(norm_surname, norm_first_name, norm_patronymic, language)
+                for variant in lowercase_permutations:
+                    lowercase_variant = self.normalize_for_ac(variant, preserve_case=False)
+                    tier_1_patterns.append(RecallOptimizedPattern(
+                        pattern=lowercase_variant,
+                        pattern_type="name_permutation",
+                        recall_tier=1,
+                        precision_hint=0.8,
+                        variants=[],
+                        language=language
+                    ))
+
+                # Генерируем полные ФИО с альтернативными патронимами
+                if orig_patronymic:
+                    full_name_variants = self._generate_full_name_with_alternative_patronymics(norm_surname, norm_first_name, norm_patronymic, language)
+                    for variant in full_name_variants:
+                        tier_1_patterns.append(RecallOptimizedPattern(
+                            pattern=variant,
+                            pattern_type="full_name_with_alternative_patronymic",
+                            recall_tier=1,
+                            precision_hint=0.8,
+                            variants=[],
+                            language=language
+                        ))
+
         # Генерируем сокращенные варианты для Tier 2
         shortened_variants = self._generate_shortened_variants(normalized_text, language)
         for variant in shortened_variants:
@@ -717,41 +775,18 @@ class HighRecallACGenerator:
                 language=language
             ))
 
-        # Генерируем перестановки имен для Tier 1
-        name_parts = self._extract_name_components(normalized_text, language)
-        if len(name_parts) >= 2:
-            surname = name_parts[0] if name_parts else ""
-            first_name = name_parts[1] if len(name_parts) > 1 else ""
-            patronymic = name_parts[2] if len(name_parts) > 2 else ""
-            
-            if surname and first_name:
-                # Генерируем перестановки
-                permutations = self._generate_name_permutations(surname, first_name, patronymic, language)
-                for variant in permutations:
-                    tier_1_patterns.append(RecallOptimizedPattern(
-                        pattern=variant,
-                        pattern_type="name_permutation",
-                        recall_tier=1,
-                        precision_hint=0.8,
-                        variants=[],
-                        language=language
-                    ))
-                
-                # Генерируем полные ФИО с альтернативными патронимами
-                if patronymic:
-                    full_name_variants = self._generate_full_name_with_alternative_patronymics(surname, first_name, patronymic, language)
-                    for variant in full_name_variants:
-                        tier_1_patterns.append(RecallOptimizedPattern(
-                            pattern=variant,
-                            pattern_type="full_name_with_alternative_patronymic",
-                            recall_tier=1,
-                            precision_hint=0.8,
-                            variants=[],
-                            language=language
-                        ))
-                
+        # Move Tier 2 generation here after permutation generation is in Tier 1
+        if len(original_parts) >= 2 and len(normalized_parts) >= 2:
+            orig_surname = original_parts[0] if original_parts else ""
+            orig_first_name = original_parts[1] if len(original_parts) > 1 else ""
+            orig_patronymic = original_parts[2] if len(original_parts) > 2 else ""
+            norm_surname = normalized_parts[0] if normalized_parts else ""
+            norm_first_name = normalized_parts[1] if len(normalized_parts) > 1 else ""
+            norm_patronymic = normalized_parts[2] if len(normalized_parts) > 2 else ""
+
+            if orig_surname and orig_first_name:
                 # Генерируем инициалы во всех позициях для Tier 2
-                initials_variants = self._generate_initials_everywhere(surname, first_name, patronymic, language)
+                initials_variants = self._generate_initials_everywhere(norm_surname, norm_first_name, norm_patronymic, language)
                 for variant in initials_variants:
                     tier_2_patterns.append(RecallOptimizedPattern(
                         pattern=variant,
@@ -761,9 +796,9 @@ class HighRecallACGenerator:
                         variants=[],
                         language=language
                     ))
-                
+
                 # Генерируем контролируемые транслитерации для Tier 2
-                for part in [surname, first_name, patronymic]:
+                for part in [norm_surname, norm_first_name, norm_patronymic]:
                     if part:
                         controlled_translits = self._generate_controlled_transliterations(part, language)
                         for variant in controlled_translits:
@@ -775,10 +810,10 @@ class HighRecallACGenerator:
                                 variants=[],
                                 language=language
                             ))
-                
+
                 # Генерируем нормативные варианты патронима для Tier 2
-                if patronymic:
-                    patronymic_variants = self._map_patronymic_variants(patronymic, language)
+                if norm_patronymic:
+                    patronymic_variants = self._map_patronymic_variants(norm_patronymic, language)
                     for variant in patronymic_variants:
                         tier_2_patterns.append(RecallOptimizedPattern(
                             pattern=variant,
@@ -788,10 +823,10 @@ class HighRecallACGenerator:
                             variants=[],
                             language=language
                         ))
-                
+
                         # Генерируем женские формы фамилии (только в контролируемых случаях)
-                        if self._should_generate_feminine_surname(first_name, patronymic):
-                            feminine_variants = self._generate_feminine_surname_variants(surname, language)
+                        if self._should_generate_feminine_surname(norm_first_name, norm_patronymic):
+                            feminine_variants = self._generate_feminine_surname_variants(norm_surname, language)
                             for variant in feminine_variants:
                                 tier_2_patterns.append(RecallOptimizedPattern(
                                     pattern=variant,

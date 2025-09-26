@@ -627,7 +627,10 @@ class UnifiedOrchestrator:
                 # Perform search using normalized text
                 query = norm_result.normalized if norm_result.normalized else ""
 
-                # ALWAYS check for homoglyphs in search query and normalize them
+                # ENHANCED: Check for homoglyphs and generate permutations for better detection
+                search_queries = [query]  # Default to original query
+                is_homoglyph_case = False
+
                 if self.homoglyph_detector and query.strip():
                     original_query = query
                     # Detect homoglyphs first
@@ -637,8 +640,14 @@ class UnifiedOrchestrator:
                         normalized_query, transformations = self.homoglyph_detector.normalize_homoglyphs(query)
                         if normalized_query != original_query:
                             query = normalized_query
+                            is_homoglyph_case = True
                             logger.warning(f"🔧 HOMOGLYPH NORMALIZATION FOR SEARCH: '{original_query}' → '{query}' (transformations: {len(transformations)})")
                             print(f"🔧 HOMOGLYPH SEARCH: '{original_query}' → '{query}' - normalized for search")
+
+                            # Generate permutations for improved detection
+                            from ..utils.name_permutations import generate_homoglyph_permutations
+                            search_queries = generate_homoglyph_permutations(original_query, normalized_query)
+                            print(f"🔄 HOMOGLYPH PERMUTATIONS: Trying {len(search_queries)} variants: {search_queries}")
                         else:
                             logger.debug("Homoglyphs detected but no normalization needed")
                     else:
@@ -664,17 +673,58 @@ class UnifiedOrchestrator:
                         candidates.extend(id_candidates)
                         print(f"🚨 SANCTIONED ID DETECTED: {len(id_candidates)} matches found")
 
-                    # Try full search service first
+                    # Enhanced search with homoglyph permutations
                     if self.search_service:
                         try:
-                            name_candidates = await self.search_service.find_candidates(
-                                normalized=norm_result,
-                                text=original_text,
-                                opts=search_opts
-                            )
-                            candidates.extend(name_candidates)
+                            if is_homoglyph_case and len(search_queries) > 1:
+                                # Try all permutations for homoglyph cases
+                                print(f"🔄 HOMOGLYPH MULTI-SEARCH: Trying {len(search_queries)} permutations")
+                                all_results = []
+                                best_candidates = []
+                                best_score = 0.0
+
+                                for i, search_query in enumerate(search_queries):
+                                    # Create modified normalization result for this query
+                                    modified_norm_result = self._create_modified_norm_result(norm_result, search_query)
+
+                                    try:
+                                        perm_candidates = await self.search_service.find_candidates(
+                                            normalized=modified_norm_result,
+                                            text=original_text,
+                                            opts=search_opts
+                                        )
+
+                                        if perm_candidates:
+                                            # Get best score from this permutation
+                                            max_score = max((getattr(c, 'score', 0.0) or getattr(c, 'final_score', 0.0))
+                                                          for c in perm_candidates)
+                                            print(f"   Permutation {i+1}: '{search_query}' → {len(perm_candidates)} results, best score: {max_score:.3f}")
+
+                                            # Keep best results
+                                            if max_score > best_score:
+                                                best_score = max_score
+                                                best_candidates = perm_candidates
+                                                print(f"   🏆 NEW BEST: '{search_query}' with score {max_score:.3f}")
+                                        else:
+                                            print(f"   Permutation {i+1}: '{search_query}' → No results")
+
+                                    except Exception as perm_e:
+                                        print(f"   Permutation {i+1}: '{search_query}' → Error: {perm_e}")
+
+                                candidates.extend(best_candidates)
+                                print(f"✅ HOMOGLYPH SEARCH COMPLETED: {len(best_candidates)} candidates, best score: {best_score:.3f}")
+                            else:
+                                # Normal search
+                                name_candidates = await self.search_service.find_candidates(
+                                    normalized=norm_result,
+                                    text=original_text,
+                                    opts=search_opts
+                                )
+                                candidates.extend(name_candidates)
+                                print(f"✅ NORMAL SEARCH COMPLETED: {len(name_candidates)} candidates")
+
                             search_processing_time = (time.time() - search_start_time) * 1000
-                            print(f"✅ FULL SEARCH COMPLETED: {len(name_candidates)} name candidates + {len(id_candidates)} ID candidates in {search_processing_time:.2f}ms")
+                            print(f"✅ FULL SEARCH COMPLETED: {len(candidates) - len(id_candidates)} name candidates + {len(id_candidates)} ID candidates in {search_processing_time:.2f}ms")
                         except Exception as e:
                             search_processing_time = (time.time() - search_start_time) * 1000
                             print(f"❌ FULL SEARCH FAILED: {e} after {search_processing_time:.2f}ms")
@@ -1768,3 +1818,23 @@ class UnifiedOrchestrator:
         except Exception as e:
             logger.error(f"Emergency fuzzy search completely failed: {e}")
             return []
+
+    def _create_modified_norm_result(self, norm_result, new_normalized_text):
+        """
+        Create modified normalization result with different normalized text.
+
+        Used for homoglyph permutation searches to try different name orders.
+        """
+        from copy import deepcopy
+
+        # Create a copy of the normalization result
+        modified_result = deepcopy(norm_result)
+
+        # Update the normalized text
+        modified_result.normalized = new_normalized_text
+
+        # Update tokens if needed
+        if hasattr(modified_result, 'tokens'):
+            modified_result.tokens = new_normalized_text.split() if new_normalized_text else []
+
+        return modified_result
