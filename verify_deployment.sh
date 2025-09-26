@@ -3,7 +3,11 @@
 
 echo "🔍 ПОЛНАЯ ПРОВЕРКА DEPLOYMENT..."
 
-# Проверяем что API key есть
+# Загружаем переменные из файлов
+if [ -f ".env.production.server" ]; then
+    source .env.production.server
+fi
+
 if [ -f ".admin_api_key" ]; then
     source .admin_api_key
     echo "✅ API ключ найден: ${ADMIN_API_KEY:0:8}..."
