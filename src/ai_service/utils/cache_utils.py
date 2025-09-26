@@ -137,8 +137,8 @@ def lru_cache_with_metrics(maxsize: int = 128, cache_name: str = "default"):
             
             # Check if result is in cache
             cache_info = cached_func.cache_info()
-            initial_hits = cache_info.hits
-            initial_misses = cache_info.misses
+            initial_hits = getattr(cache_info, 'hits', cache_info.get('hits', 0) if isinstance(cache_info, dict) else 0)
+            initial_misses = getattr(cache_info, 'misses', cache_info.get('misses', 0) if isinstance(cache_info, dict) else 0)
             
             # Call the cached function
             try:
@@ -152,13 +152,17 @@ def lru_cache_with_metrics(maxsize: int = 128, cache_name: str = "default"):
             
             # Update metrics
             new_cache_info = cached_func.cache_info()
-            if new_cache_info.hits > initial_hits:
+            new_hits = getattr(new_cache_info, 'hits', new_cache_info.get('hits', 0) if isinstance(new_cache_info, dict) else 0)
+            new_misses = getattr(new_cache_info, 'misses', new_cache_info.get('misses', 0) if isinstance(new_cache_info, dict) else 0)
+            currsize = getattr(new_cache_info, 'currsize', new_cache_info.get('currsize', 0) if isinstance(new_cache_info, dict) else 0)
+
+            if new_hits > initial_hits:
                 cache_metrics.record_hit(cache_name)
-            elif new_cache_info.misses > initial_misses:
+            elif new_misses > initial_misses:
                 cache_metrics.record_miss(cache_name)
-            
+
             # Update cache size
-            cache_metrics.update_size(cache_name, new_cache_info.currsize)
+            cache_metrics.update_size(cache_name, currsize)
             
             return result
         
