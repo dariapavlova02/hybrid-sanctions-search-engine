@@ -272,6 +272,8 @@ tmp/
 src/ai_service/data/processed_sanctioned_persons_*.json
 src/ai_service/data/templates/*.json
 src/ai_service/data/templates/*.txt
+# Include INN cache for production
+!src/ai_service/data/sanctioned_inns_cache.json
 src/ai_service/data/sanctioned_*.json
 
 # Large pattern files

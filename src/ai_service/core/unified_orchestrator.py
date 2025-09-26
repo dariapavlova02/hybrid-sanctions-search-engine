@@ -753,12 +753,12 @@ class UnifiedOrchestrator:
                         search_results["trace"] = {
                             "steps": [
                                 {
-                                    "stage": step.stage,
-                                    "query": step.query,
-                                    "took_ms": step.took_ms,
-                                    "hits_count": len(step.hits),
-                                    "best_score": max((hit.score for hit in step.hits), default=0.0),
-                                    "meta": step.meta
+                                    "stage": getattr(step, 'stage', step.get('stage', '')),
+                                    "query": getattr(step, 'query', step.get('query', '')),
+                                    "took_ms": getattr(step, 'took_ms', step.get('took_ms', 0)),
+                                    "hits_count": len(getattr(step, 'hits', step.get('hits', []))),
+                                    "best_score": max((hit.score if hasattr(hit, 'score') else hit.get('score', 0) for hit in getattr(step, 'hits', step.get('hits', []))), default=0.0),
+                                    "meta": getattr(step, 'meta', step.get('meta', {}))
                                 }
                                 for step in search_trace.steps
                             ],
