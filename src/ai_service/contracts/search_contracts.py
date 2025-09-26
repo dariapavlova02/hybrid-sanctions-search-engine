@@ -399,7 +399,16 @@ def create_search_info(search_result: SearchResult) -> SearchInfo:
     for i, c in enumerate(search_result.candidates):
         # Determine if this is a vector match based on search_mode or search_type
         is_vector_match = False
-        if hasattr(c, 'search_mode') and c.search_mode == 'vector':
+
+        # Check if it's a fuzzy result first - fuzzy should never be treated as vector
+        is_fuzzy_result = False
+        if hasattr(c, 'metadata') and isinstance(c.metadata, dict):
+            if c.metadata.get('fuzzy_algorithm') is not None:
+                is_fuzzy_result = True
+
+        if is_fuzzy_result:
+            is_vector_match = False  # Fuzzy is always non-vector
+        elif hasattr(c, 'search_mode') and c.search_mode == 'vector':
             is_vector_match = True
         elif hasattr(c, 'search_type') and c.search_type in ['vector', 'VECTOR']:
             is_vector_match = True
@@ -430,8 +439,11 @@ def create_search_info(search_result: SearchResult) -> SearchInfo:
             if passes:
                 high_confidence_matches += 1
         else:
-            # AC/fuzzy/exact match - moderate threshold
-            threshold = 0.80
+            # AC/fuzzy/exact match - use appropriate threshold
+            if is_fuzzy_result:
+                threshold = 0.65  # Lower threshold for fuzzy matches
+            else:
+                threshold = 0.80  # Higher threshold for AC/exact matches
             passes = actual_score >= threshold
             print(f"      AC/Fuzzy threshold: {actual_score:.3f} >= {threshold} = {passes}")
             if passes:

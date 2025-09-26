@@ -19,7 +19,8 @@ services:
       - ES_PORT=${ES_PORT:-9200}
       - ES_USERNAME=${ES_USERNAME:-}
       - ES_PASSWORD=${ES_PASSWORD:-}
-      - ES_VERIFY_CERTS=${ES_VERIFY_CERTS:-true}
+      - ES_SCHEME=${ES_SCHEME:-http}
+      - ES_VERIFY_CERTS=${ES_VERIFY_CERTS:-false}
       - ADMIN_API_KEY=${ADMIN_API_KEY:-}
       - ENABLE_SEARCH_CACHE=true
       - SEARCH_CACHE_SIZE=2000

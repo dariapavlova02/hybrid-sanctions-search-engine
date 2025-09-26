@@ -56,7 +56,9 @@ class ElasticsearchConfig(BaseModel):
             if host.startswith("http://") or host.startswith("https://"):
                 normalized.append(host.rstrip("/"))
                 continue
-            base_scheme = self.scheme or ("https" if self.verify_certs else "http")
+            # Use explicit scheme if set, otherwise default to http
+            # Note: verify_certs is about certificate validation, not connection scheme
+            base_scheme = self.scheme or "http"
             normalized.append(f"{base_scheme}://{host.strip('/')}".rstrip("/"))
         return normalized
 
