@@ -120,8 +120,10 @@ class RoleRules:
     
     # Feature detection rules
     surname_suffixes: Set[str] = field(default_factory=lambda: {
-        "енко", "енк", "ук", "юк", "чук", "ов", "ова", "ев", "ева",
-        "ін", "іна", "ский", "ская", "ський", "ська", "ян", "дзе"
+        "енко", "енк", "енка",  # Added "енка" for genitive forms like "Порошенка"
+        "ук", "юк", "чук", "ов", "ова", "ев", "ева",
+        "ін", "іна", "ський", "ська", "ский", "ская",
+        "ян", "дзе", "ки", "ка"  # Added more genitive/declension forms
     })
     
     patronymic_suffixes: Set[str] = field(default_factory=lambda: {
