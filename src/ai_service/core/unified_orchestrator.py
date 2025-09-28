@@ -624,8 +624,25 @@ class UnifiedOrchestrator:
                 if self.metrics_service:
                     self.metrics_service.record_counter('processing.search.started', 1)
 
-                # Perform search using normalized text
+                # Perform search using normalized text, but fallback to original for organizations
                 query = norm_result.normalized if norm_result.normalized else ""
+
+                # FIXED: If normalized is empty (organizations), use original text or org parts
+                if not query.strip():
+                    # For organizations, try to build query from signals
+                    if signals_result and hasattr(signals_result, 'organizations') and signals_result.organizations:
+                        # Use the most confident organization
+                        best_org = max(signals_result.organizations, key=lambda o: getattr(o, 'confidence', 0))
+                        if hasattr(best_org, 'core') and best_org.core:
+                            query = best_org.core
+                            if hasattr(best_org, 'legal_form') and best_org.legal_form:
+                                query = f"{best_org.core} {best_org.legal_form}"
+                            print(f"🏢 ORG SEARCH: Using organization parts as query: '{query}'")
+
+                    # Fallback to original text if no org parts
+                    if not query.strip():
+                        query = original_text
+                        print(f"🔍 FALLBACK SEARCH: Using original text as query: '{query}'")
 
                 # ENHANCED: Check for homoglyphs and generate permutations for better detection
                 search_queries = [query]  # Default to original query

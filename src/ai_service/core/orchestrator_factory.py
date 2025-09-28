@@ -11,7 +11,7 @@ from ..config import SERVICE_CONFIG, FEATURE_FLAGS
 from ..exceptions import ServiceInitializationError
 # EmbeddingService imported locally to avoid circular imports
 from ..layers.language.language_detection_service import LanguageDetectionService
-from ..layers.normalization.normalization_service import NormalizationService
+from ..layers.normalization.factory_wrapper import FactoryBasedNormalizationService
 from ..layers.signals.signals_service import SignalsService
 from ..layers.smart_filter.smart_filter_adapter import SmartFilterAdapter
 from ..layers.unicode.unicode_service import UnicodeService
@@ -115,9 +115,10 @@ class OrchestratorFactory:
             # Normalization service - always required, THE CORE
             if normalization_service is None:
                 try:
-                    normalization_service = NormalizationService()
+                    normalization_service = FactoryBasedNormalizationService()
+                    logger.info("Using FactoryBasedNormalizationService with morphological processing")
                 except Exception as e:
-                    logger.error(f"Failed to initialize normalization service: {e}")
+                    logger.error(f"Failed to initialize factory-based normalization service: {e}")
                     raise ServiceInitializationError(f"Normalization service: {e}")
 
             # Signals service - always required
