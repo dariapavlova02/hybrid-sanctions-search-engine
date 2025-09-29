@@ -1,125 +1,88 @@
 #!/usr/bin/env python3
-
 """
-Тест поиска в продакшне для "Коврико Роман" → "Ковриков Роман".
+Test search fix against production API.
 """
 
-import sys
-from pathlib import Path
+import requests
+import json
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
-
-async def test_production_search():
-    """Проверка fuzzy search в продакшне."""
-    print("🔍 ТЕСТ ПРОДАКШН ПОИСКА")
-    print("=" * 60)
-
-    try:
-        # Создаем HybridSearchService с продакшн конфигом
-        from ai_service.layers.search.config import HybridSearchConfig
-        from ai_service.layers.search.hybrid_search_service import HybridSearchService
-        from ai_service.layers.search.contracts import SearchOpts, SearchMode
-
-        search_config = HybridSearchConfig.from_env()
-        print(f"📊 Elasticsearch hosts: {search_config.elasticsearch.hosts}")
-
-        search_service = HybridSearchService(search_config)
-        search_service.initialize()
-
-        print("✅ HybridSearchService инициализирован")
-
-        # Проверяем fuzzy candidates
-        print("\n1. Проверка fuzzy candidates...")
-        fuzzy_candidates = await search_service._get_fuzzy_candidates()
-        print(f"   Загружено кандидатов: {len(fuzzy_candidates)}")
-
-        # Поиск Ковриков в кандидатах
-        kovrykov_candidates = [c for c in fuzzy_candidates if "ковриков" in c.lower()]
-        print(f"   'Ковриков' кандидатов: {len(kovrykov_candidates)}")
-        for candidate in kovrykov_candidates[:3]:
-            print(f"     - {candidate}")
-
-        # Поиск всех вариантов "Роман"
-        roman_candidates = [c for c in fuzzy_candidates
-                          if "роман" in c.lower() and "ковр" in c.lower()]
-        print(f"   'Роман + Ковр*' кандидатов: {len(roman_candidates)}")
-        for candidate in roman_candidates[:3]:
-            print(f"     - {candidate}")
-
-        # Тестируем fuzzy search
-        print("\n2. Тест fuzzy search...")
-        query_text = "Коврико Роман"
-        search_opts = SearchOpts(
-            top_k=10,
-            threshold=0.4,  # Понижаем порог
-            search_mode=SearchMode.HYBRID,
-            enable_escalation=True,
-            escalation_threshold=0.8
-        )
-
-        # Прямой fuzzy search
-        fuzzy_results = await search_service._fuzzy_search(
-            query_text=query_text,
-            opts=search_opts,
-            search_trace=None
-        )
-        print(f"   Fuzzy результаты: {len(fuzzy_results)}")
-        for result in fuzzy_results[:5]:
-            print(f"     - {result.text} (score: {result.score:.3f})")
-
-        # Если fuzzy не работает, попробуем разные варианты запроса
-        if not fuzzy_results:
-            print("\n3. Тест разных вариантов запроса...")
-            test_queries = [
-                "Ковриков Роман",
-                "Роман Ковриков",
-                "Ковриков",
-                "Роман Валерійович",
-                "Roman Kovrykov"
-            ]
-
-            for test_query in test_queries:
-                print(f"\n   Тест: '{test_query}'")
-                fuzzy_results = await search_service._fuzzy_search(
-                    query_text=test_query,
-                    opts=search_opts,
-                    search_trace=None
-                )
-                print(f"     Результаты: {len(fuzzy_results)}")
-                if fuzzy_results:
-                    for result in fuzzy_results[:3]:
-                        print(f"       - {result.text} (score: {result.score:.3f})")
-
-        return len(fuzzy_results) > 0
-
-    except Exception as e:
-        print(f"❌ Общая ошибка: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-async def main():
-    """Главная функция."""
-    print("🎯 ДИАГНОСТИКА ПРОДАКШН ПОИСКА")
+def test_production_search():
+    """Test the production API to verify search is working."""
+    print("🌐 PRODUCTION API TEST - SEARCH FIX")
     print("=" * 50)
 
-    success = await test_production_search()
+    # Production API endpoint (adjust if needed)
+    api_url = "http://95.217.84.234:8000/process"
 
-    print("\n" + "=" * 50)
-    if success:
-        print("🎉 SUCCESS: Продакшн поиск работает!")
-    else:
-        print("❌ FAILURE: Проблемы с продакшн поиском")
-        print("\n🔧 ВОЗМОЖНЫЕ ПРИЧИНЫ:")
-        print("   1. 'Ковриков Роман' нет в sanctions data")
-        print("   2. Fuzzy threshold слишком высокий")
-        print("   3. Имя в другом формате в базе")
-        print("   4. Проблемы с Elasticsearch в продакшне")
+    test_cases = [
+        "Одін Марін Інкорпорейтед",  # Target sanctioned organization
+        "Дарья Павлова",             # Regular person
+    ]
 
-    return success
+    for test_text in test_cases:
+        print(f"\n🔍 Testing: '{test_text}'")
+
+        payload = {
+            "text": test_text,
+            "enable_search": True,
+            "enable_decision": True
+        }
+
+        try:
+            response = requests.post(api_url, json=payload, timeout=30)
+
+            if response.status_code == 200:
+                result = response.json()
+
+                print(f"✅ Success: {result.get('success', False)}")
+                print(f"Normalized: '{result.get('normalized_text', '')}'")
+
+                # Check organizations
+                signals = result.get('signals', {})
+                organizations = signals.get('organizations', [])
+                print(f"Organizations: {len(organizations)}")
+
+                # Check search results
+                search_results = result.get('search_results')
+                if search_results:
+                    total_matches = search_results.get('total_matches', 0)
+                    print(f"Search matches: {total_matches}")
+
+                    if total_matches > 0:
+                        candidates = search_results.get('candidates', [])
+                        print(f"Top candidates:")
+                        for i, candidate in enumerate(candidates[:3]):
+                            name = candidate.get('name', 'Unknown')
+                            score = candidate.get('score', 0)
+                            print(f"  {i+1}. {name} (score: {score:.3f})")
+                else:
+                    print("No search results found")
+
+                # Check decision
+                decision = result.get('decision')
+                if decision:
+                    risk_level = decision.get('risk_level', 'unknown')
+                    risk_score = decision.get('risk_score', 0)
+                    print(f"Risk: {risk_level.upper()} (score: {risk_score:.3f})")
+
+                    # Check if this is the target organization
+                    if "Одін Марін" in test_text:
+                        if risk_level.upper() == "HIGH":
+                            print("🎉 SUCCESS: Sanctioned organization found with HIGH risk!")
+                        else:
+                            print(f"⚠️ Organization detected but risk level is {risk_level}, not HIGH")
+                            if total_matches == 0:
+                                print("   Likely reason: Not found in sanctions database")
+                            else:
+                                print("   Found matches but confidence may be low")
+                else:
+                    print("No decision available")
+
+            else:
+                print(f"❌ HTTP Error {response.status_code}: {response.text}")
+
+        except Exception as e:
+            print(f"❌ Request failed: {e}")
 
 if __name__ == "__main__":
-    import asyncio
-    success = asyncio.run(main())
-    sys.exit(0 if success else 1)
+    test_production_search()
