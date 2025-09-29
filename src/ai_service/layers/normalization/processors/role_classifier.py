@@ -687,6 +687,11 @@ class RoleClassifier:
                 # Handle pattern: initial + initial + given -> initial + initial + surname
                 if language == "en" or self._looks_like_surname_candidate(token, language):
                     new_role = "surname"
+            elif role == "surname" and idx == 0 and len(tagged) == 2 and tagged[1][1] == "surname":
+                # Handle pattern: surname + surname -> given + surname (for English transliterations)
+                # First surname-like token becomes given name (e.g., "Liudmila Ulianova")
+                if language == "en" or any(c.isascii() for c in token):
+                    new_role = "given"
 
             improved.append((token, new_role))
 

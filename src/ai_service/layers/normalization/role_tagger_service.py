@@ -123,7 +123,9 @@ class RoleRules:
         "енко", "енк", "енка",  # Added "енка" for genitive forms like "Порошенка"
         "ук", "юк", "чук", "ов", "ова", "ев", "ева",
         "ін", "іна", "ський", "ська", "ский", "ская",
-        "ян", "дзе", "ки", "ка"  # Added more genitive/declension forms
+        "ян", "дзе", "ки", "ка",  # Added more genitive/declension forms
+        # English transliterations of Russian/Ukrainian surnames
+        "nova", "ova", "eva", "ina", "sky", "skaya", "nko", "enko"
     })
     
     patronymic_suffixes: Set[str] = field(default_factory=lambda: {
@@ -954,7 +956,10 @@ class RoleTaggerService:
             role_tag.state_to = current_state
             
             role_tags.append(role_tag)
-        
+
+        # Post-processing: Fix surname + surname → given + surname for English transliterations
+        role_tags = self._fix_double_surnames(role_tags, tokens, lang)
+
         return role_tags
     
     def _apply_rules(self, state: FSMState, token: Token, context: List[Token]) -> RoleTag:
@@ -1068,3 +1073,27 @@ class RoleTaggerService:
             trace_entries.append(trace_entry)
         
         return trace_entries
+
+    def _fix_double_surnames(self, role_tags: List[RoleTag], tokens: List[str], lang: str) -> List[RoleTag]:
+        """
+        Fix cases where both tokens are classified as surnames.
+        For English/mixed script names like 'Liudmila Ulianova', convert first surname to given.
+        """
+        if len(role_tags) != 2:
+            return role_tags
+
+        # Check if both are surnames
+        if (role_tags[0].role == TokenRole.SURNAME and
+            role_tags[1].role == TokenRole.SURNAME):
+
+            # For English or mixed script, assume first = given, second = surname
+            if (lang == "en" or
+                any(c.isascii() for c in tokens[0]) or
+                any(c.isascii() for c in tokens[1])):
+
+                # Convert first surname to given
+                role_tags[0].role = TokenRole.GIVEN
+                role_tags[0].reason = "positional_adjustment_first_surname_to_given"
+                role_tags[0].evidence.append("double_surname_fix")
+
+        return role_tags
