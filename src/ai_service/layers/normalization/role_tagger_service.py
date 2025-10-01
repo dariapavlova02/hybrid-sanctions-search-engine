@@ -905,7 +905,7 @@ class RoleTaggerService:
         token_objects = self._create_token_objects(tokens, lang)
         
         # Apply FSM processing
-        role_tags = self._process_with_fsm(token_objects)
+        role_tags = self._process_with_fsm(token_objects, lang)
         
         logger.debug(f"Tagged tokens: {self._get_role_summary(role_tags)}")
         return role_tags
@@ -937,7 +937,7 @@ class RoleTaggerService:
         
         return token_objects
     
-    def _process_with_fsm(self, tokens: List[Token]) -> List[RoleTag]:
+    def _process_with_fsm(self, tokens: List[Token], lang: str) -> List[RoleTag]:
         """Process tokens through FSM."""
         role_tags = []
         current_state = FSMState.START
@@ -958,7 +958,8 @@ class RoleTaggerService:
             role_tags.append(role_tag)
 
         # Post-processing: Fix surname + surname → given + surname for English transliterations
-        role_tags = self._fix_double_surnames(role_tags, tokens, lang)
+        token_strings = [token.text for token in tokens]
+        role_tags = self._fix_double_surnames(role_tags, token_strings, lang)
 
         return role_tags
     
