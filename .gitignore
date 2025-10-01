@@ -268,6 +268,20 @@ tmp/
 .env.test
 .env.production
 
+# Temporary debug/test scripts in root (should be in tests/ or scripts/)
+/debug_*.py
+/test_*.py
+/check_*.py
+/analyze_*.py
+
+# Backup files
+cleanup_backup_*.tar.gz
+*_backup_*.tar.gz
+
+# Duplicate env configs (use .env.example instead)
+/env.production.*
+!/env.production.example
+
 # Large data files (generated/processed)
 src/ai_service/data/processed_sanctioned_persons_*.json
 src/ai_service/data/templates/*.json
