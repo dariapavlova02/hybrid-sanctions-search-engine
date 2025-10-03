@@ -258,8 +258,8 @@ async def create_vectors_index(es_host: str, index_name: str, vector_dim: int = 
         return False
 
 
-async def bulk_load_patterns(es_host: str, index_name: str, patterns_file: Path) -> bool:
-    """Bulk load AC patterns into Elasticsearch"""
+async def bulk_load_patterns(es_host: str, index_name: str, patterns_file: Path, batch_size: int = 5000) -> bool:
+    """Bulk load AC patterns into Elasticsearch with batching"""
     print(f"\n📦 Loading patterns from: {patterns_file.name}")
 
     try:
@@ -274,46 +274,53 @@ async def bulk_load_patterns(es_host: str, index_name: str, patterns_file: Path)
             return True
 
         print(f"   📊 Total patterns: {total:,}")
+        print(f"   📦 Batch size: {batch_size:,}")
 
-        # Build bulk request
-        bulk_data = []
-        for pattern in patterns:
-            # Index action
-            bulk_data.append(json.dumps({
-                "index": {"_index": index_name}
-            }))
-            # Document
-            bulk_data.append(json.dumps(pattern))
+        # Process in batches
+        batches = [patterns[i:i + batch_size] for i in range(0, len(patterns), batch_size)]
+        total_batches = len(batches)
 
-        bulk_body = "\n".join(bulk_data) + "\n"
-
-        # Send bulk request
-        print(f"   ⬆️  Uploading to Elasticsearch...")
+        print(f"   ⬆️  Uploading {total_batches} batches to Elasticsearch...")
 
         async with aiohttp.ClientSession() as session:
-            async with session.post(
-                f"{es_host}/_bulk",
-                data=bulk_body,
-                headers={"Content-Type": "application/x-ndjson"},
-                timeout=aiohttp.ClientTimeout(total=300)
-            ) as response:
-                if response.status == 200:
-                    result = await response.json()
+            total_errors = 0
 
-                    if result.get('errors'):
-                        errors = [item for item in result['items'] if 'error' in item.get('index', {})]
-                        print(f"   ⚠️  Loaded with {len(errors)} errors")
-                        if errors:
-                            print(f"   First error: {errors[0]['index']['error']}")
+            for batch_num, batch in enumerate(batches, 1):
+                # Build bulk request for this batch
+                bulk_data = []
+                for pattern in batch:
+                    bulk_data.append(json.dumps({"index": {"_index": index_name}}))
+                    bulk_data.append(json.dumps(pattern))
+
+                bulk_body = "\n".join(bulk_data) + "\n"
+
+                # Send bulk request
+                async with session.post(
+                    f"{es_host}/_bulk",
+                    data=bulk_body,
+                    headers={"Content-Type": "application/x-ndjson"},
+                    timeout=aiohttp.ClientTimeout(total=300)
+                ) as response:
+                    if response.status == 200:
+                        result = await response.json()
+
+                        if result.get('errors'):
+                            errors = [item for item in result['items'] if 'error' in item.get('index', {})]
+                            total_errors += len(errors)
+
+                        print(f"      Batch {batch_num}/{total_batches}: ✅ {len(batch):,} patterns")
                     else:
-                        print(f"   ✅ Successfully loaded {total:,} patterns")
+                        error_text = await response.text()
+                        print(f"      Batch {batch_num}/{total_batches}: ❌ HTTP {response.status}")
+                        print(f"      {error_text[:200]}")
+                        return False
 
-                    return True
-                else:
-                    error_text = await response.text()
-                    print(f"   ❌ Bulk load failed: HTTP {response.status}")
-                    print(f"   {error_text[:500]}")
-                    return False
+            if total_errors > 0:
+                print(f"   ⚠️  Loaded {total:,} patterns with {total_errors} errors")
+            else:
+                print(f"   ✅ Successfully loaded {total:,} patterns")
+
+            return True
 
     except FileNotFoundError:
         print(f"   ❌ File not found: {patterns_file}")
