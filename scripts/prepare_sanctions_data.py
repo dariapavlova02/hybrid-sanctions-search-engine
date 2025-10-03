@@ -346,8 +346,8 @@ def main():
     parser.add_argument(
         "--max-patterns",
         type=int,
-        default=50,
-        help="Maximum patterns per entity (default: 50)"
+        default=200,
+        help="Maximum patterns per entity (default: 200)"
     )
 
     parser.add_argument(
