@@ -76,128 +76,112 @@ def validate_input_files(data_dir: Path) -> Dict[str, Path]:
     return files
 
 
-def load_json_data(filepath: Path) -> List[Dict]:
-    """Load and validate JSON data"""
-    try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-
-        if not isinstance(data, list):
-            print(f"❌ {filepath.name} must contain a JSON array")
-            sys.exit(1)
-
-        if len(data) == 0:
-            print(f"⚠️  {filepath.name} is empty")
-
-        return data
-
-    except json.JSONDecodeError as e:
-        print(f"❌ Invalid JSON in {filepath.name}: {e}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"❌ Error reading {filepath.name}: {e}")
-        sys.exit(1)
 
 
 def generate_ac_patterns(
     files: Dict[str, Path],
     output_dir: Path,
-    tier_limits: Optional[Dict] = None,
-    max_patterns: int = 50
+    tier_limits: Optional[str] = None,
+    max_patterns: int = 50,
+    filter_tiers: Optional[str] = None
 ) -> Path:
-    """Generate AC patterns from sanctions data"""
+    """Generate AC patterns from sanctions data using generate_full_corpus"""
     print_step(2, "Generating AC patterns")
 
-    # Load data
-    print("📂 Loading data...")
-    persons = load_json_data(files["persons"])
-    companies = load_json_data(files["companies"])
-    terrorism = load_json_data(files["terrorism"])
-
-    print(f"   Persons:   {len(persons):,}")
-    print(f"   Companies: {len(companies):,}")
-    print(f"   Terrorism: {len(terrorism):,}")
-
     # Initialize generator
-    print("\n🔧 Initializing AC pattern generator...")
+    print("🔧 Initializing AC pattern generator...")
     generator = HighRecallACGenerator()
 
-    # Generate patterns
+    # Apply custom tier limits if provided
+    if tier_limits:
+        custom_limits = parse_tier_limits(tier_limits)
+        generator.tier_limits.update(custom_limits)
+        print(f"   Applied custom tier limits: {custom_limits}")
+
+    # Generate full corpus using proper method
     print("⚙️  Generating patterns (this may take a few minutes)...")
     start_time = time.time()
 
-    all_patterns = []
+    corpus = generator.generate_full_corpus(
+        persons_file=str(files["persons"]),
+        companies_file=str(files["companies"]),
+        terrorism_file=str(files["terrorism"])
+    )
 
-    # Process persons
-    print("   👥 Processing persons...")
-    for person in persons:
-        try:
-            patterns = generator.generate_patterns(
-                person,
-                entity_type="person",
-                max_patterns_per_entity=max_patterns
-            )
-            all_patterns.extend(patterns)
-        except Exception as e:
-            print(f"   ⚠️  Error processing person {person.get('id')}: {e}")
+    generation_time = time.time() - start_time
 
-    # Process companies
-    print("   🏢 Processing companies...")
-    for company in companies:
-        try:
-            patterns = generator.generate_patterns(
-                company,
-                entity_type="company",
-                max_patterns_per_entity=max_patterns
-            )
-            all_patterns.extend(patterns)
-        except Exception as e:
-            print(f"   ⚠️  Error processing company {company.get('id')}: {e}")
+    # Filter by tiers if requested
+    if filter_tiers:
+        allowed_tiers = set(int(t) for t in filter_tiers.split(','))
+        original_count = len(corpus['patterns'])
+        corpus['patterns'] = [
+            p for p in corpus['patterns']
+            if p['tier'] in allowed_tiers
+        ]
+        print(f"   Filtered to tiers {allowed_tiers}: {original_count} -> {len(corpus['patterns'])} patterns")
 
-    # Process terrorism
-    print("   ⚠️  Processing terrorism list...")
-    for entry in terrorism:
-        try:
-            patterns = generator.generate_patterns(
-                entry,
-                entity_type="terrorism",
-                max_patterns_per_entity=max_patterns
-            )
-            all_patterns.extend(patterns)
-        except Exception as e:
-            print(f"   ⚠️  Error processing terrorism entry {entry.get('id')}: {e}")
+    # Limit patterns per entity if requested
+    if max_patterns:
+        entity_counts = {}
+        filtered_patterns = []
 
-    elapsed = time.time() - start_time
+        for pattern in corpus['patterns']:
+            entity_key = f"{pattern['entity_type']}:{pattern['entity_id']}"
+            current_count = entity_counts.get(entity_key, 0)
 
-    # Statistics
-    tier_counts = {}
-    for pattern in all_patterns:
-        tier = pattern.get("tier", -1)
-        tier_counts[tier] = tier_counts.get(tier, 0) + 1
+            if current_count < max_patterns:
+                filtered_patterns.append(pattern)
+                entity_counts[entity_key] = current_count + 1
 
-    print(f"\n✅ Generated {len(all_patterns):,} patterns in {elapsed:.1f}s")
-    print(f"   Tier distribution:")
-    for tier in sorted(tier_counts.keys()):
-        count = tier_counts[tier]
-        pct = (count / len(all_patterns) * 100) if all_patterns else 0
+        original_count = len(corpus['patterns'])
+        corpus['patterns'] = filtered_patterns
+        print(f"   Limited patterns per entity to {max_patterns}: {original_count} -> {len(corpus['patterns'])} patterns")
+
+    # Update statistics with final counts
+    corpus['statistics']['patterns_generated'] = len(corpus['patterns'])
+    corpus['statistics']['generation_time'] = generation_time
+
+    # Calculate final tier distribution
+    final_tier_dist = {}
+    for pattern in corpus['patterns']:
+        tier = pattern['tier']
+        final_tier_dist[tier] = final_tier_dist.get(tier, 0) + 1
+
+    corpus['statistics']['final_tier_distribution'] = final_tier_dist
+
+    # Print statistics
+    stats = corpus['statistics']
+    print(f"\n✅ Generated {len(corpus['patterns']):,} patterns in {stats['processing_time']:.1f}s")
+    print(f"   Persons processed:   {stats['persons_processed']:,}")
+    print(f"   Companies processed: {stats['companies_processed']:,}")
+    print(f"   Terrorism processed: {stats['terrorism_processed']:,}")
+    print(f"\n   Tier distribution:")
+    for tier in sorted(final_tier_dist.keys()):
+        count = final_tier_dist[tier]
+        pct = (count / len(corpus['patterns']) * 100) if corpus['patterns'] else 0
         print(f"      Tier {tier}: {count:,} ({pct:.1f}%)")
 
-    # Save patterns
+    # Save patterns with proper structure
     output_file = output_dir / f"ac_patterns_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
     output_data = {
         "metadata": {
             "generated_at": datetime.now().isoformat(),
-            "total_patterns": len(all_patterns),
+            "generator_version": corpus.get('generator_version', '1.0.0'),
+            "total_patterns": len(corpus['patterns']),
             "sources": {
-                "persons": len(persons),
-                "companies": len(companies),
-                "terrorism": len(terrorism)
+                "persons": stats['persons_processed'],
+                "companies": stats['companies_processed'],
+                "terrorism": stats['terrorism_processed']
             },
-            "tier_distribution": tier_counts,
-            "generation_time_seconds": elapsed
+            "tier_distribution": final_tier_dist,
+            "generation_time_seconds": stats['processing_time'],
+            "filtering_applied": {
+                "tier_filter": filter_tiers,
+                "max_per_entity": max_patterns
+            }
         },
-        "patterns": all_patterns
+        "patterns": corpus['patterns']
     }
 
     with open(output_file, 'w', encoding='utf-8') as f:
@@ -208,45 +192,62 @@ def generate_ac_patterns(
     return output_file
 
 
-def generate_vectors(files: Dict[str, Path], output_dir: Path) -> Dict[str, Path]:
-    """Generate vector embeddings (placeholder - calls external script)"""
+def parse_tier_limits(tier_limits_str: str) -> dict:
+    """Parse tier limits from string format like '0:5,1:10,2:15,3:50'"""
+    from ai_service.layers.patterns.high_recall_ac_generator import PatternTier
+
+    if not tier_limits_str:
+        return {}
+
+    limits = {}
+    for pair in tier_limits_str.split(','):
+        tier_str, limit_str = pair.split(':')
+        tier = PatternTier(int(tier_str))
+        limits[tier] = int(limit_str)
+
+    return limits
+
+
+def generate_vectors(patterns_file: Path, output_dir: Path) -> Path:
+    """Generate vector embeddings from AC patterns"""
     print_step(3, "Generating vector embeddings")
 
     print("ℹ️  Vector generation requires sentence-transformers")
+    print(f"   Input: {patterns_file.name}")
     print("   Running generate_vectors.py script...")
 
     import subprocess
 
-    vector_files = {}
+    # Output file with correct JSON format
+    output_file = output_dir / f"vectors_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
-    for entity_type, filepath in files.items():
-        output_file = output_dir / f"vectors_{entity_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.npy"
+    print(f"\n📊 Generating vectors from AC patterns...")
 
-        print(f"\n📊 Generating vectors for {entity_type}...")
+    try:
+        result = subprocess.run([
+            sys.executable,
+            str(project_root / "scripts" / "generate_vectors.py"),
+            "--input", str(patterns_file),  # AC patterns file, not sanctions
+            "--output", str(output_file),
+            "--max-patterns", "10000"
+        ], capture_output=True, text=True, timeout=300)
 
-        try:
-            result = subprocess.run([
-                sys.executable,
-                str(project_root / "scripts" / "generate_vectors.py"),
-                "--input", str(filepath),
-                "--output", str(output_file)
-            ], capture_output=True, text=True, timeout=300)
+        if result.returncode == 0:
+            print(f"✅ Generated: {output_file.name}")
+            return output_file
+        else:
+            print(f"❌ Failed: {result.stderr}")
+            return None
 
-            if result.returncode == 0:
-                print(f"✅ Generated: {output_file.name}")
-                vector_files[entity_type] = output_file
-            else:
-                print(f"❌ Failed: {result.stderr}")
-
-        except subprocess.TimeoutExpired:
-            print(f"⏱️  Timeout generating vectors for {entity_type}")
-        except FileNotFoundError:
-            print("⚠️  generate_vectors.py not found, skipping vector generation")
-            break
-        except Exception as e:
-            print(f"❌ Error: {e}")
-
-    return vector_files
+    except subprocess.TimeoutExpired:
+        print(f"⏱️  Timeout generating vectors")
+        return None
+    except FileNotFoundError:
+        print("⚠️  generate_vectors.py not found, skipping vector generation")
+        return None
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return None
 
 
 def generate_templates(files: Dict[str, Path], output_dir: Path):
@@ -262,7 +263,10 @@ def generate_templates(files: Dict[str, Path], output_dir: Path):
     for entity_type, filepath in files.items():
         print(f"\n   Processing {entity_type}...")
 
-        data = load_json_data(filepath)
+        # Load JSON data inline
+        with open(filepath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
         templates = template_builder.create_batch_templates(data, entity_type=entity_type)
 
         output_file = templates_dir / f"{entity_type}_templates.json"
@@ -277,7 +281,7 @@ def generate_templates(files: Dict[str, Path], output_dir: Path):
 def create_deployment_manifest(
     output_dir: Path,
     patterns_file: Path,
-    vector_files: Dict[str, Path],
+    vector_file: Optional[Path],
     input_files: Dict[str, Path]
 ):
     """Create deployment manifest with all file paths"""
@@ -292,18 +296,13 @@ def create_deployment_manifest(
         },
         "generated_files": {
             "ac_patterns": str(patterns_file.relative_to(project_root)),
-            "vectors": {
-                name: str(filepath.relative_to(project_root))
-                for name, filepath in vector_files.items()
-            }
+            "vectors": str(vector_file.relative_to(project_root)) if vector_file else None
         },
         "elasticsearch_config": {
             "index_prefix": "sanctions",
             "suggested_indices": [
                 "sanctions_ac_patterns",
-                "sanctions_vectors_persons",
-                "sanctions_vectors_companies",
-                "sanctions_vectors_terrorism"
+                "sanctions_vectors"
             ]
         },
         "next_steps": [
@@ -352,6 +351,16 @@ def main():
     )
 
     parser.add_argument(
+        "--tier-limits",
+        help="Custom tier limits in format '0:5,1:10,2:15,3:50'"
+    )
+
+    parser.add_argument(
+        "--filter-tiers",
+        help="Include only specific tiers, e.g., '0,1,2' (default: all tiers)"
+    )
+
+    parser.add_argument(
         "--skip-vectors",
         action="store_true",
         help="Skip vector generation (faster)"
@@ -385,13 +394,15 @@ def main():
     patterns_file = generate_ac_patterns(
         input_files,
         args.output_dir,
-        max_patterns=args.max_patterns
+        tier_limits=args.tier_limits,
+        max_patterns=args.max_patterns,
+        filter_tiers=args.filter_tiers
     )
 
     # Step 3: Generate vectors
-    vector_files = {}
+    vector_file = None
     if not args.skip_vectors and not args.patterns_only:
-        vector_files = generate_vectors(input_files, args.output_dir)
+        vector_file = generate_vectors(patterns_file, args.output_dir)
     else:
         print("\nℹ️  Skipping vector generation")
 
@@ -405,7 +416,7 @@ def main():
     manifest_file = create_deployment_manifest(
         args.output_dir,
         patterns_file,
-        vector_files,
+        vector_file,
         input_files
     )
 

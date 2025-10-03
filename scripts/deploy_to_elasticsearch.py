@@ -323,6 +323,74 @@ async def bulk_load_patterns(es_host: str, index_name: str, patterns_file: Path)
         return False
 
 
+async def bulk_load_vectors(es_host: str, index_name: str, vectors_file: Path) -> bool:
+    """Bulk load vector embeddings into Elasticsearch"""
+    print(f"\n📦 Loading vectors from: {vectors_file.name}")
+
+    try:
+        with open(vectors_file, 'r', encoding='utf-8') as f:
+            vectors_data = json.load(f)
+
+        if not vectors_data:
+            print("   ⚠️  No vector data to load")
+            return True
+
+        total = len(vectors_data)
+        print(f"   📊 Total vectors: {total:,}")
+
+        # Build bulk request
+        bulk_data = []
+        for vector_entry in vectors_data:
+            # Index action
+            bulk_data.append(json.dumps({
+                "index": {"_index": index_name}
+            }))
+            # Document
+            doc = {
+                "name": vector_entry.get("name", ""),
+                "vector": vector_entry.get("vector", []),
+                "metadata": vector_entry.get("metadata", {})
+            }
+            bulk_data.append(json.dumps(doc))
+
+        bulk_body = "\n".join(bulk_data) + "\n"
+
+        # Send bulk request
+        print(f"   ⬆️  Uploading to Elasticsearch...")
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{es_host}/_bulk",
+                data=bulk_body,
+                headers={"Content-Type": "application/x-ndjson"},
+                timeout=aiohttp.ClientTimeout(total=300)
+            ) as response:
+                if response.status == 200:
+                    result = await response.json()
+
+                    if result.get('errors'):
+                        errors = [item for item in result['items'] if 'error' in item.get('index', {})]
+                        print(f"   ⚠️  Loaded with {len(errors)} errors")
+                        if errors:
+                            print(f"   First error: {errors[0]['index']['error']}")
+                    else:
+                        print(f"   ✅ Successfully loaded {total:,} vectors")
+
+                    return True
+                else:
+                    error_text = await response.text()
+                    print(f"   ❌ Bulk load failed: HTTP {response.status}")
+                    print(f"   {error_text[:500]}")
+                    return False
+
+    except FileNotFoundError:
+        print(f"   ❌ File not found: {vectors_file}")
+        return False
+    except Exception as e:
+        print(f"   ❌ Error: {e}")
+        return False
+
+
 async def verify_indices(es_host: str, expected_indices: List[str]) -> bool:
     """Verify that indices were created and have data"""
     print_step(3, "Verifying indices")
@@ -424,12 +492,13 @@ async def main_async(args):
         print(f"❌ Failed to create AC patterns index")
         return 1
 
-    # Vectors indices (if needed)
-    if args.create_vector_indices:
-        for entity_type in ['persons', 'companies', 'terrorism']:
-            vector_index = f"{args.index_prefix}_vectors_{entity_type}"
-            if not await create_vectors_index(es_host, vector_index):
-                print(f"⚠️  Failed to create vectors index for {entity_type}")
+    # Vectors index (if needed)
+    vector_index = None
+    if args.create_vector_indices or args.vectors_file:
+        vector_index = f"{args.index_prefix}_vectors"
+        if not await create_vectors_index(es_host, vector_index):
+            print(f"❌ Failed to create vectors index")
+            return 1
 
     # Step 3: Load AC patterns
     if args.patterns_file:
@@ -451,14 +520,28 @@ async def main_async(args):
         print(f"❌ Failed to load patterns")
         return 1
 
+    # Load vectors if file provided
+    if vector_index and args.vectors_file:
+        vectors_path = args.vectors_file
+        if not await bulk_load_vectors(es_host, vector_index, vectors_path):
+            print(f"⚠️  Failed to load vectors (continuing anyway)")
+    elif vector_index and not args.vectors_file:
+        # Try to auto-detect vectors file
+        output_dir = project_root / "output" / "sanctions"
+        vectors_files = list(output_dir.glob("vectors_*.json"))
+
+        if vectors_files:
+            vectors_path = max(vectors_files, key=lambda p: p.stat().st_mtime)
+            print(f"ℹ️  Using latest vectors file: {vectors_path.name}")
+            if not await bulk_load_vectors(es_host, vector_index, vectors_path):
+                print(f"⚠️  Failed to load vectors (continuing anyway)")
+        else:
+            print("ℹ️  No vectors file found, skipping vector loading")
+
     # Step 4: Verify
     indices_to_verify = [ac_index]
-    if args.create_vector_indices:
-        indices_to_verify.extend([
-            f"{args.index_prefix}_vectors_persons",
-            f"{args.index_prefix}_vectors_companies",
-            f"{args.index_prefix}_vectors_terrorism"
-        ])
+    if vector_index:
+        indices_to_verify.append(vector_index)
 
     if not await verify_indices(es_host, indices_to_verify):
         print("\n⚠️  Some indices have issues")
@@ -501,6 +584,12 @@ def main():
         "--patterns-file",
         type=Path,
         help="Path to AC patterns JSON file (auto-detects latest if not specified)"
+    )
+
+    parser.add_argument(
+        "--vectors-file",
+        type=Path,
+        help="Path to vectors JSON file (auto-detects latest if not specified)"
     )
 
     parser.add_argument(
