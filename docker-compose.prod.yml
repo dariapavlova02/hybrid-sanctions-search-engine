@@ -42,6 +42,7 @@ services:
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data
+      - ./src/ai_service/data:/app/src/ai_service/data:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]

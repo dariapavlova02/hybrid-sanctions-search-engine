@@ -310,8 +310,12 @@ test_patterns*.json
 !tests/**/*.json
 !config/**/*.json
 !templates/**/*.json
-!src/ai_service/data/dicts/**/*.json
+!src/ai_service/data/dicts/**/*.
+!src/ai_service/data/sanctioned_companies.json
+!src/ai_service/data/sanctioned_persons.json
+!src/ai_service/data/terrorism_black_list.json
 !src/ai_service/data/lexicons/**/*.json
 !data/sanctions/*.json
+
 # Exclude generated sanctions cache
 data/sanctions/sanctions_cache.json

@@ -2361,7 +2361,7 @@
   },
   {
     "id": 296,
-    "date_entry": "2015-07-14",
+    "date_entry": "2025-08-26",
     "aka_name": "IBRAHIM",
     "type_aka": "N",
     "quality_aka": null,
@@ -2369,7 +2369,7 @@
   },
   {
     "id": 297,
-    "date_entry": "2015-07-14",
+    "date_entry": "2025-08-26",
     "aka_name": "ALI",
     "type_aka": "N",
     "quality_aka": null,
@@ -2377,7 +2377,7 @@
   },
   {
     "id": 298,
-    "date_entry": "2015-07-14",
+    "date_entry": "2025-08-26",
     "aka_name": "ABU BAKR",
     "type_aka": "N",
     "quality_aka": null,
@@ -2385,7 +2385,7 @@
   },
   {
     "id": 299,
-    "date_entry": "2015-07-14",
+    "date_entry": "2025-08-26",
     "aka_name": "TANTOUSH",
     "type_aka": "N",
     "quality_aka": null,
@@ -2393,80 +2393,80 @@
   },
   {
     "id": 300,
-    "date_entry": "2015-07-14",
-    "aka_name": "Ibrahim AbubakerTantouche",
-    "type_aka": "PE",
-    "quality_aka": 1,
-    "number_entry": 103
-  },
-  {
-    "id": 301,
-    "date_entry": "2015-07-14",
-    "aka_name": "'Abd al-Muhsi",
-    "type_aka": "PE",
-    "quality_aka": 1,
-    "number_entry": 103
-  },
-  {
-    "id": 302,
-    "date_entry": "2015-07-14",
-    "aka_name": "'Abd al-Rahman",
-    "type_aka": "PE",
-    "quality_aka": 1,
-    "number_entry": 103
-  },
-  {
-    "id": 303,
-    "date_entry": "2015-07-14",
-    "aka_name": "Abdel IlahSabri",
-    "type_aka": "PE",
-    "quality_aka": 1,
-    "number_entry": 103
-  },
-  {
-    "id": 304,
-    "date_entry": "2015-07-14",
+    "date_entry": "2025-08-26",
     "aka_name": "Abu Anas",
     "type_aka": "PE",
     "quality_aka": 1,
     "number_entry": 103
   },
   {
-    "id": 305,
-    "date_entry": "2015-07-14",
-    "aka_name": "Ibrahim Ali Muhammad Abu Bakr",
-    "type_aka": "PE",
-    "quality_aka": 1,
-    "number_entry": 103
-  },
-  {
-    "id": 306,
-    "date_entry": "2015-07-14",
-    "aka_name": "Ibrahim AbubakerTantoush",
-    "type_aka": "PE",
-    "quality_aka": 1,
-    "number_entry": 103
-  },
-  {
-    "id": 307,
-    "date_entry": "2015-07-14",
-    "aka_name": "Abdul Rahman",
-    "type_aka": "PE",
-    "quality_aka": 1,
-    "number_entry": 103
-  },
-  {
-    "id": 308,
-    "date_entry": "2015-07-14",
+    "id": 301,
+    "date_entry": "2025-08-26",
     "aka_name": "Al-Libi",
     "type_aka": "PE",
     "quality_aka": 2,
     "number_entry": 103
   },
   {
-    "id": 309,
-    "date_entry": "2015-07-14",
+    "id": 302,
+    "date_entry": "2025-08-26",
+    "aka_name": "Ibrahim Abubaker Tantouche",
+    "type_aka": "PE",
+    "quality_aka": 1,
+    "number_entry": 103
+  },
+  {
+    "id": 303,
+    "date_entry": "2025-08-26",
+    "aka_name": "Ibrahim Abubaker Tantoush",
+    "type_aka": "PE",
+    "quality_aka": 1,
+    "number_entry": 103
+  },
+  {
+    "id": 304,
+    "date_entry": "2025-08-26",
+    "aka_name": "‘Abd al-Rahman",
+    "type_aka": "PE",
+    "quality_aka": 1,
+    "number_entry": 103
+  },
+  {
+    "id": 305,
+    "date_entry": "2025-08-26",
+    "aka_name": "Abdel Ilah Sabri (false identity related to fraudulent South African identification number 6910275240086 linked to South African passport number 434021161, both documents have been confiscated)",
+    "type_aka": "PE",
+    "quality_aka": 1,
+    "number_entry": 103
+  },
+  {
+    "id": 306,
+    "date_entry": "2025-08-26",
     "aka_name": "Abd al-Muhsin",
+    "type_aka": "PE",
+    "quality_aka": 1,
+    "number_entry": 103
+  },
+  {
+    "id": 307,
+    "date_entry": "2025-08-26",
+    "aka_name": "Ibrahim Ali Muhammad Abu Bakr",
+    "type_aka": "PE",
+    "quality_aka": 1,
+    "number_entry": 103
+  },
+  {
+    "id": 308,
+    "date_entry": "2025-08-26",
+    "aka_name": "Abdul Rahman",
+    "type_aka": "PE",
+    "quality_aka": 1,
+    "number_entry": 103
+  },
+  {
+    "id": 309,
+    "date_entry": "2025-08-26",
+    "aka_name": "‘Abd al-Muhsi",
     "type_aka": "PE",
     "quality_aka": 1,
     "number_entry": 103
@@ -8833,7 +8833,7 @@
   },
   {
     "id": 1105,
-    "date_entry": "2011-06-16",
+    "date_entry": "2025-08-26",
     "aka_name": "SULAIMAN",
     "type_aka": "N",
     "quality_aka": null,
@@ -8841,7 +8841,7 @@
   },
   {
     "id": 1106,
-    "date_entry": "2011-06-16",
+    "date_entry": "2025-08-26",
     "aka_name": "JASSEM",
     "type_aka": "N",
     "quality_aka": null,
@@ -8849,7 +8849,7 @@
   },
   {
     "id": 1107,
-    "date_entry": "2011-06-16",
+    "date_entry": "2025-08-26",
     "aka_name": "SULAIMAN",
     "type_aka": "N",
     "quality_aka": null,
@@ -8857,7 +8857,7 @@
   },
   {
     "id": 1108,
-    "date_entry": "2011-06-16",
+    "date_entry": "2025-08-26",
     "aka_name": "ALI ABO GHAITH",
     "type_aka": "N",
     "quality_aka": null,
@@ -8865,7 +8865,7 @@
   },
   {
     "id": 1109,
-    "date_entry": "2011-06-16",
+    "date_entry": "2025-08-26",
     "aka_name": "Abo Ghaith",
     "type_aka": "PE",
     "quality_aka": 2,
@@ -12481,7 +12481,7 @@
   },
   {
     "id": 1561,
-    "date_entry": "2016-03-11",
+    "date_entry": "2025-08-26",
     "aka_name": "AL-AZHAR",
     "type_aka": "N",
     "quality_aka": null,
@@ -12489,7 +12489,7 @@
   },
   {
     "id": 1562,
-    "date_entry": "2016-03-11",
+    "date_entry": "2025-08-26",
     "aka_name": "BEN KHALIFA",
     "type_aka": "N",
     "quality_aka": null,
@@ -12497,7 +12497,7 @@
   },
   {
     "id": 1563,
-    "date_entry": "2016-03-11",
+    "date_entry": "2025-08-26",
     "aka_name": "BEN AHMED",
     "type_aka": "N",
     "quality_aka": null,
@@ -12505,7 +12505,7 @@
   },
   {
     "id": 1564,
-    "date_entry": "2016-03-11",
+    "date_entry": "2025-08-26",
     "aka_name": "ROUINE",
     "type_aka": "N",
     "quality_aka": null,
@@ -12513,16 +12513,16 @@
   },
   {
     "id": 1565,
-    "date_entry": "2016-03-11",
-    "aka_name": "Lazhar",
+    "date_entry": "2025-08-26",
+    "aka_name": "Salmane",
     "type_aka": "PE",
     "quality_aka": 2,
     "number_entry": 480
   },
   {
     "id": 1566,
-    "date_entry": "2016-03-11",
-    "aka_name": "Salmane",
+    "date_entry": "2025-08-26",
+    "aka_name": "Lazhar",
     "type_aka": "PE",
     "quality_aka": 2,
     "number_entry": 480
@@ -28473,7 +28473,7 @@
   },
   {
     "id": 3560,
-    "date_entry": "2014-09-26",
+    "date_entry": "2025-08-26",
     "aka_name": "SHAFI",
     "type_aka": "N",
     "quality_aka": null,
@@ -28481,7 +28481,7 @@
   },
   {
     "id": 3561,
-    "date_entry": "2014-09-26",
+    "date_entry": "2025-08-26",
     "aka_name": "SULTAN",
     "type_aka": "N",
     "quality_aka": null,
@@ -28489,7 +28489,7 @@
   },
   {
     "id": 3562,
-    "date_entry": "2014-09-26",
+    "date_entry": "2025-08-26",
     "aka_name": "MOHAMMED",
     "type_aka": "N",
     "quality_aka": null,
@@ -28497,7 +28497,7 @@
   },
   {
     "id": 3563,
-    "date_entry": "2014-09-26",
+    "date_entry": "2025-08-26",
     "aka_name": "AL-AJMI",
     "type_aka": "N",
     "quality_aka": null,
@@ -28505,7 +28505,7 @@
   },
   {
     "id": 3564,
-    "date_entry": "2014-09-26",
+    "date_entry": "2025-08-26",
     "aka_name": "Shaykh Abu-Sultan",
     "type_aka": "PE",
     "quality_aka": 2,
@@ -28513,7 +28513,7 @@
   },
   {
     "id": 3565,
-    "date_entry": "2014-09-26",
+    "date_entry": "2025-08-26",
     "aka_name": "Shafi al-Ajmi",
     "type_aka": "PE",
     "quality_aka": 1,
@@ -28521,8 +28521,8 @@
   },
   {
     "id": 3566,
-    "date_entry": "2014-09-26",
-    "aka_name": "Sheikh Shafial-Ajmi",
+    "date_entry": "2025-08-26",
+    "aka_name": "Sheikh Shafi al-Ajmi",
     "type_aka": "PE",
     "quality_aka": 1,
     "number_entry": 1268
@@ -32017,7 +32017,7 @@
   },
   {
     "id": 4003,
-    "date_entry": "2016-03-11",
+    "date_entry": "2025-08-26",
     "aka_name": "GULMUROD",
     "type_aka": null,
     "quality_aka": null,
@@ -32025,7 +32025,7 @@
   },
   {
     "id": 4004,
-    "date_entry": "2016-03-11",
+    "date_entry": "2025-08-26",
     "aka_name": "KHALIMOV",
     "type_aka": null,
     "quality_aka": null,
