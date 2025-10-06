@@ -54,62 +54,81 @@ class VectorGenerator:
         # Dummy vector for testing
         return [0.1] * 384
 
+    def generate_vectors_batch(self, texts: List[str], batch_size: int = 32) -> List[List[float]]:
+        """Generate vectors for multiple texts in batches (faster)."""
+        if not self.model:
+            return [[0.1] * 384 for _ in texts]
+
+        try:
+            embeddings = self.model.encode(texts, batch_size=batch_size, show_progress_bar=True)
+            return [emb.tolist() for emb in embeddings]
+        except Exception as e:
+            logger.error(f"Failed to generate batch vectors: {e}")
+            return [[0.0] * 384 for _ in texts]
+
     def generate_vectors_from_patterns(self, patterns_file: Path, output_file: Path,
-                                     max_patterns: int = 10000, sample_tiers: List[str] = None) -> int:
-        """Generate vectors from AC patterns file."""
+                                     max_patterns: int = 10000, sample_tiers: List[int] = None) -> int:
+        """Generate vectors from AC patterns file (new format with metadata)."""
         if sample_tiers is None:
-            sample_tiers = ["tier_0_exact", "tier_1_high", "tier_2_medium"]
+            sample_tiers = [0, 1, 2]  # Tier 0, 1, 2 only (skip tier 3 for vectors)
 
         logger.info(f"Generating vectors from {patterns_file}")
 
-        # Load patterns
+        # Load patterns (new format: {"metadata": {...}, "patterns": [...]})
         with open(patterns_file, 'r', encoding='utf-8') as f:
-            patterns_data = json.load(f)
+            data = json.load(f)
 
-        vectors = []
-        pattern_count = 0
+        # Extract patterns array
+        patterns_list = data.get('patterns', [])
+        logger.info(f"Loaded {len(patterns_list)} total patterns")
 
-        # Process each tier
-        for tier_name, patterns in patterns_data.items():
-            if tier_name not in sample_tiers:
-                continue
+        # Collect patterns for batch processing
+        patterns_to_process = []
+        tier_counts = {tier: 0 for tier in sample_tiers}
 
-            if not isinstance(patterns, list):
-                continue
-
-            logger.info(f"Processing tier {tier_name}: {len(patterns)} patterns")
-
-            for pattern_data in patterns:
-                if pattern_count >= max_patterns:
-                    break
-
-                pattern = pattern_data.get('pattern', '')
-                if not pattern or len(pattern) < 2:
-                    continue
-
-                # Generate vector
-                vector = self.generate_vector(pattern)
-
-                # Create vector entry
-                vector_entry = {
-                    "name": pattern,
-                    "vector": vector,
-                    "metadata": {
-                        "tier": tier_name,
-                        "pattern_type": pattern_data.get('pattern_type', 'unknown'),
-                        "source_list": pattern_data.get('source_list', 'unknown'),
-                        "original_data": pattern_data
-                    }
-                }
-
-                vectors.append(vector_entry)
-                pattern_count += 1
-
-                if pattern_count % 1000 == 0:
-                    logger.info(f"Generated {pattern_count} vectors...")
-
-            if pattern_count >= max_patterns:
+        for pattern_data in patterns_list:
+            if len(patterns_to_process) >= max_patterns:
                 break
+
+            tier = pattern_data.get('tier')
+            if tier not in sample_tiers:
+                continue
+
+            pattern = pattern_data.get('pattern', '')
+            if not pattern or len(pattern) < 2:
+                continue
+
+            patterns_to_process.append({
+                'text': pattern,
+                'metadata': {
+                    "tier": tier,
+                    "pattern_type": pattern_data.get('type', 'unknown'),
+                    "entity_id": pattern_data.get('entity_id', ''),
+                    "entity_type": pattern_data.get('entity_type', 'unknown'),
+                    "confidence": pattern_data.get('confidence', 0.0),
+                    "canonical": pattern_data.get('canonical', pattern)
+                }
+            })
+            tier_counts[tier] += 1
+
+        logger.info(f"Collected {len(patterns_to_process)} patterns for vectorization")
+        logger.info(f"Tier distribution: {tier_counts}")
+
+        # Generate vectors in batches (much faster!)
+        texts = [p['text'] for p in patterns_to_process]
+        logger.info(f"Generating vectors in batches...")
+
+        embeddings = self.generate_vectors_batch(texts, batch_size=64)
+
+        # Create vector entries
+        vectors = []
+        for pattern_info, embedding in zip(patterns_to_process, embeddings):
+            vector_entry = {
+                "name": pattern_info['text'],
+                "vector": embedding,
+                "metadata": pattern_info['metadata']
+            }
+            vectors.append(vector_entry)
 
         # Save vectors
         logger.info(f"Saving {len(vectors)} vectors to {output_file}")
