@@ -31,7 +31,7 @@ services:
       - VECTOR_SEARCH_THRESHOLD=0.3
       - ENABLE_VECTOR_FALLBACK=true
       # Elasticsearch index configuration
-      - ES_AC_INDEX=ai_service_ac_patterns
+      - ES_AC_INDEX=sanctions_ac_patterns
       - ES_VECTOR_INDEX=vectors
       # Force reload sanctions for debugging
       - FORCE_RELOAD_SANCTIONS=true
