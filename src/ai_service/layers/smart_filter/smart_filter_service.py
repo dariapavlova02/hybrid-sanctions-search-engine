@@ -274,6 +274,19 @@ class SmartFilterService:
             if ac_matches:
                 detected_signals.append("ac_match")
 
+            # DEBUG LOGGING: Log decision details for debugging
+            self.logger.debug(
+                f"SMARTFILTER DECISION: '{original_text}' -> "
+                f"should_process={should_process}, confidence={total_confidence:.3f}, "
+                f"signals={detected_signals}, recommendation='{recommendation}'"
+            )
+            self.logger.debug(
+                f"SIGNAL BREAKDOWN: names={name_signals['confidence']:.3f}, "
+                f"companies={company_signals['confidence']:.3f}, "
+                f"context={context_signals['confidence']:.3f}, "
+                f"ac_matches={len(ac_matches)}"
+            )
+
             return FilterResult(
                 should_process=should_process,
                 confidence=total_confidence,
@@ -776,6 +789,14 @@ class SmartFilterService:
         self, confidence: float, signals: Dict[str, Any], text: str
     ) -> Tuple[bool, str, str]:
         """Принятие решения о необходимости обработки"""
+
+        # DEBUG LOGGING: Log threshold comparison
+        self.logger.debug(
+            f"THRESHOLD CHECK: confidence={confidence:.3f} vs "
+            f"high={self.thresholds['high']:.3f}, "
+            f"medium={self.thresholds['medium']:.3f}, "
+            f"min_processing_threshold={self.thresholds['min_processing_threshold']:.3f}"
+        )
 
         if confidence >= self.thresholds["high"]:
             return True, "Высокая уверенность в наличии релевантных сигналов", "high"

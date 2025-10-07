@@ -35,7 +35,7 @@ class ScoringWeights:
 
     # General weights
     company_weight: float = 0.6
-    name_weight: float = 0.4
+    name_weight: float = 0.8
 
 
 class ConfidenceScorer:

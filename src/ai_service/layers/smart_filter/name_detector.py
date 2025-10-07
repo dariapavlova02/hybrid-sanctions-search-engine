@@ -158,13 +158,13 @@ class NameDetector:
         name_count = len(detected_names)
         text_length = len(text.split())
 
-        # Simple confidence calculation
+        # Simple confidence calculation - increased for better name detection
         if name_count == 0:
             confidence = 0.0
         elif name_count == 1:
-            confidence = 0.3
+            confidence = 0.8  # Increased from 0.3 to 0.8 for single names
         elif name_count >= 2:
-            confidence = 0.7
+            confidence = 0.9  # Increased from 0.7 to 0.9 for multiple names
         else:
             confidence = 0.0
 
