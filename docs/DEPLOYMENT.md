@@ -104,8 +104,11 @@ docker-compose --profile dev up ai-service-dev
 # Start Elasticsearch for development
 docker-compose up -d elasticsearch
 
-# Initialize search indices
-python scripts/setup_elasticsearch.py
+# Initialize search indices with component templates, index templates, and warmup
+python scripts/elasticsearch_setup_and_warmup.py
+
+# Alternative: Use the setup script
+./scripts/setup_elasticsearch.sh
 ```
 
 ## Docker Deployment
@@ -198,7 +201,54 @@ kubectl get svc ai-service
 kubectl logs -f deployment/ai-service
 ```
 
-## Production Configuration
+## Production Deployment Workflow
+
+### Automated Production Deployment
+
+The project includes a comprehensive production deployment script that handles the complete workflow:
+
+```bash
+# Run the complete production deployment
+./scripts/deploy_search_production.sh
+```
+
+This script performs a 12-step automated deployment process:
+
+1. **Backup Configuration**: Creates timestamped backup of current configuration
+2. **Update Configuration**: Applies latest configuration changes
+3. **Elasticsearch Setup**: Runs component template and index template initialization
+4. **Index Creation**: Creates watchlist indices with proper mappings
+5. **Alias Management**: Sets up current aliases for seamless access
+6. **Data Loading**: Loads sanctioned entities data using bulk loader
+7. **Service Restart**: Restarts AI service with new configuration
+8. **Health Check**: Verifies service health and connectivity
+9. **Search Integration Test**: Runs comprehensive search tests
+10. **Performance Validation**: Validates search performance metrics
+11. **Cache Warmup**: Warms up normalization and search caches
+12. **Final Verification**: Runs end-to-end system validation
+
+### Manual Production Deployment
+
+If you need to perform manual deployment or troubleshoot issues:
+
+```bash
+# 1. Setup Elasticsearch infrastructure
+python scripts/elasticsearch_setup_and_warmup.py
+
+# 2. Load sanctioned entities data
+python scripts/bulk_loader.py --input data/entities/persons.jsonl --entity-type person --upsert
+python scripts/bulk_loader.py --input data/entities/orgs.jsonl --entity-type org --upsert
+
+# 3. Test search functionality
+python scripts/quick_test_search.py --test all
+
+# 4. Warmup the service
+./scripts/smoke_warmup.sh
+# Or
+poetry run python tools/warmup.py --n 200 --verbose
+```
+
+### Production Configuration
 
 ### Environment Variables
 
@@ -224,6 +274,9 @@ ELASTICSEARCH_SSL_VERIFY=true
 CACHE_TTL=3600
 MAX_BATCH_SIZE=100
 REQUEST_TIMEOUT=30
+NORM_CACHE_LRU=8192
+MORPH_CACHE_LRU=8192
+DISABLE_DEBUG_TRACING=true
 
 # Monitoring
 PROMETHEUS_ENABLED=true
@@ -255,6 +308,147 @@ resources:
   limits:
     memory: "4Gi"
     cpu: "2000m"
+```
+
+## Elasticsearch Data Management
+
+### Bulk Data Loading
+
+The system provides a sophisticated bulk loader for sanctioned entities:
+
+```bash
+# Load person entities
+python scripts/bulk_loader.py --input data/entities/persons.jsonl --entity-type person --upsert --batch-size 1000
+
+# Load organization entities
+python scripts/bulk_loader.py --input data/entities/orgs.yaml --entity-type org --upsert --rebuild-alias
+
+# With custom Elasticsearch configuration
+python scripts/bulk_loader.py --input entities.jsonl --entity-type person \
+  --es-url https://production-es.com:9200 \
+  --es-user ai-service \
+  --es-pass secure-password \
+  --embedding-model sentence-transformers/all-MiniLM-L6-v2
+```
+
+### Bulk Loader Features
+
+- **Embedding Generation**: Automatically generates 384-dimensional embeddings for entities without vectors
+- **Caching**: In-memory caching for embedding generation to improve performance
+- **Batch Processing**: Configurable batch sizes for optimal throughput
+- **Metrics Tracking**: Comprehensive metrics including throughput, success rate, and latency
+- **Alias Management**: Automatic alias rebuilding for seamless index transitions
+- **Retry Logic**: Exponential backoff retry for failed operations
+
+### Elasticsearch Infrastructure Setup
+
+```bash
+# Complete Elasticsearch setup
+python scripts/elasticsearch_setup_and_warmup.py
+
+# Manual setup steps
+# 1. Component templates
+curl -X PUT "localhost:9200/_component_template/watchlist_component_template" \
+  -H "Content-Type: application/json" \
+  -d @templates/elasticsearch/elasticsearch_component_template.json
+
+# 2. Index templates  
+curl -X PUT "localhost:9200/_index_template/watchlist_persons_template" \
+  -H "Content-Type: application/json" \
+  -d @templates/elasticsearch/elasticsearch_persons_template.json
+
+# 3. Create indices
+curl -X PUT "localhost:9200/watchlist_persons_v1" \
+  -H "Content-Type: application/json" \
+  -d @templates/elasticsearch/elasticsearch_persons_template.json
+
+# 4. Setup aliases
+curl -X POST "localhost:9200/_aliases" \
+  -H "Content-Type: application/json" \
+  -d '{"actions": [{"add": {"index": "watchlist_persons_v1", "alias": "watchlist_persons_current"}}]}'
+
+# 5. Warmup queries
+python scripts/elasticsearch_setup_and_warmup.py --warmup-only
+```
+
+### Search System Testing
+
+```bash
+# Comprehensive search testing
+python scripts/quick_test_search.py --test all
+
+# Individual component tests
+python scripts/quick_test_search.py --test health      # Elasticsearch cluster health
+python scripts/quick_testsearch.py --test indices     # Verify required indices exist
+python scripts/quick_test_search.py --test ac          # Test AC (Approximate Matching) search
+python scripts/quick_test_search.py --test vector      # Test vector/kNN search
+python scripts/quick_test_search.py --test multi       # Test multi-search functionality
+python scripts/quick_test_search.py --test performance # Performance benchmarking
+
+# Performance metrics output
+# ✅ AC Search Latency: 45.23ms
+# ✅ Vector Search Latency: 67.89ms
+# ✅ Multi-Search Test: 2 responses received
+```
+
+## Sanctions Data Pipeline
+
+### INN Cache Generation
+
+The system maintains a cache of Russian Tax Identification Numbers (INN) for improved matching:
+
+```bash
+# Generate INN cache from sanctions data
+python scripts/generate_inn_cache.py
+
+# Simple INN cache generation
+python scripts/generate_inn_cache_simple.py
+
+# Test INN cache coverage
+python scripts/test_inn_cache_coverage.py
+
+# Extract sanctioned INNs from data
+python scripts/extract_sanctioned_inns.py --input data/sanctions.json --output inn_cache.txt
+```
+
+### Sanctions Pipeline
+
+```bash
+# Run complete sanctions data pipeline
+python scripts/sanctions_pipeline.py
+
+# Pipeline steps:
+# 1. Load sanctions data from multiple sources
+# 2. Normalize and deduplicate entities
+# 3. Generate embeddings for all entities
+# 4. Load into Elasticsearch indices
+# 5. Create aliases and setup warmup
+# 6. Validate data integrity
+
+# Prepare sanctions data
+python scripts/prepare_sanctions_data.py --source data/raw/ --output data/processed/
+
+# Export high-recall AC patterns
+python scripts/export_high_recall_ac_patterns.py --output patterns/ac_patterns.json
+```
+
+### Data Validation
+
+```bash
+# Local validation of sanctions data
+./scripts/local_validation.sh
+
+# Simple validation
+./scripts/simple_validation.sh
+
+# Smoke test sanctions search
+./scripts/smoke_test_search.sh
+
+# Test bulk loader functionality
+python scripts/test_bulk_loader.py --sample-data
+
+# Test Elasticsearch setup
+python scripts/test_elasticsearch_setup.py
 ```
 
 ## Monitoring & Observability
@@ -294,6 +488,12 @@ curl http://localhost:8000/health/detailed
 
 # Readiness probe
 curl http://localhost:8000/health/ready
+
+# Elasticsearch health check
+python scripts/quick_test_search.py --test health
+
+# Comprehensive system health
+python scripts/quick_test_search.py --test all
 ```
 
 ### Logging
@@ -500,6 +700,18 @@ curl -X POST http://localhost:8000/admin/enable-profiling \
 
 # View profile report
 curl http://localhost:8000/admin/profile-report
+
+# Run performance profiling tests
+python scripts/test_profiling.py --duration 60 --requests 1000
+
+# Test ASCII fastpath performance
+python tests/performance/test_ascii_fastpath_performance.py
+
+# Test decomposed pipeline performance
+python tests/performance/test_decomposed_pipeline_performance.py
+
+# Performance benchmarking
+python tools/performance_test.py --concurrent-users 50 --duration 300
 ```
 
 ## Maintenance
@@ -509,15 +721,22 @@ curl http://localhost:8000/admin/profile-report
 ```bash
 # Daily: Check health
 curl http://localhost:8000/health
+python scripts/quick_test_search.py --test health
 
 # Weekly: Clear cache if needed
 curl -X POST http://localhost:8000/admin/clear-cache \
   -H "Authorization: Bearer $API_KEY"
 
+# Weekly: System warmup
+./scripts/smoke_warmup.sh
+
 # Monthly: Update dependencies
 poetry update
 make test
 make docker-build
+
+# Monthly: Elasticsearch maintenance
+python scripts/elasticsearch_setup_and_warmup.py --maintenance-mode
 ```
 
 ### Backup Procedures
@@ -555,6 +774,17 @@ kubectl rollout restart deployment/ai-service
 # Emergency fallback mode
 curl -X POST http://localhost:8000/admin/enable-fallback \
   -H "Authorization: Bearer $API_KEY"
+
+# Complete emergency recovery procedure
+./scripts/emergency_procedures.sh
+
+# Elasticsearch recovery
+python scripts/setup_elasticsearch.py --recovery-mode
+python scripts/bulk_loader.py --input backup_entities.jsonl --entity-type person --restore
+
+# Service warmup after recovery
+./scripts/smoke_warmup.sh
+python scripts/quick_test_search.py --test all
 ```
 
 ### Incident Response
@@ -570,6 +800,54 @@ curl -X POST http://localhost:8000/admin/enable-fallback \
 - **Development Team**: dev-team@company.com
 - **Operations Team**: ops-team@company.com
 - **On-call Engineer**: +1-555-0123
+
+## Deployment Integration
+
+### Search Integration Deployment
+
+```bash
+# Deploy search integration components
+python scripts/deploy_search_integration.py
+
+# Deploy to production with validation
+python scripts/deploy_search_production.sh
+
+# Upload data via API
+python scripts/upload_data_via_api.py --data entities.jsonl --batch-size 100
+
+# Upload via shell script
+./scripts/upload_via_api.sh entities.jsonl
+
+# Test deployment integration
+python scripts/deploy_to_elasticsearch.py --test-mode
+```
+
+### API Testing Templates
+
+```bash
+# Generate AC search curl commands
+python scripts/ac_search_templates.py --output curl_commands.md
+
+# Generate vector search curl commands  
+python scripts/vector_search_templates.py --output vector_curls.md
+
+# Use predefined curl commands
+./scripts/ac_search_curl_commands.md
+./scripts/vector_search_curl_commands.md
+```
+
+### Rollback Procedures
+
+```bash
+# Rollback search integration
+python scripts/rollback_search_integration.py --version previous
+
+# Emergency rollback
+./scripts/deploy_smartfilter_fix.sh --rollback
+
+# Update INN cache hook (for rollback)
+./scripts/update_inn_cache_hook.sh --restore-backup
+```
 
 ## Additional Resources
 
