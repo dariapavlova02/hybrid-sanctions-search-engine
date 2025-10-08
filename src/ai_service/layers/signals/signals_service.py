@@ -1640,10 +1640,14 @@ class SignalsService:
             # Собираем все ID для проверки
             all_ids_to_check = []
 
-            # Добавляем person IDs
+            # Добавляем person IDs (включая невалидные - для санкционных ИНН)
             for id_info in person_ids:
                 id_value = id_info.get('value', '')
-                if id_value and id_value.isdigit() and len(id_value) >= 10:  # Минимальная длина для ІПН
+                id_type = id_info.get('type', '')
+                # Проверяем ИНН типы независимо от валидации (для санкционных ИНН)
+                if id_value and id_value.isdigit() and len(id_value) >= 10 and id_type in ['inn', 'inn_ua', 'inn_ru']:
+                    all_ids_to_check.append((id_value, 'person', id_info))
+                elif id_value and id_value.isdigit() and len(id_value) >= 10 and id_info.get('valid', True):  # Остальные только если валидные
                     all_ids_to_check.append((id_value, 'person', id_info))
 
             # Добавляем org IDs
