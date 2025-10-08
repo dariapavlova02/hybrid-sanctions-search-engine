@@ -4,6 +4,7 @@ Provides better error handling, logging, and orchestration of the refactored com
 """
 
 import json
+import re
 import unicodedata
 from pathlib import Path
 from typing import Dict, List, Set, Optional, Tuple, Any, Literal
@@ -28,6 +29,51 @@ from ..morphology.diminutive_resolver import DiminutiveResolver
 from ..role_tagger import RoleTagger
 from ..role_tagger_service import RoleTaggerService
 from ..lexicon_loader import get_lexicons
+
+
+def _detect_token_language(token: str, default_language: str = 'ru') -> str:
+    """
+    Detect language of a token based on character composition.
+    
+    Args:
+        token: Token to analyze
+        default_language: Default language if detection is uncertain
+        
+    Returns:
+        Language code: 'uk', 'ru', 'en', or default_language
+    """
+    if not token:
+        return default_language
+    
+    token_lower = token.lower()
+    
+    # Ukrainian-specific letters: і, ї, є, ґ
+    if re.search(r'[іїєґ]', token_lower):
+        return 'uk'
+    
+    # Ukrainian surname patterns (even without specific letters)
+    # -енко, -енка, -ко, -ук, -юк, -чук are very common Ukrainian surnames
+    # Include declined forms: -енка (genitive), -енку (dative), etc.
+    if re.search(r'(енко|енка|енку|енком|ченко|шенко|ук|юк|чук|ський)$', token_lower):
+        return 'uk'
+    
+    # Ukrainian given names patterns
+    # Петро, Олександр, Василь, etc.
+    ukrainian_given_names = ['петро', 'олександр', 'василь', 'іван', 'андрій', 'віктор']
+    if token_lower in ukrainian_given_names:
+        return 'uk'
+    
+    # Cyrillic but not Ukrainian-specific -> Russian (or use default if 'uk' preferred)
+    if re.search(r'[а-яё]', token_lower):
+        # If default is 'uk', prefer it for ambiguous Cyrillic (can be both ru/uk)
+        return default_language if default_language in ('uk', 'ru') else 'ru'
+    
+    # Latin alphabet -> English
+    if re.search(r'^[a-z\'-]+$', token_lower):
+        return 'en'
+    
+    # Default to provided language
+    return default_language
 
 
 def _to_title(word: str) -> str:
@@ -1779,10 +1825,20 @@ class NormalizationFactory(ErrorReportingMixin):
             if self.ner_disabled:
                 flags['ner_disabled'] = True
 
+            # Detect token language for morphology
+            token_lang = None
+            if role in PERSON_ROLES:
+                token_lang = _detect_token_language(orig, config.language)
+
+            # Determine normal form (nominative form after morphology)
+            normal_form = final if orig != final else None
+
             trace.append(TokenTrace(
                 token=orig,
                 role=role,
                 rule=" + ".join(rule_parts),
+                morph_lang=token_lang,
+                normal_form=normal_form,
                 output=final,
                 cache=cache_data,
                 fallback=final == orig,
@@ -2432,11 +2488,16 @@ class NormalizationFactory(ErrorReportingMixin):
             # Create token traces
             token_traces = []
             for i, (token, role) in enumerate(zip(tokens, roles)):
+                # Detect language even for ASCII fastpath
+                token_lang = None
+                if role in PERSON_ROLES:
+                    token_lang = _detect_token_language(token, config.language)
+                
                 token_traces.append(TokenTrace(
                     token=token,
                     role=role,
                     rule="enable_ascii_fastpath",
-                    morph_lang=None,
+                    morph_lang=token_lang,
                     normal_form=token,
                     output=token,
                     fallback=False,

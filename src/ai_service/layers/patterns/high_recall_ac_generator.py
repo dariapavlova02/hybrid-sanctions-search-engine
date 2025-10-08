@@ -976,14 +976,23 @@ class NamePatternGenerator:
                 (r'(.+)ий$', r'\1ого'),  # -ий → -ого (genitive)
             ],
             'uk': [
-                (r'(.+)енко$', r'\1енка'),  # -енко → -енка (genitive)
-                (r'(.+)ич$', r'\1ича'),     # -ич → -ича (genitive)
+                # Ukrainian surnames ending in -енко (most common pattern)
+                (r'(.+)енко$', r'\1енка'),     # -енко → -енка (genitive: Порошенко → Порошенка)
+                (r'(.+)енко$', r'\1енку'),     # -енко → -енку (dative: Порошенко → Порошенку)
+                (r'(.+)енко$', r'\1енком'),    # -енко → -енком (instrumental: Порошенко → Порошенком)
+                (r'(.+)енко$', r'\1енкові'),   # -енко → -енкові (locative: Порошенко → Порошенкові)
+                # Other Ukrainian surname patterns
+                (r'(.+)ич$', r'\1ича'),        # -ич → -ича (genitive)
+                (r'(.+)ук$', r'\1ука'),        # -ук → -ука (genitive)
+                (r'(.+)юк$', r'\1юка'),        # -юк → -юка (genitive)
+                (r'(.+)чук$', r'\1чука'),      # -чук → -чука (genitive)
             ]
         }
 
         patterns_list = case_patterns.get(language, [])
         original = " ".join(words)
 
+        # Forward patterns (nominative → other cases)
         for pattern, replacement in patterns_list:
             variant_words = []
             for word in words:
@@ -1010,6 +1019,47 @@ class NamePatternGenerator:
                     entity_id="",
                     entity_type="person"
                 ))
+
+        # Reverse patterns (other cases → nominative)
+        # This is CRITICAL for matching declined forms like "Порошенка" to nominative "Порошенко"
+        if language == 'uk':
+            reverse_patterns = [
+                (r'(.+)енка$', r'\1енко'),     # -енка → -енко (genitive → nominative)
+                (r'(.+)енку$', r'\1енко'),     # -енку → -енко (dative → nominative)
+                (r'(.+)енком$', r'\1енко'),    # -енком → -енко (instrumental → nominative)
+                (r'(.+)енкові$', r'\1енко'),   # -енкові → -енко (locative → nominative)
+                (r'(.+)ича$', r'\1ич'),        # -ича → -ич (genitive → nominative)
+                (r'(.+)ука$', r'\1ук'),        # -ука → -ук (genitive → nominative)
+                (r'(.+)юка$', r'\1юк'),        # -юка → -юк (genitive → nominative)
+                (r'(.+)чука$', r'\1чук'),      # -чука → -чук (genitive → nominative)
+            ]
+
+            for pattern, replacement in reverse_patterns:
+                variant_words = []
+                for word in words:
+                    if re.match(pattern, word):
+                        variant_words.append(re.sub(pattern, replacement, word))
+                    else:
+                        variant_words.append(word)
+
+                variant = " ".join(variant_words)
+                if variant != original:
+                    metadata = PatternMetadata(
+                        tier=PatternTier.TIER_2,
+                        pattern_type=PatternType.MORPHOLOGICAL,
+                        language=language,
+                        confidence=0.75,  # Higher confidence for reverse normalization
+                        source_field="name",
+                        hints={"morphological": True, "reverse_normalization": True}
+                    )
+
+                    patterns.append(GeneratedPattern(
+                        pattern=variant,
+                        canonical=original,
+                        metadata=metadata,
+                        entity_id="",
+                        entity_type="person"
+                    ))
 
         return patterns
 

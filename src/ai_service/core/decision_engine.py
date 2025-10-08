@@ -37,8 +37,19 @@ class DecisionEngine:
         # Safely extract smart filter info with defaults
         smartfilter = self._safe_smartfilter(inp.smartfilter)
         
-        # Check if smart filter says to skip processing
-        if not smartfilter.should_process:
+        # CRITICAL FIX: Check if we have high-confidence search matches BEFORE skipping
+        # If search found good matches, continue processing regardless of smartfilter
+        has_search_matches = False
+        if inp.search and hasattr(inp.search, 'high_confidence_matches'):
+            has_search_matches = inp.search.high_confidence_matches > 0
+            if has_search_matches:
+                self.logger.info(
+                    f"SmartFilter suggested skip (should_process=False), but search found "
+                    f"{inp.search.high_confidence_matches} high-confidence matches - continuing processing"
+                )
+        
+        # Check if smart filter says to skip processing (only if no search matches)
+        if not smartfilter.should_process and not has_search_matches:
             return DecisionOutput(
                 risk=RiskLevel.SKIP,
                 score=0.0,
