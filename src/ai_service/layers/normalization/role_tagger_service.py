@@ -712,12 +712,12 @@ class DefaultPersonRule(FSMTransitionRule):
 
             # Debug logging for classification issues
             if token.text == "Катерина":
-                self.logger.info(f"🔍 ROLE TAGGER DEBUG: Token='Катерина', lang='{lang}', predicted_role='{predicted_role}'")
-                self.logger.info(f"🔍 Available given_names for {lang}: {len(self.role_classifier.given_names.get(lang, set()))} names")
+                self.logger.debug(f"ROLE TAGGER DEBUG: Token='Катерина', lang='{lang}', predicted_role='{predicted_role}'")
+                self.logger.debug(f"Available given_names for {lang}: {len(self.role_classifier.given_names.get(lang, set()))} names")
                 if 'катерина' in self.role_classifier.given_names.get(lang, set()):
-                    self.logger.info(f"✅ 'катерина' IS in given_names[{lang}]")
+                    self.logger.debug(f"'катерина' IS in given_names[{lang}]")
                 else:
-                    self.logger.info(f"❌ 'катерина' NOT in given_names[{lang}]")
+                    self.logger.debug(f"'катерина' NOT in given_names[{lang}]")
                     # Show first few names for debugging
                     sample_names = list(self.role_classifier.given_names.get(lang, set()))[:10]
                     self.logger.info(f"🔍 Sample names in given_names[{lang}]: {sample_names}")
@@ -754,7 +754,7 @@ class DefaultPersonRule(FSMTransitionRule):
 
             # Debug logging for fallback logic
             if token.text == "Катерина":
-                self.logger.info(f"🔧 FALLBACK DEBUG: Checking dictionaries directly for 'катерина' in lang='{lang}'")
+                self.logger.debug(f"FALLBACK DEBUG: Checking dictionaries directly for 'катерина' in lang='{lang}'")
 
             # Check if it's in given names dictionary
             if token_lower in self.role_classifier.given_names.get(lang, set()):

@@ -5,20 +5,20 @@ for sanctions data verification
 """
 
 import os
-import sys
 import secrets
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+import sys
 import time
 from collections import defaultdict
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, Field, ValidationError, validator, ValidationError
+from pydantic import BaseModel, Field, ValidationError, validator
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent
@@ -30,6 +30,11 @@ from ai_service.config import (
     SECURITY_CONFIG,
     SERVICE_CONFIG,
 )
+from ai_service.contracts.base_contracts import (
+    NormalizationResponse,
+    ProcessResponse,
+    UnifiedProcessingResult,
+)
 from ai_service.core.orchestrator_factory import OrchestratorFactory
 from ai_service.exceptions import (
     AuthenticationError,
@@ -37,25 +42,26 @@ from ai_service.exceptions import (
     ServiceUnavailableError,
     ValidationAPIError,
 )
+from ai_service.monitoring.prometheus_exporter import get_exporter
 from ai_service.utils import get_logger, setup_logging
-from ai_service.utils.response_formatter import format_processing_result
-from ai_service.contracts.base_contracts import NormalizationResponse, ProcessResponse, UnifiedProcessingResult
+
 # from ai_service.layers.search.contracts import SearchRequest, SearchOpts
 from ai_service.utils.feature_flags import FeatureFlags, get_feature_flag_manager
-from ai_service.monitoring.prometheus_exporter import get_exporter
+from ai_service.utils.response_formatter import format_processing_result
 
 # Setup centralized logging
 setup_logging()
 logger = get_logger(__name__)
 
 # Import lazy_imports module to trigger initialization
-from ai_service.utils.lazy_imports import NAMEPARSER, RAPIDFUZZ, NLP_EN, NLP_UK, NLP_RU
+from ai_service.utils.lazy_imports import NAMEPARSER, NLP_EN, NLP_RU, NLP_UK, RAPIDFUZZ
 
 # Create FastAPI application
 
+
 class NormalizationOptions(BaseModel):
     """Normalization options including feature flags"""
-    
+
     flags: Optional[FeatureFlags] = None
 
 
@@ -71,7 +77,7 @@ class TextNormalizationRequest(BaseModel):
     preserve_names: bool = True  # Preserve names and surnames
     options: Optional[NormalizationOptions] = None
 
-    @validator('text')
+    @validator("text")
     def validate_text_content(cls, v):
         """Additional text validation for security"""
         if not v.strip():
@@ -98,7 +104,9 @@ class ProcessTextRequest(BaseModel):
     def validate_text_length(cls, v):
         """Validate text length"""
         if len(v) > SERVICE_CONFIG.max_input_length:
-            raise ValueError(f"Text too long: {len(v)} > {SERVICE_CONFIG.max_input_length}")
+            raise ValueError(
+                f"Text too long: {len(v)} > {SERVICE_CONFIG.max_input_length}"
+            )
         return v
 
 
@@ -115,7 +123,9 @@ class ProcessBatchRequest(BaseModel):
         """Validate each text in the list"""
         for text in v:
             if len(text) > SERVICE_CONFIG.max_input_length:
-                raise ValueError(f"Text too long: {len(text)} > {SERVICE_CONFIG.max_input_length}")
+                raise ValueError(
+                    f"Text too long: {len(text)} > {SERVICE_CONFIG.max_input_length}"
+                )
         return v
 
 
@@ -131,10 +141,10 @@ class SearchSimilarRequest(BaseModel):
 
 # class SearchRequest(BaseModel):
 #     """Request model for name search"""
-#     
+#
 #     query: str = Field(..., max_length=SERVICE_CONFIG.max_input_length, min_length=1)
 #     opts: SearchOpts = Field(default_factory=SearchOpts)
-#     
+#
 #     @validator('query')
 #     def validate_query(cls, v):
 #         """Validate search query"""
@@ -173,6 +183,7 @@ if INTEGRATION_CONFIG.cors_enabled:
 # Include admin endpoints
 app.include_router(admin_router)
 
+
 # Rate limiting for DoS protection
 class RateLimitingMiddleware:
     """Simple in-memory rate limiting middleware for DoS protection"""
@@ -188,7 +199,8 @@ class RateLimitingMiddleware:
 
         # Clean old requests
         self.requests[client_ip] = [
-            req_time for req_time in self.requests[client_ip]
+            req_time
+            for req_time in self.requests[client_ip]
             if current_time - req_time < self.window_seconds
         ]
 
@@ -197,7 +209,7 @@ class RateLimitingMiddleware:
             logger.warning(f"Rate limit exceeded for IP: {client_ip}")
             return JSONResponse(
                 status_code=429,
-                content={"detail": "Too Many Requests - Rate limit exceeded"}
+                content={"detail": "Too Many Requests - Rate limit exceeded"},
             )
 
         # Add current request
@@ -205,6 +217,7 @@ class RateLimitingMiddleware:
 
         response = await call_next(request)
         return response
+
 
 # Add rate limiting middleware - optimized for 100+ RPS
 app.middleware("http")(RateLimitingMiddleware(max_requests=6000, window_seconds=60))
@@ -220,7 +233,7 @@ def _extract_signals_dict(result: UnifiedProcessingResult) -> Dict[str, Any]:
     """Extract signals information as dictionary"""
     if not result.signals:
         return None
-    
+
     return {
         "persons": [
             {
@@ -252,7 +265,7 @@ def _extract_decision_dict(result: UnifiedProcessingResult) -> Dict[str, Any]:
     """Extract decision information as dictionary"""
     if not result.decision:
         return None
-    
+
     return {
         "risk_level": result.decision.risk.value,
         "risk_score": result.decision.score,
@@ -266,10 +279,10 @@ def _extract_decision_dict(result: UnifiedProcessingResult) -> Dict[str, Any]:
 def _merge_feature_flags(request_flags: Optional[FeatureFlags]) -> FeatureFlags:
     """Merge request feature flags with global configuration."""
     global_flags = get_feature_flag_manager()._flags
-    
+
     if request_flags is None:
         return global_flags
-    
+
     # Create a new FeatureFlags instance with request flags taking precedence
     return FeatureFlags(
         use_factory_normalizer=request_flags.use_factory_normalizer,
@@ -385,18 +398,50 @@ async def startup_event():
 
         # Pre-load sanctions data for fuzzy search
         try:
-            from ai_service.layers.search.sanctions_data_loader import SanctionsDataLoader
+            from ai_service.layers.search.sanctions_data_loader import (
+                SanctionsDataLoader,
+            )
+
             sanctions_loader = SanctionsDataLoader()
             dataset = await sanctions_loader.load_dataset(force_reload=False)
-            logger.info(f"✅ Sanctions data preloaded on startup: {dataset.total_entries} entries, {len(dataset.all_names)} unique names")
+            logger.info(
+                f"✅ Sanctions data preloaded on startup: {dataset.total_entries} entries, {len(dataset.all_names)} unique names"
+            )
 
             # Also preload fuzzy candidates for faster first searches
             person_candidates = await sanctions_loader.get_fuzzy_candidates("person")
             org_candidates = await sanctions_loader.get_fuzzy_candidates("organization")
-            logger.info(f"✅ Fuzzy candidates preloaded: {len(person_candidates)} persons, {len(org_candidates)} organizations")
+            logger.info(
+                f"✅ Fuzzy candidates preloaded: {len(person_candidates)} persons, {len(org_candidates)} organizations"
+            )
 
         except Exception as e:
-            logger.warning(f"⚠️ Failed to preload sanctions data (fuzzy search will load on first use): {e}")
+            logger.warning(
+                f"⚠️ Failed to preload sanctions data (fuzzy search will load on first use): {e}"
+            )
+
+        # Initialize INN cache for FAST PATH
+        try:
+            from ai_service.layers.search.sanctioned_inn_cache import get_inn_cache
+
+            inn_cache = get_inn_cache()
+            stats = inn_cache.get_stats()
+            logger.info(
+                f"✅ INN cache initialized: {stats['total_inns']} INNs loaded "
+                f"({stats['persons']} persons, {stats['organizations']} orgs)"
+            )
+
+            # Test lookup for known sanctioned INN
+            test_inn = os.getenv("TEST_INN", "2839403975")  # Known sanctioned INN
+            if inn_cache.lookup(test_inn):
+                logger.info(f"✅ INN cache validation passed: {test_inn} found")
+            else:
+                logger.warning(f"⚠️ INN cache validation failed: {test_inn} not found")
+
+        except Exception as e:
+            logger.warning(
+                f"⚠️ Failed to initialize INN cache (will fall back to regular search): {e}"
+            )
 
     except Exception as e:
         logger.error(f"Error initializing orchestrator: {e}")
@@ -430,7 +475,7 @@ async def detailed_health_check():
 
         # Get search service health if available
         search_health = {}
-        if hasattr(orchestrator, 'search_service') and orchestrator.search_service:
+        if hasattr(orchestrator, "search_service") and orchestrator.search_service:
             try:
                 search_health = await orchestrator.search_service.health_check()
             except Exception as e:
@@ -439,12 +484,13 @@ async def detailed_health_check():
         # Check HTTP client pool health
         try:
             from ai_service.utils.http_client_pool import get_http_pool
+
             pool = get_http_pool()
             pool_stats = pool.get_stats()
             pool_health = {
                 "status": "healthy",
                 "active_clients": pool_stats.get("async_client_created", False),
-                "connections": pool_stats
+                "connections": pool_stats,
             }
         except Exception as e:
             pool_health = {"status": "error", "error": str(e)}
@@ -463,13 +509,17 @@ async def detailed_health_check():
                     if stats["total_processed"] > 0
                     else 0
                 ),
-                "cache_hit_rate": stats.get("cache", {}).get("hit_rate", 0) if isinstance(stats.get("cache"), dict) else 0,
+                "cache_hit_rate": (
+                    stats.get("cache", {}).get("hit_rate", 0)
+                    if isinstance(stats.get("cache"), dict)
+                    else 0
+                ),
                 "services": stats.get("services", {}),
             },
             "components": {
                 "search_service": search_health,
                 "http_client_pool": pool_health,
-            }
+            },
         }
     else:
         return {
@@ -496,16 +546,17 @@ async def readiness_check():
             stats = orchestrator.get_processing_stats()
 
             # Check if we can process a simple request (lightweight check)
-            is_ready = (
-                stats.get("total_processed", 0) >= 0 and  # Orchestrator is working
-                hasattr(orchestrator, 'normalization_service')  # Core service available
-            )
+            is_ready = stats.get(
+                "total_processed", 0
+            ) >= 0 and hasattr(  # Orchestrator is working
+                orchestrator, "normalization_service"
+            )  # Core service available
 
             if is_ready:
                 return {
                     "status": "ready",
                     "timestamp": time.time(),
-                    "message": "Service ready to accept requests"
+                    "message": "Service ready to accept requests",
                 }
             else:
                 return JSONResponse(
@@ -513,8 +564,8 @@ async def readiness_check():
                     content={
                         "status": "not_ready",
                         "timestamp": time.time(),
-                        "message": "Service not ready"
-                    }
+                        "message": "Service not ready",
+                    },
                 )
         except Exception as e:
             return JSONResponse(
@@ -522,8 +573,8 @@ async def readiness_check():
                 content={
                     "status": "not_ready",
                     "timestamp": time.time(),
-                    "error": str(e)
-                }
+                    "error": str(e),
+                },
             )
     else:
         return JSONResponse(
@@ -531,8 +582,8 @@ async def readiness_check():
             content={
                 "status": "not_ready",
                 "timestamp": time.time(),
-                "message": "Orchestrator not initialized"
-            }
+                "message": "Orchestrator not initialized",
+            },
         )
 
 
@@ -551,27 +602,28 @@ async def get_metrics():
             stats = orchestrator.get_processing_stats()
 
             # Update success rate if available
-            total_requests = stats.get('total_processed', 0)
-            successful_requests = stats.get('successful', 0)
+            total_requests = stats.get("total_processed", 0)
+            successful_requests = stats.get("successful", 0)
             if total_requests > 0:
                 success_rate = successful_requests / total_requests
                 exporter.update_success_rate(success_rate)
 
             # Update cache hit rate if available
-            if 'cache' in stats:
-                cache_hit_rate = stats['cache'].get('hit_rate', 0.0)
+            if "cache" in stats:
+                cache_hit_rate = stats["cache"].get("hit_rate", 0.0)
                 exporter.update_cache_hit_rate(cache_hit_rate)
 
             # Update active connections estimate (based on service availability)
-            if 'services' in stats:
-                active_services = sum(1 for s in stats['services'].values() if s.get('available', False))
+            if "services" in stats:
+                active_services = sum(
+                    1 for s in stats["services"].values() if s.get("available", False)
+                )
                 exporter.update_active_connections(active_services)
 
         # Return metrics in Prometheus format with correct Content-Type
-        metrics_content = exporter.get_metrics().decode('utf-8')
+        metrics_content = exporter.get_metrics().decode("utf-8")
         return Response(
-            content=metrics_content,
-            media_type=exporter.get_metrics_content_type()
+            content=metrics_content, media_type=exporter.get_metrics_content_type()
         )
 
     except Exception as e:
@@ -598,11 +650,13 @@ async def process_text(request: ProcessTextRequest):
 
     try:
         # Merge feature flags from request with global configuration
-        merged_flags = _merge_feature_flags(request.options.flags if request.options else None)
-        
+        merged_flags = _merge_feature_flags(
+            request.options.flags if request.options else None
+        )
+
         # Log feature flags for tracing
         logger.info(f"Processing with feature flags: {merged_flags.to_dict()}")
-        
+
         result = await orchestrator.process(
             text=request.text,
             generate_variants=request.generate_variants,
@@ -632,8 +686,8 @@ async def process_text(request: ProcessTextRequest):
             search_results=result.search_results,
             embedding=result.embeddings if request.generate_embeddings else None,
             # Add homoglyph fields from normalization data
-            homoglyph_detected=getattr(result, 'homoglyph_detected', False),
-            homoglyph_analysis=getattr(result, 'homoglyph_analysis', None),
+            homoglyph_detected=getattr(result, "homoglyph_detected", False),
+            homoglyph_analysis=getattr(result, "homoglyph_analysis", None),
         )
     except ServiceUnavailableError as e:
         logger.error(f"Service unavailable: {e}")
@@ -664,13 +718,15 @@ async def normalize_text(request: TextNormalizationRequest):
         # Debug logging
         logger.info(f"Processing text: '{request.text}'")
         logger.info(f"Orchestrator initialized: {orchestrator is not None}")
-        
+
         # Merge feature flags from request with global configuration
-        merged_flags = _merge_feature_flags(request.options.flags if request.options else None)
-        
+        merged_flags = _merge_feature_flags(
+            request.options.flags if request.options else None
+        )
+
         # Log feature flags for tracing
         logger.info(f"Normalizing with feature flags: {merged_flags.to_dict()}")
-        
+
         # Use unified orchestrator for normalization only
         result = await orchestrator.process(
             text=request.text,
@@ -683,12 +739,14 @@ async def normalize_text(request: TextNormalizationRequest):
             # Pass feature flags to orchestrator
             feature_flags=merged_flags,
         )
-        
+
         # Note: Feature flags are logged separately, not added to trace
         # as trace should only contain TokenTrace objects
-        
+
         # Debug logging
-        logger.info(f"Result: success={result.success}, tokens={result.tokens}, language={result.language}")
+        logger.info(
+            f"Result: success={result.success}, tokens={result.tokens}, language={result.language}"
+        )
         logger.info(f"Result type: {type(result)}")
         logger.info(f"Result attributes: {dir(result)}")
         logger.info(f"Result normalized_text: {result.normalized_text}")
@@ -706,7 +764,9 @@ async def normalize_text(request: TextNormalizationRequest):
         )
     except Exception as e:
         logger.error(f"Error normalizing text: {e}")
-        raise HTTPException(status_code=500, detail=f"Text normalization failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Text normalization failed: {str(e)}"
+        )
 
 
 @app.post("/process-batch")
@@ -790,18 +850,18 @@ async def analyze_complexity(request: ComplexityAnalysisRequest):
 #     """Search for names using hybrid search"""
 #     if not orchestrator:
 #         raise HTTPException(status_code=503, detail="Orchestrator not initialized")
-# 
+#
 #     try:
 #         # Check if search service is available
 #         if not hasattr(orchestrator, 'search_service') or not orchestrator.search_service:
 #             raise HTTPException(status_code=503, detail="Search service not available")
-# 
+#
 #         # Perform search using HybridSearchService
 #         results = await orchestrator.search_service.search(
 #             query=request.query,
 #             opts=request.opts
 #         )
-# 
+#
 #         return {
 #             "query": request.query,
 #             "results": results,
@@ -877,11 +937,13 @@ async def reload_configuration(token: str = Depends(verify_admin_token)):
 
     try:
         # Reload search service configuration if available
-        if hasattr(orchestrator, 'search_service') and orchestrator.search_service:
-            if hasattr(orchestrator.search_service, 'config') and hasattr(orchestrator.search_service.config, '_reload_configuration'):
+        if hasattr(orchestrator, "search_service") and orchestrator.search_service:
+            if hasattr(orchestrator.search_service, "config") and hasattr(
+                orchestrator.search_service.config, "_reload_configuration"
+            ):
                 orchestrator.search_service.config._reload_configuration()
                 logger.info("Search service configuration reloaded")
-        
+
         return {"message": "Configuration reloaded successfully"}
     except Exception as e:
         logger.error(f"Error reloading configuration: {e}")
@@ -897,20 +959,21 @@ async def get_configuration_status(token: str = Depends(verify_admin_token)):
     try:
         status = {
             "search_service": {
-                "enabled": hasattr(orchestrator, 'search_service') and orchestrator.search_service is not None,
+                "enabled": hasattr(orchestrator, "search_service")
+                and orchestrator.search_service is not None,
                 "hot_reload": False,
-                "reload_stats": {}
+                "reload_stats": {},
             }
         }
-        
+
         # Get search service configuration status
-        if hasattr(orchestrator, 'search_service') and orchestrator.search_service:
-            if hasattr(orchestrator.search_service, 'config'):
+        if hasattr(orchestrator, "search_service") and orchestrator.search_service:
+            if hasattr(orchestrator.search_service, "config"):
                 config = orchestrator.search_service.config
-                if hasattr(config, 'get_reload_stats'):
+                if hasattr(config, "get_reload_stats"):
                     status["search_service"]["hot_reload"] = True
                     status["search_service"]["reload_stats"] = config.get_reload_stats()
-        
+
         return status
     except Exception as e:
         logger.error(f"Error getting configuration status: {e}")
@@ -926,29 +989,35 @@ async def validate_configuration(token: str = Depends(verify_admin_token)):
     try:
         validation_results = {
             "search_service": {
-                "enabled": hasattr(orchestrator, 'search_service') and orchestrator.search_service is not None,
+                "enabled": hasattr(orchestrator, "search_service")
+                and orchestrator.search_service is not None,
                 "validation_passed": False,
                 "errors": [],
-                "warnings": []
+                "warnings": [],
             }
         }
-        
+
         # Validate search service configuration
-        if hasattr(orchestrator, 'search_service') and orchestrator.search_service:
+        if hasattr(orchestrator, "search_service") and orchestrator.search_service:
             try:
                 config = orchestrator.search_service.config
-                
+
                 # Validate configuration using Pydantic validation
                 config.validate(config)
                 validation_results["search_service"]["validation_passed"] = True
-                
+
                 # Additional runtime validation
-                if hasattr(config, 'es_hosts') and config.es_hosts:
+                if hasattr(config, "es_hosts") and config.es_hosts:
                     # Test Elasticsearch connectivity
                     try:
-                        if hasattr(orchestrator.search_service, '_client_factory') and orchestrator.search_service._client_factory:
-                            health = await orchestrator.search_service._client_factory.health_check()
-                            if health.get('status') != 'green':
+                        if (
+                            hasattr(orchestrator.search_service, "_client_factory")
+                            and orchestrator.search_service._client_factory
+                        ):
+                            health = (
+                                await orchestrator.search_service._client_factory.health_check()
+                            )
+                            if health.get("status") != "green":
                                 validation_results["search_service"]["warnings"].append(
                                     f"Elasticsearch cluster status: {health.get('status', 'unknown')}"
                                 )
@@ -956,18 +1025,23 @@ async def validate_configuration(token: str = Depends(verify_admin_token)):
                         validation_results["search_service"]["warnings"].append(
                             f"Elasticsearch connectivity check failed: {str(e)}"
                         )
-                
+
                 # Validate fallback services
-                if hasattr(config, 'enable_fallback') and config.enable_fallback:
-                    if not hasattr(orchestrator.search_service, '_fallback_watchlist_service') or not orchestrator.search_service._fallback_watchlist_service:
+                if hasattr(config, "enable_fallback") and config.enable_fallback:
+                    if (
+                        not hasattr(
+                            orchestrator.search_service, "_fallback_watchlist_service"
+                        )
+                        or not orchestrator.search_service._fallback_watchlist_service
+                    ):
                         validation_results["search_service"]["warnings"].append(
                             "Fallback enabled but watchlist service not available"
                         )
-                
+
             except Exception as e:
                 validation_results["search_service"]["validation_passed"] = False
                 validation_results["search_service"]["errors"].append(str(e))
-        
+
         return validation_results
     except Exception as e:
         logger.error(f"Error validating configuration: {e}")
@@ -1034,43 +1108,49 @@ async def root():
 
 # Admin endpoints
 @app.get("/admin/status")
-async def admin_status(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
+async def admin_status(
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
+):
     """Admin status endpoint with authentication"""
-    if not credentials or not secrets.compare_digest(credentials.credentials, SECURITY_CONFIG.admin_api_key):
+    if not credentials or not secrets.compare_digest(
+        credentials.credentials, SECURITY_CONFIG.admin_api_key
+    ):
         raise HTTPException(status_code=401, detail="Invalid admin token")
-    
+
     # Get orchestrator statistics
     stats = {
         "total_processed": 0,
         "successful": 0,
         "failed": 0,
-        "cache": {"hits": 0, "misses": 0}
+        "cache": {"hits": 0, "misses": 0},
     }
-    
+
     detailed_stats = stats.copy()
-    
+
     if orchestrator:
         # Get basic stats from orchestrator if available
-        stats.update({
-            "orchestrator_initialized": True,
-            "processing_time": 0.0  # Simple value to avoid recursion
-        })
-        
+        stats.update(
+            {
+                "orchestrator_initialized": True,
+                "processing_time": 0.0,  # Simple value to avoid recursion
+            }
+        )
+
         # Try to get detailed stats if method exists
-        if hasattr(orchestrator, 'get_detailed_stats'):
+        if hasattr(orchestrator, "get_detailed_stats"):
             try:
                 detailed_stats = orchestrator.get_detailed_stats()
             except Exception:
                 pass  # Use default stats if method fails
     else:
         stats["orchestrator_initialized"] = False
-    
+
     return {
         "status": "operational",
         "version": "1.0.0",
         "timestamp": "2023-01-01T00:00:00Z",
         "statistics": stats,
-        "detailed_stats": detailed_stats
+        "detailed_stats": detailed_stats,
     }
 
 
@@ -1078,45 +1158,32 @@ async def admin_status(credentials: HTTPAuthorizationCredentials = Depends(HTTPB
 @app.exception_handler(AuthenticationError)
 async def authentication_exception_handler(request, exc):
     """Handle authentication errors"""
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.message}
-    )
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 
 
 @app.exception_handler(ValidationAPIError)
 async def validation_exception_handler(request, exc):
     """Handle validation errors"""
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.message}
-    )
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 
 
 @app.exception_handler(ServiceUnavailableError)
 async def service_unavailable_exception_handler(request, exc):
     """Handle service unavailable errors"""
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.message}
-    )
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 
 
 @app.exception_handler(InternalServerError)
 async def internal_server_exception_handler(request, exc):
     """Handle internal server errors"""
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.message}
-    )
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 
 
 @app.exception_handler(ValidationError)
 async def validation_exception_handler(request, exc):
     """Handle Pydantic validation errors"""
     return JSONResponse(
-        status_code=422,
-        content={"detail": "Validation error", "errors": exc.errors()}
+        status_code=422, content={"detail": "Validation error", "errors": exc.errors()}
     )
 
 
@@ -1124,8 +1191,7 @@ async def validation_exception_handler(request, exc):
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Handle request validation errors"""
     return JSONResponse(
-        status_code=422,
-        content={"detail": "Validation error", "errors": exc.errors()}
+        status_code=422, content={"detail": "Validation error", "errors": exc.errors()}
     )
 
 
@@ -1133,10 +1199,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 async def pydantic_validation_exception_handler(request: Request, exc: ValidationError):
     """Handle Pydantic validation errors"""
     return JSONResponse(
-        status_code=422,
-        content={"detail": "Validation error", "errors": exc.errors()}
+        status_code=422, content={"detail": "Validation error", "errors": exc.errors()}
     )
-
 
 
 if __name__ == "__main__":

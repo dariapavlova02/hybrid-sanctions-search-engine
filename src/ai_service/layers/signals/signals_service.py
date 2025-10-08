@@ -138,16 +138,13 @@ class SignalsService:
         if not text or not text.strip():
             return self._empty_result()
 
-        # ДИАГНОСТИКА: логируем что получили на вход
-        self.logger.info(f"🔍 SIGNALS DEBUG: extract_signals called with text='{text}', language='{language}'")
-        self.logger.info(f"🔍 SIGNALS DEBUG: normalization_result type: {type(normalization_result)}")
-        print(f"🔍 SIGNALS DEBUG: extract_signals called with text='{text}', language='{language}'")
-        print(f"🔍 SIGNALS DEBUG: normalization_result type: {type(normalization_result)}")
+        # Debug logging for input validation
+        self.logger.debug(f"SIGNALS DEBUG: extract_signals called with text='{text}', language='{language}'")
+        self.logger.debug(f"SIGNALS DEBUG: normalization_result type: {type(normalization_result)}")
 
         # Convert NormalizationResult object to dict if needed
         if normalization_result and hasattr(normalization_result, 'to_dict'):
-            self.logger.info(f"🔍 SIGNALS DEBUG: Converting NormalizationResult to dict")
-            print(f"🔍 SIGNALS DEBUG: Converting NormalizationResult to dict")
+            self.logger.debug(f"SIGNALS DEBUG: Converting NormalizationResult to dict")
             normalization_result = normalization_result.to_dict()
 
         # Логируем что в итоге передано в _get_entity_cores

@@ -71,26 +71,31 @@ def extract_inns_from_sanctions():
         for company in companies_data:
             stats["companies_processed"] += 1
 
-            # Extract various ID fields
-            id_fields = ['tax_number', 'edrpou', 'inn', 'itn', 'registration_number']
+            # Extract various ID fields for companies
+            id_fields = ['tax_number', 'edrpou', 'inn', 'itn', 'registration_number', 'reg_number', 'code_edrpou']
+            found_ids = []
+            
             for field in id_fields:
                 inn = company.get(field)
-                if inn and str(inn).strip():
+                if inn and str(inn).strip() and len(str(inn).strip()) >= 8:
                     inn = str(inn).strip()
+                    
+                    # Avoid duplicates for same company
+                    if inn not in found_ids:
+                        inn_cache[inn] = {
+                            "type": "organization",
+                            "name": company.get('name', '').strip(),
+                            "name_en": company.get('name_en', '').strip(),
+                            "org_id": company.get('person_id'),  # Use person_id as org identifier
+                            "source": "ukrainian_sanctions",
+                            "status": company.get('status', 1),
+                            "id_field": field,
+                            "aliases": company.get('aliases', [])
+                        }
 
-                    inn_cache[inn] = {
-                        "type": "organization",
-                        "name": company.get('name', '').strip(),
-                        "name_en": company.get('name_en', '').strip(),
-                        "org_id": company.get('org_id'),
-                        "source": "ukrainian_sanctions",
-                        "status": company.get('status', 1),
-                        "id_field": field
-                    }
-
-                    stats["inns_extracted"] += 1
-                    print(f"  ✓ {inn} -> {company.get('name', 'Unknown')} ({field})")
-                    break  # Only take first valid ID
+                        found_ids.append(inn)
+                        stats["inns_extracted"] += 1
+                        print(f"  ✓ {inn} -> {company.get('name', 'Unknown')} ({field})")
 
         stats["files_processed"].append(str(companies_file))
 
@@ -104,23 +109,51 @@ def extract_inns_from_sanctions():
 
         for entry in terrorism_data:
             # Look for IDs in metadata or direct fields
-            inn = None
-            for field in ['itn', 'inn', 'tax_id', 'passport', 'id_number']:
+            found_ids = []
+            
+            # Check various ID fields for terrorism entries
+            id_fields = ['itn', 'inn', 'tax_id', 'passport', 'id_number', 'national_id', 'document_number']
+            
+            # Also check for numeric IDs in data fields
+            all_fields = list(entry.keys())
+            
+            for field in id_fields:
                 if entry.get(field):
                     inn = str(entry[field]).strip()
-                    break
-
-            if inn and len(inn) >= 8:  # Reasonable ID length
-                inn_cache[inn] = {
-                    "type": "person",
-                    "name": entry.get('name', '').strip(),
-                    "source": "terrorism_blacklist",
-                    "status": 1,
-                    "risk_level": "critical"
-                }
-
-                stats["inns_extracted"] += 1
-                print(f"  ✓ {inn} -> {entry.get('name', 'Unknown')} (TERRORISM)")
+                    if len(inn) >= 8 and inn not in found_ids:
+                        inn_cache[inn] = {
+                            "type": "person",
+                            "name": entry.get('aka_name', entry.get('name', '')).strip(),
+                            "source": "terrorism_blacklist",
+                            "status": 1,
+                            "risk_level": "critical",
+                            "id_field": field,
+                            "date_entry": entry.get('date_entry'),
+                            "number_entry": entry.get('number_entry')
+                        }
+                        
+                        found_ids.append(inn)
+                        stats["inns_extracted"] += 1
+                        print(f"  ✓ {inn} -> {entry.get('aka_name', 'Unknown')} (TERRORISM-{field})")
+            
+            # Also check for any 8+ digit numbers in other fields
+            for field, value in entry.items():
+                if field not in id_fields and isinstance(value, str) and value.strip().isdigit() and len(value.strip()) >= 8:
+                    inn = value.strip()
+                    if inn not in found_ids and len(inn) >= 8:
+                        inn_cache[inn] = {
+                            "type": "person",
+                            "name": entry.get('aka_name', entry.get('name', '')).strip(),
+                            "source": "terrorism_blacklist",
+                            "status": 1,
+                            "risk_level": "critical",
+                            "id_field": f"auto_detected_{field}",
+                            "date_entry": entry.get('date_entry')
+                        }
+                        
+                        found_ids.append(inn)
+                        stats["inns_extracted"] += 1
+                        print(f"  ✓ {inn} -> {entry.get('aka_name', 'Unknown')} (TERRORISM-AUTO)")
 
         stats["files_processed"].append(str(terrorism_file))
 
@@ -147,29 +180,62 @@ def extract_inns_from_sanctions():
                 if not isinstance(entry, dict):
                     continue
 
-                # Look for various ID fields
-                inn = None
-                for field in ['itn', 'inn', 'tax_id', 'tax_number', 'edrpou', 'registration_number', 'passport', 'id_number']:
+                # Enhanced ID detection for additional files
+                found_ids = []
+                id_fields = [
+                    'itn', 'inn', 'tax_id', 'tax_number', 'edrpou', 'code_edrpou',
+                    'registration_number', 'reg_number', 'passport', 'id_number', 
+                    'national_id', 'document_number', 'company_id', 'org_id'
+                ]
+                
+                # Check explicit ID fields first
+                for field in id_fields:
                     if entry.get(field):
                         candidate_inn = str(entry[field]).strip()
-                        if len(candidate_inn) >= 8 and candidate_inn.isdigit():
-                            inn = candidate_inn
-                            break
+                        if len(candidate_inn) >= 8 and candidate_inn.isdigit() and candidate_inn not in found_ids:
+                            # Determine type based on available fields
+                            entry_type = "organization" if any(
+                                indicator in entry for indicator in ['company', 'organization', 'org', 'business', 'tax_number', 'edrpou']
+                            ) else "person"
 
-                if inn and inn not in inn_cache:  # Avoid duplicates
-                    # Determine type based on available fields
-                    entry_type = "organization" if any(field in entry for field in ['company', 'organization', 'org', 'business']) else "person"
+                            inn_cache[candidate_inn] = {
+                                "type": entry_type,
+                                "name": entry.get('name', entry.get('company', entry.get('organization', entry.get('aka_name', '')))).strip(),
+                                "source": f"additional_sanctions_{json_file.stem}",
+                                "status": entry.get('status', 1),
+                                "risk_level": "high",
+                                "id_field": field
+                            }
 
-                    inn_cache[inn] = {
-                        "type": entry_type,
-                        "name": entry.get('name', entry.get('company', entry.get('organization', ''))).strip(),
-                        "source": f"additional_sanctions_{json_file.stem}",
-                        "status": entry.get('status', 1),
-                        "risk_level": "high"
-                    }
+                            found_ids.append(candidate_inn)
+                            stats["inns_extracted"] += 1
+                            print(f"  ✓ {candidate_inn} -> {inn_cache[candidate_inn]['name']} ({json_file.stem}-{field})")
+                
+                # Auto-detect 8+ digit numbers in other fields
+                for field, value in entry.items():
+                    if field not in id_fields and isinstance(value, str):
+                        # Look for patterns that look like IDs
+                        import re
+                        id_patterns = re.findall(r'\b\d{8,}\b', value.strip())
+                        for candidate_inn in id_patterns:
+                            if candidate_inn not in found_ids and len(candidate_inn) >= 8:
+                                # Determine type
+                                entry_type = "organization" if any(
+                                    indicator in entry for indicator in ['company', 'organization', 'org', 'business']
+                                ) else "person"
 
-                    stats["inns_extracted"] += 1
-                    print(f"  ✓ {inn} -> {inn_cache[inn]['name']} ({json_file.stem})")
+                                inn_cache[candidate_inn] = {
+                                    "type": entry_type,
+                                    "name": entry.get('name', entry.get('company', entry.get('organization', entry.get('aka_name', '')))).strip(),
+                                    "source": f"auto_detected_{json_file.stem}",
+                                    "status": entry.get('status', 1),
+                                    "risk_level": "medium",
+                                    "id_field": f"auto_{field}"
+                                }
+
+                                found_ids.append(candidate_inn)
+                                stats["inns_extracted"] += 1
+                                print(f"  ✓ {candidate_inn} -> {inn_cache[candidate_inn]['name']} ({json_file.stem}-AUTO)")
 
             stats["files_processed"].append(str(json_file))
 

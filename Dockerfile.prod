@@ -96,6 +96,11 @@ RUN if [ -f "env.production.maximum_relevancy" ]; then \
         echo "⚠️ No production environment file found, using defaults"; \
     fi
 
+# Generate INN cache for FAST PATH optimization
+RUN echo "🚀 Generating INN cache for sanctions FAST PATH..." && \
+    python scripts/extract_sanctioned_inns.py && \
+    echo "✅ INN cache generated successfully"
+
 # Create logs directory
 RUN mkdir -p logs && chmod 755 logs
 
