@@ -569,6 +569,7 @@ class NormalizationFactory(ErrorReportingMixin):
                 fsm_roles,
                 final_tokens,  # Use tokens after full processing pipeline
                 processing_traces,
+                config,
                 cache_info
             )
             
@@ -608,6 +609,7 @@ class NormalizationFactory(ErrorReportingMixin):
                 roles,
                 final_tokens,
                 processing_traces,
+                config,
                 cache_info
             )
             
@@ -660,11 +662,18 @@ class NormalizationFactory(ErrorReportingMixin):
             )
             trace.append(assembly_trace)
 
+        # Debug: Check if config is available
+        try:
+            lang = config.language
+        except NameError as e:
+            self.logger.error(f"Config not available in _extract_persons call: {e}")
+            raise
+        
         persons = self._extract_persons(
             original_tagged_tokens,
             final_tokens,
             roles,
-            config.language,
+            lang,
         )
         persons_core = [person["tokens"] for person in persons] if persons else ([] if not filtered_person_tokens else [filtered_person_tokens])
 
@@ -1778,6 +1787,7 @@ class NormalizationFactory(ErrorReportingMixin):
         roles: List[str],
         final_tokens: List[str],
         processing_traces: List[str],
+        config: NormalizationConfig,
         cache_info: Optional[Dict[str, Dict[str, str]]] = None
     ) -> List[TokenTrace]:
         """Build detailed token trace for debugging."""
