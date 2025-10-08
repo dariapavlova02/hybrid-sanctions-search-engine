@@ -39,7 +39,7 @@ Clean 9-layer processing pipeline:
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/ai-service.git
+git clone [rep]
 cd ai-service
 
 # Install dependencies
@@ -281,25 +281,10 @@ tests/
 └── performance/            # Performance tests
 ```
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass
-6. Submit a pull request
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 📞 Support
-
 - **Documentation**: [./docs/](./docs/)
 - **Issues**: [GitHub Issues](https://github.com/your-org/ai-service/issues)
 - **API Reference**: [./docs/API.md](./docs/API.md)
-
----
-
-Built with ❤️ for multilingual text processing and search

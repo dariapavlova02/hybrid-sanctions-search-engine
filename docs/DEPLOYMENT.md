@@ -38,7 +38,7 @@ Comprehensive deployment guide for AI Service in development, staging, and produ
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/your-org/ai-service.git
+git clone [rep]
 cd ai-service
 ```
 

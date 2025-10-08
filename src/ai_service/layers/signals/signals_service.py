@@ -474,11 +474,12 @@ class SignalsService:
 
         self.logger.debug(f"🔍 ID ENRICHMENT: Found {len(unique_person_ids)} person IDs, {len(unique_org_ids)} org IDs")
 
-        # 5. FAST PATH: Проверяем INN cache для быстрого обнаружения санкций
-        self._check_sanctioned_inn_cache(unique_person_ids, unique_org_ids, persons, organizations)
-
+        # 5. Обогащаем персон и организации ID
         self._enrich_organizations_with_ids(organizations, unique_org_ids)
         self._enrich_persons_with_ids(persons, unique_person_ids)
+
+        # 6. FAST PATH: Проверяем INN cache для быстрого обнаружения санкций (после обогащения ID)
+        self._check_sanctioned_inn_cache(unique_person_ids, unique_org_ids, persons, organizations)
 
     def _enrich_with_birthdates(self, text: str, persons: List[PersonSignal]):
         """Обогащает персоны найденными датами рождения."""
@@ -1589,12 +1590,13 @@ class SignalsService:
                 id_groups[value] = []
             id_groups[value].append(id_info)
 
-        # Выбираем лучший ID из каждой группы (trace > regex)
+        # Выбираем лучший ID из каждой группы (INN extractor > trace > other regex)
         unique_ids = []
         for value, group in id_groups.items():
-            # Сортируем: trace источники первыми, потом по confidence
+            # Сортируем: INN типы первыми, потом trace, потом по confidence
             group.sort(key=lambda x: (
-                x.get('source') != 'normalization_trace',  # trace первые (False < True)
+                x.get('type') not in ['inn', 'inn_ua', 'inn_ru'],  # INN типы первые (False < True)
+                x.get('source') != 'normalization_trace',  # trace вторые (False < True)  
                 -x.get('confidence', 0)  # потом по убывающей confidence
             ))
 
@@ -1654,6 +1656,8 @@ class SignalsService:
                 return
 
             self.logger.debug(f"🚀 FAST PATH: Checking {len(all_ids_to_check)} IDs against sanctions cache")
+            if all_ids_to_check:
+                self.logger.debug(f"🚀 FAST PATH: IDs to check: {[(id_value, entity_type, id_info.get('type', 'unknown')) for id_value, entity_type, id_info in all_ids_to_check[:5]]}")
 
             # Проверяем каждый ID в cache
             sanctioned_matches = 0

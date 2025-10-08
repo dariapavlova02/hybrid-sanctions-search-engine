@@ -5,9 +5,12 @@ for sanctions data verification
 """
 
 import os
-import secrets
+import asyncio
+import logging
+import subprocess
 import sys
 import time
+import secrets
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -423,8 +426,33 @@ async def startup_event():
         # Initialize INN cache for FAST PATH
         try:
             from ai_service.layers.search.sanctioned_inn_cache import get_inn_cache
+            import subprocess
+            import sys
 
             inn_cache = get_inn_cache()
+            
+            # Check if cache exists and has data, if not - generate it
+            if not inn_cache.cache_file.exists() or inn_cache.get_stats()['total_inns'] == 0:
+                logger.info("🔄 INN cache not found or empty - generating automatically...")
+                try:
+                    # Generate cache using the extract script
+                    cache_script = Path(__file__).parent.parent.parent / "scripts" / "extract_sanctioned_inns.py"
+                    result = subprocess.run([
+                        sys.executable, str(cache_script)
+                    ], capture_output=True, text=True, timeout=300)
+                    
+                    if result.returncode == 0:
+                        logger.info("✅ INN cache generated successfully")
+                        # Reload cache after generation
+                        inn_cache.reload_cache()
+                    else:
+                        logger.error(f"❌ Failed to generate INN cache: {result.stderr}")
+                        
+                except subprocess.TimeoutExpired:
+                    logger.error("❌ INN cache generation timed out")
+                except Exception as gen_error:
+                    logger.error(f"❌ Error generating INN cache: {gen_error}")
+
             stats = inn_cache.get_stats()
             logger.info(
                 f"✅ INN cache initialized: {stats['total_inns']} INNs loaded "
