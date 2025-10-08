@@ -41,7 +41,6 @@ services:
       - .env.production
     volumes:
       - ./logs:/app/logs
-      - ./data:/app/data
       - ./src/ai_service/data:/app/src/ai_service/data:ro
     restart: unless-stopped
     healthcheck:
@@ -58,9 +57,6 @@ services:
         limits:
           memory: 4G
           cpus: '2.0'
-        reservations:
-          memory: 2G
-          cpus: '1.0'
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
@@ -89,9 +85,6 @@ services:
         limits:
           memory: 2G
           cpus: '1.0'
-        reservations:
-          memory: 1G
-          cpus: '0.5'
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.11.0
