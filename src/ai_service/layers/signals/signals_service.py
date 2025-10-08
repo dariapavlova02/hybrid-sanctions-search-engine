@@ -473,6 +473,8 @@ class SignalsService:
         unique_person_ids = self._deduplicate_ids(all_person_ids)
 
         self.logger.debug(f"🔍 ID ENRICHMENT: Found {len(unique_person_ids)} person IDs, {len(unique_org_ids)} org IDs")
+        if unique_person_ids:
+            self.logger.debug(f"🔍 PERSON IDS: {[(p.get('type'), p.get('value'), p.get('source')) for p in unique_person_ids[:3]]}")
 
         # 5. Обогащаем персон и организации ID
         self._enrich_organizations_with_ids(organizations, unique_org_ids)
@@ -1659,9 +1661,11 @@ class SignalsService:
             if not all_ids_to_check:
                 return
 
-            self.logger.debug(f"🚀 FAST PATH: Checking {len(all_ids_to_check)} IDs against sanctions cache")
+            self.logger.warning(f"🚀 FAST PATH: Checking {len(all_ids_to_check)} IDs against sanctions cache")
             if all_ids_to_check:
-                self.logger.debug(f"🚀 FAST PATH: IDs to check: {[(id_value, entity_type, id_info.get('type', 'unknown')) for id_value, entity_type, id_info in all_ids_to_check[:5]]}")
+                self.logger.warning(f"🚀 FAST PATH: IDs to check: {[(id_value, entity_type, id_info.get('type', 'unknown')) for id_value, entity_type, id_info in all_ids_to_check[:5]]}")
+            else:
+                self.logger.warning("🚀 FAST PATH: No IDs to check - this is the problem!")
 
             # Проверяем каждый ID в cache
             sanctioned_matches = 0
