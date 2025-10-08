@@ -1226,27 +1226,50 @@ class UnifiedOrchestrator:
         
         if signals_result.persons:
             # Use the highest person confidence
-            person_confidence = max(p.confidence for p in signals_result.persons)
+            person_confidence = max(p.confidence if hasattr(p, 'confidence') else p.get('confidence', 0.0) for p in signals_result.persons)
             # Check for SANCTIONED ID matches in person data (FAST PATH logic)
             for person in signals_result.persons:
-                if hasattr(person, 'ids') and person.ids:
+                # Handle both object and dict formats
+                person_ids = getattr(person, 'ids', None) if hasattr(person, 'ids') else person.get('ids', [])
+                if person_ids:
                     # Only set id_match=True if we found sanctioned IDs (not just any IDs)
-                    for id_info in person.ids:
+                    for id_info in person_ids:
                         if isinstance(id_info, dict) and id_info.get('sanctioned', False):
                             id_match = True
-                            logger.warning(f"🚨 FAST PATH: Sanctioned person ID detected: {id_info.get('value')}")
+                            self.logger.warning(f"🚨 FAST PATH: Sanctioned person ID detected: {id_info.get('value')}")
                             break
                     if id_match:
                         break
         
         if signals_result.organizations:
             # Use the highest organization confidence
-            org_confidence = max(o.confidence for o in signals_result.organizations)
+            org_confidence = max(o.confidence if hasattr(o, 'confidence') else o.get('confidence', 0.0) for o in signals_result.organizations)
             # Check for SANCTIONED ID matches in organization data (FAST PATH logic)
             for org in signals_result.organizations:
-                if hasattr(org, 'ids') and org.ids:
+                # Handle both object and dict formats
+                org_ids = getattr(org, 'ids', None) if hasattr(org, 'ids') else org.get('ids', [])
+                if org_ids:
                     # Only set id_match=True if we found sanctioned IDs (not just any IDs)
-                    for id_info in org.ids:
+                    for id_info in org_ids:
+                        if isinstance(id_info, dict) and id_info.get('sanctioned', False):
+                            id_match = True
+                            self.logger.warning(f"🚨 FAST PATH: Sanctioned org ID detected: {id_info.get('value')}")
+                            break
+                    if id_match:
+                        break
+                    if id_match:
+                        break
+        
+        if signals_result.organizations:
+            # Use the highest organization confidence
+            org_confidence = max(o.confidence if hasattr(o, 'confidence') else o.get('confidence', 0.0) for o in signals_result.organizations)
+            # Check for SANCTIONED ID matches in organization data (FAST PATH logic)
+            for org in signals_result.organizations:
+                # Handle both object and dict formats
+                org_ids = getattr(org, 'ids', None) if hasattr(org, 'ids') else org.get('ids', [])
+                if org_ids:
+                    # Only set id_match=True if we found sanctioned IDs (not just any IDs)
+                    for id_info in org_ids:
                         if isinstance(id_info, dict) and id_info.get('sanctioned', False):
                             id_match = True
                             logger.warning(f"🚨 FAST PATH: Sanctioned org ID detected: {id_info.get('value')}")
