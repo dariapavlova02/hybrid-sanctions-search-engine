@@ -1539,6 +1539,9 @@ class SignalsService:
         Returns:
             Dict с ключами 'person_ids' и 'organization_ids'
         """
+        # Import INN validation for proper Russian/Ukrainian validation
+        from ...data.patterns.identifiers import validate_inn
+        
         if not normalization_result or 'trace' not in normalization_result:
             self.logger.debug("🔍 ID TRACE: No trace in normalization_result")
             return {'person_ids': [], 'organization_ids': []}
@@ -1598,15 +1601,16 @@ class SignalsService:
                         if inn_value == token_text or len(token_text) == 10:  # ИНН 2839403975 имеет 10 цифр
                             position = match.span(1)  # Позиция только цифр
                             
-                            # Создаем ID для ИНН
+                            # Создаем ID для ИНН с правильной валидацией
+                            is_valid = validate_inn(inn_value)
                             inn_id_info = {
                                 "type": "inn",
                                 "value": inn_value,
                                 "raw": match.group(0),  # Весь матч включая "ИНН"
                                 "name": "Taxpayer ID (INN)",
-                                "confidence": 0.9,
+                                "confidence": 0.9 if is_valid else 0.6,
                                 "position": position,
-                                "valid": False,  # ИНН 2839403975 может быть невалидным для РФ но валидным для УР
+                                "valid": is_valid,  # Используем правильную валидацию RU + UA
                                 "source": "normalization_trace_inn"
                             }
                             
@@ -1656,15 +1660,16 @@ class SignalsService:
                         if inn_value == token_text or len(token_text) == 10:  # ИНН 2839403975 имеет 10 цифр
                             position = match.span(1)  # Позиция только цифр
                             
-                            # Создаем ID для ИНН
+                            # Создаем ID для ИНН с правильной валидацией
+                            is_valid = validate_inn(inn_value)
                             inn_id_info = {
                                 "type": "inn",
                                 "value": inn_value,
                                 "raw": match.group(0),  # Весь матч включая "ИНН"
                                 "name": "Taxpayer ID (INN)",
-                                "confidence": 0.9,
+                                "confidence": 0.9 if is_valid else 0.6,
                                 "position": position,
-                                "valid": False,  # ИНН 2839403975 может быть невалидным для РФ но валидным для УР
+                                "valid": is_valid,  # Используем правильную валидацию RU + UA
                                 "source": "normalization_trace_inn"
                             }
                             
@@ -1714,15 +1719,16 @@ class SignalsService:
                         if inn_value == token_text or len(token_text) == 10:  # ИНН 2839403975 имеет 10 цифр
                             position = match.span(1)  # Позиция только цифр
                             
-                            # Создаем ID для ИНН
+                            # Создаем ID для ИНН с правильной валидацией
+                            is_valid = validate_inn(inn_value)
                             inn_id_info = {
                                 "type": "inn",
                                 "value": inn_value,
                                 "raw": match.group(0),  # Весь матч включая "ИНН"
                                 "name": "Taxpayer ID (INN)",
-                                "confidence": 0.9,
+                                "confidence": 0.9 if is_valid else 0.6,
                                 "position": position,
-                                "valid": False,  # ИНН 2839403975 может быть невалидным для РФ но валидным для УР
+                                "valid": is_valid,  # Используем правильную валидацию RU + UA
                                 "source": "normalization_trace_inn"
                             }
                             
@@ -1804,17 +1810,24 @@ class SignalsService:
             # Собираем все ID для проверки
             all_ids_to_check = []
 
-            # Добавляем person IDs (включая невалидные - для санкционных ИНН)
+            # Добавляем person IDs с правильной валидацией
             for id_info in person_ids:
                 id_value = id_info.get('value', '')
                 id_type = id_info.get('type', '')
-                # Проверяем ИНН типы независимо от валидации (для санкционных ИНН)
-                if id_value and id_value.isdigit() and len(id_value) >= 10 and id_type in ['inn', 'inn_ua', 'inn_ru']:
-                    all_ids_to_check.append((id_value, 'person', id_info))
-                elif id_value and id_value.isdigit() and len(id_value) == 10 and id_type == 'numeric_id':  # 10-значные numeric_id (ИНН из trace)
-                    all_ids_to_check.append((id_value, 'person', id_info))
-                elif id_value and id_value.isdigit() and len(id_value) >= 10 and id_info.get('valid', True):  # Остальные только если валидные
-                    all_ids_to_check.append((id_value, 'person', id_info))
+
+                if id_value and id_value.isdigit():
+                    # Для ИНН проверяем ВСЕ независимо от валидации
+                    # КРИТИЧНО: Даже невалидный ИНН может быть в санкционных списках!
+                    if id_type == 'inn' and len(id_value) in [10, 12]:
+                        # Добавляем в проверку ВСЕГДА, даже если формально невалидный
+                        all_ids_to_check.append((id_value, 'person', id_info))
+                        self.logger.warning(f"🚀 FAST PATH: Added INN for sanction check: {id_value} (type: {id_type})")
+
+                    
+                    # Для остальных типов ID проверяем по старой логике
+                    elif len(id_value) >= 10 and id_info.get('valid', True):
+                        all_ids_to_check.append((id_value, 'person', id_info))
+                        self.logger.debug(f"🚀 FAST PATH: Added valid ID for sanction check: {id_value} (type: {id_type})")
 
             # Добавляем org IDs
             for id_info in org_ids:
@@ -1868,24 +1881,41 @@ class SignalsService:
         self, person: PersonSignal, sanctioned_data: Dict[str, Any], id_info: Dict[str, Any]
     ):
         """Обогащает персону санкционными данными из cache."""
-        # Добавляем ID к персоне с санкционной пометкой
-        sanctioned_id = {
-            **id_info,
-            'sanctioned': True,
-            'sanctioned_name': sanctioned_data.get('name'),
-            'sanctioned_source': sanctioned_data.get('source', 'sanctions_cache'),
-            'confidence': 1.0  # Максимальная уверенность для точного совпадения
-        }
+        id_value = id_info.get('value')
 
-        person.ids.append(sanctioned_id)
+        # Проверяем, есть ли уже такой ID у персоны
+        existing_id = None
+        for existing in person.ids:
+            if existing.get('value') == id_value:
+                existing_id = existing
+                break
+
+        if existing_id:
+            # Обновляем существующий ID санкционной информацией
+            existing_id['sanctioned'] = True
+            existing_id['sanctioned_name'] = sanctioned_data.get('name')
+            existing_id['sanctioned_source'] = sanctioned_data.get('source', 'sanctions_cache')
+            existing_id['confidence'] = 1.0  # Максимальная уверенность для точного совпадения
+            self.logger.warning(f"🚨 UPDATED existing ID {id_value} with sanctioned flag")
+        else:
+            # Добавляем новый ID к персоне с санкционной пометкой
+            sanctioned_id = {
+                **id_info,
+                'sanctioned': True,
+                'sanctioned_name': sanctioned_data.get('name'),
+                'sanctioned_source': sanctioned_data.get('source', 'sanctions_cache'),
+                'confidence': 1.0  # Максимальная уверенность для точного совпадения
+            }
+            person.ids.append(sanctioned_id)
+            self.logger.warning(f"🚨 ADDED new sanctioned ID {id_value}")
 
         # Обогащаем evidence
-        person.evidence.append(f"sanctioned_inn_cache_hit_{id_info.get('value')}")
+        person.evidence.append(f"sanctioned_inn_cache_hit_{id_value}")
 
         # Повышаем confidence персоны
         person.confidence = max(person.confidence, 0.95)
 
-        self.logger.debug(f"Enriched person '{person.full_name}' with sanctioned INN data")
+        self.logger.warning(f"🚨 Enriched person '{person.full_name}' with sanctioned INN {id_value} -> {sanctioned_data.get('name')}")
 
     def _enrich_organization_with_sanctioned_data(
         self, org: OrganizationSignal, sanctioned_data: Dict[str, Any], id_info: Dict[str, Any]
