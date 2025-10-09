@@ -1595,12 +1595,13 @@ class SignalsService:
                     import re
                     inn_pattern = r'(?:(?:ИНН|инн|INN)\s*[\:\:]?\s*)?(\d{10,12})'
                     inn_matches = list(re.finditer(inn_pattern, text))
-                    
+
+                    inn_found = False
                     for match in inn_matches:
                         inn_value = match.group(1)
                         if inn_value == token_text or len(token_text) == 10:  # ИНН 2839403975 имеет 10 цифр
                             position = match.span(1)  # Позиция только цифр
-                            
+
                             # Создаем ID для ИНН с правильной валидацией
                             is_valid = validate_inn(inn_value)
                             inn_id_info = {
@@ -1613,128 +1614,16 @@ class SignalsService:
                                 "valid": is_valid,  # Используем правильную валидацию RU + UA
                                 "source": "normalization_trace_inn"
                             }
-                            
+
                             person_ids.append(inn_id_info.copy())
-                            self.logger.warning(f"🔍 ID TRACE: Found INN '{inn_value}' from marker_инн_nearby in trace")
+                            self.logger.warning(f"🔍 ID TRACE: Found INN '{inn_value}' from marker_инн_nearby in trace (valid={is_valid})")
+                            inn_found = True
                             break
-                    # Найдем позицию токена в исходном тексте
-                    import re
-                    matches = list(re.finditer(re.escape(token_text), text))
-                    position = matches[0].span() if matches else (0, len(token_text))
 
-                    # Определяем тип ID на основе длины и контекста
-                    id_length = len(token_text)
-
-                    # Универсальный ID для персон и организаций
-                    id_info = {
-                        "type": "numeric_id",  # Общий тип для всех numeric ID из trace
-                        "value": token_text,
-                        "raw": token_text,
-                        "name": f"Numeric ID ({id_length} digits)",
-                        "confidence": 0.95,  # Высокая уверенность - найдено нормализацией
-                        "position": position,
-                        "valid": True,
-                        "source": "normalization_trace"  # Отметка что из trace
-                    }
-
-                    # Добавляем и в person_ids и в organization_ids
-                    # так как из trace неясно к чему относится ID
-                    person_ids.append(id_info.copy())
-                    organization_ids.append(id_info.copy())
-
-                    self.logger.debug(f"🔍 ID TRACE: Found numeric ID '{token_text}' in trace")
-            
-            # ИЩЕМ ИНН В NOTES - это фикс для проблемы когда ИНН отсекается нормализацией
-            notes = entry.get('notes', '')
-            if 'marker_инн_nearby' in notes or 'marker_inn_nearby' in notes:
-                # Извлекаем ИНН из текста по контексту
-                token_text = entry.get('token', '')
-                if token_text and token_text.isdigit() and len(token_text) >= 10:
-                    # Ищем ИНН в исходном тексте рядом с этим токеном
-                    import re
-                    inn_pattern = r'(?:(?:ИНН|инн|INN)\s*[\:\:]?\s*)?(\d{10,12})'
-                    inn_matches = list(re.finditer(inn_pattern, text))
-                    
-                    for match in inn_matches:
-                        inn_value = match.group(1)
-                        if inn_value == token_text or len(token_text) == 10:  # ИНН 2839403975 имеет 10 цифр
-                            position = match.span(1)  # Позиция только цифр
-                            
-                            # Создаем ID для ИНН с правильной валидацией
-                            is_valid = validate_inn(inn_value)
-                            inn_id_info = {
-                                "type": "inn",
-                                "value": inn_value,
-                                "raw": match.group(0),  # Весь матч включая "ИНН"
-                                "name": "Taxpayer ID (INN)",
-                                "confidence": 0.9 if is_valid else 0.6,
-                                "position": position,
-                                "valid": is_valid,  # Используем правильную валидацию RU + UA
-                                "source": "normalization_trace_inn"
-                            }
-                            
-                            person_ids.append(inn_id_info.copy())
-                            self.logger.warning(f"🔍 ID TRACE: Found INN '{inn_value}' from marker_инн_nearby in trace")
-                            break
-                    # Найдем позицию токена в исходном тексте
-                    import re
-                    matches = list(re.finditer(re.escape(token_text), text))
-                    position = matches[0].span() if matches else (0, len(token_text))
-
-                    # Определяем тип ID на основе длины и контекста
-                    id_length = len(token_text)
-
-                    # Универсальный ID для персон и организаций
-                    id_info = {
-                        "type": "numeric_id",  # Общий тип для всех numeric ID из trace
-                        "value": token_text,
-                        "raw": token_text,
-                        "name": f"Numeric ID ({id_length} digits)",
-                        "confidence": 0.95,  # Высокая уверенность - найдено нормализацией
-                        "position": position,
-                        "valid": True,
-                        "source": "normalization_trace"  # Отметка что из trace
-                    }
-
-                    # Добавляем и в person_ids и в organization_ids
-                    # так как из trace неясно к чему относится ID
-                    person_ids.append(id_info.copy())
-                    organization_ids.append(id_info.copy())
-
-                    self.logger.debug(f"🔍 ID TRACE: Found numeric ID '{token_text}' in trace")
-            
-            # ИЩЕМ ИНН В NOTES - это фикс для проблемы когда ИНН отсекается нормализацией
-            notes = entry.get('notes', '')
-            if 'marker_инн_nearby' in notes or 'marker_inn_nearby' in notes:
-                # Извлекаем ИНН из текста по контексту
-                token_text = entry.get('token', '')
-                if token_text and token_text.isdigit() and len(token_text) >= 10:
-                    # Ищем ИНН в исходном тексте рядом с этим токеном
-                    import re
-                    inn_pattern = r'(?:(?:ИНН|инн|INN)\s*[\:\:]?\s*)?(\d{10,12})'
-                    inn_matches = list(re.finditer(inn_pattern, text))
-                    
-                    for match in inn_matches:
-                        inn_value = match.group(1)
-                        if inn_value == token_text or len(token_text) == 10:  # ИНН 2839403975 имеет 10 цифр
-                            position = match.span(1)  # Позиция только цифр
-                            
-                            # Создаем ID для ИНН с правильной валидацией
-                            is_valid = validate_inn(inn_value)
-                            inn_id_info = {
-                                "type": "inn",
-                                "value": inn_value,
-                                "raw": match.group(0),  # Весь матч включая "ИНН"
-                                "name": "Taxpayer ID (INN)",
-                                "confidence": 0.9 if is_valid else 0.6,
-                                "position": position,
-                                "valid": is_valid,  # Используем правильную валидацию RU + UA
-                                "source": "normalization_trace_inn"
-                            }
-                            
-                            person_ids.append(inn_id_info.copy())
-                            self.logger.warning(f"🔍 ID TRACE: Found INN '{inn_value}' from marker_инн_nearby in trace")
-                            break
+                    # Если не нашли ИНН pattern, НЕ добавляем как numeric_id
+                    # (это предотвращает дубликаты и неправильную типизацию)
+                    if not inn_found:
+                        self.logger.debug(f"🔍 ID TRACE: Token '{token_text}' with marker_инн_nearby but no INN pattern match")
 
         self.logger.debug(f"🔍 ID TRACE: Extracted {len(person_ids)} person IDs, {len(organization_ids)} org IDs from trace")
         return {'person_ids': person_ids, 'organization_ids': organization_ids}
@@ -1811,9 +1700,17 @@ class SignalsService:
             all_ids_to_check = []
 
             # Добавляем person IDs с правильной валидацией
-            for id_info in person_ids:
+            self.logger.warning(f"🔍 FAST PATH INPUT: Processing {len(person_ids)} person IDs")
+            for idx, id_info in enumerate(person_ids):
                 id_value = id_info.get('value', '')
                 id_type = id_info.get('type', '')
+                is_valid = id_info.get('valid', None)
+                id_source = id_info.get('source', 'unknown')
+
+                self.logger.warning(
+                    f"🔍 FAST PATH [{idx+1}/{len(person_ids)}]: "
+                    f"value='{id_value}' type='{id_type}' valid={is_valid} source={id_source}"
+                )
 
                 if id_value and id_value.isdigit():
                     # Для ИНН проверяем ВСЕ независимо от валидации
@@ -1821,13 +1718,19 @@ class SignalsService:
                     if id_type == 'inn' and len(id_value) in [10, 12]:
                         # Добавляем в проверку ВСЕГДА, даже если формально невалидный
                         all_ids_to_check.append((id_value, 'person', id_info))
-                        self.logger.warning(f"🚀 FAST PATH: Added INN for sanction check: {id_value} (type: {id_type})")
-
-                    
+                        self.logger.warning(
+                            f"✅ FAST PATH: Added INN for sanction check: {id_value} "
+                            f"(type: {id_type}, valid={is_valid}, will check anyway)"
+                        )
                     # Для остальных типов ID проверяем по старой логике
                     elif len(id_value) >= 10 and id_info.get('valid', True):
                         all_ids_to_check.append((id_value, 'person', id_info))
                         self.logger.debug(f"🚀 FAST PATH: Added valid ID for sanction check: {id_value} (type: {id_type})")
+                    else:
+                        self.logger.warning(
+                            f"⚠️ FAST PATH SKIP: ID '{id_value}' not added "
+                            f"(type={id_type}, len={len(id_value)}, valid={is_valid})"
+                        )
 
             # Добавляем org IDs
             for id_info in org_ids:
