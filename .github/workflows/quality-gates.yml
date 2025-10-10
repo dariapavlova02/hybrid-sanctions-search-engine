@@ -60,7 +60,10 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .[all,test]
+        # Configure pip with longer timeout and retries for large packages (nvidia-cublas-cu12 ~600MB)
+        export PIP_DEFAULT_TIMEOUT=600
+        export PIP_RETRIES=5
+        pip install -e .[all,test] --timeout=600 --retries=5 || pip install -e .[all,test] --timeout=600 --retries=5
         # Install optional morphology dependencies
         pip install pymorphy3[ru] pymorphy3[uk] || echo "Morphology dependencies optional"
 
@@ -259,7 +262,10 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .[all,test]
+        # Configure pip with longer timeout and retries for large packages (nvidia-cublas-cu12 ~600MB)
+        export PIP_DEFAULT_TIMEOUT=600
+        export PIP_RETRIES=5
+        pip install -e .[all,test] --timeout=600 --retries=5 || pip install -e .[all,test] --timeout=600 --retries=5
         # Performance measurement tools
         pip install memory_profiler psutil
 
@@ -402,7 +408,10 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .[all,test]
+        # Configure pip with longer timeout and retries for large packages (nvidia-cublas-cu12 ~600MB)
+        export PIP_DEFAULT_TIMEOUT=600
+        export PIP_RETRIES=5
+        pip install -e .[all,test] --timeout=600 --retries=5 || pip install -e .[all,test] --timeout=600 --retries=5
 
     - name: Wait for Elasticsearch
       run: |

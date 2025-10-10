@@ -46,7 +46,10 @@ jobs:
 
     - name: Install dependencies
       run: |
-        poetry install
+        # Configure pip with longer timeout and retries for large packages (nvidia-cublas-cu12 ~600MB)
+        export PIP_DEFAULT_TIMEOUT=600
+        export PIP_RETRIES=5
+        poetry install --no-interaction --no-ansi || poetry install --no-interaction --no-ansi
 
     - name: Install spaCy models (optional)
       run: |
@@ -116,7 +119,10 @@ jobs:
 
     - name: Install dependencies
       run: |
-        poetry install
+        # Configure pip with longer timeout and retries for large packages (nvidia-cublas-cu12 ~600MB)
+        export PIP_DEFAULT_TIMEOUT=600
+        export PIP_RETRIES=5
+        poetry install --no-interaction --no-ansi || poetry install --no-interaction --no-ansi
 
     - name: Create artifacts directory
       run: mkdir -p artifacts/security
@@ -304,7 +310,10 @@ jobs:
 
     - name: Install dependencies
       run: |
-        poetry install
+        # Configure pip with longer timeout and retries for large packages (nvidia-cublas-cu12 ~600MB)
+        export PIP_DEFAULT_TIMEOUT=600
+        export PIP_RETRIES=5
+        poetry install --no-interaction --no-ansi || poetry install --no-interaction --no-ansi
 
     - name: Install spaCy models
       run: |
