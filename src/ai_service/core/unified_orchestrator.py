@@ -759,7 +759,7 @@ class UnifiedOrchestrator:
                     # Convert candidates to the expected search_results format
                     search_results = {
                         "query": query,
-                        "results": [candidate.to_dict() for candidate in candidates],
+                        "results": [candidate.to_dict() if hasattr(candidate, 'to_dict') else candidate for candidate in candidates],
                         "total_hits": len(candidates),
                         "search_type": "hybrid",
                         "processing_time_ms": search_processing_time
@@ -1236,7 +1236,7 @@ class UnifiedOrchestrator:
                     for id_info in person_ids:
                         if isinstance(id_info, dict) and id_info.get('sanctioned', False):
                             id_match = True
-                            self.logger.warning(f"🚨 FAST PATH: Sanctioned person ID detected: {id_info.get('value')}")
+                            logger.warning(f"🚨 FAST PATH: Sanctioned person ID detected: {id_info.get('value')}")
                             break
                     if id_match:
                         break
@@ -1253,7 +1253,7 @@ class UnifiedOrchestrator:
                     for id_info in org_ids:
                         if isinstance(id_info, dict) and id_info.get('sanctioned', False):
                             id_match = True
-                            self.logger.warning(f"🚨 FAST PATH: Sanctioned org ID detected: {id_info.get('value')}")
+                            logger.warning(f"🚨 FAST PATH: Sanctioned org ID detected: {id_info.get('value')}")
                             break
                     if id_match:
                         break
