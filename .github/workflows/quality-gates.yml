@@ -147,7 +147,7 @@ jobs:
         echo "✅ All golden parity gates passed!" | tee -a artifacts/golden/validation.txt
 
     - name: Upload golden test artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: golden-parity-reports-${{ github.run_number }}
@@ -227,7 +227,7 @@ jobs:
         echo "✅ ASCII fastpath parity gate passed!" | tee -a artifacts/ascii/validation.txt
 
     - name: Upload ASCII parity artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: ascii-parity-reports-${{ github.run_number }}
@@ -351,7 +351,7 @@ jobs:
         echo "✅ Performance benchmark completed!" | tee -a artifacts/performance/validation.txt
 
     - name: Upload performance artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: performance-reports-${{ github.run_number }}
@@ -546,7 +546,7 @@ jobs:
         echo "✅ Search integration validation completed!" | tee -a artifacts/search/validation.txt
 
     - name: Upload search integration artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: search-integration-reports-${{ github.run_number }}

@@ -139,7 +139,7 @@ jobs:
         echo "✅ Pre-deployment validation completed!" | tee -a artifacts/pre-deployment/readiness.txt
 
     - name: Upload pre-deployment artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: pre-deployment-validation-${{ github.run_number }}
@@ -283,7 +283,7 @@ jobs:
         echo "✅ Elasticsearch deployment validation completed!" | tee -a artifacts/deployment/elasticsearch-validation.txt
 
     - name: Upload Elasticsearch deployment artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: elasticsearch-deployment-${{ github.run_number }}
@@ -441,7 +441,7 @@ jobs:
         echo "✅ Monitoring setup completed successfully!" >> artifacts/monitoring/monitoring-validation.md
 
     - name: Upload monitoring artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: monitoring-setup-${{ github.run_number }}
@@ -617,7 +617,7 @@ jobs:
         fi
 
     - name: Upload post-deployment artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: post-deployment-validation-${{ github.run_number }}
