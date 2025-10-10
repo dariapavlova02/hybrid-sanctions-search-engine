@@ -87,7 +87,7 @@ class TestEmbeddingsPerformance:
         avg_latency = statistics.mean(latencies)
         max_latency = max(latencies)
         
-        print(f"\n📊 Performance Results:")
+        print(f"\n[STATS] Performance Results:")
         print(f"   Average latency: {avg_latency:.2f}ms")
         print(f"   P95 latency: {p95_latency:.2f}ms")
         print(f"   Max latency: {max_latency:.2f}ms")
@@ -113,7 +113,7 @@ class TestEmbeddingsPerformance:
         second_result = embedding_service.encode_batch(test_batch)
         second_duration = (time.perf_counter() - start_time) * 1000
         
-        print(f"\n🔄 Repeated Batch Performance:")
+        print(f"\n[PROGRESS] Repeated Batch Performance:")
         print(f"   First run: {first_duration:.2f}ms")
         print(f"   Second run: {second_duration:.2f}ms")
         print(f"   Speedup: {first_duration / second_duration:.2f}x")
@@ -235,6 +235,6 @@ class TestEmbeddingsPerformance:
         assert len(single_result[0]) == 384
         assert single_duration < 200.0, f"Single text too slow: {single_duration:.2f}ms"
         
-        print(f"\n🔍 Edge Case Performance:")
+        print(f"\n[CHECK] Edge Case Performance:")
         print(f"   Empty batch: {empty_duration:.2f}ms")
         print(f"   Single text: {single_duration:.2f}ms")

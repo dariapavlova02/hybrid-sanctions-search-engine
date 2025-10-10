@@ -18,7 +18,7 @@ try:
     SENTENCE_TRANSFORMERS_AVAILABLE = True
 except ImportError:
     SENTENCE_TRANSFORMERS_AVAILABLE = False
-    print("⚠️ sentence-transformers not available, using dummy vectors")
+    print("[WARN] sentence-transformers not available, using dummy vectors")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ class VectorGenerator:
             try:
                 logger.info(f"Loading model: {model_name}")
                 self.model = SentenceTransformer(model_name)
-                logger.info("✅ Model loaded successfully")
+                logger.info("[OK] Model loaded successfully")
             except Exception as e:
                 logger.warning(f"Failed to load model: {e}")
                 self.model = None
@@ -135,7 +135,7 @@ class VectorGenerator:
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(vectors, f, ensure_ascii=False, indent=2)
 
-        logger.info(f"✅ Generated {len(vectors)} vectors")
+        logger.info(f"[OK] Generated {len(vectors)} vectors")
         return len(vectors)
 
     def generate_sample_vectors(self, output_file: Path, count: int = 1000) -> int:
@@ -201,7 +201,7 @@ class VectorGenerator:
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(vectors, f, ensure_ascii=False, indent=2)
 
-        logger.info(f"✅ Generated {len(vectors)} sample vectors")
+        logger.info(f"[OK] Generated {len(vectors)} sample vectors")
         return len(vectors)
 
 async def main():
@@ -224,13 +224,13 @@ async def main():
         output_file = args.output or Path("data/templates/sample_vectors.json")
         output_file.parent.mkdir(parents=True, exist_ok=True)
         count = generator.generate_sample_vectors(output_file, args.max_patterns)
-        print(f"✅ Generated {count} sample vectors in {output_file}")
+        print(f"[OK] Generated {count} sample vectors in {output_file}")
 
     elif args.input and args.output:
         # Generate vectors from patterns file
         args.output.parent.mkdir(parents=True, exist_ok=True)
         count = generator.generate_vectors_from_patterns(args.input, args.output, args.max_patterns)
-        print(f"✅ Generated {count} vectors from {args.input} → {args.output}")
+        print(f"[OK] Generated {count} vectors from {args.input} → {args.output}")
 
     else:
         # Generate vectors for all available pattern files
@@ -248,14 +248,14 @@ async def main():
 
             if input_file.exists():
                 count = generator.generate_vectors_from_patterns(input_file, output_file, args.max_patterns)
-                print(f"✅ Generated {count} vectors: {input_filename} → {output_filename}")
+                print(f"[OK] Generated {count} vectors: {input_filename} → {output_filename}")
             else:
-                print(f"⚠️ Input file not found: {input_file}")
+                print(f"[WARN] Input file not found: {input_file}")
 
         # Also generate sample vectors
         sample_output = data_dir / "sample_vectors.json"
         count = generator.generate_sample_vectors(sample_output, 1000)
-        print(f"✅ Generated {count} sample vectors in {sample_output}")
+        print(f"[OK] Generated {count} sample vectors in {sample_output}")
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -98,14 +98,14 @@ class SearchSmokeTester:
     
     async def test_elasticsearch_health(self) -> bool:
         """Test Elasticsearch cluster health."""
-        print("🔍 Testing Elasticsearch health...")
+        print("[CHECK] Testing Elasticsearch health...")
         
         start_time = time.time()
         success, result = await self._make_request("GET", "/_cluster/health")
         end_time = time.time()
         
         if not success:
-            print(f"❌ Health check failed: {result.get('error')}")
+            print(f"[ERROR] Health check failed: {result.get('error')}")
             self.test_results["tests"]["elasticsearch_health"] = {
                 "status": "failed",
                 "error": result.get("error"),
@@ -114,7 +114,7 @@ class SearchSmokeTester:
             return False
         
         status = result.get("status", "unknown")
-        print(f"✅ Elasticsearch health: {status}")
+        print(f"[OK] Elasticsearch health: {status}")
         
         self.test_results["tests"]["elasticsearch_health"] = {
             "status": "passed",
@@ -133,7 +133,7 @@ class SearchSmokeTester:
         end_time = time.time()
         
         if not success:
-            print(f"❌ Failed to get aliases: {result.get('error')}")
+            print(f"[ERROR] Failed to get aliases: {result.get('error')}")
             self.test_results["tests"]["indices_exist"] = {
                 "status": "failed",
                 "error": result.get("error"),
@@ -150,10 +150,10 @@ class SearchSmokeTester:
             for alias in required_aliases:
                 if alias in aliases:
                     found_aliases.append(alias)
-                    print(f"✅ Found alias: {alias} -> {index_name}")
+                    print(f"[OK] Found alias: {alias} -> {index_name}")
         
         if len(found_aliases) == len(required_aliases):
-            print(f"✅ All required aliases found: {found_aliases}")
+            print(f"[OK] All required aliases found: {found_aliases}")
             self.test_results["tests"]["indices_exist"] = {
                 "status": "passed",
                 "found_aliases": found_aliases,
@@ -162,7 +162,7 @@ class SearchSmokeTester:
             return True
         else:
             missing = set(required_aliases) - set(found_aliases)
-            print(f"❌ Missing aliases: {missing}")
+            print(f"[ERROR] Missing aliases: {missing}")
             self.test_results["tests"]["indices_exist"] = {
                 "status": "failed",
                 "found_aliases": found_aliases,
@@ -173,7 +173,7 @@ class SearchSmokeTester:
     
     async def test_ac_search(self) -> bool:
         """Test AC search functionality."""
-        print("🔍 Testing AC search...")
+        print("[CHECK] Testing AC search...")
         
         test_queries = [
             "иван петров",
@@ -206,14 +206,14 @@ class SearchSmokeTester:
             
             if success:
                 hits = result.get("hits", {}).get("total", {}).get("value", 0)
-                print(f"✅ AC search '{query}': {hits} hits ({end_time - start_time:.3f}s)")
+                print(f"[OK] AC search '{query}': {hits} hits ({end_time - start_time:.3f}s)")
                 ac_results.append({
                     "query": query,
                     "hits": hits,
                     "duration_ms": (end_time - start_time) * 1000
                 })
             else:
-                print(f"❌ AC search '{query}' failed: {result.get('error')}")
+                print(f"[ERROR] AC search '{query}' failed: {result.get('error')}")
                 ac_results.append({
                     "query": query,
                     "hits": 0,
@@ -239,7 +239,7 @@ class SearchSmokeTester:
     
     async def test_vector_search(self) -> bool:
         """Test vector search functionality."""
-        print("🔍 Testing vector search...")
+        print("[CHECK] Testing vector search...")
         
         # Generate dummy query vector
         query_vector = [0.1] * 384
@@ -265,7 +265,7 @@ class SearchSmokeTester:
         
         if success:
             hits = result.get("hits", {}).get("total", {}).get("value", 0)
-            print(f"✅ Vector search: {hits} hits ({end_time - start_time:.3f}s)")
+            print(f"[OK] Vector search: {hits} hits ({end_time - start_time:.3f}s)")
             
             self.test_results["tests"]["vector_search"] = {
                 "status": "passed",
@@ -278,7 +278,7 @@ class SearchSmokeTester:
             
             return True
         else:
-            print(f"❌ Vector search failed: {result.get('error')}")
+            print(f"[ERROR] Vector search failed: {result.get('error')}")
             self.test_results["tests"]["vector_search"] = {
                 "status": "failed",
                 "error": result.get("error"),
@@ -323,14 +323,14 @@ class SearchSmokeTester:
             if success:
                 durations.append(end_time - start_time)
             else:
-                print(f"⚠️ Performance test query '{query}' failed")
+                print(f"[WARN] Performance test query '{query}' failed")
         
         if durations:
             avg_duration = sum(durations) / len(durations)
             p95_duration = sorted(durations)[int(len(durations) * 0.95)]
             max_duration = max(durations)
             
-            print(f"✅ Performance test completed:")
+            print(f"[OK] Performance test completed:")
             print(f"  Average: {avg_duration:.3f}s")
             print(f"  P95: {p95_duration:.3f}s")
             print(f"  Max: {max_duration:.3f}s")
@@ -352,7 +352,7 @@ class SearchSmokeTester:
             
             return performance_ok
         else:
-            print("❌ No successful performance test queries")
+            print("[ERROR] No successful performance test queries")
             self.test_results["tests"]["performance"] = {
                 "status": "failed",
                 "error": "No successful queries"
@@ -382,14 +382,14 @@ class SearchSmokeTester:
         
         # Should handle error gracefully
         if not success:
-            print("✅ Error handling test passed - invalid query handled gracefully")
+            print("[OK] Error handling test passed - invalid query handled gracefully")
             self.test_results["tests"]["error_handling"] = {
                 "status": "passed",
                 "duration_ms": (end_time - start_time) * 1000
             }
             return True
         else:
-            print("⚠️ Error handling test - invalid query did not fail as expected")
+            print("[WARN] Error handling test - invalid query did not fail as expected")
             self.test_results["tests"]["error_handling"] = {
                 "status": "warning",
                 "duration_ms": (end_time - start_time) * 1000
@@ -419,11 +419,11 @@ class SearchSmokeTester:
                 success = await test_func()
                 if success:
                     passed_tests += 1
-                    print(f"✅ {test_name} passed")
+                    print(f"[OK] {test_name} passed")
                 else:
-                    print(f"❌ {test_name} failed")
+                    print(f"[ERROR] {test_name} failed")
             except Exception as e:
-                print(f"❌ {test_name} error: {e}")
+                print(f"[ERROR] {test_name} error: {e}")
                 self.test_results["errors"].append(f"{test_name}: {str(e)}")
         
         # Overall result
@@ -432,9 +432,9 @@ class SearchSmokeTester:
         self.test_results["passed_tests"] = passed_tests
         self.test_results["total_tests"] = total_tests
         
-        print(f"\n📊 Smoke test summary:")
+        print(f"\n[STATS] Smoke test summary:")
         print(f"  Passed: {passed_tests}/{total_tests}")
-        print(f"  Status: {'✅ PASSED' if overall_success else '❌ FAILED'}")
+        print(f"  Status: {'[OK] PASSED' if overall_success else '[ERROR] FAILED'}")
         
         return overall_success
 

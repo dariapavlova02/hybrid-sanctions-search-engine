@@ -241,7 +241,7 @@ def main():
             print(f"\nRun with --fix to automatically fix missing decorators")
             sys.exit(1)
         elif results['missing_decorators'] == 0:
-            print(f"\n✅ All async tests have @pytest.mark.asyncio decorators")
+            print(f"\n[OK] All async tests have @pytest.mark.asyncio decorators")
 
 
 if __name__ == '__main__':

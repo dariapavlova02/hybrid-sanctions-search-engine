@@ -21,9 +21,9 @@ try:
     from ai_service.layers.signals.signals_service import SignalsService
     from ai_service.layers.unicode.unicode_service import UnicodeService
     from ai_service.layers.language.language_detection_service import LanguageDetectionService
-    print("✅ All core AI services imported successfully")
+    print("[OK] All core AI services imported successfully")
 except ImportError as e:
-    print(f"❌ Failed to import services: {e}")
+    print(f"[ERROR] Failed to import services: {e}")
     sys.exit(1)
 
 
@@ -50,7 +50,7 @@ class FinalIntegrationTest:
         """Run comprehensive test of AI services with golden test methodology."""
         start_time = time.time()
 
-        print("🎯 FINAL GOLDEN TEST INTEGRATION")
+        print("[TARGET] FINAL GOLDEN TEST INTEGRATION")
         print("="*60)
         print("Testing AI Service components with golden test methodology")
         print("="*60)
@@ -75,7 +75,7 @@ class FinalIntegrationTest:
 
     async def _test_e2e_name_pipeline(self):
         """Test end-to-end name processing pipeline."""
-        print("\n🔄 Testing End-to-End Name Processing Pipeline")
+        print("\n[PROGRESS] Testing End-to-End Name Processing Pipeline")
 
         test_cases = [
             {
@@ -103,7 +103,7 @@ class FinalIntegrationTest:
         for test_case in test_cases:
             try:
                 text = test_case["input"]
-                print(f"\n  📝 Processing: '{text}'")
+                print(f"\n  [CMD] Processing: '{text}'")
 
                 # Step 1: Language Detection
                 lang_result = self.language_service.detect_language(text)
@@ -132,9 +132,9 @@ class FinalIntegrationTest:
 
                 success = lang_correct and tokens_present and signals_result is not None
 
-                print(f"     Language: {detected_lang} ({'✅' if lang_correct else '❌'})")
+                print(f"     Language: {detected_lang} ({'[OK]' if lang_correct else '[ERROR]'})")
                 print(f"     Normalized: '{norm_result.normalized}'")
-                print(f"     Tokens: {norm_result.tokens} ({'✅' if tokens_present else '❌'})")
+                print(f"     Tokens: {norm_result.tokens} ({'[OK]' if tokens_present else '[ERROR]'})")
                 print(f"     Signals confidence: {getattr(signals_result, 'confidence', 0.0):.2f}")
 
                 if success:
@@ -142,7 +142,7 @@ class FinalIntegrationTest:
                     print(f"     🎉 {test_case['name']}: PASSED")
                 else:
                     service_results["failed"] += 1
-                    print(f"     ❌ {test_case['name']}: FAILED")
+                    print(f"     [ERROR] {test_case['name']}: FAILED")
 
                 service_results["details"].append({
                     "name": test_case["name"],
@@ -154,7 +154,7 @@ class FinalIntegrationTest:
 
             except Exception as e:
                 service_results["failed"] += 1
-                print(f"     🔥 {test_case['name']}: ERROR - {e}")
+                print(f"     [HOT] {test_case['name']}: ERROR - {e}")
 
         self.results["service_results"]["e2e_pipeline"] = service_results
         self.results["total_tests"] += len(test_cases)
@@ -187,18 +187,18 @@ class FinalIntegrationTest:
                 correct = detected_lang == expected_lang
                 if correct:
                     service_results["passed"] += 1
-                    print(f"  ✅ '{text}' → {detected_lang} (conf: {confidence:.2f})")
+                    print(f"  [OK] '{text}' → {detected_lang} (conf: {confidence:.2f})")
                 else:
                     service_results["failed"] += 1
-                    print(f"  ❌ '{text}' → {detected_lang} (expected {expected_lang})")
+                    print(f"  [ERROR] '{text}' → {detected_lang} (expected {expected_lang})")
 
             except Exception as e:
                 service_results["failed"] += 1
-                print(f"  🔥 '{text}' → ERROR: {e}")
+                print(f"  [HOT] '{text}' → ERROR: {e}")
 
         total = len(test_cases)
         service_results["accuracy"] = service_results["passed"] / total if total > 0 else 0
-        print(f"\n  📊 Language Detection Accuracy: {service_results['accuracy']:.1%}")
+        print(f"\n  [STATS] Language Detection Accuracy: {service_results['accuracy']:.1%}")
 
         self.results["service_results"]["language_detection"] = service_results
         self.results["total_tests"] += total
@@ -264,10 +264,10 @@ class FinalIntegrationTest:
 
                 if success:
                     service_results["passed"] += 1
-                    print(f"  ✅ {test_case['description']}")
+                    print(f"  [OK] {test_case['description']}")
                 else:
                     service_results["failed"] += 1
-                    print(f"  ❌ {test_case['description']}")
+                    print(f"  [ERROR] {test_case['description']}")
 
                 print(f"     Confidence: {confidence:.2f}")
                 if has_orgs:
@@ -285,7 +285,7 @@ class FinalIntegrationTest:
 
             except Exception as e:
                 service_results["failed"] += 1
-                print(f"  🔥 {test_case['description']}: ERROR - {e}")
+                print(f"  [HOT] {test_case['description']}: ERROR - {e}")
 
         self.results["service_results"]["signals_extraction"] = service_results
         self.results["total_tests"] += len(test_cases)
@@ -314,14 +314,14 @@ class FinalIntegrationTest:
 
                 if len(normalized) > 0:
                     service_results["passed"] += 1
-                    print(f"  ✅ {description}: '{text}' → '{normalized}'")
+                    print(f"  [OK] {description}: '{text}' → '{normalized}'")
                 else:
                     service_results["failed"] += 1
-                    print(f"  ❌ {description}: '{text}' → Empty result")
+                    print(f"  [ERROR] {description}: '{text}' → Empty result")
 
             except Exception as e:
                 service_results["failed"] += 1
-                print(f"  🔥 {description}: ERROR - {e}")
+                print(f"  [HOT] {description}: ERROR - {e}")
 
         self.results["service_results"]["unicode_normalization"] = service_results
         self.results["total_tests"] += len(test_cases)
@@ -364,11 +364,11 @@ class FinalIntegrationTest:
 
                     service_results["passed"] += 1
                     service_results["processed"] += 1
-                    print(f"     ✅ Workflow completed successfully")
+                    print(f"     [OK] Workflow completed successfully")
 
                 except Exception as e:
                     service_results["failed"] += 1
-                    print(f"     🔥 Workflow failed: {e}")
+                    print(f"     [HOT] Workflow failed: {e}")
 
             self.results["service_results"]["integration_workflow"] = service_results
             self.results["total_tests"] += service_results["processed"]
@@ -376,7 +376,7 @@ class FinalIntegrationTest:
             self.results["failed"] += service_results["failed"]
 
         else:
-            print("  ⚠️ Golden suite file not found, skipping workflow test")
+            print("  [WARN] Golden suite file not found, skipping workflow test")
 
     def _print_final_summary(self):
         """Print comprehensive final summary."""
@@ -384,16 +384,16 @@ class FinalIntegrationTest:
         self.results["success_rate"] = (self.results["passed"] / total * 100) if total > 0 else 0
 
         print(f"\n{'='*60}")
-        print(f"🎯 FINAL INTEGRATION TEST SUMMARY")
+        print(f"[TARGET] FINAL INTEGRATION TEST SUMMARY")
         print(f"{'='*60}")
-        print(f"📊 Overall Statistics:")
+        print(f"[STATS] Overall Statistics:")
         print(f"  Total tests executed: {total}")
-        print(f"  ✅ Tests passed: {self.results['passed']}")
-        print(f"  ❌ Tests failed: {self.results['failed']}")
+        print(f"  [OK] Tests passed: {self.results['passed']}")
+        print(f"  [ERROR] Tests failed: {self.results['failed']}")
         print(f"  📈 Success rate: {self.results['success_rate']:.1f}%")
         print(f"  ⏱️ Total execution time: {self.results['execution_time']:.2f}s")
 
-        print(f"\n🔍 Service-by-Service Results:")
+        print(f"\n[CHECK] Service-by-Service Results:")
         for service_name, result in self.results["service_results"].items():
             if "passed" in result and "failed" in result:
                 total_service = result["passed"] + result["failed"]
@@ -404,20 +404,20 @@ class FinalIntegrationTest:
         if self.results["success_rate"] >= 80:
             assessment = "🎉 EXCELLENT - Ready for production"
         elif self.results["success_rate"] >= 60:
-            assessment = "✅ GOOD - Minor issues to address"
+            assessment = "[OK] GOOD - Minor issues to address"
         elif self.results["success_rate"] >= 40:
-            assessment = "⚠️ FAIR - Significant improvements needed"
+            assessment = "[WARN] FAIR - Significant improvements needed"
         else:
-            assessment = "❌ POOR - Major issues require attention"
+            assessment = "[ERROR] POOR - Major issues require attention"
 
         print(f"\n🏆 Assessment: {assessment}")
 
         # Golden test framework validation
         print(f"\n📋 Golden Test Framework Status:")
-        print(f"  ✅ Framework successfully integrated with real services")
-        print(f"  ✅ End-to-end testing capabilities demonstrated")
-        print(f"  ✅ Multi-layer service coordination validated")
-        print(f"  🎯 Ready for CI/CD pipeline integration")
+        print(f"  [OK] Framework successfully integrated with real services")
+        print(f"  [OK] End-to-end testing capabilities demonstrated")
+        print(f"  [OK] Multi-layer service coordination validated")
+        print(f"  [TARGET] Ready for CI/CD pipeline integration")
 
 
 async def main():

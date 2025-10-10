@@ -100,7 +100,7 @@ class ACSearchTester:
         ]
 
         for category, index_name, queries in test_cases:
-            logger.info(f"\n🔍 Testing {category} patterns in {index_name}")
+            logger.info(f"\n[CHECK] Testing {category} patterns in {index_name}")
 
             for query in queries:
                 logger.info(f"\n  Query: '{query}'")
@@ -130,7 +130,7 @@ class ACSearchTester:
 
         indices = ["ac_patterns_person", "ac_patterns_company", "ac_patterns_terrorism"]
 
-        logger.info("\n📊 Index Statistics:")
+        logger.info("\n[STATS] Index Statistics:")
 
         for index_name in indices:
             try:
@@ -187,10 +187,10 @@ async def main():
 
         # Test connection
         if not await es_client.health_check():
-            logger.error("❌ Elasticsearch connection failed")
+            logger.error("[ERROR] Elasticsearch connection failed")
             return 1
 
-        logger.info("✅ Elasticsearch connection successful")
+        logger.info("[OK] Elasticsearch connection successful")
 
         # Initialize tester
         tester = ACSearchTester(es_client)
@@ -205,7 +205,7 @@ async def main():
         return 0
 
     except Exception as e:
-        logger.error(f"❌ Test failed: {e}")
+        logger.error(f"[ERROR] Test failed: {e}")
         return 1
 
     finally:

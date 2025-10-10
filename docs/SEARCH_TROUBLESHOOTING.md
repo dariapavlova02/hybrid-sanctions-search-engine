@@ -676,21 +676,3 @@ docker logs elasticsearch > /tmp/search-debug/elasticsearch.log
 # Create debug package
 tar -czf search-debug-$(date +%Y%m%d-%H%M%S).tar.gz /tmp/search-debug/
 ```
-
-### Information to Include
-
-When reporting issues, include:
-
-1. **Error messages and logs**
-2. **Configuration files** (sanitized)
-3. **Health check results**
-4. **Performance metrics**
-5. **System information** (OS, Docker version, etc.)
-6. **Steps to reproduce**
-
-### Contact Information
-
-- **Documentation**: [Search API Docs](https://docs.example.com/search-api)
-- **Support Email**: support@example.com
-- **Issue Tracker**: [GitHub Issues](https://github.com/example/ai-service/issues)
-- **Status Page**: [Service Status](https://status.example.com)

@@ -394,7 +394,7 @@ def create_search_info(search_result: SearchResult) -> SearchInfo:
     high_confidence_matches = 0
 
     # Debug logging
-    print(f"🔍 DEBUG: Processing {len(search_result.candidates)} candidates for high_confidence_matches")
+    print(f"[CHECK] DEBUG: Processing {len(search_result.candidates)} candidates for high_confidence_matches")
 
     for i, c in enumerate(search_result.candidates):
         # Determine if this is a vector match based on search_mode or search_type
@@ -449,7 +449,7 @@ def create_search_info(search_result: SearchResult) -> SearchInfo:
             if passes:
                 high_confidence_matches += 1
 
-    print(f"🎯 FINAL: high_confidence_matches = {high_confidence_matches}")
+    print(f"[TARGET] FINAL: high_confidence_matches = {high_confidence_matches}")
 
     return SearchInfo(
         has_exact_matches=has_exact,

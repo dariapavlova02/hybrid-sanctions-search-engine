@@ -50,7 +50,7 @@ def print_header(text: str):
 
 def print_step(step_num: int, text: str):
     """Print step indicator"""
-    print(f"\n🔹 Step {step_num}: {text}")
+    print(f"\n[STEP] Step {step_num}: {text}")
     print("-" * 50)
 
 
@@ -66,12 +66,12 @@ def validate_input_files(data_dir: Path) -> Dict[str, Path]:
 
     for name, filepath in files.items():
         if not filepath.exists():
-            print(f"❌ Missing required file: {filepath}")
+            print(f"[ERROR] Missing required file: {filepath}")
             sys.exit(1)
 
         # Check file size
         size_mb = filepath.stat().st_size / (1024 * 1024)
-        print(f"✅ {name:12} {filepath.name:40} ({size_mb:.1f} MB)")
+        print(f"[OK] {name:12} {filepath.name:40} ({size_mb:.1f} MB)")
 
     return files
 
@@ -151,7 +151,7 @@ def generate_ac_patterns(
 
     # Print statistics
     stats = corpus['statistics']
-    print(f"\n✅ Generated {len(corpus['patterns']):,} patterns in {stats['processing_time']:.1f}s")
+    print(f"\n[OK] Generated {len(corpus['patterns']):,} patterns in {stats['processing_time']:.1f}s")
     print(f"   Persons processed:   {stats['persons_processed']:,}")
     print(f"   Companies processed: {stats['companies_processed']:,}")
     print(f"   Terrorism processed: {stats['terrorism_processed']:,}")
@@ -212,7 +212,7 @@ def generate_vectors(patterns_file: Path, output_dir: Path) -> Path:
     """Generate vector embeddings from AC patterns"""
     print_step(3, "Generating vector embeddings")
 
-    print("ℹ️  Vector generation requires sentence-transformers")
+    print("[INFO]  Vector generation requires sentence-transformers")
     print(f"   Input: {patterns_file.name}")
     print("   Running generate_vectors.py script...")
 
@@ -221,7 +221,7 @@ def generate_vectors(patterns_file: Path, output_dir: Path) -> Path:
     # Output file with correct JSON format
     output_file = output_dir / f"vectors_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
-    print(f"\n📊 Generating vectors from AC patterns...")
+    print(f"\n[STATS] Generating vectors from AC patterns...")
 
     try:
         result = subprocess.run([
@@ -233,20 +233,20 @@ def generate_vectors(patterns_file: Path, output_dir: Path) -> Path:
         ], capture_output=True, text=True, timeout=300)
 
         if result.returncode == 0:
-            print(f"✅ Generated: {output_file.name}")
+            print(f"[OK] Generated: {output_file.name}")
             return output_file
         else:
-            print(f"❌ Failed: {result.stderr}")
+            print(f"[ERROR] Failed: {result.stderr}")
             return None
 
     except subprocess.TimeoutExpired:
         print(f"⏱️  Timeout generating vectors")
         return None
     except FileNotFoundError:
-        print("⚠️  generate_vectors.py not found, skipping vector generation")
+        print("[WARN]  generate_vectors.py not found, skipping vector generation")
         return None
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[ERROR] Error: {e}")
         return None
 
 
@@ -254,7 +254,7 @@ def generate_templates(files: Dict[str, Path], output_dir: Path):
     """Generate templates for additional processing"""
     print_step(4, "Generating templates")
 
-    print("🏗️  Building templates...")
+    print("[BUILD]  Building templates...")
 
     template_builder = TemplateBuilder()
     templates_dir = output_dir / "templates"
@@ -298,7 +298,7 @@ def generate_templates(files: Dict[str, Path], output_dir: Path):
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(templates, f, ensure_ascii=False, indent=2)
 
-        print(f"   ✅ {len(templates):,} templates → {output_file.name}")
+        print(f"   [OK] {len(templates):,} templates → {output_file.name}")
 
     print(f"\n💾 Templates saved to: {templates_dir}")
 
@@ -408,9 +408,9 @@ def main():
     # Create output directory
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    print_header("🚀 SANCTIONS DATA PREPARATION PIPELINE")
+    print_header("[INIT] SANCTIONS DATA PREPARATION PIPELINE")
     print(f"📁 Data directory: {args.data_dir}")
-    print(f"📦 Output directory: {args.output_dir}")
+    print(f"[DATA] Output directory: {args.output_dir}")
 
     # Step 1: Validate inputs
     input_files = validate_input_files(args.data_dir)
@@ -429,13 +429,13 @@ def main():
     if not args.skip_vectors and not args.patterns_only:
         vector_file = generate_vectors(patterns_file, args.output_dir)
     else:
-        print("\nℹ️  Skipping vector generation")
+        print("\n[INFO]  Skipping vector generation")
 
     # Step 4: Generate templates
     if not args.skip_templates and not args.patterns_only:
         generate_templates(input_files, args.output_dir)
     else:
-        print("\nℹ️  Skipping template generation")
+        print("\n[INFO]  Skipping template generation")
 
     # Step 5: Create deployment manifest
     manifest_file = create_deployment_manifest(
@@ -446,15 +446,15 @@ def main():
     )
 
     # Summary
-    print_header("✅ PREPARATION COMPLETE")
-    print(f"📦 Output directory: {args.output_dir}")
+    print_header("[OK] PREPARATION COMPLETE")
+    print(f"[DATA] Output directory: {args.output_dir}")
     print(f"📋 Deployment manifest: {manifest_file.name}")
-    print(f"\n📝 Next steps:")
+    print(f"\n[CMD] Next steps:")
     print(f"   1. Review generated files in: {args.output_dir}")
     print(f"   2. Load to Elasticsearch:")
     print(f"      python scripts/deploy_to_elasticsearch.py \\")
     print(f"        --manifest {manifest_file}")
-    print(f"\n💡 Quick deploy:")
+    print(f"\n[TIP] Quick deploy:")
     print(f"   python scripts/deploy_to_elasticsearch.py --es-host localhost:9200")
 
 
@@ -462,10 +462,10 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n⚠️  Interrupted by user")
+        print("\n\n[WARN]  Interrupted by user")
         sys.exit(1)
     except Exception as e:
-        print(f"\n\n❌ Error: {e}")
+        print(f"\n\n[ERROR] Error: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

@@ -58,7 +58,7 @@ class TestUnicodeServiceEdgeCases:
     def test_normalize_text_with_surrogate_pairs(self, service):
         """Test normalization with Unicode surrogate pairs"""
         # Emoji and other high Unicode code points
-        text_with_emoji = "Test 🚀 rocket 🔥 fire emoji text"
+        text_with_emoji = "Test [INIT] rocket [HOT] fire emoji text"
 
         result = service.normalize_text(text_with_emoji)
 

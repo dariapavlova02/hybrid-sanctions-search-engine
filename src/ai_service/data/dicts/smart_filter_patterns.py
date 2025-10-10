@@ -39,17 +39,17 @@ EXCLUSION_PATTERNS = [
 ]
 
 # REMOVED BUSINESS SIGNALS - these must reach Signals Service:
-# ❌ r"^\d+$" - could be IPN/EDRPOU
-# ❌ r"^(okpo|едрпоу|edrpou|ipn|іпн|inn|інн|ogrn|огрн|kpp|кпп)$" - document type markers
-# ❌ r"^\d{8,}[a-z]+$" - could be IPN with suffix
-# ❌ r"^[a-z]+\d{8,}$" - could be prefixed IPN
-# ❌ r"^\d{10,}$" - could be IPN numbers
-# ❌ r"^[a-z]{2,4}\d{4,}[a-z]*$" - could be valid document codes
-# ❌ r"^д\.р\.$" - date of birth marker
-# ❌ r"^\d{4}-\d{2}-\d{2}$" - ISO dates
-# ❌ r"^\d{2}\.\d{2}\.\d{4}$" - European dates
-# ❌ r"^\d{2}/\d{2}/\d{4}$" - US dates
-# ❌ Month name patterns - business dates
+# [ERROR] r"^\d+$" - could be IPN/EDRPOU
+# [ERROR] r"^(okpo|едрпоу|edrpou|ipn|іпн|inn|інн|ogrn|огрн|kpp|кпп)$" - document type markers
+# [ERROR] r"^\d{8,}[a-z]+$" - could be IPN with suffix
+# [ERROR] r"^[a-z]+\d{8,}$" - could be prefixed IPN
+# [ERROR] r"^\d{10,}$" - could be IPN numbers
+# [ERROR] r"^[a-z]{2,4}\d{4,}[a-z]*$" - could be valid document codes
+# [ERROR] r"^д\.р\.$" - date of birth marker
+# [ERROR] r"^\d{4}-\d{2}-\d{2}$" - ISO dates
+# [ERROR] r"^\d{2}\.\d{2}\.\d{4}$" - European dates
+# [ERROR] r"^\d{2}/\d{2}/\d{4}$" - US dates
+# [ERROR] Month name patterns - business dates
 
 # Additional patterns for dates and time
 DATE_TIME_PATTERNS = {

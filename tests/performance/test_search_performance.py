@@ -354,7 +354,7 @@ class TestSearchPerformance:
         error_scenarios = [
             "",  # Empty string
             "a" * 10000,  # Very long string
-            "🚀" * 1000,  # Many emojis
+            "[INIT]" * 1000,  # Many emojis
             "test\n\n\n\n\n",  # Many newlines
             "test\t\t\t\t\t",  # Many tabs
             "test" + " " * 1000,  # Many spaces

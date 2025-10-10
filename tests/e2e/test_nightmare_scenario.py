@@ -271,7 +271,7 @@ class TestNightmareScenario:
             "X" * 1000,  # Very long string
             "Ё" * 100,  # Repeated special characters
             "∑∂∆∞≈≠≤≥±",  # Mathematical symbols
-            "🎭🎨🎪🎯🎲",  # Emojis
+            "🎭🎨🎪[TARGET]🎲",  # Emojis
             "Тест\x00\x01\x02",  # Control characters
             "   \t\n\r   ",  # Only spaces
             "Сергій" + "\u200b" * 10 + "Іванов",  # Invisible characters

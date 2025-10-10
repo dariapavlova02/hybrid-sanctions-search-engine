@@ -33,27 +33,27 @@ def test_direct_cache_lookup():
     # Lookup the INN
     result = cache.lookup(test_inn)
     if result:
-        print(f"   ✅ FOUND: {result}")
+        print(f"   [OK] FOUND: {result}")
         print(f"   Name: {result.get('name')}")
         print(f"   Type: {result.get('type')}")
     else:
-        print(f"   ❌ NOT FOUND in cache")
+        print(f"   [ERROR] NOT FOUND in cache")
 
     # Method 2: Using convenience function
     print(f"\n2. Testing with lookup_sanctioned_inn('{test_inn}')...")
     result2 = lookup_sanctioned_inn(test_inn)
     if result2:
-        print(f"   ✅ FOUND: {result2.get('name')}")
+        print(f"   [OK] FOUND: {result2.get('name')}")
     else:
-        print(f"   ❌ NOT FOUND")
+        print(f"   [ERROR] NOT FOUND")
 
     # Method 3: Check raw cache content
     print(f"\n3. Checking raw cache content...")
     if test_inn in cache.cache:
-        print(f"   ✅ INN '{test_inn}' exists as key in cache")
+        print(f"   [OK] INN '{test_inn}' exists as key in cache")
         print(f"   Value: {cache.cache[test_inn]}")
     else:
-        print(f"   ❌ INN '{test_inn}' NOT a key in cache")
+        print(f"   [ERROR] INN '{test_inn}' NOT a key in cache")
         # Show first few keys to verify format
         print(f"   Sample cache keys: {list(cache.cache.keys())[:5]}")
 
@@ -62,9 +62,9 @@ def test_direct_cache_lookup():
     normalized = str(test_inn).strip()
     print(f"   Normalized INN: '{normalized}' (type: {type(normalized)})")
     if normalized in cache.cache:
-        print(f"   ✅ Normalized INN found in cache")
+        print(f"   [OK] Normalized INN found in cache")
     else:
-        print(f"   ❌ Normalized INN not found")
+        print(f"   [ERROR] Normalized INN not found")
 
     print("\n" + "=" * 80)
 

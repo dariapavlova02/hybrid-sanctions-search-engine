@@ -198,10 +198,10 @@ class OrchestratorFactory:
                         from ..layers.search.mock_search_service import MockSearchService
                         search_service = MockSearchService()
                         search_service.initialize()
-                        logger.info("✅ MockSearchService initialized successfully - search escalation available")
+                        logger.info("[OK] MockSearchService initialized successfully - search escalation available")
                         # Keep enable_search=True so search layer still runs with mock
                     except Exception as mock_e:
-                        logger.error(f"❌ Critical: Failed to initialize MockSearchService: {mock_e}")
+                        logger.error(f"[ERROR] Critical: Failed to initialize MockSearchService: {mock_e}")
                         search_service = None
                         enable_search = False
 

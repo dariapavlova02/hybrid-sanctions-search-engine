@@ -363,7 +363,7 @@ async def normalize(
 3. **Positional defaults**: Inconsistent application
 4. **Advanced features flag**: Not implemented
 
-## Quick Start for New Developers
+## Quick Start
 
 ### Running Tests
 ```bash

@@ -23,7 +23,7 @@ def test_ukrainian_morphology_simple():
         "Петра",       # Should become "Петр"
     ]
     
-    print("🔍 Ukrainian Morphology Simple Test")
+    print("[CHECK] Ukrainian Morphology Simple Test")
     print("=" * 50)
     
     for name in test_cases:
@@ -35,11 +35,11 @@ def test_ukrainian_morphology_simple():
             
             # Check if all forms are strings
             all_strings = all(isinstance(form, str) for form in forms)
-            print(f"All strings: {'✅' if all_strings else '❌'}")
+            print(f"All strings: {'[OK]' if all_strings else '[ERROR]'}")
             
             # Check if nominative form is present
             nominative_found = any(form.endswith(('ей', 'ов', 'р')) for form in forms)
-            print(f"Has nominative form: {'✅' if nominative_found else '❌'}")
+            print(f"Has nominative form: {'[OK]' if nominative_found else '[ERROR]'}")
             
         except Exception as e:
             print(f"Error: {e}")

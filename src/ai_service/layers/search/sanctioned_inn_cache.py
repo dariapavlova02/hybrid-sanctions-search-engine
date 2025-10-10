@@ -53,14 +53,14 @@ class SanctionedINNCache:
                     self.stats["organizations"] += 1
 
             logger.info(
-                f"✅ Loaded {self.stats['total_inns']} sanctioned INNs "
+                f"[OK] Loaded {self.stats['total_inns']} sanctioned INNs "
                 f"({self.stats['persons']} persons, {self.stats['organizations']} orgs) "
                 f"in {load_time:.2f}ms"
             )
             return True
 
         except Exception as e:
-            logger.error(f"❌ Failed to load INN cache: {e}")
+            logger.error(f"[ERROR] Failed to load INN cache: {e}")
             return False
 
     def lookup(self, inn: str) -> Optional[Dict[str, Any]]:

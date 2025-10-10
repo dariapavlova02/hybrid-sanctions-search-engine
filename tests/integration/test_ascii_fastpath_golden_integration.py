@@ -115,7 +115,7 @@ class TestAsciiFastpathGoldenIntegration:
             assert fastpath_result.confidence >= 0.9, \
                 f"Fastpath confidence too low for case '{case_id}': {fastpath_result.confidence}"
             
-            print(f"✅ Case '{case_id}' passed parity validation")
+            print(f"[OK] Case '{case_id}' passed parity validation")
     
     @pytest.mark.asyncio
     async def test_ascii_fastpath_performance_improvement(

@@ -111,16 +111,16 @@ def test_normalization_directly():
             # Check if name is preserved (check for both nominative and genitive forms)
             if ("Петро" in result.normalized or "Петра" in result.normalized) and \
                ("Порошенко" in result.normalized or "Порошенка" in result.normalized):
-                print("✅ Name normalization working correctly!")
+                print("[OK] Name normalization working correctly!")
                 print(f"   Found names in normalized text: '{result.normalized}'")
                 return True
             else:
-                print("❌ Name normalization not working as expected")
+                print("[ERROR] Name normalization not working as expected")
                 print(f"   Expected to find 'Петро/Петра' and 'Порошенко/Порошенка' in: '{result.normalized}'")
                 return False
                 
     except Exception as e:
-        print(f"❌ Error testing normalization: {e}")
+        print(f"[ERROR] Error testing normalization: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -128,7 +128,7 @@ def test_normalization_directly():
 
 def main():
     """Main function to run the normalization test."""
-    print("🚀 Simple Normalization Test")
+    print("[INIT] Simple Normalization Test")
     print("=" * 50)
     
     success = test_normalization_directly()

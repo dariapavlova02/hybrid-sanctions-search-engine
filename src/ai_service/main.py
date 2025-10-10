@@ -408,19 +408,19 @@ async def startup_event():
             sanctions_loader = SanctionsDataLoader()
             dataset = await sanctions_loader.load_dataset(force_reload=False)
             logger.info(
-                f"✅ Sanctions data preloaded on startup: {dataset.total_entries} entries, {len(dataset.all_names)} unique names"
+                f"[OK] Sanctions data preloaded on startup: {dataset.total_entries} entries, {len(dataset.all_names)} unique names"
             )
 
             # Also preload fuzzy candidates for faster first searches
             person_candidates = await sanctions_loader.get_fuzzy_candidates("person")
             org_candidates = await sanctions_loader.get_fuzzy_candidates("organization")
             logger.info(
-                f"✅ Fuzzy candidates preloaded: {len(person_candidates)} persons, {len(org_candidates)} organizations"
+                f"[OK] Fuzzy candidates preloaded: {len(person_candidates)} persons, {len(org_candidates)} organizations"
             )
 
         except Exception as e:
             logger.warning(
-                f"⚠️ Failed to preload sanctions data (fuzzy search will load on first use): {e}"
+                f"[WARN] Failed to preload sanctions data (fuzzy search will load on first use): {e}"
             )
 
         # Initialize INN cache for FAST PATH
@@ -433,7 +433,7 @@ async def startup_event():
             
             # Check if cache exists and has data, if not - generate it
             if not inn_cache.cache_file.exists() or inn_cache.get_stats()['total_inns'] == 0:
-                logger.info("🔄 INN cache not found or empty - generating automatically...")
+                logger.info("[PROGRESS] INN cache not found or empty - generating automatically...")
                 try:
                     # Generate cache using the extract script
                     cache_script = Path(__file__).parent.parent.parent / "scripts" / "extract_sanctioned_inns.py"
@@ -442,33 +442,33 @@ async def startup_event():
                     ], capture_output=True, text=True, timeout=300)
                     
                     if result.returncode == 0:
-                        logger.info("✅ INN cache generated successfully")
+                        logger.info("[OK] INN cache generated successfully")
                         # Reload cache after generation
                         inn_cache.reload_cache()
                     else:
-                        logger.error(f"❌ Failed to generate INN cache: {result.stderr}")
+                        logger.error(f"[ERROR] Failed to generate INN cache: {result.stderr}")
                         
                 except subprocess.TimeoutExpired:
-                    logger.error("❌ INN cache generation timed out")
+                    logger.error("[ERROR] INN cache generation timed out")
                 except Exception as gen_error:
-                    logger.error(f"❌ Error generating INN cache: {gen_error}")
+                    logger.error(f"[ERROR] Error generating INN cache: {gen_error}")
 
             stats = inn_cache.get_stats()
             logger.info(
-                f"✅ INN cache initialized: {stats['total_inns']} INNs loaded "
+                f"[OK] INN cache initialized: {stats['total_inns']} INNs loaded "
                 f"({stats['persons']} persons, {stats['organizations']} orgs)"
             )
 
             # Test lookup for known sanctioned INN
             test_inn = os.getenv("TEST_INN", "2839403975")  # Known sanctioned INN
             if inn_cache.lookup(test_inn):
-                logger.info(f"✅ INN cache validation passed: {test_inn} found")
+                logger.info(f"[OK] INN cache validation passed: {test_inn} found")
             else:
-                logger.warning(f"⚠️ INN cache validation failed: {test_inn} not found")
+                logger.warning(f"[WARN] INN cache validation failed: {test_inn} not found")
 
         except Exception as e:
             logger.warning(
-                f"⚠️ Failed to initialize INN cache (will fall back to regular search): {e}"
+                f"[WARN] Failed to initialize INN cache (will fall back to regular search): {e}"
             )
 
     except Exception as e:

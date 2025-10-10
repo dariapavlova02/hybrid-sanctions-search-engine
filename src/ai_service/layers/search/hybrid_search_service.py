@@ -95,7 +95,7 @@ class HybridSearchService(BaseService, SearchService):
         # Force reload sanctions in production if needed
         import os
         if os.getenv("FORCE_RELOAD_SANCTIONS", "false").lower() == "true":
-            self.logger.warning("🔄 FORCE_RELOAD_SANCTIONS=true, will force reload sanctions data")
+            self.logger.warning("[PROGRESS] FORCE_RELOAD_SANCTIONS=true, will force reload sanctions data")
 
         # Embedding cache
         self._embedding_cache: Dict[str, Tuple[List[float], datetime]] = {}
@@ -134,18 +134,18 @@ class HybridSearchService(BaseService, SearchService):
                     self.config,
                     client_factory=self._client_factory,
                 )
-                self.logger.info("✅ Elasticsearch adapters initialized successfully")
+                self.logger.info("[OK] Elasticsearch adapters initialized successfully")
             except Exception as es_e:
-                self.logger.warning(f"⚠️ Failed to initialize Elasticsearch adapters: {es_e}")
-                self.logger.info("📝 Will use fallback services for search")
+                self.logger.warning(f"[WARN] Failed to initialize Elasticsearch adapters: {es_e}")
+                self.logger.info("[CMD] Will use fallback services for search")
                 # Don't raise - continue with fallback services
 
             # Initialize fallback services (always try these)
             try:
                 self._ensure_fallback_services()
-                self.logger.info("✅ Fallback services initialized")
+                self.logger.info("[OK] Fallback services initialized")
             except Exception as fallback_e:
-                self.logger.warning(f"⚠️ Failed to initialize fallback services: {fallback_e}")
+                self.logger.warning(f"[WARN] Failed to initialize fallback services: {fallback_e}")
 
             # Start hot-reloading if supported
             if hasattr(self.config, 'start_hot_reload'):
@@ -159,10 +159,10 @@ class HybridSearchService(BaseService, SearchService):
                     self.logger.warning(f"Failed to enable hot-reloading: {e}")
 
             self._initialized = True
-            self.logger.info("✅ Hybrid search service initialized successfully (with available components)")
+            self.logger.info("[OK] Hybrid search service initialized successfully (with available components)")
 
         except Exception as e:
-            self.logger.error(f"❌ Failed to initialize hybrid search service: {e}")
+            self.logger.error(f"[ERROR] Failed to initialize hybrid search service: {e}")
             raise
 
     async def _get_embedding_service(self):
@@ -491,7 +491,7 @@ class HybridSearchService(BaseService, SearchService):
                 f"Search completed: {len(candidates)} candidates found in {processing_time:.2f}ms"
             )
 
-            print(f"🎯 find_candidates RESULT: {len(candidates)} candidates, {processing_time:.2f}ms")
+            print(f"[TARGET] find_candidates RESULT: {len(candidates)} candidates, {processing_time:.2f}ms")
             return candidates
             
         except Exception as e:
@@ -765,9 +765,9 @@ class HybridSearchService(BaseService, SearchService):
 
         # Check if AC results are sufficient
         should_escalate = self._should_escalate(ac_candidates, opts)
-        print(f"🔥 ESCALATION DEBUG: ac_count={len(ac_candidates)}, should_escalate={should_escalate}, threshold={opts.escalation_threshold}")
+        print(f"[HOT] ESCALATION DEBUG: ac_count={len(ac_candidates)}, should_escalate={should_escalate}, threshold={opts.escalation_threshold}")
         if should_escalate:
-            print(f"🚀 ESCALATING: AC results insufficient, trying fuzzy search first")
+            print(f"[INIT] ESCALATING: AC results insufficient, trying fuzzy search first")
             self.logger.info("AC results insufficient, trying fuzzy search first")
             self._metrics.escalation_triggered += 1
 
@@ -794,7 +794,7 @@ class HybridSearchService(BaseService, SearchService):
             ))
 
             # Check if fuzzy results are good enough
-            print(f"📊 CHECKING FUZZY SUFFICIENCY: {len(fuzzy_candidates)} candidates")
+            print(f"[STATS] CHECKING FUZZY SUFFICIENCY: {len(fuzzy_candidates)} candidates")
             if fuzzy_candidates:
                 best_fuzzy_score = max(c.score for c in fuzzy_candidates)
                 print(f"   Best fuzzy score: {best_fuzzy_score:.3f}")
@@ -805,7 +805,7 @@ class HybridSearchService(BaseService, SearchService):
             print(f"   Is sufficient: {is_sufficient}")
 
             if is_sufficient:
-                print("✅ FUZZY RESULTS SUFFICIENT - returning fuzzy results")
+                print("[OK] FUZZY RESULTS SUFFICIENT - returning fuzzy results")
                 self.logger.info(f"Fuzzy search found {len(fuzzy_candidates)} good matches - skipping vector search")
                 # Combine AC and fuzzy results
                 print(f"🔗 COMBINING RESULTS: ac={len(ac_candidates)}, fuzzy={len(fuzzy_candidates)}")
@@ -1118,7 +1118,7 @@ class HybridSearchService(BaseService, SearchService):
         opts: SearchOpts
     ) -> List[Candidate]:
         """Combine and deduplicate results from AC and vector search."""
-        print(f"📊 _combine_results INPUT: ac={len(ac_candidates)}, vector={len(vector_candidates)}")
+        print(f"[STATS] _combine_results INPUT: ac={len(ac_candidates)}, vector={len(vector_candidates)}")
 
         ac_weight = self._fusion_weights.get("ac", 0.6)
         vector_weight = self._fusion_weights.get("vector", 0.4)
@@ -1196,7 +1196,7 @@ class HybridSearchService(BaseService, SearchService):
             results = list(deduped.values())
 
         final_results = results[:opts.top_k]
-        print(f"📊 _combine_results OUTPUT: {len(final_results)} candidates")
+        print(f"[STATS] _combine_results OUTPUT: {len(final_results)} candidates")
         if final_results:
             for i, candidate in enumerate(final_results[:3]):
                 print(f"   {i+1}. {candidate.text} (score: {candidate.score:.3f})")
@@ -2258,7 +2258,7 @@ class HybridSearchService(BaseService, SearchService):
             # Try ES-based fuzzy search first (more efficient for 1M+ patterns)
             es_fuzzy_results = await self._elasticsearch_fuzzy_search(query_text, opts)
             if es_fuzzy_results:
-                print(f"🎯 ES FUZZY SEARCH: Got {len(es_fuzzy_results)} results")
+                print(f"[TARGET] ES FUZZY SEARCH: Got {len(es_fuzzy_results)} results")
                 return es_fuzzy_results
 
             # Fallback to in-memory fuzzy search
@@ -2468,24 +2468,24 @@ class HybridSearchService(BaseService, SearchService):
         try:
             # Get candidates for fuzzy matching (from watchlist or cache)
             candidates = await self._get_fuzzy_candidates()
-            print(f"🔍 FUZZY CANDIDATES: Got {len(candidates)} candidates")
+            print(f"[CHECK] FUZZY CANDIDATES: Got {len(candidates)} candidates")
             if candidates:
                 print(f"   Sample candidates: {candidates[:3]}")
 
             if not candidates:
-                print("❌ NO FUZZY CANDIDATES AVAILABLE")
+                print("[ERROR] NO FUZZY CANDIDATES AVAILABLE")
                 self.logger.debug("No candidates available for fuzzy search")
                 return []
 
             # Perform fuzzy search
-            print(f"🚀 PERFORMING FUZZY SEARCH: query='{query_text}'")
+            print(f"[INIT] PERFORMING FUZZY SEARCH: query='{query_text}'")
             fuzzy_results = await self._fuzzy_service.search_async(
                 query=query_text,
                 candidates=candidates,
                 doc_mapping=None,  # We'll map later
                 metadata_mapping=None
             )
-            print(f"✅ FUZZY SEARCH RESULTS: Got {len(fuzzy_results)} results")
+            print(f"[OK] FUZZY SEARCH RESULTS: Got {len(fuzzy_results)} results")
 
             # Convert fuzzy results to Candidates
             fuzzy_candidates = []
@@ -2567,24 +2567,24 @@ class HybridSearchService(BaseService, SearchService):
             force_reload = os.getenv("FORCE_RELOAD_SANCTIONS", "false").lower() == "true"
             if force_reload:
                 await self._sanctions_loader.clear_cache()
-                self.logger.warning("🗑️ Cleared sanctions cache due to FORCE_RELOAD_SANCTIONS")
+                self.logger.warning("[DELETE] Cleared sanctions cache due to FORCE_RELOAD_SANCTIONS")
 
             sanctions_candidates = await self._sanctions_loader.get_fuzzy_candidates()
 
             if sanctions_candidates:
                 candidates.extend(sanctions_candidates)
                 self._sanctions_loaded = True
-                self.logger.info(f"✅ Loaded {len(sanctions_candidates)} names from sanctions data for fuzzy search")
+                self.logger.info(f"[OK] Loaded {len(sanctions_candidates)} names from sanctions data for fuzzy search")
 
                 # Get additional stats
                 stats = await self._sanctions_loader.get_stats()
                 self.logger.info(f"Sanctions stats: {stats['persons']} persons, {stats['organizations']} orgs from {len(stats['sources'])} sources")
 
             else:
-                self.logger.warning("❌ No sanctions candidates loaded from primary source")
+                self.logger.warning("[ERROR] No sanctions candidates loaded from primary source")
 
         except Exception as e:
-            self.logger.error(f"❌ Failed to load sanctions data for fuzzy search: {e}")
+            self.logger.error(f"[ERROR] Failed to load sanctions data for fuzzy search: {e}")
             import traceback
             self.logger.error(f"Full traceback: {traceback.format_exc()}")
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Создание пустых индексов Elasticsearch
-Используется когда нет файлов с данными для загрузки
+Creating пустых indices Elasticsearch
+Используется когда нет files with data для загрузки
 """
 
 import argparse
@@ -18,7 +18,7 @@ import aiohttp
 
 async def create_ac_patterns_index(es_host: str, index_name: str) -> bool:
     """Создать индекс AC patterns с маппингами"""
-    print(f"🏗️  Создание индекса: {index_name}")
+    print(f"[BUILD]  Creating индекса: {index_name}")
 
     index_config = {
         "settings": {
@@ -63,7 +63,7 @@ async def create_ac_patterns_index(es_host: str, index_name: str) -> bool:
             # Проверяем существование индекса
             async with session.head(f"http://{es_host}/{index_name}") as response:
                 if response.status == 200:
-                    print(f"   ✅ Индекс уже существует")
+                    print(f"   [OK] Индекс уже существует")
                     return True
 
             # Создаём индекс
@@ -73,22 +73,22 @@ async def create_ac_patterns_index(es_host: str, index_name: str) -> bool:
                 headers={"Content-Type": "application/json"}
             ) as response:
                 if response.status == 200:
-                    print(f"   ✅ Индекс создан успешно")
+                    print(f"   [OK] Индекс создан успешно")
                     return True
                 else:
                     error_text = await response.text()
-                    print(f"   ❌ Ошибка создания: HTTP {response.status}")
+                    print(f"   [ERROR] Ошибка создания: HTTP {response.status}")
                     print(f"   {error_text}")
                     return False
 
     except Exception as e:
-        print(f"   ❌ Ошибка: {e}")
+        print(f"   [ERROR] Ошибка: {e}")
         return False
 
 
 async def create_vectors_index(es_host: str, index_name: str, vector_dim: int = 384) -> bool:
     """Создать индекс vectors с kNN маппингами"""
-    print(f"🏗️  Создание индекса: {index_name}")
+    print(f"[BUILD]  Creating индекса: {index_name}")
 
     index_config = {
         "settings": {
@@ -120,7 +120,7 @@ async def create_vectors_index(es_host: str, index_name: str, vector_dim: int = 
             # Проверяем существование индекса
             async with session.head(f"http://{es_host}/{index_name}") as response:
                 if response.status == 200:
-                    print(f"   ✅ Индекс уже существует")
+                    print(f"   [OK] Индекс уже существует")
                     return True
 
             # Создаём индекс
@@ -130,16 +130,16 @@ async def create_vectors_index(es_host: str, index_name: str, vector_dim: int = 
                 headers={"Content-Type": "application/json"}
             ) as response:
                 if response.status == 200:
-                    print(f"   ✅ Индекс создан успешно")
+                    print(f"   [OK] Индекс создан успешно")
                     return True
                 else:
                     error_text = await response.text()
-                    print(f"   ❌ Ошибка: HTTP {response.status}")
+                    print(f"   [ERROR] Ошибка: HTTP {response.status}")
                     print(f"   {error_text}")
                     return False
 
     except Exception as e:
-        print(f"   ❌ Ошибка: {e}")
+        print(f"   [ERROR] Ошибка: {e}")
         return False
 
 
@@ -149,7 +149,7 @@ async def main_async(args):
     prefix = args.index_prefix
 
     print("=" * 60)
-    print("СОЗДАНИЕ ПУСТЫХ ИНДЕКСОВ ELASTICSEARCH")
+    print("Creating ПУСТЫХ indices ELASTICSEARCH")
     print("=" * 60)
     print(f"Elasticsearch: {es_host}")
     print(f"Префикс: {prefix}")
@@ -164,13 +164,13 @@ async def main_async(args):
 
     print()
     if ac_success and vector_success:
-        print("✅ Все индексы созданы успешно")
+        print("[OK] All indices созданы успешно")
         return 0
     elif ac_success:
-        print("⚠️  Создан только AC индекс (vector индекс не создан)")
+        print("[WARN]  Создан Only AC индекс (vector индекс не создан)")
         return 0
     else:
-        print("❌ Не удалось создать индексы")
+        print("[ERROR] Не удалось создать индексы")
         return 1
 
 
@@ -188,19 +188,19 @@ def main():
     parser.add_argument(
         "--index-prefix",
         default="sanctions",
-        help="Префикс имён индексов (по умолчанию: sanctions)"
+        help="Префикс имён indices (по умолчанию: sanctions)"
     )
 
     parser.add_argument(
         "--vector-dim",
         type=int,
         default=384,
-        help="Размерность векторов (по умолчанию: 384)"
+        help="Размерность vectors (по умолчанию: 384)"
     )
 
     args = parser.parse_args()
 
-    # Запуск async main
+    # Start async main
     exit_code = asyncio.run(main_async(args))
     sys.exit(exit_code)
 
@@ -209,10 +209,10 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n⚠️  Прервано пользователем")
+        print("\n\n[WARN]  Прервано пользователем")
         sys.exit(1)
     except Exception as e:
-        print(f"\n\n❌ Ошибка: {e}")
+        print(f"\n\n[ERROR] Ошибка: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

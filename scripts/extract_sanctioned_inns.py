@@ -26,7 +26,7 @@ def extract_inns_from_sanctions():
         "files_processed": []
     }
 
-    print("🔍 EXTRACTING SANCTIONED INNs")
+    print("[CHECK] EXTRACTING SANCTIONED INNs")
     print("=" * 50)
 
     # Process sanctioned persons
@@ -240,7 +240,7 @@ def extract_inns_from_sanctions():
             stats["files_processed"].append(str(json_file))
 
         except Exception as e:
-            print(f"  ⚠️ Error processing {json_file}: {e}")
+            print(f"  [WARN] Error processing {json_file}: {e}")
 
     # Save INN cache
     output_file = data_dir / "sanctioned_inns_cache.json"
@@ -248,10 +248,10 @@ def extract_inns_from_sanctions():
         json.dump(inn_cache, f, ensure_ascii=False, indent=2)
 
     print("\n" + "=" * 50)
-    print("📊 EXTRACTION COMPLETE")
+    print("[STATS] EXTRACTION COMPLETE")
     print(f"📋 Persons processed: {stats['persons_processed']}")
     print(f"🏢 Companies processed: {stats['companies_processed']}")
-    print(f"🎯 INNs extracted: {stats['inns_extracted']}")
+    print(f"[TARGET] INNs extracted: {stats['inns_extracted']}")
     print(f"📁 Output file: {output_file}")
     print(f"📄 Files processed: {len(stats['files_processed'])}")
 
@@ -259,7 +259,7 @@ def extract_inns_from_sanctions():
         print(f"  - {file_path}")
 
     # Show sample entries
-    print("\n🔍 SAMPLE ENTRIES:")
+    print("\n[CHECK] SAMPLE ENTRIES:")
     for i, (inn, data) in enumerate(list(inn_cache.items())[:5]):
         print(f"  {inn}: {data['name']} ({data['type']})")
         if i >= 4:
@@ -273,8 +273,8 @@ def extract_inns_from_sanctions():
 if __name__ == "__main__":
     try:
         inn_cache, stats = extract_inns_from_sanctions()
-        print(f"\n✅ SUCCESS: {stats['inns_extracted']} sanctioned INNs cached")
+        print(f"\n[OK] SUCCESS: {stats['inns_extracted']} sanctioned INNs cached")
     except Exception as e:
-        print(f"\n❌ ERROR: {e}")
+        print(f"\n[ERROR] ERROR: {e}")
         import traceback
         traceback.print_exc()

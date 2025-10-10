@@ -54,13 +54,13 @@ def print_header(text: str):
 
 def print_step(step_num: int, text: str):
     """Print step indicator"""
-    print(f"\n🔹 Step {step_num}: {text}")
+    print(f"\n[STEP] Step {step_num}: {text}")
     print("-" * 50)
 
 
 def get_es_host_interactive() -> str:
     """Interactive ES host input"""
-    print_header("📍 ELASTICSEARCH CONNECTION")
+    print_header("[LOCATION] ELASTICSEARCH CONNECTION")
 
     print("Enter Elasticsearch host (examples):")
     print("  • localhost:9200        (local Docker)")
@@ -72,7 +72,7 @@ def get_es_host_interactive() -> str:
         es_host = input("Elasticsearch host: ").strip()
 
         if not es_host:
-            print("❌ Host cannot be empty")
+            print("[ERROR] Host cannot be empty")
             continue
 
         # Add http:// if not present
@@ -80,7 +80,7 @@ def get_es_host_interactive() -> str:
             es_host = f"http://{es_host}"
 
         # Confirm
-        print(f"\n📍 Will connect to: {es_host}")
+        print(f"\n[LOCATION] Will connect to: {es_host}")
         confirm = input("Correct? (y/n): ").strip().lower()
 
         if confirm == 'y':
@@ -98,31 +98,31 @@ async def check_elasticsearch_health(es_host: str) -> bool:
             async with session.get(f"{es_host}/_cluster/health", timeout=aiohttp.ClientTimeout(total=10)) as response:
                 if response.status == 200:
                     health = await response.json()
-                    print(f"✅ Cluster status: {health['status']}")
-                    print(f"✅ Cluster name: {health['cluster_name']}")
-                    print(f"✅ Nodes: {health['number_of_nodes']}")
-                    print(f"✅ Active shards: {health['active_primary_shards']}")
+                    print(f"[OK] Cluster status: {health['status']}")
+                    print(f"[OK] Cluster name: {health['cluster_name']}")
+                    print(f"[OK] Nodes: {health['number_of_nodes']}")
+                    print(f"[OK] Active shards: {health['active_primary_shards']}")
                     return True
                 else:
-                    print(f"❌ Health check failed: HTTP {response.status}")
+                    print(f"[ERROR] Health check failed: HTTP {response.status}")
                     return False
 
     except asyncio.TimeoutError:
-        print(f"❌ Connection timeout to {es_host}")
+        print(f"[ERROR] Connection timeout to {es_host}")
         print("   Check that Elasticsearch is running")
         return False
     except aiohttp.ClientConnectorError:
-        print(f"❌ Cannot connect to {es_host}")
+        print(f"[ERROR] Cannot connect to {es_host}")
         print("   Check host and port, ensure Elasticsearch is running")
         return False
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[ERROR] Error: {e}")
         return False
 
 
 async def create_ac_patterns_index(es_host: str, index_name: str) -> bool:
     """Create AC patterns index with mappings"""
-    print(f"\n🏗️  Creating index: {index_name}")
+    print(f"\n[BUILD]  Creating index: {index_name}")
 
     index_config = {
         "settings": {
@@ -167,18 +167,18 @@ async def create_ac_patterns_index(es_host: str, index_name: str) -> bool:
             # Check if index exists
             async with session.head(f"{es_host}/{index_name}") as response:
                 if response.status == 200:
-                    print(f"   ⚠️  Index already exists")
+                    print(f"   [WARN]  Index already exists")
                     overwrite = input(f"   Delete and recreate {index_name}? (y/n): ").strip().lower()
 
                     if overwrite == 'y':
                         async with session.delete(f"{es_host}/{index_name}") as del_response:
                             if del_response.status == 200:
-                                print(f"   🗑️  Deleted existing index")
+                                print(f"   [DELETE]  Deleted existing index")
                             else:
-                                print(f"   ❌ Failed to delete index: HTTP {del_response.status}")
+                                print(f"   [ERROR] Failed to delete index: HTTP {del_response.status}")
                                 return False
                     else:
-                        print(f"   ℹ️  Keeping existing index")
+                        print(f"   [INFO]  Keeping existing index")
                         return True
 
             # Create index
@@ -188,22 +188,22 @@ async def create_ac_patterns_index(es_host: str, index_name: str) -> bool:
                 headers={"Content-Type": "application/json"}
             ) as response:
                 if response.status == 200:
-                    print(f"   ✅ Index created successfully")
+                    print(f"   [OK] Index created successfully")
                     return True
                 else:
                     error_text = await response.text()
-                    print(f"   ❌ Failed to create index: HTTP {response.status}")
+                    print(f"   [ERROR] Failed to create index: HTTP {response.status}")
                     print(f"   {error_text}")
                     return False
 
     except Exception as e:
-        print(f"   ❌ Error: {e}")
+        print(f"   [ERROR] Error: {e}")
         return False
 
 
 async def create_vectors_index(es_host: str, index_name: str, vector_dim: int = 384) -> bool:
     """Create vectors index with kNN mappings"""
-    print(f"\n🏗️  Creating index: {index_name}")
+    print(f"\n[BUILD]  Creating index: {index_name}")
 
     index_config = {
         "settings": {
@@ -235,7 +235,7 @@ async def create_vectors_index(es_host: str, index_name: str, vector_dim: int = 
             # Check if index exists
             async with session.head(f"{es_host}/{index_name}") as response:
                 if response.status == 200:
-                    print(f"   ⚠️  Index already exists, skipping")
+                    print(f"   [WARN]  Index already exists, skipping")
                     return True
 
             # Create index
@@ -245,22 +245,22 @@ async def create_vectors_index(es_host: str, index_name: str, vector_dim: int = 
                 headers={"Content-Type": "application/json"}
             ) as response:
                 if response.status == 200:
-                    print(f"   ✅ Index created successfully")
+                    print(f"   [OK] Index created successfully")
                     return True
                 else:
                     error_text = await response.text()
-                    print(f"   ❌ Failed: HTTP {response.status}")
+                    print(f"   [ERROR] Failed: HTTP {response.status}")
                     print(f"   {error_text}")
                     return False
 
     except Exception as e:
-        print(f"   ❌ Error: {e}")
+        print(f"   [ERROR] Error: {e}")
         return False
 
 
 async def bulk_load_patterns(es_host: str, index_name: str, patterns_file: Path, batch_size: int = 5000) -> bool:
     """Bulk load AC patterns into Elasticsearch with batching"""
-    print(f"\n📦 Loading patterns from: {patterns_file.name}")
+    print(f"\n[DATA] Loading patterns from: {patterns_file.name}")
 
     try:
         with open(patterns_file, 'r', encoding='utf-8') as f:
@@ -270,17 +270,17 @@ async def bulk_load_patterns(es_host: str, index_name: str, patterns_file: Path,
         total = len(patterns)
 
         if total == 0:
-            print("   ⚠️  No patterns to load")
+            print("   [WARN]  No patterns to load")
             return True
 
-        print(f"   📊 Total patterns: {total:,}")
-        print(f"   📦 Batch size: {batch_size:,}")
+        print(f"   [STATS] Total patterns: {total:,}")
+        print(f"   [DATA] Batch size: {batch_size:,}")
 
         # Process in batches
         batches = [patterns[i:i + batch_size] for i in range(0, len(patterns), batch_size)]
         total_batches = len(batches)
 
-        print(f"   ⬆️  Uploading {total_batches} batches to Elasticsearch...")
+        print(f"   [UPLOAD]  Uploading {total_batches} batches to Elasticsearch...")
 
         async with aiohttp.ClientSession() as session:
             total_errors = 0
@@ -308,49 +308,49 @@ async def bulk_load_patterns(es_host: str, index_name: str, patterns_file: Path,
                             errors = [item for item in result['items'] if 'error' in item.get('index', {})]
                             total_errors += len(errors)
 
-                        print(f"      Batch {batch_num}/{total_batches}: ✅ {len(batch):,} patterns")
+                        print(f"      Batch {batch_num}/{total_batches}: [OK] {len(batch):,} patterns")
                     else:
                         error_text = await response.text()
-                        print(f"      Batch {batch_num}/{total_batches}: ❌ HTTP {response.status}")
+                        print(f"      Batch {batch_num}/{total_batches}: [ERROR] HTTP {response.status}")
                         print(f"      {error_text[:200]}")
                         return False
 
             if total_errors > 0:
-                print(f"   ⚠️  Loaded {total:,} patterns with {total_errors} errors")
+                print(f"   [WARN]  Loaded {total:,} patterns with {total_errors} errors")
             else:
-                print(f"   ✅ Successfully loaded {total:,} patterns")
+                print(f"   [OK] Successfully loaded {total:,} patterns")
 
             return True
 
     except FileNotFoundError:
-        print(f"   ❌ File not found: {patterns_file}")
+        print(f"   [ERROR] File not found: {patterns_file}")
         return False
     except Exception as e:
-        print(f"   ❌ Error: {e}")
+        print(f"   [ERROR] Error: {e}")
         return False
 
 
 async def bulk_load_vectors(es_host: str, index_name: str, vectors_file: Path, batch_size: int = 1000) -> bool:
     """Bulk load vector embeddings into Elasticsearch with batching"""
-    print(f"\n📦 Loading vectors from: {vectors_file.name}")
+    print(f"\n[DATA] Loading vectors from: {vectors_file.name}")
 
     try:
         with open(vectors_file, 'r', encoding='utf-8') as f:
             vectors_data = json.load(f)
 
         if not vectors_data:
-            print("   ⚠️  No vector data to load")
+            print("   [WARN]  No vector data to load")
             return True
 
         total = len(vectors_data)
-        print(f"   📊 Total vectors: {total:,}")
-        print(f"   📦 Batch size: {batch_size:,}")
+        print(f"   [STATS] Total vectors: {total:,}")
+        print(f"   [DATA] Batch size: {batch_size:,}")
 
         # Process in batches
         batches = [vectors_data[i:i + batch_size] for i in range(0, len(vectors_data), batch_size)]
         total_batches = len(batches)
 
-        print(f"   ⬆️  Uploading {total_batches} batches to Elasticsearch...")
+        print(f"   [UPLOAD]  Uploading {total_batches} batches to Elasticsearch...")
 
         async with aiohttp.ClientSession() as session:
             total_errors = 0
@@ -383,25 +383,25 @@ async def bulk_load_vectors(es_host: str, index_name: str, vectors_file: Path, b
                             errors = [item for item in result['items'] if 'error' in item.get('index', {})]
                             total_errors += len(errors)
 
-                        print(f"      Batch {batch_num}/{total_batches}: ✅ {len(batch):,} vectors")
+                        print(f"      Batch {batch_num}/{total_batches}: [OK] {len(batch):,} vectors")
                     else:
                         error_text = await response.text()
-                        print(f"      Batch {batch_num}/{total_batches}: ❌ HTTP {response.status}")
+                        print(f"      Batch {batch_num}/{total_batches}: [ERROR] HTTP {response.status}")
                         print(f"      {error_text[:200]}")
                         return False
 
             if total_errors > 0:
-                print(f"   ⚠️  Loaded {total:,} vectors with {total_errors} errors")
+                print(f"   [WARN]  Loaded {total:,} vectors with {total_errors} errors")
             else:
-                print(f"   ✅ Successfully loaded {total:,} vectors")
+                print(f"   [OK] Successfully loaded {total:,} vectors")
 
             return True
 
     except FileNotFoundError:
-        print(f"   ❌ File not found: {vectors_file}")
+        print(f"   [ERROR] File not found: {vectors_file}")
         return False
     except Exception as e:
-        print(f"   ❌ Error: {e}")
+        print(f"   [ERROR] Error: {e}")
         return False
 
 
@@ -419,19 +419,19 @@ async def verify_indices(es_host: str, expected_indices: List[str]) -> bool:
                     if response.status == 200:
                         result = await response.json()
                         count = result.get('count', 0)
-                        print(f"✅ {index:40} {count:,} documents")
+                        print(f"[OK] {index:40} {count:,} documents")
 
                         if count == 0:
-                            print(f"   ⚠️  Index is empty!")
+                            print(f"   [WARN]  Index is empty!")
                             all_ok = False
                     else:
-                        print(f"❌ {index:40} not found")
+                        print(f"[ERROR] {index:40} not found")
                         all_ok = False
 
             return all_ok
 
     except Exception as e:
-        print(f"❌ Error verifying indices: {e}")
+        print(f"[ERROR] Error verifying indices: {e}")
         return False
 
 
@@ -488,7 +488,7 @@ async def run_warmup_queries(es_host: str, index_name: str):
         }
     ]
 
-    print(f"🔥 Warming up index: {index_name}")
+    print(f"[HOT] Warming up index: {index_name}")
 
     try:
         async with aiohttp.ClientSession() as session:
@@ -501,14 +501,14 @@ async def run_warmup_queries(es_host: str, index_name: str):
                     if response.status == 200:
                         result = await response.json()
                         hits = result['hits']['total']['value']
-                        print(f"   ✅ {warmup['name']}: {hits} hits")
+                        print(f"   [OK] {warmup['name']}: {hits} hits")
                     else:
-                        print(f"   ⚠️  {warmup['name']}: query failed")
+                        print(f"   [WARN]  {warmup['name']}: query failed")
 
-        print("✅ Warmup complete")
+        print("[OK] Warmup complete")
 
     except Exception as e:
-        print(f"⚠️  Warmup error: {e}")
+        print(f"[WARN]  Warmup error: {e}")
 
 
 async def main_async(args):
@@ -522,12 +522,12 @@ async def main_async(args):
     else:
         es_host = get_es_host_interactive()
 
-    print_header("🚀 ELASTICSEARCH DEPLOYMENT")
-    print(f"📍 Elasticsearch: {es_host}")
+    print_header("[INIT] ELASTICSEARCH DEPLOYMENT")
+    print(f"[LOCATION] Elasticsearch: {es_host}")
 
     # Step 1: Health check
     if not await check_elasticsearch_health(es_host):
-        print("\n❌ Cannot proceed without healthy Elasticsearch cluster")
+        print("\n[ERROR] Cannot proceed without healthy Elasticsearch cluster")
         return 1
 
     # Step 2: Create indices
@@ -536,7 +536,7 @@ async def main_async(args):
     # AC patterns index
     ac_index = f"{args.index_prefix}_ac_patterns"
     if not await create_ac_patterns_index(es_host, ac_index):
-        print(f"❌ Failed to create AC patterns index")
+        print(f"[ERROR] Failed to create AC patterns index")
         return 1
 
     # Vectors index (if needed)
@@ -544,7 +544,7 @@ async def main_async(args):
     if args.create_vector_indices or args.vectors_file:
         vector_index = f"{args.index_prefix}_vectors"
         if not await create_vectors_index(es_host, vector_index):
-            print(f"❌ Failed to create vectors index")
+            print(f"[ERROR] Failed to create vectors index")
             return 1
 
     # Step 3: Load AC patterns
@@ -556,22 +556,22 @@ async def main_async(args):
         patterns_files = list(output_dir.glob("ac_patterns_*.json"))
 
         if not patterns_files:
-            print("❌ No AC patterns file found")
+            print("[ERROR] No AC patterns file found")
             print(f"   Run: python scripts/prepare_sanctions_data.py")
             return 1
 
         patterns_path = max(patterns_files, key=lambda p: p.stat().st_mtime)
-        print(f"ℹ️  Using latest patterns file: {patterns_path.name}")
+        print(f"[INFO]  Using latest patterns file: {patterns_path.name}")
 
     if not await bulk_load_patterns(es_host, ac_index, patterns_path):
-        print(f"❌ Failed to load patterns")
+        print(f"[ERROR] Failed to load patterns")
         return 1
 
     # Load vectors if file provided
     if vector_index and args.vectors_file:
         vectors_path = args.vectors_file
         if not await bulk_load_vectors(es_host, vector_index, vectors_path):
-            print(f"⚠️  Failed to load vectors (continuing anyway)")
+            print(f"[WARN]  Failed to load vectors (continuing anyway)")
     elif vector_index and not args.vectors_file:
         # Try to auto-detect vectors file
         output_dir = project_root / "output" / "sanctions"
@@ -579,11 +579,11 @@ async def main_async(args):
 
         if vectors_files:
             vectors_path = max(vectors_files, key=lambda p: p.stat().st_mtime)
-            print(f"ℹ️  Using latest vectors file: {vectors_path.name}")
+            print(f"[INFO]  Using latest vectors file: {vectors_path.name}")
             if not await bulk_load_vectors(es_host, vector_index, vectors_path):
-                print(f"⚠️  Failed to load vectors (continuing anyway)")
+                print(f"[WARN]  Failed to load vectors (continuing anyway)")
         else:
-            print("ℹ️  No vectors file found, skipping vector loading")
+            print("[INFO]  No vectors file found, skipping vector loading")
 
     # Step 4: Verify
     indices_to_verify = [ac_index]
@@ -591,19 +591,19 @@ async def main_async(args):
         indices_to_verify.append(vector_index)
 
     if not await verify_indices(es_host, indices_to_verify):
-        print("\n⚠️  Some indices have issues")
+        print("\n[WARN]  Some indices have issues")
 
     # Step 5: Warmup
     if not args.skip_warmup:
         await run_warmup_queries(es_host, ac_index)
 
     # Summary
-    print_header("✅ DEPLOYMENT COMPLETE")
-    print(f"📍 Elasticsearch: {es_host}")
+    print_header("[OK] DEPLOYMENT COMPLETE")
+    print(f"[LOCATION] Elasticsearch: {es_host}")
     print(f"📋 Indices created:")
     for idx in indices_to_verify:
         print(f"   • {idx}")
-    print(f"\n💡 Test search:")
+    print(f"\n[TIP] Test search:")
     print(f"   curl '{es_host}/{ac_index}/_search?q=pattern:путин&pretty'")
 
     return 0
@@ -668,10 +668,10 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n⚠️  Interrupted by user")
+        print("\n\n[WARN]  Interrupted by user")
         sys.exit(1)
     except Exception as e:
-        print(f"\n\n❌ Error: {e}")
+        print(f"\n\n[ERROR] Error: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

@@ -126,7 +126,7 @@ def main():
         persons_count = sum(1 for item in cache.values() if item.get('type') == 'person')
         orgs_count = sum(1 for item in cache.values() if item.get('type') == 'organization')
         
-        logger.info(f"✅ Cache generation completed!")
+        logger.info(f"[OK] Cache generation completed!")
         logger.info(f"   Total INNs: {len(cache)}")
         logger.info(f"   Persons: {persons_count}")
         logger.info(f"   Organizations: {orgs_count}")
@@ -135,12 +135,12 @@ def main():
         # Test lookup for the problematic INN
         test_inn = os.getenv("TEST_INN", "2839403975")
         if test_inn in cache:
-            logger.info(f"✅ Test INN {test_inn} found: {cache[test_inn].get('name')}")
+            logger.info(f"[OK] Test INN {test_inn} found: {cache[test_inn].get('name')}")
         else:
-            logger.warning(f"❌ Test INN {test_inn} not found in cache")
+            logger.warning(f"[ERROR] Test INN {test_inn} not found in cache")
         
     except Exception as e:
-        logger.error(f"❌ Failed to generate INN cache: {e}")
+        logger.error(f"[ERROR] Failed to generate INN cache: {e}")
         sys.exit(1)
 
 

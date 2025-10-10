@@ -48,7 +48,7 @@ async def test_entity_parsing():
         assert entities[1].normalized_name == "Test Org"
         assert entities[1].country == "US"
         
-        print("✅ JSONL parsing: PASS")
+        print("[OK] JSONL parsing: PASS")
         
     finally:
         os.unlink(jsonl_path)
@@ -77,7 +77,7 @@ async def test_entity_parsing():
         assert entities[0].normalized_name == "Test Person 2"
         assert entities[0].dob == "1990-01-01"
         
-        print("✅ YAML parsing: PASS")
+        print("[OK] YAML parsing: PASS")
         
     finally:
         os.unlink(yaml_path)
@@ -106,7 +106,7 @@ async def test_embedding_generation():
     assert entities[0].name_vector is not None
     assert len(entities[0].name_vector) == 384  # 384-dim vector
     
-    print("✅ Embedding generation: PASS")
+    print("[OK] Embedding generation: PASS")
 
 
 async def test_elasticsearch_document_conversion():
@@ -138,7 +138,7 @@ async def test_elasticsearch_document_conversion():
     }
     
     assert doc == expected
-    print("✅ Elasticsearch document conversion: PASS")
+    print("[OK] Elasticsearch document conversion: PASS")
 
 
 async def test_bulk_operations():
@@ -146,7 +146,7 @@ async def test_bulk_operations():
     print("Testing bulk operations...")
     
     # Skip bulk operations test for now due to mocking complexity
-    print("✅ Bulk operations: SKIP (mocking complexity)")
+    print("[OK] Bulk operations: SKIP (mocking complexity)")
 
 
 async def test_metrics():
@@ -166,7 +166,7 @@ async def test_metrics():
     assert metrics.get_success_rate() == 95.0  # 95/100 * 100
     assert metrics.get_cache_hit_rate() == 37.5  # 30/80 * 100
     
-    print("✅ Metrics calculation: PASS")
+    print("[OK] Metrics calculation: PASS")
 
 
 async def test_error_handling():
@@ -180,14 +180,14 @@ async def test_error_handling():
         entity = loader._parse_entity({"entity_id": "test"}, 1)
         assert False, "Should have raised ValueError"
     except ValueError:
-        print("✅ Invalid entity data handling: PASS")
+        print("[OK] Invalid entity data handling: PASS")
     
     # Test missing required fields
     try:
         entity = loader._parse_entity({"entity_type": "person"}, 1)
         assert False, "Should have raised ValueError"
     except ValueError:
-        print("✅ Missing required fields handling: PASS")
+        print("[OK] Missing required fields handling: PASS")
 
 
 async def run_all_tests():
@@ -202,11 +202,11 @@ async def run_all_tests():
         await test_metrics()
         await test_error_handling()
         
-        print("\n✅ All tests PASSED!")
+        print("\n[OK] All tests PASSED!")
         return True
         
     except Exception as e:
-        print(f"\n❌ Test failed: {e}")
+        print(f"\n[ERROR] Test failed: {e}")
         return False
 
 

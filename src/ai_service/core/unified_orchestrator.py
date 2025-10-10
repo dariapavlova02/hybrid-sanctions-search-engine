@@ -133,19 +133,19 @@ class UnifiedOrchestrator:
                 # Initialize the service (this may throw if Elasticsearch unavailable)
                 self.search_service.initialize()
 
-                logger.info("✅ Auto-initialized HybridSearchService (search enabled, no service provided)")
+                logger.info("[OK] Auto-initialized HybridSearchService (search enabled, no service provided)")
             except Exception as e:
-                logger.warning(f"❌ Failed to auto-initialize HybridSearchService: {e}")
-                logger.info("🔄 Falling back to MockSearchService for development/testing")
+                logger.warning(f"[ERROR] Failed to auto-initialize HybridSearchService: {e}")
+                logger.info("[PROGRESS] Falling back to MockSearchService for development/testing")
 
                 # Fallback to MockSearchService
                 try:
                     from ai_service.layers.search.mock_search_service import MockSearchService
                     self.search_service = MockSearchService()
                     self.search_service.initialize()
-                    logger.info("✅ MockSearchService initialized successfully - search escalation available")
+                    logger.info("[OK] MockSearchService initialized successfully - search escalation available")
                 except Exception as mock_e:
-                    logger.error(f"❌ Critical: Failed to initialize MockSearchService: {mock_e}")
+                    logger.error(f"[ERROR] Critical: Failed to initialize MockSearchService: {mock_e}")
                     self.search_service = None
 
         self.default_feature_flags = default_feature_flags or FeatureFlags()
@@ -642,7 +642,7 @@ class UnifiedOrchestrator:
                     # Fallback to original text if no org parts
                     if not query.strip():
                         query = original_text
-                        print(f"🔍 FALLBACK SEARCH: Using original text as query: '{query}'")
+                        print(f"[CHECK] FALLBACK SEARCH: Using original text as query: '{query}'")
 
                 # ENHANCED: Check for homoglyphs and generate permutations for better detection
                 search_queries = [query]  # Default to original query
@@ -664,15 +664,15 @@ class UnifiedOrchestrator:
                             # Generate permutations for improved detection
                             from ..utils.name_permutations import generate_homoglyph_permutations
                             search_queries = generate_homoglyph_permutations(original_query, normalized_query)
-                            print(f"🔄 HOMOGLYPH PERMUTATIONS: Trying {len(search_queries)} variants: {search_queries}")
+                            print(f"[PROGRESS] HOMOGLYPH PERMUTATIONS: Trying {len(search_queries)} variants: {search_queries}")
                         else:
                             logger.debug("Homoglyphs detected but no normalization needed")
                     else:
                         logger.debug("No homoglyphs detected in search query")
-                print(f"🔍 SEARCH DEBUG: query='{query}', search_service={self.search_service is not None}, SearchOpts={SearchOpts is not None}")
+                print(f"[CHECK] SEARCH DEBUG: query='{query}', search_service={self.search_service is not None}, SearchOpts={SearchOpts is not None}")
 
                 if query.strip() and SearchOpts:
-                    print(f"🚀 CALLING SEARCH: query='{query.strip()}'")
+                    print(f"[INIT] CALLING SEARCH: query='{query.strip()}'")
                     search_opts = SearchOpts(
                         top_k=10,
                         threshold=0.7,
@@ -695,7 +695,7 @@ class UnifiedOrchestrator:
                         try:
                             if is_homoglyph_case and len(search_queries) > 1:
                                 # Try all permutations for homoglyph cases
-                                print(f"🔄 HOMOGLYPH MULTI-SEARCH: Trying {len(search_queries)} permutations")
+                                print(f"[PROGRESS] HOMOGLYPH MULTI-SEARCH: Trying {len(search_queries)} permutations")
                                 all_results = []
                                 best_candidates = []
                                 best_score = 0.0
@@ -729,7 +729,7 @@ class UnifiedOrchestrator:
                                         print(f"   Permutation {i+1}: '{search_query}' → Error: {perm_e}")
 
                                 candidates.extend(best_candidates)
-                                print(f"✅ HOMOGLYPH SEARCH COMPLETED: {len(best_candidates)} candidates, best score: {best_score:.3f}")
+                                print(f"[OK] HOMOGLYPH SEARCH COMPLETED: {len(best_candidates)} candidates, best score: {best_score:.3f}")
                             else:
                                 # Normal search
                                 name_candidates = await self.search_service.find_candidates(
@@ -738,23 +738,23 @@ class UnifiedOrchestrator:
                                     opts=search_opts
                                 )
                                 candidates.extend(name_candidates)
-                                print(f"✅ NORMAL SEARCH COMPLETED: {len(name_candidates)} candidates")
+                                print(f"[OK] NORMAL SEARCH COMPLETED: {len(name_candidates)} candidates")
 
                             search_processing_time = (time.time() - search_start_time) * 1000
-                            print(f"✅ FULL SEARCH COMPLETED: {len(candidates) - len(id_candidates)} name candidates + {len(id_candidates)} ID candidates in {search_processing_time:.2f}ms")
+                            print(f"[OK] FULL SEARCH COMPLETED: {len(candidates) - len(id_candidates)} name candidates + {len(id_candidates)} ID candidates in {search_processing_time:.2f}ms")
                         except Exception as e:
                             search_processing_time = (time.time() - search_start_time) * 1000
-                            print(f"❌ FULL SEARCH FAILED: {e} after {search_processing_time:.2f}ms")
+                            print(f"[ERROR] FULL SEARCH FAILED: {e} after {search_processing_time:.2f}ms")
                             # Keep ID candidates even if name search fails
                     else:
-                        print(f"⚠️ SEARCH SERVICE IS NONE - using fallback fuzzy search")
+                        print(f"[WARN] SEARCH SERVICE IS NONE - using fallback fuzzy search")
                         search_processing_time = (time.time() - search_start_time) * 1000
 
                     # Fallback fuzzy search for critical names
                     if len(candidates) == 0:
                         candidates = self._emergency_fuzzy_search(query, original_text)
                         if len(candidates) > 0:
-                            print(f"🎯 EMERGENCY FUZZY FOUND: {len(candidates)} matches for '{query}'")
+                            print(f"[TARGET] EMERGENCY FUZZY FOUND: {len(candidates)} matches for '{query}'")
 
                     # Convert candidates to the expected search_results format
                     search_results = {
@@ -1685,7 +1685,7 @@ class UnifiedOrchestrator:
                     if not id_value:
                         continue
 
-                    print(f"🔍 Checking {id_type.upper()}: {id_value}")
+                    print(f"[CHECK] Checking {id_type.upper()}: {id_value}")
 
                     # Search in mock database for this ID
                     candidates = await self._find_candidates_by_id(id_value, id_type)
@@ -1695,7 +1695,7 @@ class UnifiedOrchestrator:
 
             return id_candidates
         except Exception as e:
-            print(f"❌ ID search failed: {e}")
+            print(f"[ERROR] ID search failed: {e}")
             return []
 
     async def _find_candidates_by_id(self, id_value: str, id_type: str) -> List[Dict[str, Any]]:
@@ -1761,7 +1761,7 @@ class UnifiedOrchestrator:
                                 "confidence": 1.0
                             }
                             candidates.append(candidate)
-                            print(f"✅ Mock match found: {test_person.text} ({field_name}: {id_value})")
+                            print(f"[OK] Mock match found: {test_person.text} ({field_name}: {id_value})")
                             break
 
                 return candidates
@@ -1769,7 +1769,7 @@ class UnifiedOrchestrator:
             return []
 
         except Exception as e:
-            print(f"❌ Find candidates by ID failed: {e}")
+            print(f"[ERROR] Find candidates by ID failed: {e}")
             return []
 
     def _emergency_fuzzy_search(self, query: str, original_text: str) -> list:

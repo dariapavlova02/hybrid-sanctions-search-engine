@@ -387,7 +387,7 @@ class TestPipelineEnd2End:
         assert result.processing_time < 0.5, \
             f"Processing too slow: {result.processing_time}s (should be < 0.5s for integration tests)"
 
-        logger.info(f"✅ {test_case.name} passed - processing time: {result.processing_time:.3f}s")
+        logger.info(f"[OK] {test_case.name} passed - processing time: {result.processing_time:.3f}s")
 
     @pytest.mark.asyncio
     async def test_normalization_flags_behavior(self):
@@ -415,7 +415,7 @@ class TestPipelineEnd2End:
         assert len(unique_results) > 1, \
             f"Flags should produce different results but all were identical: {normalized_results}"
 
-        logger.info(f"✅ Flags behavior test passed - {len(unique_results)} unique results from {len(flag_combinations)} flag combinations")
+        logger.info(f"[OK] Flags behavior test passed - {len(unique_results)} unique results from {len(flag_combinations)} flag combinations")
 
     @pytest.mark.asyncio
     async def test_performance_requirements(self):
@@ -435,7 +435,7 @@ class TestPipelineEnd2End:
             assert result.processing_time <= 0.01, \
                 f"Short text '{text}' processing too slow: {result.processing_time:.3f}s (should be ≤ 0.01s)"
 
-        logger.info("✅ Performance requirements test passed")
+        logger.info("[OK] Performance requirements test passed")
 
 
 # Standalone test runner
@@ -445,7 +445,7 @@ if __name__ == "__main__":
         test_instance = TestPipelineEnd2End()
         test_instance.setup_class()
 
-        print("🚀 Running End-to-End Integration Tests")
+        print("[INIT] Running End-to-End Integration Tests")
         print("=" * 60)
 
         passed = 0
@@ -455,21 +455,21 @@ if __name__ == "__main__":
             try:
                 await test_instance.test_pipeline_integration(test_case)
                 passed += 1
-                print(f"✅ {test_case.name}")
+                print(f"[OK] {test_case.name}")
             except Exception as e:
                 failed += 1
-                print(f"❌ {test_case.name}: {e}")
+                print(f"[ERROR] {test_case.name}: {e}")
 
         # Run additional tests
         try:
             await test_instance.test_normalization_flags_behavior()
             await test_instance.test_performance_requirements()
             passed += 2
-            print("✅ Flags behavior test")
-            print("✅ Performance requirements test")
+            print("[OK] Flags behavior test")
+            print("[OK] Performance requirements test")
         except Exception as e:
             failed += 2
-            print(f"❌ Additional tests failed: {e}")
+            print(f"[ERROR] Additional tests failed: {e}")
 
         print("\n" + "=" * 60)
         print(f"Results: {passed} passed, {failed} failed")

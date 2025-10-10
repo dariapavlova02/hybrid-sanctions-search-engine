@@ -3,29 +3,29 @@
 Full Deployment Pipeline
 ========================
 
-Полный цикл подготовки и развёртывания санкционных данных в Elasticsearch.
+Complete cycle of preparing and deploying sanctions data to Elasticsearch.
 
-Что делает:
-1. Проверяет исходные файлы (sanctioned_persons.json, sanctioned_companies.json, terrorism_black_list.json)
-2. Генерирует AC patterns из исходников
-3. Генерирует vector embeddings из AC patterns
-4. Создаёт индексы в Elasticsearch
-5. Загружает AC patterns в ES
-6. Загружает vectors в ES
-7. Делает warmup queries
-8. Проверяет результат
+What it does:
+1. Checks source files (sanctioned_persons.json, sanctioned_companies.json, terrorism_black_list.json)
+2. Generates AC patterns from source data
+3. Generates vector embeddings from AC patterns
+4. Creates indices in Elasticsearch
+5. Loads AC patterns into ES
+6. Loads vectors into ES
+7. Runs warmup queries
+8. Verifies results
 
 Usage:
-    # Полный цикл (локально)
+    # Full cycle (locally)
     python scripts/full_deployment_pipeline.py
 
-    # Полный цикл (на production)
+    # Full cycle (production)
     python scripts/full_deployment_pipeline.py --es-host elasticsearch:9200
 
-    # Пропустить подготовку данных (если уже есть)
+    # Skip data preparation (if already exists)
     python scripts/full_deployment_pipeline.py --skip-preparation
 
-    # Только подготовка (без загрузки в ES)
+    # Preparation only (without ES loading)
     python scripts/full_deployment_pipeline.py --prepare-only
 """
 
@@ -53,13 +53,13 @@ def print_header(text: str):
 
 def print_step(step_num: int, total_steps: int, text: str):
     """Print step indicator"""
-    print(f"\n🔹 Step {step_num}/{total_steps}: {text}")
+    print(f"\n[Step {step_num}/{total_steps}] {text}")
     print("-" * 70)
 
 
 def check_source_files() -> Dict[str, Path]:
-    """Проверка наличия исходных файлов"""
-    print_step(1, 7, "Проверка исходных файлов")
+    """Check source files existence"""
+    print_step(1, 7, "Checking source files")
 
     data_dir = project_root / "src" / "ai_service" / "data"
 
@@ -73,27 +73,27 @@ def check_source_files() -> Dict[str, Path]:
     for name, filepath in files.items():
         if filepath.exists():
             size_mb = filepath.stat().st_size / (1024 * 1024)
-            print(f"✅ {name:12} {filepath.name:45} ({size_mb:.1f} MB)")
+            print(f"[OK] {name:12} {filepath.name:45} ({size_mb:.1f} MB)")
         else:
-            print(f"❌ {name:12} {filepath.name:45} ОТСУТСТВУЕТ!")
+            print(f"[ERROR] {name:12} {filepath.name:45} MISSING!")
             all_exist = False
 
     if not all_exist:
-        print("\n❌ Не все исходные файлы найдены!")
-        print("   Убедитесь что файлы санкций находятся в src/ai_service/data/")
+        print("\n[ERROR] Not all source files found!")
+        print("   Ensure sanction files are in src/ai_service/data/")
         sys.exit(1)
 
     return files
 
 
 def prepare_sanctions_data(max_patterns: int = 200, skip_vectors: bool = False) -> Tuple[Path, Optional[Path]]:
-    """Подготовка данных: AC patterns + vectors"""
-    print_step(2, 7, "Подготовка AC patterns и векторов")
+    """Prepare data: AC patterns + vectors"""
+    print_step(2, 7, "Preparing AC patterns and vectors")
 
     output_dir = project_root / "output" / "sanctions"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Аргументы для prepare_sanctions_data.py
+    # Arguments for prepare_sanctions_data.py
     cmd = [
         sys.executable,
         str(project_root / "scripts" / "prepare_sanctions_data.py"),
@@ -104,32 +104,32 @@ def prepare_sanctions_data(max_patterns: int = 200, skip_vectors: bool = False) 
     if skip_vectors:
         cmd.append("--skip-vectors")
 
-    print(f"📝 Команда: {' '.join(cmd)}")
+    print(f"[CMD] {' '.join(cmd)}")
     print()
 
-    # Запуск подготовки
+    # Run preparation
     result = subprocess.run(cmd, capture_output=False, text=True)
 
     if result.returncode != 0:
-        print("\n❌ Подготовка данных завершилась с ошибкой!")
+        print("\n[ERROR] Data preparation failed!")
         sys.exit(1)
 
-    # Находим созданные файлы
+    # Find created files
     patterns_files = sorted(output_dir.glob("ac_patterns_*.json"), reverse=True)
     vectors_files = sorted(output_dir.glob("vectors_*.json"), reverse=True)
 
     if not patterns_files:
-        print("\n❌ AC patterns файл не найден!")
+        print("\n[ERROR] AC patterns file not found!")
         sys.exit(1)
 
     patterns_file = patterns_files[0]
     vectors_file = vectors_files[0] if vectors_files else None
 
-    print(f"\n✅ AC patterns: {patterns_file.name}")
+    print(f"\n[OK] AC patterns: {patterns_file.name}")
     if vectors_file:
-        print(f"✅ Vectors: {vectors_file.name}")
+        print(f"[OK] Vectors: {vectors_file.name}")
     else:
-        print(f"⚠️  Vectors не созданы (пропущены)")
+        print(f"[WARN] Vectors not created (skipped)")
 
     return patterns_file, vectors_file
 
@@ -140,8 +140,8 @@ def deploy_to_elasticsearch(
     vectors_file: Optional[Path],
     index_prefix: str = "sanctions"
 ) -> bool:
-    """Развёртывание в Elasticsearch"""
-    print_step(3, 7, "Развёртывание в Elasticsearch")
+    """Deployment в Elasticsearch"""
+    print_step(3, 7, "Deployment в Elasticsearch")
 
     cmd = [
         sys.executable,
@@ -157,22 +157,22 @@ def deploy_to_elasticsearch(
             "--create-vector-indices"
         ])
 
-    print(f"📝 Команда: {' '.join(cmd)}")
+    print(f"[CMD] Command: {' '.join(cmd)}")
     print()
 
     result = subprocess.run(cmd, capture_output=False, text=True)
 
     if result.returncode != 0:
-        print("\n❌ Развёртывание завершилось с ошибкой!")
+        print("\n[ERROR] Deployment завершилось с ошибкой!")
         return False
 
-    print("\n✅ Развёртывание завершено успешно")
+    print("\n[OK] Deployment completed successfully")
     return True
 
 
 def verify_deployment(es_host: str, index_prefix: str = "sanctions") -> bool:
-    """Проверка развёртывания"""
-    print_step(4, 7, "Проверка развёртывания")
+    """Check развёртывания"""
+    print_step(4, 7, "Check развёртывания")
 
     import aiohttp
 
@@ -182,31 +182,31 @@ def verify_deployment(es_host: str, index_prefix: str = "sanctions") -> bool:
 
         try:
             async with aiohttp.ClientSession() as session:
-                # Проверка AC patterns
+                # Check AC patterns
                 async with session.get(f"http://{es_host}/{ac_index}/_count") as response:
                     if response.status == 200:
                         data = await response.json()
                         ac_count = data.get('count', 0)
-                        print(f"✅ {ac_index:30} {ac_count:,} документов")
+                        print(f"[OK] {ac_index:30} {ac_count:,} documents")
                     else:
-                        print(f"❌ {ac_index:30} не найден")
+                        print(f"[ERROR] {ac_index:30} не found")
                         return False
 
-                # Проверка vectors
+                # Check vectors
                 async with session.get(f"http://{es_host}/{vector_index}/_count") as response:
                     if response.status == 200:
                         data = await response.json()
                         vector_count = data.get('count', 0)
                         if vector_count > 0:
-                            print(f"✅ {vector_index:30} {vector_count:,} документов")
+                            print(f"[OK] {vector_index:30} {vector_count:,} documents")
                         else:
-                            print(f"⚠️  {vector_index:30} пустой (векторы не загружены)")
+                            print(f"[WARN]  {vector_index:30} пустой (векторы не загружены)")
                     else:
-                        print(f"⚠️  {vector_index:30} не найден")
+                        print(f"[WARN]  {vector_index:30} не found")
 
                 return True
         except Exception as e:
-            print(f"❌ Ошибка проверки: {e}")
+            print(f"[ERROR] Ошибка проверки: {e}")
             return False
 
     return asyncio.run(check())
@@ -220,20 +220,20 @@ def print_summary(
     index_prefix: str
 ):
     """Вывод итоговой сводки"""
-    print_header("✅ РАЗВЁРТЫВАНИЕ ЗАВЕРШЕНО")
+    print_header("[OK] Deployment ЗАВЕРШЕНО")
 
     elapsed = time.time() - start_time
     elapsed_min = int(elapsed // 60)
     elapsed_sec = int(elapsed % 60)
 
-    print(f"⏱️  Время выполнения: {elapsed_min}m {elapsed_sec}s")
+    print(f"⏱️  Execution time: {elapsed_min}m {elapsed_sec}s")
     print()
-    print("📦 Созданные файлы:")
+    print("[DATA] Created files:")
     print(f"   • {patterns_file.name}")
     if vectors_file:
         print(f"   • {vectors_file.name}")
     print()
-    print("📍 Elasticsearch:")
+    print("[LOCATION] Elasticsearch:")
     print(f"   • Host: {es_host}")
     print(f"   • Индексы:")
     print(f"     - {index_prefix}_ac_patterns")
@@ -248,7 +248,7 @@ def print_summary(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Полный цикл подготовки и развёртывания санкционных данных",
+        description="Full cycle подreadyки и развёртывания санкционных data",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__
     )
@@ -262,75 +262,75 @@ def main():
     parser.add_argument(
         "--index-prefix",
         default="sanctions",
-        help="Префикс имён индексов (default: sanctions)"
+        help="Префикс имён indices (default: sanctions)"
     )
 
     parser.add_argument(
         "--max-patterns",
         type=int,
         default=200,
-        help="Максимум паттернов на entity (default: 200)"
+        help="Максимум patterns на entity (default: 200)"
     )
 
     parser.add_argument(
         "--skip-preparation",
         action="store_true",
-        help="Пропустить подготовку данных (использовать существующие файлы)"
+        help="Skip подreadyку data (использовать существующие файлы)"
     )
 
     parser.add_argument(
         "--skip-vectors",
         action="store_true",
-        help="Пропустить генерацию векторов (быстрее)"
+        help="Skip генерацию vectors (быстрее)"
     )
 
     parser.add_argument(
         "--prepare-only",
         action="store_true",
-        help="Только подготовка данных (без загрузки в ES)"
+        help="Only Preparation data (without loading в ES)"
     )
 
     args = parser.parse_args()
 
     start_time = time.time()
 
-    print_header("🚀 ПОЛНЫЙ ЦИКЛ РАЗВЁРТЫВАНИЯ САНКЦИОННЫХ ДАННЫХ")
-    print(f"📍 Elasticsearch: {args.es_host}")
-    print(f"📦 Index prefix: {args.index_prefix}")
+    print_header("[INIT] Full cycle РАЗВЁРТЫВАНИЯ САНКЦИОННЫХ data")
+    print(f"[LOCATION] Elasticsearch: {args.es_host}")
+    print(f"[DATA] Index prefix: {args.index_prefix}")
     print(f"⚙️  Max patterns: {args.max_patterns}")
 
     try:
-        # Step 1: Проверка исходных файлов
+        # Step 1: Check source files
         check_source_files()
 
-        # Step 2: Подготовка данных
+        # Step 2: Preparation data
         if args.skip_preparation:
-            print_step(2, 7, "Поиск существующих файлов")
+            print_step(2, 7, "Поиск существующих files")
             output_dir = project_root / "output" / "sanctions"
             patterns_files = sorted(output_dir.glob("ac_patterns_*.json"), reverse=True)
             vectors_files = sorted(output_dir.glob("vectors_*.json"), reverse=True)
 
             if not patterns_files:
-                print("❌ AC patterns файл не найден! Запустите без --skip-preparation")
+                print("[ERROR] AC patterns файл не found! Запустите без --skip-preparation")
                 sys.exit(1)
 
             patterns_file = patterns_files[0]
             vectors_file = vectors_files[0] if vectors_files else None
 
-            print(f"✅ Используем существующий: {patterns_file.name}")
+            print(f"[OK] Используем существующий: {patterns_file.name}")
             if vectors_file:
-                print(f"✅ Используем существующий: {vectors_file.name}")
+                print(f"[OK] Используем существующий: {vectors_file.name}")
         else:
             patterns_file, vectors_file = prepare_sanctions_data(
                 max_patterns=args.max_patterns,
                 skip_vectors=args.skip_vectors
             )
 
-        # Step 3: Развёртывание (если не prepare-only)
+        # Step 3: Deployment (если не prepare-only)
         if args.prepare_only:
-            print("\nℹ️  Режим prepare-only: развёртывание пропущено")
-            print(f"\n📦 Файлы готовы в: {patterns_file.parent}")
-            print(f"\n💡 Для развёртывания запустите:")
+            print("\n[INFO]  Режим prepare-only: Deployment пропущено")
+            print(f"\n[DATA] Файлы readyы в: {patterns_file.parent}")
+            print(f"\n[TIP] Для развёртывания запустите:")
             print(f"   python scripts/deploy_to_elasticsearch.py \\")
             print(f"     --es-host {args.es_host} \\")
             print(f"     --patterns-file {patterns_file} \\")
@@ -349,17 +349,17 @@ def main():
         if not success:
             sys.exit(1)
 
-        # Step 4: Проверка
+        # Step 4: Check
         verify_deployment(args.es_host, args.index_prefix)
 
         # Summary
         print_summary(start_time, patterns_file, vectors_file, args.es_host, args.index_prefix)
 
     except KeyboardInterrupt:
-        print("\n\n⚠️  Прервано пользователем")
+        print("\n\n[WARN]  Прервано пользователем")
         sys.exit(130)
     except Exception as e:
-        print(f"\n\n❌ Ошибка: {e}")
+        print(f"\n\n[ERROR] Ошибка: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

@@ -163,13 +163,13 @@ class SignalsService:
 
         # Логируем что в итоге передано в _get_entity_cores
         if normalization_result:
-            self.logger.info(f"🔍 SIGNALS DEBUG: normalization_result keys: {list(normalization_result.keys())}")
-            self.logger.info(f"🔍 SIGNALS DEBUG: persons_core present: {'persons_core' in normalization_result}")
-            print(f"🔍 SIGNALS DEBUG: normalization_result keys: {list(normalization_result.keys())}")
-            print(f"🔍 SIGNALS DEBUG: persons_core present: {'persons_core' in normalization_result}")
+            self.logger.info(f"[CHECK] SIGNALS DEBUG: normalization_result keys: {list(normalization_result.keys())}")
+            self.logger.info(f"[CHECK] SIGNALS DEBUG: persons_core present: {'persons_core' in normalization_result}")
+            print(f"[CHECK] SIGNALS DEBUG: normalization_result keys: {list(normalization_result.keys())}")
+            print(f"[CHECK] SIGNALS DEBUG: persons_core present: {'persons_core' in normalization_result}")
         else:
-            self.logger.warning(f"🔍 SIGNALS DEBUG: normalization_result is None/empty!")
-            print(f"🔍 SIGNALS DEBUG: normalization_result is None/empty!")
+            self.logger.warning(f"[CHECK] SIGNALS DEBUG: normalization_result is None/empty!")
+            print(f"[CHECK] SIGNALS DEBUG: normalization_result is None/empty!")
 
         # Сохраняем текст для proximity matching
         self._current_text = text
@@ -242,8 +242,8 @@ class SignalsService:
 
             # FALLBACK: если после фильтрации ничего не осталось, попробуем PersonExtractor
             if not persons_core:
-                self.logger.warning(f"⚠️ EMPTY AFTER FILTERING: Trying PersonExtractor as fallback")
-                print(f"⚠️ EMPTY AFTER FILTERING: Trying PersonExtractor as fallback")
+                self.logger.warning(f"[WARN] EMPTY AFTER FILTERING: Trying PersonExtractor as fallback")
+                print(f"[WARN] EMPTY AFTER FILTERING: Trying PersonExtractor as fallback")
                 fallback_persons = self.person_extractor.extract(text, language)
 
                 # Применяем такую же фильтрацию к fallback результатам
@@ -255,8 +255,8 @@ class SignalsService:
                     if filtered_tokens:
                         persons_core.append(filtered_tokens)
 
-                self.logger.info(f"⚠️ FALLBACK RESULT: persons_core: {persons_core}")
-                print(f"⚠️ FALLBACK RESULT: persons_core: {persons_core}")
+                self.logger.info(f"[WARN] FALLBACK RESULT: persons_core: {persons_core}")
+                print(f"[WARN] FALLBACK RESULT: persons_core: {persons_core}")
         else:
             # FALLBACK: используем PersonExtractor только если нет нормализованных данных
             self.logger.warning(f"🔴 SIGNALS FALLBACK: No persons_core in normalization_result, falling back to PersonExtractor. normalization_result keys: {list(normalization_result.keys()) if normalization_result else 'None'}")
@@ -486,9 +486,9 @@ class SignalsService:
         unique_org_ids = self._deduplicate_ids(all_org_ids)
         unique_person_ids = self._deduplicate_ids(all_person_ids)
 
-        self.logger.debug(f"🔍 ID ENRICHMENT: Found {len(unique_person_ids)} person IDs, {len(unique_org_ids)} org IDs")
+        self.logger.debug(f"[CHECK] ID ENRICHMENT: Found {len(unique_person_ids)} person IDs, {len(unique_org_ids)} org IDs")
         if unique_person_ids:
-            self.logger.debug(f"🔍 PERSON IDS: {[(p.get('type'), p.get('value'), p.get('source')) for p in unique_person_ids[:3]]}")
+            self.logger.debug(f"[CHECK] PERSON IDS: {[(p.get('type'), p.get('value'), p.get('source')) for p in unique_person_ids[:3]]}")
 
         # 5. Обогащаем персон и организации ID
         self._enrich_organizations_with_ids(organizations, unique_org_ids)
@@ -1543,14 +1543,14 @@ class SignalsService:
         from ...data.patterns.identifiers import validate_inn
         
         if not normalization_result or 'trace' not in normalization_result:
-            self.logger.debug("🔍 ID TRACE: No trace in normalization_result")
+            self.logger.debug("[CHECK] ID TRACE: No trace in normalization_result")
             return {'person_ids': [], 'organization_ids': []}
 
         trace = normalization_result['trace']
         person_ids = []
         organization_ids = []
 
-        self.logger.debug(f"🔍 ID TRACE: Processing {len(trace)} trace entries")
+        self.logger.debug(f"[CHECK] ID TRACE: Processing {len(trace)} trace entries")
 
         for entry in trace:
             # Ищем токены с ролью 'id'
@@ -1583,7 +1583,7 @@ class SignalsService:
                     person_ids.append(id_info.copy())
                     organization_ids.append(id_info.copy())
 
-                    self.logger.debug(f"🔍 ID TRACE: Found numeric ID '{token_text}' in trace")
+                    self.logger.debug(f"[CHECK] ID TRACE: Found numeric ID '{token_text}' in trace")
             
             # ИЩЕМ ИНН В NOTES - это фикс для проблемы когда ИНН отсекается нормализацией
             notes = entry.get('notes', '')
@@ -1616,16 +1616,16 @@ class SignalsService:
                             }
 
                             person_ids.append(inn_id_info.copy())
-                            self.logger.warning(f"🔍 ID TRACE: Found INN '{inn_value}' from marker_инн_nearby in trace (valid={is_valid})")
+                            self.logger.warning(f"[CHECK] ID TRACE: Found INN '{inn_value}' from marker_инн_nearby in trace (valid={is_valid})")
                             inn_found = True
                             break
 
                     # Если не нашли ИНН pattern, НЕ добавляем как numeric_id
                     # (это предотвращает дубликаты и неправильную типизацию)
                     if not inn_found:
-                        self.logger.debug(f"🔍 ID TRACE: Token '{token_text}' with marker_инн_nearby but no INN pattern match")
+                        self.logger.debug(f"[CHECK] ID TRACE: Token '{token_text}' with marker_инн_nearby but no INN pattern match")
 
-        self.logger.debug(f"🔍 ID TRACE: Extracted {len(person_ids)} person IDs, {len(organization_ids)} org IDs from trace")
+        self.logger.debug(f"[CHECK] ID TRACE: Extracted {len(person_ids)} person IDs, {len(organization_ids)} org IDs from trace")
         return {'person_ids': person_ids, 'organization_ids': organization_ids}
 
     def _deduplicate_ids(self, ids: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -1663,7 +1663,7 @@ class SignalsService:
             best_id = group[0]
             unique_ids.append(best_id)
 
-            self.logger.debug(f"🔍 ID DEDUP: Selected {best_id.get('source', 'regex')} source for ID '{value}'")
+            self.logger.debug(f"[CHECK] ID DEDUP: Selected {best_id.get('source', 'regex')} source for ID '{value}'")
 
         return unique_ids
 
@@ -1700,7 +1700,7 @@ class SignalsService:
             all_ids_to_check = []
 
             # Добавляем person IDs с правильной валидацией
-            self.logger.warning(f"🔍 FAST PATH INPUT: Processing {len(person_ids)} person IDs")
+            self.logger.warning(f"[CHECK] FAST PATH INPUT: Processing {len(person_ids)} person IDs")
             for idx, id_info in enumerate(person_ids):
                 id_value = id_info.get('value', '')
                 id_type = id_info.get('type', '')
@@ -1708,7 +1708,7 @@ class SignalsService:
                 id_source = id_info.get('source', 'unknown')
 
                 self.logger.warning(
-                    f"🔍 FAST PATH [{idx+1}/{len(person_ids)}]: "
+                    f"[CHECK] FAST PATH [{idx+1}/{len(person_ids)}]: "
                     f"value='{id_value}' type='{id_type}' valid={is_valid} source={id_source}"
                 )
 
@@ -1719,16 +1719,16 @@ class SignalsService:
                         # Добавляем в проверку ВСЕГДА, даже если формально невалидный
                         all_ids_to_check.append((id_value, 'person', id_info))
                         self.logger.warning(
-                            f"✅ FAST PATH: Added INN for sanction check: {id_value} "
+                            f"[OK] FAST PATH: Added INN for sanction check: {id_value} "
                             f"(type: {id_type}, valid={is_valid}, will check anyway)"
                         )
                     # Для остальных типов ID проверяем по старой логике
                     elif len(id_value) >= 10 and id_info.get('valid', True):
                         all_ids_to_check.append((id_value, 'person', id_info))
-                        self.logger.debug(f"🚀 FAST PATH: Added valid ID for sanction check: {id_value} (type: {id_type})")
+                        self.logger.debug(f"[INIT] FAST PATH: Added valid ID for sanction check: {id_value} (type: {id_type})")
                     else:
                         self.logger.warning(
-                            f"⚠️ FAST PATH SKIP: ID '{id_value}' not added "
+                            f"[WARN] FAST PATH SKIP: ID '{id_value}' not added "
                             f"(type={id_type}, len={len(id_value)}, valid={is_valid})"
                         )
 
@@ -1741,11 +1741,11 @@ class SignalsService:
             if not all_ids_to_check:
                 return
 
-            self.logger.warning(f"🚀 FAST PATH: Checking {len(all_ids_to_check)} IDs against sanctions cache")
+            self.logger.warning(f"[INIT] FAST PATH: Checking {len(all_ids_to_check)} IDs against sanctions cache")
             if all_ids_to_check:
-                self.logger.warning(f"🚀 FAST PATH: IDs to check: {[(id_value, entity_type, id_info.get('type', 'unknown')) for id_value, entity_type, id_info in all_ids_to_check[:5]]}")
+                self.logger.warning(f"[INIT] FAST PATH: IDs to check: {[(id_value, entity_type, id_info.get('type', 'unknown')) for id_value, entity_type, id_info in all_ids_to_check[:5]]}")
             else:
-                self.logger.warning("🚀 FAST PATH: No IDs to check - this is the problem!")
+                self.logger.warning("[INIT] FAST PATH: No IDs to check - this is the problem!")
 
             # Проверяем каждый ID в cache
             sanctioned_matches = 0
@@ -1773,7 +1773,7 @@ class SignalsService:
             if sanctioned_matches > 0:
                 self.logger.warning(f"🚨 FAST PATH: Found {sanctioned_matches} sanctioned ID matches in cache")
             else:
-                self.logger.debug("✅ FAST PATH: No sanctions found in INN cache")
+                self.logger.debug("[OK] FAST PATH: No sanctions found in INN cache")
 
         except ImportError:
             self.logger.warning("INN cache not available - falling back to regular search")

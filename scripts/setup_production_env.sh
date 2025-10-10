@@ -5,7 +5,7 @@
 echo "🔧 Настройка environment variables для production..."
 
 # 1. КРИТИЧНО: Elasticsearch credentials (убраны hardcoded!)
-echo "⚠️  ВНИМАНИЕ: Установи РЕАЛЬНЫЕ credentials для Elasticsearch:"
+echo "[WARN]  ВНИМАНИЕ: Установи РЕАЛЬНЫЕ credentials для Elasticsearch:"
 
 read -p "ES_HOST (например, localhost или IP): " ES_HOST
 read -p "ES_USERNAME: " ES_USERNAME
@@ -17,7 +17,7 @@ echo "🔑 Генерирую безопасный Admin API ключ..."
 ADMIN_API_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))" 2>/dev/null)
 
 if [ -z "$ADMIN_API_KEY" ]; then
-    echo "❌ Python не найден, используй этот ключ:"
+    echo "[ERROR] Python не найден, используй этот ключ:"
     ADMIN_API_KEY="MANUALLY-SET-32-CHAR-SECURE-KEY-HERE"
 fi
 
@@ -44,7 +44,7 @@ MAX_REQUESTS_PER_MINUTE=6000
 
 EOF
 
-echo "✅ Создан файл .env.production.server"
+echo "[OK] Создан файл .env.production.server"
 
 # 4. Экспортируем переменные в текущую сессию
 export ES_HOST="${ES_HOST}"
@@ -53,19 +53,19 @@ export ES_PASSWORD="${ES_PASSWORD}"
 export ES_VERIFY_CERTS=true
 export ADMIN_API_KEY="${ADMIN_API_KEY}"
 
-echo "✅ Переменные экспортированы в текущую сессию"
+echo "[OK] Переменные экспортированы в текущую сессию"
 
 # 5. Генерируем INN cache для FAST PATH оптимизации
-echo "🚀 Генерирую INN cache для быстрой проверки санкций..."
+echo "[INIT] Генерирую INN cache для быстрой проверки санкций..."
 if python3 scripts/extract_sanctioned_inns.py; then
-    echo "✅ INN cache успешно сгенерирован с полным покрытием (persons, companies, terrorism)"
+    echo "[OK] INN cache успешно сгенерирован с полным покрытием (persons, companies, terrorism)"
 else
-    echo "⚠️  Предупреждение: Не удалось сгенерировать INN cache, будет использоваться обычный поиск"
+    echo "[WARN]  Предупреждение: Не удалось сгенерировать INN cache, будет использоваться обычный поиск"
 fi
 
 # 6. Показываем что нужно сделать дальше
 echo ""
-echo "🎯 ЧТО ДЕЛАТЬ ДАЛЬШЕ:"
+echo "[TARGET] ЧТО ДЕЛАТЬ ДАЛЬШЕ:"
 echo "1. Проверь, что Elasticsearch доступен:"
 echo "   curl -u $ES_USERNAME:$ES_PASSWORD http://$ES_HOST:9200/_cluster/health"
 echo ""

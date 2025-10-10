@@ -16,7 +16,7 @@ from ai_service.config.settings import ServiceConfig
 
 def test_strict_name_extraction():
     """Строгий тест извлечения имен без моков."""
-    print("🔍 Strict Name Extraction Test (No Mocks)")
+    print("[CHECK] Strict Name Extraction Test (No Mocks)")
     print("=" * 60)
     
     # Создаем реальный сервис без моков
@@ -29,7 +29,7 @@ def test_strict_name_extraction():
     
     # orchestrator = CleanOrchestratorService(config)  # Class not found
     # For now, skip this test as it requires proper service initialization
-    print("⚠️  Skipping test - CleanOrchestratorService not available")
+    print("[WARN]  Skipping test - CleanOrchestratorService not available")
     return
     
     # Тестовый случай: "Оплата от Петра Порошенка по Договору 123"
@@ -82,11 +82,11 @@ def test_strict_name_extraction():
     distance = abs(petro_pos - pорошенко_pos)
     assert distance <= 20, f"Names 'петро' and 'порошенко' are too far apart (distance: {distance})"
     
-    print("✅ All strict checks passed!")
-    print(f"✅ 'петро' found at position {petro_pos}")
-    print(f"✅ 'порошенко' found at position {pорошенко_pos}")
-    print(f"✅ Distance between names: {distance} characters")
-    print(f"✅ Original genitive forms 'петра' and 'порошенка' were correctly normalized")
+    print("[OK] All strict checks passed!")
+    print(f"[OK] 'петро' found at position {petro_pos}")
+    print(f"[OK] 'порошенко' found at position {pорошенко_pos}")
+    print(f"[OK] Distance between names: {distance} characters")
+    print(f"[OK] Original genitive forms 'петра' and 'порошенка' were correctly normalized")
     
     return result
 

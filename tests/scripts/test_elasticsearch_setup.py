@@ -140,10 +140,10 @@ async def test_elasticsearch_setup():
         ]
         
         if all(all_tests):
-            print("\n✅ All tests PASSED!")
+            print("\n[OK] All tests PASSED!")
             return True
         else:
-            print("\n❌ Some tests FAILED!")
+            print("\n[ERROR] Some tests FAILED!")
             return False
 
 

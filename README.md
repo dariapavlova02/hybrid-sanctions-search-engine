@@ -60,6 +60,74 @@ make docker-run
 docker-compose up ai-service
 ```
 
+## 🔍 Elasticsearch Deployment
+
+### Quick Start
+
+For complete deployment (data preparation + Elasticsearch loading):
+
+```bash
+# Inside Docker container (recommended for production)
+docker exec ai-service-prod python scripts/full_deployment_pipeline.py \
+  --es-host elasticsearch:9200
+```
+
+Or automatic initialization on Docker startup:
+
+```bash
+# Simply start the container - entrypoint handles everything
+docker-compose up -d
+
+# Check logs to verify initialization
+docker logs ai-service
+```
+
+### What Gets Deployed
+
+- **AC Patterns Index** (`sanctions_ac_patterns`): ~2.7M Aho-Corasick patterns for exact/fuzzy matching
+- **Vectors Index** (`sanctions_vectors`): ~10K sentence-transformer embeddings for semantic search
+
+### Deployment Options
+
+**Option 1: Automatic (Docker Entrypoint)** - Simplest for production
+```bash
+docker-compose down && docker-compose up -d
+# ✅ docker-entrypoint.sh automatically loads data on startup
+```
+
+**Option 2: Manual Pipeline** - Full control over deployment
+```bash
+# Prepare data files
+python scripts/prepare_sanctions_data.py
+
+# Deploy to Elasticsearch
+python scripts/deploy_to_elasticsearch.py --es-host localhost:9200
+```
+
+**Option 3: Complete Pipeline** - One command for everything
+```bash
+docker exec ai-service-prod python scripts/full_deployment_pipeline.py \
+  --es-host elasticsearch:9200
+```
+
+### Verification
+
+```bash
+# Check indices
+curl http://localhost:9200/_cat/indices?v | grep sanctions
+
+# Expected output:
+# green open sanctions_ac_patterns 1 0 2768827
+# green open sanctions_vectors     1 0   10000
+
+# Test search
+curl -X POST http://localhost:8000/search \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Петров", "search_type": "hybrid"}'
+```
+
+📖 **Full Guide**: See [ELASTICSEARCH_DEPLOYMENT.md](./ELASTICSEARCH_DEPLOYMENT.md) for detailed deployment instructions, troubleshooting, and configuration options.
+
 ## 📚 API Documentation
 
 ### Core Endpoints
@@ -181,17 +249,41 @@ Access at `http://localhost:3000` (admin/admin)
 ### Production Deployment
 
 ```bash
-# Production image
-docker build -f Dockerfile.prod -t ai-service:latest .
 
-# Run with limits
-docker run -d \
-  --name ai-service \
-  -p 8000:8000 \
-  --memory=4g \
-  --cpus=2 \
-  --env-file env.production \
-  ai-service:latest
+# Pull latest code
+git pull origin main
+
+# Rebuild and restart (automatic ES initialization)
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
+
+# ✅ docker-entrypoint.sh will automatically:
+#    1. Wait for Elasticsearch to be ready
+#    2. Find data files in output/sanctions/
+#    3. Create indices: sanctions_ac_patterns, sanctions_vectors
+#    4. Load ~2.7M AC patterns (batch 5000, ~30-60s)
+#    5. Load ~10K vectors (batch 1000, ~10-20s)
+#    6. Run warmup queries
+#    7. Start the application
+
+# Verify deployment
+docker logs ai-service-prod | head -100
+curl http://localhost:9200/_cat/indices?v | grep sanctions
+```
+
+### Manual Data Loading (Inside Container)
+
+```bash
+# When you need manual control over deployment
+docker exec -it ai-service-prod python scripts/full_deployment_pipeline.py \
+  --es-host elasticsearch:9200
+
+# This runs complete chain:
+# 1. Check source files
+# 2. Generate AC patterns + vectors (if needed)
+# 3. Deploy to Elasticsearch
+# 4. Verify deployment
 ```
 
 ### Docker Compose

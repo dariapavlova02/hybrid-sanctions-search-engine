@@ -22,9 +22,9 @@ try:
     from ai_service.layers.unicode.unicode_service import UnicodeService
     from ai_service.layers.language.language_detection_service import LanguageDetectionService
     from ai_service.config import SERVICE_CONFIG
-    print("✅ Core services imported successfully")
+    print("[OK] Core services imported successfully")
 except ImportError as e:
-    print(f"❌ Import failed: {e}")
+    print(f"[ERROR] Import failed: {e}")
     sys.exit(1)
 
 
@@ -68,7 +68,7 @@ class SimpleIntegrationRunner:
 
     async def _test_normalization_service(self):
         """Test normalization service with golden test cases."""
-        print("\n📝 Testing Normalization Service")
+        print("\n[CMD] Testing Normalization Service")
 
         test_cases = [
             {
@@ -123,16 +123,16 @@ class SimpleIntegrationRunner:
                 self._record_result(test_case["id"], test_case["description"], passed, errors)
 
                 if passed:
-                    print(f"  ✅ {test_case['id']}: {test_case['description']}")
+                    print(f"  [OK] {test_case['id']}: {test_case['description']}")
                     print(f"     Input: '{test_case['input']}'")
                     print(f"     Output: '{result.normalized}'")
                     print(f"     Tokens: {result.tokens}")
                 else:
-                    print(f"  ❌ {test_case['id']}: {test_case['description']}")
+                    print(f"  [ERROR] {test_case['id']}: {test_case['description']}")
                     print(f"     Errors: {errors}")
 
             except Exception as e:
-                print(f"  🔥 {test_case['id']}: Error - {e}")
+                print(f"  [HOT] {test_case['id']}: Error - {e}")
                 self._record_result(test_case["id"], test_case["description"], False, [str(e)])
 
     async def _test_language_detection(self):
@@ -156,12 +156,12 @@ class SimpleIntegrationRunner:
                 self._record_result(test_case["id"], f"Language detection: {test_case['input']}", passed, errors)
 
                 if passed:
-                    print(f"  ✅ {test_case['id']}: '{test_case['input']}' → {detected_lang}")
+                    print(f"  [OK] {test_case['id']}: '{test_case['input']}' → {detected_lang}")
                 else:
-                    print(f"  ❌ {test_case['id']}: '{test_case['input']}' → {detected_lang} (expected {test_case['expected']})")
+                    print(f"  [ERROR] {test_case['id']}: '{test_case['input']}' → {detected_lang} (expected {test_case['expected']})")
 
             except Exception as e:
-                print(f"  🔥 {test_case['id']}: Error - {e}")
+                print(f"  [HOT] {test_case['id']}: Error - {e}")
                 self._record_result(test_case["id"], f"Language detection: {test_case['input']}", False, [str(e)])
 
     async def _test_unicode_service(self):
@@ -185,12 +185,12 @@ class SimpleIntegrationRunner:
                 self._record_result(test_case["id"], test_case["description"], passed, errors)
 
                 if passed:
-                    print(f"  ✅ {test_case['id']}: '{test_case['input']}' → '{normalized_text}'")
+                    print(f"  [OK] {test_case['id']}: '{test_case['input']}' → '{normalized_text}'")
                 else:
-                    print(f"  ❌ {test_case['id']}: '{test_case['input']}' → Empty result")
+                    print(f"  [ERROR] {test_case['id']}: '{test_case['input']}' → Empty result")
 
             except Exception as e:
-                print(f"  🔥 {test_case['id']}: Error - {e}")
+                print(f"  [HOT] {test_case['id']}: Error - {e}")
                 self._record_result(test_case["id"], test_case["description"], False, [str(e)])
 
     async def _test_signals_service(self):
@@ -234,18 +234,18 @@ class SimpleIntegrationRunner:
                 self._record_result(test_case["id"], test_case["description"], passed, errors)
 
                 if passed:
-                    print(f"  ✅ {test_case['id']}: {test_case['description']}")
+                    print(f"  [OK] {test_case['id']}: {test_case['description']}")
                     print(f"     Confidence: {result.confidence:.2f}")
                     if hasattr(result, 'organizations') and result.organizations:
                         print(f"     Organizations: {len(result.organizations)}")
                     if hasattr(result, 'persons') and result.persons:
                         print(f"     Persons: {len(result.persons)}")
                 else:
-                    print(f"  ❌ {test_case['id']}: {test_case['description']}")
+                    print(f"  [ERROR] {test_case['id']}: {test_case['description']}")
                     print(f"     No signals detected")
 
             except Exception as e:
-                print(f"  🔥 {test_case['id']}: Error - {e}")
+                print(f"  [HOT] {test_case['id']}: Error - {e}")
                 self._record_result(test_case["id"], test_case["description"], False, [str(e)])
 
     def _record_result(self, test_id: str, description: str, passed: bool, errors: List[str]):
@@ -268,22 +268,22 @@ class SimpleIntegrationRunner:
         success_rate = (self.results["passed"] / total * 100) if total > 0 else 0
 
         print(f"\n{'='*60}")
-        print(f"📊 CORE SERVICES TEST SUMMARY")
+        print(f"[STATS] CORE SERVICES TEST SUMMARY")
         print(f"{'='*60}")
         print(f"Total tests: {total}")
-        print(f"✅ Passed: {self.results['passed']}")
-        print(f"❌ Failed: {self.results['failed']}")
+        print(f"[OK] Passed: {self.results['passed']}")
+        print(f"[ERROR] Failed: {self.results['failed']}")
         print(f"Success rate: {success_rate:.1f}%")
 
         if self.results["failed"] > 0:
-            print(f"\n🔍 Failed test details:")
+            print(f"\n[CHECK] Failed test details:")
             for detail in self.results["details"]:
                 if not detail["passed"]:
                     print(f"  {detail['id']}: {detail['errors']}")
 
     async def test_specific_golden_cases(self):
         """Test specific cases from golden suite that can work with available services."""
-        print("\n🎯 Testing Selected Golden Test Cases")
+        print("\n[TARGET] Testing Selected Golden Test Cases")
         print("=" * 60)
 
         # Find testable cases from golden suite
@@ -318,10 +318,10 @@ class SimpleIntegrationRunner:
                 print(f"   Detected language: {detected_lang} (confidence: {confidence:.2f})")
 
                 self._record_result(test_case["id"], test_case["description"], True, [])
-                print(f"   ✅ Golden case processed successfully")
+                print(f"   [OK] Golden case processed successfully")
 
             except Exception as e:
-                print(f"   🔥 Error processing golden case: {e}")
+                print(f"   [HOT] Error processing golden case: {e}")
                 self._record_result(test_case["id"], test_case["description"], False, [str(e)])
 
 
@@ -330,7 +330,7 @@ async def main():
     suite_file = Path(__file__).parent / "golden_suite.json"
     runner = SimpleIntegrationRunner(suite_file)
 
-    print("🎯 Simple Integration Testing with Available AI Services")
+    print("[TARGET] Simple Integration Testing with Available AI Services")
     print("=" * 60)
 
     # Test core services functionality

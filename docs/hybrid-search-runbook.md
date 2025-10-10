@@ -819,16 +819,3 @@ docker logs search-prometheus
 docker logs search-grafana
 ```
 
----
-
-## Support Contacts
-
-- **Development Team**: dev-team@company.com
-- **SRE Team**: sre-team@company.com
-- **Emergency**: +1-555-EMERGENCY
-
-## Document Version
-
-- **Version**: 1.0
-- **Last Updated**: 2024-01-15
-- **Author**: AI Service Team

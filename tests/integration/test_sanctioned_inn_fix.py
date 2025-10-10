@@ -29,9 +29,9 @@ async def test_sanctioned_inn_detection():
     # Exact production request
     text = "Дарья ПАвлова ИНН 2839403975"
 
-    print(f"\n📝 Input text: {text}")
-    print(f"🎯 Expected: INN 2839403975 should be found and marked as sanctioned")
-    print(f"🎯 Expected: INN should have type='inn' (not 'numeric_id')\n")
+    print(f"\n[CMD] Input text: {text}")
+    print(f"[TARGET] Expected: INN 2839403975 should be found and marked as sanctioned")
+    print(f"[TARGET] Expected: INN should have type='inn' (not 'numeric_id')\n")
 
     # Step 1: Normalization
     print("\n" + "=" * 80)
@@ -47,9 +47,9 @@ async def test_sanctioned_inn_detection():
         enable_advanced_features=True
     )
 
-    print(f"\n✅ Normalized text: {norm_result.normalized}")
-    print(f"✅ Tokens: {norm_result.tokens}")
-    print(f"✅ Trace entries: {len(norm_result.trace)}")
+    print(f"\n[OK] Normalized text: {norm_result.normalized}")
+    print(f"[OK] Tokens: {norm_result.tokens}")
+    print(f"[OK] Trace entries: {len(norm_result.trace)}")
 
     # Check for INN marker in trace
     inn_marker_found = False
@@ -65,10 +65,10 @@ async def test_sanctioned_inn_detection():
         notes = entry_dict.get('notes', '')
         if 'marker_инн_nearby' in notes or 'marker_inn_nearby' in notes:
             inn_marker_found = True
-            print(f"\n✅ Found INN marker in trace: token='{entry_dict.get('token')}' notes='{notes}'")
+            print(f"\n[OK] Found INN marker in trace: token='{entry_dict.get('token')}' notes='{notes}'")
 
     if not inn_marker_found:
-        print("\n⚠️  No INN marker found in normalization trace!")
+        print("\n[WARN]  No INN marker found in normalization trace!")
 
     # Step 2: Signals Extraction
     print("\n" + "=" * 80)
@@ -82,8 +82,8 @@ async def test_sanctioned_inn_detection():
         language="ru"
     )
 
-    print(f"\n✅ Persons found: {len(signals_result['persons'])}")
-    print(f"✅ Overall confidence: {signals_result['confidence']}")
+    print(f"\n[OK] Persons found: {len(signals_result['persons'])}")
+    print(f"[OK] Overall confidence: {signals_result['confidence']}")
 
     # Check persons and IDs
     persons = signals_result['persons']
@@ -109,10 +109,10 @@ async def test_sanctioned_inn_detection():
 
     # Check 1: At least one person found
     if len(persons) == 0:
-        print("❌ FAIL: No persons found in signals")
+        print("[ERROR] FAIL: No persons found in signals")
         success = False
     else:
-        print(f"✅ PASS: Found {len(persons)} person(s)")
+        print(f"[OK] PASS: Found {len(persons)} person(s)")
 
     # Check 2: INN 2839403975 extracted with correct type
     inn_found = False
@@ -127,40 +127,40 @@ async def test_sanctioned_inn_detection():
 
                 if id_type == 'inn':
                     inn_correct_type = True
-                    print(f"✅ PASS: INN 2839403975 found with correct type='inn'")
+                    print(f"[OK] PASS: INN 2839403975 found with correct type='inn'")
                 else:
-                    print(f"❌ FAIL: INN 2839403975 has wrong type='{id_type}' (expected 'inn')")
+                    print(f"[ERROR] FAIL: INN 2839403975 has wrong type='{id_type}' (expected 'inn')")
                     success = False
 
                 if id_info.get('sanctioned'):
                     inn_sanctioned = True
-                    print(f"✅ PASS: INN 2839403975 marked as sanctioned")
+                    print(f"[OK] PASS: INN 2839403975 marked as sanctioned")
                     print(f"         Sanctioned name: {id_info.get('sanctioned_name')}")
                 else:
-                    print(f"❌ FAIL: INN 2839403975 NOT marked as sanctioned")
+                    print(f"[ERROR] FAIL: INN 2839403975 NOT marked as sanctioned")
                     success = False
                 break
 
     if not inn_found:
-        print("❌ FAIL: INN 2839403975 not found in person IDs")
+        print("[ERROR] FAIL: INN 2839403975 not found in person IDs")
         success = False
 
     # Check 3: Validate the INN using proper validation
     inn_valid = validate_inn('2839403975')
-    print(f"\n📊 INN Validation (validate_inn): {inn_valid}")
+    print(f"\n[STATS] INN Validation (validate_inn): {inn_valid}")
     if not inn_valid:
-        print(f"   ℹ️  Note: INN is formally invalid BUT should still be checked in sanctions!")
+        print(f"   [INFO]  Note: INN is formally invalid BUT should still be checked in sanctions!")
 
     # Print summary
     print("\n" + "=" * 80)
     if success:
-        print("✅ TEST PASSED: Sanctioned INN detection working correctly!")
+        print("[OK] TEST PASSED: Sanctioned INN detection working correctly!")
         print("\nKey fixes verified:")
-        print("  1. ✅ Duplicate code removed from _extract_ids_from_normalization_trace")
-        print("  2. ✅ INN has correct type='inn' (not 'numeric_id')")
-        print("  3. ✅ INN marked as sanctioned via fast path cache")
+        print("  1. [OK] Duplicate code removed from _extract_ids_from_normalization_trace")
+        print("  2. [OK] INN has correct type='inn' (not 'numeric_id')")
+        print("  3. [OK] INN marked as sanctioned via fast path cache")
     else:
-        print("❌ TEST FAILED: Issues detected, see above")
+        print("[ERROR] TEST FAILED: Issues detected, see above")
     print("=" * 80)
 
     return success

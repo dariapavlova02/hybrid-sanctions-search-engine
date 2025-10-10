@@ -113,7 +113,7 @@ class SanctionsDataLoader:
 
         # Try to load from cache file
         if not force_reload and await self._load_from_cache():
-            self.logger.info(f"✅ Loaded from cache: {self._cached_dataset.total_entries} entries")
+            self.logger.info(f"[OK] Loaded from cache: {self._cached_dataset.total_entries} entries")
             return self._cached_dataset
 
         # Load from source files

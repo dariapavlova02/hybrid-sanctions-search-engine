@@ -569,7 +569,3 @@ groups:
     annotations:
       summary: "High search error rate detected"
 ```
-
----
-
-This documentation provides comprehensive coverage of the search system stability features. For implementation details, refer to the individual component documentation and test files.

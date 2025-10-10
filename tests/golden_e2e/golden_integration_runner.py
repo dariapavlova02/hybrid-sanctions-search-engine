@@ -51,11 +51,11 @@ class GoldenIntegrationRunner:
             factory = OrchestratorFactory()
             self.orchestrator = await factory.create_orchestrator()
 
-            print("✅ Orchestrator initialized successfully")
+            print("[OK] Orchestrator initialized successfully")
             return True
 
         except Exception as e:
-            print(f"❌ Failed to initialize orchestrator: {e}")
+            print(f"[ERROR] Failed to initialize orchestrator: {e}")
             return False
 
     async def run_layer_test(self, test: Dict[str, Any]) -> Dict[str, Any]:
@@ -425,23 +425,23 @@ class GoldenIntegrationRunner:
     def print_summary(self):
         """Print test execution summary."""
         print(f"\n{'='*60}")
-        print(f"🎯 GOLDEN TEST INTEGRATION SUMMARY")
+        print(f"[TARGET] GOLDEN TEST INTEGRATION SUMMARY")
         print(f"{'='*60}")
         total = self.results["passed"] + self.results["failed"] + self.results["errors"]
         print(f"Total tests: {total}")
-        print(f"✅ Passed: {self.results['passed']}")
-        print(f"❌ Failed: {self.results['failed']}")
-        print(f"🔥 Errors: {self.results['errors']}")
+        print(f"[OK] Passed: {self.results['passed']}")
+        print(f"[ERROR] Failed: {self.results['failed']}")
+        print(f"[HOT] Errors: {self.results['errors']}")
         print(f"⏱️ Execution time: {self.results['execution_time']:.2f}s")
 
         if self.results["layer_results"]:
-            print(f"\n📊 Layer breakdown:")
+            print(f"\n[STATS] Layer breakdown:")
             for layer, results in self.results["layer_results"].items():
                 success_rate = results["passed"] / results["total_tests"] * 100
                 print(f"  {layer}: {results['passed']}/{results['total_tests']} ({success_rate:.1f}%)")
 
         if self.results["failed"] > 0 or self.results["errors"] > 0:
-            print(f"\n🔍 Failed/Error tests:")
+            print(f"\n[CHECK] Failed/Error tests:")
             for layer, results in self.results["layer_results"].items():
                 for test_result in results["test_results"]:
                     if test_result["status"] != "passed":
@@ -454,13 +454,13 @@ async def main():
 
     if len(sys.argv) > 1:
         layer_name = sys.argv[1]
-        print(f"🎯 Running {layer_name} layer tests with real services...")
+        print(f"[TARGET] Running {layer_name} layer tests with real services...")
         runner = GoldenIntegrationRunner(suite_file)
         if await runner.initialize_orchestrator():
             await runner.run_layer(layer_name)
             runner.print_summary()
     else:
-        print("🎯 Running all golden tests with real AI services...")
+        print("[TARGET] Running all golden tests with real AI services...")
         runner = GoldenIntegrationRunner(suite_file)
         await runner.run_all()
         runner.print_summary()

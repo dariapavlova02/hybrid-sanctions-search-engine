@@ -201,15 +201,3 @@ cat artifacts/deployment/elasticsearch-validation.txt
 2. Review structured JSON reports
 3. Analyze performance and security data
 4. Use PR comments for team visibility
-
-## Contact and Support
-
-For issues with the CI/CD pipeline:
-1. Check workflow artifacts first
-2. Review this documentation
-3. Contact the DevOps team with specific error logs
-4. Include workflow run URL and relevant artifacts
-
----
-
-*This documentation is maintained alongside the workflow files. Last updated: $(date)*

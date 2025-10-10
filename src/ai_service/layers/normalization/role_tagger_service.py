@@ -720,7 +720,7 @@ class DefaultPersonRule(FSMTransitionRule):
                     self.logger.debug(f"'катерина' NOT in given_names[{lang}]")
                     # Show first few names for debugging
                     sample_names = list(self.role_classifier.given_names.get(lang, set()))[:10]
-                    self.logger.info(f"🔍 Sample names in given_names[{lang}]: {sample_names}")
+                    self.logger.info(f"[CHECK] Sample names in given_names[{lang}]: {sample_names}")
 
             if predicted_role == "surname":
                 if state == FSMState.START:

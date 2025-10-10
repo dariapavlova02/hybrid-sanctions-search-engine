@@ -29,15 +29,15 @@ class QuickSearchTester:
             response = await self.client.get(f"{self.es_url}/_cluster/health")
             if response.status_code == 200:
                 health = response.json()
-                print(f"✅ Elasticsearch Health: {health['status']}")
+                print(f"[OK] Elasticsearch Health: {health['status']}")
                 print(f"   Nodes: {health['number_of_nodes']}")
                 print(f"   Active Shards: {health['active_shards']}")
                 return health['status'] in ['green', 'yellow']
             else:
-                print(f"❌ Elasticsearch Health Check Failed: {response.status_code}")
+                print(f"[ERROR] Elasticsearch Health Check Failed: {response.status_code}")
                 return False
         except Exception as e:
-            print(f"❌ Elasticsearch Connection Error: {e}")
+            print(f"[ERROR] Elasticsearch Connection Error: {e}")
             return False
     
     async def test_indices_exist(self) -> bool:
@@ -56,16 +56,16 @@ class QuickSearchTester:
                         missing_indices.append(required)
                 
                 if missing_indices:
-                    print(f"❌ Missing Indices: {missing_indices}")
+                    print(f"[ERROR] Missing Indices: {missing_indices}")
                     return False
                 else:
-                    print("✅ All required indices exist")
+                    print("[OK] All required indices exist")
                     return True
             else:
-                print(f"❌ Failed to get indices: {response.status_code}")
+                print(f"[ERROR] Failed to get indices: {response.status_code}")
                 return False
         except Exception as e:
-            print(f"❌ Error checking indices: {e}")
+            print(f"[ERROR] Error checking indices: {e}")
             return False
     
     async def test_ac_search(self, entity_type: str = "person") -> bool:
@@ -94,13 +94,13 @@ class QuickSearchTester:
             if response.status_code == 200:
                 result = response.json()
                 hits = result.get('hits', {}).get('total', {}).get('value', 0)
-                print(f"✅ AC Search Test: {hits} hits found")
+                print(f"[OK] AC Search Test: {hits} hits found")
                 return True
             else:
-                print(f"❌ AC Search Test Failed: {response.status_code}")
+                print(f"[ERROR] AC Search Test Failed: {response.status_code}")
                 return False
         except Exception as e:
-            print(f"❌ AC Search Error: {e}")
+            print(f"[ERROR] AC Search Error: {e}")
             return False
     
     async def test_vector_search(self, entity_type: str = "person") -> bool:
@@ -127,13 +127,13 @@ class QuickSearchTester:
             if response.status_code == 200:
                 result = response.json()
                 hits = result.get('hits', {}).get('total', {}).get('value', 0)
-                print(f"✅ Vector Search Test: {hits} hits found")
+                print(f"[OK] Vector Search Test: {hits} hits found")
                 return True
             else:
-                print(f"❌ Vector Search Test Failed: {response.status_code}")
+                print(f"[ERROR] Vector Search Test Failed: {response.status_code}")
                 return False
         except Exception as e:
-            print(f"❌ Vector Search Error: {e}")
+            print(f"[ERROR] Vector Search Error: {e}")
             return False
     
     async def test_multi_search(self, entity_type: str = "person") -> bool:
@@ -182,13 +182,13 @@ class QuickSearchTester:
             if response.status_code == 200:
                 result = response.json()
                 responses = result.get('responses', [])
-                print(f"✅ Multi-Search Test: {len(responses)} responses received")
+                print(f"[OK] Multi-Search Test: {len(responses)} responses received")
                 return True
             else:
-                print(f"❌ Multi-Search Test Failed: {response.status_code}")
+                print(f"[ERROR] Multi-Search Test Failed: {response.status_code}")
                 return False
         except Exception as e:
-            print(f"❌ Multi-Search Error: {e}")
+            print(f"[ERROR] Multi-Search Error: {e}")
             return False
     
     async def test_search_performance(self, entity_type: str = "person") -> Dict[str, float]:
@@ -221,9 +221,9 @@ class QuickSearchTester:
             if response.status_code == 200:
                 ac_time = time.time() - start_time
                 metrics['ac_latency_ms'] = ac_time * 1000
-                print(f"✅ AC Search Latency: {ac_time*1000:.2f}ms")
+                print(f"[OK] AC Search Latency: {ac_time*1000:.2f}ms")
             else:
-                print(f"❌ AC Search Performance Test Failed: {response.status_code}")
+                print(f"[ERROR] AC Search Performance Test Failed: {response.status_code}")
                 metrics['ac_latency_ms'] = -1
             
             # Test Vector search performance
@@ -246,20 +246,20 @@ class QuickSearchTester:
             if response.status_code == 200:
                 vector_time = time.time() - start_time
                 metrics['vector_latency_ms'] = vector_time * 1000
-                print(f"✅ Vector Search Latency: {vector_time*1000:.2f}ms")
+                print(f"[OK] Vector Search Latency: {vector_time*1000:.2f}ms")
             else:
-                print(f"❌ Vector Search Performance Test Failed: {response.status_code}")
+                print(f"[ERROR] Vector Search Performance Test Failed: {response.status_code}")
                 metrics['vector_latency_ms'] = -1
             
             return metrics
             
         except Exception as e:
-            print(f"❌ Performance Test Error: {e}")
+            print(f"[ERROR] Performance Test Error: {e}")
             return {'ac_latency_ms': -1, 'vector_latency_ms': -1}
     
     async def run_comprehensive_test(self) -> bool:
         """Run comprehensive test suite"""
-        print("🔍 Starting Comprehensive Search Test...\n")
+        print("[CHECK] Starting Comprehensive Search Test...\n")
         
         tests_passed = 0
         total_tests = 6
@@ -306,10 +306,10 @@ class QuickSearchTester:
         print(f"Test Results: {tests_passed}/{total_tests} tests passed")
         
         if tests_passed == total_tests:
-            print("✅ All tests passed! Search system is healthy.")
+            print("[OK] All tests passed! Search system is healthy.")
             return True
         else:
-            print("❌ Some tests failed. Check the output above for details.")
+            print("[ERROR] Some tests failed. Check the output above for details.")
             return False
     
     async def cleanup(self):
@@ -352,10 +352,10 @@ async def main():
         sys.exit(0 if success else 1)
         
     except KeyboardInterrupt:
-        print("\n⚠️  Test interrupted by user")
+        print("\n[WARN]  Test interrupted by user")
         sys.exit(130)
     except Exception as e:
-        print(f"\n❌ Test failed with error: {e}")
+        print(f"\n[ERROR] Test failed with error: {e}")
         sys.exit(1)
     finally:
         await tester.cleanup()

@@ -142,11 +142,11 @@ class MockSearchService(SearchService):
                         )
                         candidates.append(candidate)
 
-            print(f"✅ MockSearchService loaded {len(candidates)} real sanctions records")
+            print(f"[OK] MockSearchService loaded {len(candidates)} real sanctions records")
             return candidates
 
         except Exception as e:
-            print(f"⚠️ Failed to load real sanctions data: {e}, falling back to minimal hardcoded records")
+            print(f"[WARN] Failed to load real sanctions data: {e}, falling back to minimal hardcoded records")
             # Fallback to minimal hardcoded data
             return [
                 Candidate(
@@ -223,7 +223,7 @@ class MockSearchService(SearchService):
         query_lower = text.lower()
         candidates = []
 
-        print(f"🔍 MockSearchService.find_candidates: query='{text}', mode={opts.search_mode}, threshold={opts.threshold}")
+        print(f"[CHECK] MockSearchService.find_candidates: query='{text}', mode={opts.search_mode}, threshold={opts.threshold}")
 
         for person in self._test_persons:
             score = 0.0
@@ -239,7 +239,7 @@ class MockSearchService(SearchService):
             if exact_match:
                 matched = True
                 score = person.score
-                print(f"    ✅ EXACT MATCH! Score: {score:.3f}")
+                print(f"    [OK] EXACT MATCH! Score: {score:.3f}")
 
             # Fuzzy matching for typos (e.g., "Порошенк" matches "Порошенко")
             else:
@@ -291,7 +291,7 @@ class MockSearchService(SearchService):
                             matched = True
                             # Minimal penalty for fuzzy matches to ensure good matches pass threshold
                             score = person.score * match_ratio * 1.05  # 105% of original score for fuzzy (boost good matches)
-                            print(f"    ✅ FUZZY MATCH! Score: {person.score} * {match_ratio:.3f} * 1.05 = {score:.3f}")
+                            print(f"    [OK] FUZZY MATCH! Score: {person.score} * {match_ratio:.3f} * 1.05 = {score:.3f}")
 
             if matched:
                 # Create a copy with updated score and search mode

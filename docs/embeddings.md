@@ -281,11 +281,3 @@ print(f"Device: {info['device']}")
 3. **Memory Management**: Process large datasets in chunks
 4. **Error Handling**: Always handle potential model loading errors
 5. **Performance Monitoring**: Use provided timing logs for optimization
-
-## Future Roadmap
-
-- [ ] Attribute-aware embeddings (`include_attrs=True`)
-- [ ] Model versioning and A/B testing
-- [ ] Custom model fine-tuning
-- [ ] Advanced similarity metrics
-- [ ] Real-time model switching

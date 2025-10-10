@@ -29,7 +29,7 @@ class SimpleGoldenRunner:
         self._record_result("G-ING-01", "ingest", result1)
 
         # Test 2: Smart Filter layer - Title/suffix removal
-        print("\n🔍 Testing Smart Filter Layer (G-SF-01)")
+        print("\n[CHECK] Testing Smart Filter Layer (G-SF-01)")
         result2 = self._test_smart_filter_titles()
         self._record_result("G-SF-01", "smart_filter", result2)
 
@@ -293,10 +293,10 @@ class SimpleGoldenRunner:
     def _record_result(self, test_id: str, layer: str, result: Dict[str, Any]):
         """Record test result."""
         if result["passed"]:
-            print(f"  ✅ {test_id} PASSED")
+            print(f"  [OK] {test_id} PASSED")
             self.results["passed"] += 1
         else:
-            print(f"  ❌ {test_id} FAILED")
+            print(f"  [ERROR] {test_id} FAILED")
             self.results["failed"] += 1
 
         print(f"     Assertions: {result['assertions_passed']}/{result['assertions_total']}")
@@ -311,15 +311,15 @@ class SimpleGoldenRunner:
         """Print test execution summary."""
         total = self.results["passed"] + self.results["failed"]
         print(f"\n{'='*50}")
-        print(f"📊 GOLDEN TEST SUMMARY")
+        print(f"[STATS] GOLDEN TEST SUMMARY")
         print(f"{'='*50}")
         print(f"Total tests: {total}")
-        print(f"✅ Passed: {self.results['passed']}")
-        print(f"❌ Failed: {self.results['failed']}")
+        print(f"[OK] Passed: {self.results['passed']}")
+        print(f"[ERROR] Failed: {self.results['failed']}")
         print(f"Success rate: {self.results['passed']/total*100:.1f}%")
 
         if self.results["failed"] > 0:
-            print(f"\n🔍 Failed test details:")
+            print(f"\n[CHECK] Failed test details:")
             for detail in self.results["details"]:
                 if not detail["result"]["passed"]:
                     print(f"  {detail['id']} ({detail['layer']})")

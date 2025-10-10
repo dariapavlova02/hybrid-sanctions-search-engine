@@ -12,15 +12,15 @@ def test_inn_cache():
     cache_file = Path(__file__).parent.parent / "src" / "ai_service" / "data" / "sanctioned_inns_cache.json"
     
     if not cache_file.exists():
-        print("❌ INN cache file not found!")
+        print("[ERROR] INN cache file not found!")
         return
     
     with open(cache_file, 'r', encoding='utf-8') as f:
         cache = json.load(f)
     
-    print(f"🔍 Testing INN Cache Coverage")
+    print(f"[CHECK] Testing INN Cache Coverage")
     print(f"=" * 50)
-    print(f"📊 Total INNs in cache: {len(cache)}")
+    print(f"[STATS] Total INNs in cache: {len(cache)}")
     
     # Statistics
     persons = sum(1 for item in cache.values() if item.get('type') == 'person')
@@ -41,7 +41,7 @@ def test_inn_cache():
     for source, count in sorted(sources.items()):
         print(f"   {source}: {count}")
     
-    print(f"⚠️  Risk Levels:")
+    print(f"[WARN]  Risk Levels:")
     for risk, count in sorted(risk_levels.items()):
         print(f"   {risk}: {count}")
     
@@ -56,12 +56,12 @@ def test_inn_cache():
     for inn, description in test_cases:
         if inn in cache:
             data = cache[inn]
-            print(f"✅ {inn}: {data['name']} ({data['type']}) - {data.get('source', 'unknown')}")
+            print(f"[OK] {inn}: {data['name']} ({data['type']}) - {data.get('source', 'unknown')}")
         else:
-            print(f"❌ {inn}: NOT FOUND - {description}")
+            print(f"[ERROR] {inn}: NOT FOUND - {description}")
     
     # Test ID patterns
-    print(f"\n🔍 Testing ID Patterns:")
+    print(f"\n[CHECK] Testing ID Patterns:")
     patterns = {
         "10-digit INNs": lambda x: len(x) == 10 and x.isdigit(),
         "8-digit IDs": lambda x: len(x) == 8 and x.isdigit(),
@@ -88,7 +88,7 @@ def test_inn_cache():
     for inn, data in org_entries:
         print(f"     {inn}: {data['name']}")
     
-    print(f"\n✅ INN Cache test completed!")
+    print(f"\n[OK] INN Cache test completed!")
 
 if __name__ == "__main__":
     test_inn_cache()

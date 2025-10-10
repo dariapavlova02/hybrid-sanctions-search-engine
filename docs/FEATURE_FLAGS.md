@@ -389,34 +389,6 @@ curl -X POST "http://localhost:8000/normalize" \
   }'
 ```
 
-## Migration Guide
-
-### From Legacy to Factory Normalization
-
-1. **Enable in staging**:
-   ```yaml
-   staging:
-     feature_flags:
-       use_factory_normalizer: true
-   ```
-
-2. **Monitor performance**:
-   - Check processing times
-   - Verify accuracy
-   - Monitor error rates
-
-3. **Gradual production rollout**:
-   ```yaml
-   production:
-     feature_flags:
-       use_factory_normalizer: true
-   ```
-
-4. **Remove legacy code** (future phase):
-   - Remove legacy normalization service
-   - Clean up feature flag system
-   - Update documentation
-
 ## Security Considerations
 
 - Feature flags are included in traces - ensure no sensitive data

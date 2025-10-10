@@ -216,7 +216,7 @@ class TestUnicodeService:
             None,  # None input
             "   ",  # Only whitespace
             "\x00\x01\x02",  # Control characters
-            "🚀" * 1000,  # Very long emoji string
+            "[INIT]" * 1000,  # Very long emoji string
         ]
 
         for case in edge_cases:

@@ -24,7 +24,7 @@ def test_diminutive_forms():
         ("Дашенька", "Дарія"),   # Дашенька -> Дарія
     ]
     
-    print("🔍 Testing Diminutive Forms")
+    print("[CHECK] Testing Diminutive Forms")
     print("=" * 50)
     
     for input_name, expected_base in test_cases:
@@ -40,13 +40,13 @@ def test_diminutive_forms():
             expected_lower = expected_base.lower()
             
             if expected_lower in forms_lower:
-                print(f"✅ Found expected base form: '{expected_base}'")
+                print(f"[OK] Found expected base form: '{expected_base}'")
             else:
-                print(f"❌ Expected base form '{expected_base}' NOT found")
+                print(f"[ERROR] Expected base form '{expected_base}' NOT found")
                 print(f"   Available forms: {forms}")
                 
         except Exception as e:
-            print(f"❌ Error: {e}")
+            print(f"[ERROR] Error: {e}")
     
     print("\n" + "=" * 50)
     print("Test completed!")

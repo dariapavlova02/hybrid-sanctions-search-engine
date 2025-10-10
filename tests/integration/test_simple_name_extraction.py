@@ -23,7 +23,7 @@ def run_simple_name_extraction_test():
     test_file = Path(__file__).parent / "test_name_extraction_pipeline.py"
     
     if not test_file.exists():
-        print(f"❌ Test file not found: {test_file}")
+        print(f"[ERROR] Test file not found: {test_file}")
         return False
     
     # Run the specific test
@@ -41,21 +41,21 @@ def run_simple_name_extraction_test():
     
     try:
         result = subprocess.run(cmd, check=True, capture_output=False)
-        print("\n✅ Test passed successfully!")
+        print("\n[OK] Test passed successfully!")
         print("The name 'Петра Порошенка' was correctly normalized to 'Петро Порошенко'")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"\n❌ Test failed with exit code: {e.returncode}")
+        print(f"\n[ERROR] Test failed with exit code: {e.returncode}")
         print("The normalization may not be working as expected")
         return False
     except Exception as e:
-        print(f"\n❌ Error running test: {e}")
+        print(f"\n[ERROR] Error running test: {e}")
         return False
 
 
 def main():
     """Main function to run the simple name extraction test."""
-    print("🚀 Simple Name Extraction Test Runner")
+    print("[INIT] Simple Name Extraction Test Runner")
     print("=" * 50)
     
     success = run_simple_name_extraction_test()
