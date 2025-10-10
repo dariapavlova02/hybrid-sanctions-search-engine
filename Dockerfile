@@ -35,6 +35,7 @@ COPY pyproject.toml poetry.lock README.md ./
 
 # Copy application code first
 COPY src/ ./src/
+COPY scripts/ ./scripts/
 COPY config.py ./
 # Do not bake runtime secrets into the image.
 # Provide env.production as documentation only (do not auto-load as .env in container)
