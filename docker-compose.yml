@@ -69,6 +69,7 @@ services:
       - xpack.security.enabled=false
       - xpack.security.enrollment.enabled=false
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - http.max_content_length=200mb
     ports:
       - "9200:9200"
       - "9300:9300"

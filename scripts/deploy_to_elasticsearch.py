@@ -330,8 +330,8 @@ async def bulk_load_patterns(es_host: str, index_name: str, patterns_file: Path,
         return False
 
 
-async def bulk_load_vectors(es_host: str, index_name: str, vectors_file: Path) -> bool:
-    """Bulk load vector embeddings into Elasticsearch"""
+async def bulk_load_vectors(es_host: str, index_name: str, vectors_file: Path, batch_size: int = 1000) -> bool:
+    """Bulk load vector embeddings into Elasticsearch with batching"""
     print(f"\n📦 Loading vectors from: {vectors_file.name}")
 
     try:
@@ -344,51 +344,58 @@ async def bulk_load_vectors(es_host: str, index_name: str, vectors_file: Path) -
 
         total = len(vectors_data)
         print(f"   📊 Total vectors: {total:,}")
+        print(f"   📦 Batch size: {batch_size:,}")
 
-        # Build bulk request
-        bulk_data = []
-        for vector_entry in vectors_data:
-            # Index action
-            bulk_data.append(json.dumps({
-                "index": {"_index": index_name}
-            }))
-            # Document
-            doc = {
-                "name": vector_entry.get("name", ""),
-                "vector": vector_entry.get("vector", []),
-                "metadata": vector_entry.get("metadata", {})
-            }
-            bulk_data.append(json.dumps(doc))
+        # Process in batches
+        batches = [vectors_data[i:i + batch_size] for i in range(0, len(vectors_data), batch_size)]
+        total_batches = len(batches)
 
-        bulk_body = "\n".join(bulk_data) + "\n"
-
-        # Send bulk request
-        print(f"   ⬆️  Uploading to Elasticsearch...")
+        print(f"   ⬆️  Uploading {total_batches} batches to Elasticsearch...")
 
         async with aiohttp.ClientSession() as session:
-            async with session.post(
-                f"{es_host}/_bulk",
-                data=bulk_body,
-                headers={"Content-Type": "application/x-ndjson"},
-                timeout=aiohttp.ClientTimeout(total=300)
-            ) as response:
-                if response.status == 200:
-                    result = await response.json()
+            total_errors = 0
 
-                    if result.get('errors'):
-                        errors = [item for item in result['items'] if 'error' in item.get('index', {})]
-                        print(f"   ⚠️  Loaded with {len(errors)} errors")
-                        if errors:
-                            print(f"   First error: {errors[0]['index']['error']}")
+            for batch_num, batch in enumerate(batches, 1):
+                # Build bulk request for this batch
+                bulk_data = []
+                for vector_entry in batch:
+                    bulk_data.append(json.dumps({"index": {"_index": index_name}}))
+                    doc = {
+                        "name": vector_entry.get("name", ""),
+                        "vector": vector_entry.get("vector", []),
+                        "metadata": vector_entry.get("metadata", {})
+                    }
+                    bulk_data.append(json.dumps(doc))
+
+                bulk_body = "\n".join(bulk_data) + "\n"
+
+                # Send bulk request
+                async with session.post(
+                    f"{es_host}/_bulk",
+                    data=bulk_body,
+                    headers={"Content-Type": "application/x-ndjson"},
+                    timeout=aiohttp.ClientTimeout(total=300)
+                ) as response:
+                    if response.status == 200:
+                        result = await response.json()
+
+                        if result.get('errors'):
+                            errors = [item for item in result['items'] if 'error' in item.get('index', {})]
+                            total_errors += len(errors)
+
+                        print(f"      Batch {batch_num}/{total_batches}: ✅ {len(batch):,} vectors")
                     else:
-                        print(f"   ✅ Successfully loaded {total:,} vectors")
+                        error_text = await response.text()
+                        print(f"      Batch {batch_num}/{total_batches}: ❌ HTTP {response.status}")
+                        print(f"      {error_text[:200]}")
+                        return False
 
-                    return True
-                else:
-                    error_text = await response.text()
-                    print(f"   ❌ Bulk load failed: HTTP {response.status}")
-                    print(f"   {error_text[:500]}")
-                    return False
+            if total_errors > 0:
+                print(f"   ⚠️  Loaded {total:,} vectors with {total_errors} errors")
+            else:
+                print(f"   ✅ Successfully loaded {total:,} vectors")
+
+            return True
 
     except FileNotFoundError:
         print(f"   ❌ File not found: {vectors_file}")
@@ -432,38 +439,71 @@ async def run_warmup_queries(es_host: str, index_name: str):
     """Run warmup queries to cache data"""
     print_step(4, "Running warmup queries")
 
-    warmup_patterns = [
-        "путин",
-        "газпром",
-        "ukraine",
-        "sanctions"
+    # Warmup queries that should find real data
+    warmup_queries = [
+        {
+            "name": "Partial match: 'газпром'",
+            "query": {
+                "query": {
+                    "match": {
+                        "pattern": "газпром"
+                    }
+                },
+                "size": 5
+            }
+        },
+        {
+            "name": "Wildcard: '*putin*'",
+            "query": {
+                "query": {
+                    "wildcard": {
+                        "pattern": "*putin*"
+                    }
+                },
+                "size": 5
+            }
+        },
+        {
+            "name": "Sample entities (tier 0)",
+            "query": {
+                "query": {
+                    "term": {
+                        "tier": 0
+                    }
+                },
+                "size": 10
+            }
+        },
+        {
+            "name": "Random sample",
+            "query": {
+                "query": {
+                    "function_score": {
+                        "query": {"match_all": {}},
+                        "random_score": {}
+                    }
+                },
+                "size": 10
+            }
+        }
     ]
 
     print(f"🔥 Warming up index: {index_name}")
 
     try:
         async with aiohttp.ClientSession() as session:
-            for pattern in warmup_patterns:
-                query = {
-                    "query": {
-                        "match": {
-                            "pattern": pattern
-                        }
-                    },
-                    "size": 10
-                }
-
+            for warmup in warmup_queries:
                 async with session.post(
                     f"{es_host}/{index_name}/_search",
-                    json=query,
+                    json=warmup["query"],
                     headers={"Content-Type": "application/json"}
                 ) as response:
                     if response.status == 200:
                         result = await response.json()
                         hits = result['hits']['total']['value']
-                        print(f"   ✅ '{pattern}': {hits} hits")
+                        print(f"   ✅ {warmup['name']}: {hits} hits")
                     else:
-                        print(f"   ⚠️  '{pattern}': query failed")
+                        print(f"   ⚠️  {warmup['name']}: query failed")
 
         print("✅ Warmup complete")
 
