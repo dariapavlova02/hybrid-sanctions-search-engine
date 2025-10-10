@@ -37,6 +37,9 @@ COPY pyproject.toml poetry.lock README.md ./
 COPY src/ ./src/
 COPY scripts/ ./scripts/
 COPY config.py ./
+
+# Make entrypoint executable
+RUN chmod +x /app/scripts/docker-entrypoint.sh
 # Do not bake runtime secrets into the image.
 # Provide env.production as documentation only (do not auto-load as .env in container)
 
@@ -82,5 +85,8 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run the application
+# Set entrypoint for automatic Elasticsearch initialization
+ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
+
+# Run the application (passed to entrypoint)
 CMD ["python", "-m", "uvicorn", "src.ai_service.main:app", "--host", "0.0.0.0", "--port", "8000"]

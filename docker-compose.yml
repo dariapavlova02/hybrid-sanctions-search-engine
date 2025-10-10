@@ -10,11 +10,17 @@ services:
       - APP_ENV=production
       - WORKERS=4
       - DEBUG=false
+      # Elasticsearch configuration
+      - ES_HOSTS=elasticsearch:9200
+      - ES_INDEX_PREFIX=sanctions
+      - ES_STARTUP_TIMEOUT=60
+      - SKIP_ES_INIT=false
     env_file:
       - env.production
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data
+      - ./output:/app/output
     restart: unless-stopped
     depends_on:
       elasticsearch:
