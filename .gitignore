@@ -316,6 +316,8 @@ test_patterns*.json
 !src/ai_service/data/terrorism_black_list.json
 !src/ai_service/data/lexicons/**/*.json
 !data/sanctions/*.json
+!data/**/*.json
+!data/lexicons/**/*.json
 
 # Exclude generated sanctions cache
 data/sanctions/sanctions_cache.json
