@@ -6,6 +6,8 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV APP_ENV=production
 ENV NLTK_DATA=/app/nltk_data
+# Project IP configuration
+ENV PROJECT_IP=0.0.0.0
 # Ensure HuggingFace/Sentence-Transformers caches persist in image and are readable by non-root
 ENV HF_HOME=/app/.cache/huggingface
 ENV TRANSFORMERS_CACHE=/app/.cache/huggingface
@@ -89,4 +91,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
 
 # Run the application (passed to entrypoint)
-CMD ["python", "-m", "uvicorn", "src.ai_service.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "uvicorn", "src.ai_service.main:app", "--host", "${PROJECT_IP:-0.0.0.0}", "--port", "8000"]

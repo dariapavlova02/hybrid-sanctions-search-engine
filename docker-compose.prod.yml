@@ -12,6 +12,8 @@ services:
       - APP_ENV=production
       - WORKERS=4
       - DEBUG=false
+      # Project IP configuration
+      - PROJECT_IP=${PROJECT_IP:-192.168.6.11}
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
       - ENABLE_ELASTICSEARCH_AUTH=false
       # 🔒 SECURITY: CRITICAL environment variables
@@ -102,6 +104,8 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl:ro
+    environment:
+      - PROJECT_IP=${PROJECT_IP:-192.168.6.11}
     depends_on:
       - ai-service
     restart: unless-stopped

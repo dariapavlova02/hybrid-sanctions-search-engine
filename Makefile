@@ -85,3 +85,19 @@ backup: ## Backup data directory
 
 restore: ## Restore from backup (usage: make restore BACKUP_FILE=backup-20231201-120000.tar.gz)
 	tar -xzf $(BACKUP_FILE) -C ./
+
+# PROJECT_IP Configuration Commands
+deploy-prod: ## Deploy to production with PROJECT_IP=192.168.6.11
+	PROJECT_IP=192.168.6.11 APP_ENV=production ./scripts/quick-deploy.sh
+
+deploy-local: ## Deploy locally with PROJECT_IP=127.0.0.1
+	PROJECT_IP=127.0.0.1 APP_ENV=development ./scripts/quick-deploy.sh
+
+deploy-dev: ## Deploy for development with PROJECT_IP=0.0.0.0
+	PROJECT_IP=0.0.0.0 APP_ENV=development ./scripts/quick-deploy.sh
+
+generate-nginx: ## Generate nginx configuration with current PROJECT_IP
+	./scripts/generate-nginx-config.sh
+
+quick-deploy: ## Interactive quick deployment
+	./scripts/quick-deploy.sh

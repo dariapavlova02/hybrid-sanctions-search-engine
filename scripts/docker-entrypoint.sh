@@ -19,6 +19,7 @@ ES_HOST="${ES_HOSTS:-elasticsearch:9200}"
 ES_TIMEOUT="${ES_STARTUP_TIMEOUT:-60}"
 INDEX_PREFIX="${ES_INDEX_PREFIX:-sanctions}"
 SKIP_ES_INIT="${SKIP_ES_INIT:-false}"
+PROJECT_IP="${PROJECT_IP:-0.0.0.0}"
 
 # Extract first host from list
 ES_FIRST_HOST=$(echo "$ES_HOST" | cut -d',' -f1)
@@ -28,6 +29,7 @@ echo "Configuration:"
 echo "  Elasticsearch: $ES_FIRST_HOST"
 echo "  Index Prefix: $INDEX_PREFIX"
 echo "  Skip Init: $SKIP_ES_INIT"
+echo "  Project IP: $PROJECT_IP"
 echo ""
 
 # Function to wait for Elasticsearch
@@ -181,8 +183,14 @@ main() {
     export ES_AC_INDEX="${INDEX_PREFIX}_ac_patterns"
     export ES_VECTOR_INDEX="${INDEX_PREFIX}_vectors"
 
-    # Start main application
-    exec "$@"
+    # Start main application with PROJECT_IP
+    if [ "$#" -gt 0 ]; then
+        # Replace host parameter in command if it exists
+        exec "$@" --host "$PROJECT_IP"
+    else
+        # Default command with PROJECT_IP
+        exec python -m uvicorn src.ai_service.main:app --host "$PROJECT_IP" --port 8000
+    fi
 }
 
 # Run

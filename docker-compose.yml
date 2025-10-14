@@ -10,6 +10,8 @@ services:
       - APP_ENV=production
       - WORKERS=4
       - DEBUG=false
+      # Project IP configuration
+      - PROJECT_IP=${PROJECT_IP:-0.0.0.0}
       # Elasticsearch configuration
       - ES_HOSTS=elasticsearch:9200
       - ES_INDEX_PREFIX=sanctions
@@ -49,13 +51,15 @@ services:
       - DEBUG=true
       - NLTK_DATA=/app/nltk_data
       - LOGGING_CONFIG=/app/src/ai_service/config/logging_dev.yml
+      # Project IP configuration
+      - PROJECT_IP=${PROJECT_IP:-0.0.0.0}
     volumes:
       - ./src/ai_service/main.py:/app/src/ai_service/main.py
       - ./src/ai_service/services:/app/src/ai_service/services
       - ./src/ai_service/utils:/app/src/ai_service/utils
       - ./config.py:/app/config.py
       - ./logs:/app/logs
-    command: ["sh", "-c", "mkdir -p /app/logs && poetry run uvicorn src.ai_service.main:app --host 0.0.0.0 --port 8000 --reload"]
+    command: ["sh", "-c", "mkdir -p /app/logs && poetry run uvicorn src.ai_service.main:app --host ${PROJECT_IP:-0.0.0.0} --port 8000 --reload"]
     profiles:
       - dev
     depends_on:
