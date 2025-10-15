@@ -8,7 +8,7 @@ services:
     container_name: ai-service-prod
     command: /bin/sh -c "python -m uvicorn src.ai_service.main:app --host 0.0.0.0 --port 8000"
     ports:
-      - "${PROJECT_IP:-0.0.0.0}:8001:8000"
+      - "${PROJECT_IP:-192.168.6.11}:8001:8000"
     environment:
       - APP_ENV=production
       - WORKERS=4
@@ -69,8 +69,8 @@ services:
       - cluster.name=ai-service-cluster
       - node.name=ai-service-node
     ports:
-      - "9200:9200"
-      - "9300:9300"
+      - "${PROJECT_IP:-192.168.6.11}:9200:9200"
+      - "${PROJECT_IP:-192.168.6.11}:9300:9300"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     healthcheck:
@@ -101,8 +101,8 @@ services:
     image: nginx:alpine
     container_name: nginx-prod
     ports:
-      - "80:80"
-      - "443:443"
+      - "${PROJECT_IP:-192.168.6.11}:80:80"
+      - "${PROJECT_IP:-192.168.6.11}:443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl:ro
