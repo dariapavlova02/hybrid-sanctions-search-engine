@@ -117,5 +117,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Default command
-CMD ["python", "-m", "uvicorn", "src.ai_service.main:app", "--host", "${PROJECT_IP:-192.168.6.11}", "--port", "8000"]
+# Default command - use shell to allow variable expansion
+CMD ["/bin/sh", "-c", "python -m uvicorn src.ai_service.main:app --host ${PROJECT_IP:-0.0.0.0} --port 8000"]

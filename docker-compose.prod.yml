@@ -6,8 +6,9 @@ services:
       context: .
       dockerfile: Dockerfile.prod
     container_name: ai-service-prod
+    command: /bin/sh -c "python -m uvicorn src.ai_service.main:app --host 0.0.0.0 --port 8000"
     ports:
-      - "8000:8000"
+      - "${PROJECT_IP:-0.0.0.0}:8001:8000"
     environment:
       - APP_ENV=production
       - WORKERS=4
@@ -44,6 +45,7 @@ services:
     volumes:
       - ./logs:/app/logs
       - ./src/ai_service/data:/app/src/ai_service/data:ro
+      - ./.env.production:/app/.env.production:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -84,7 +86,7 @@ services:
     image: docker.elastic.co/kibana/kibana:8.11.0
     container_name: kibana-prod
     environment:
-      - ELASTICSEARCH_HOSTS=http://95.217.84.234:9200
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
       - SERVER_NAME=kibana
     ports:
       - "5601:5601"

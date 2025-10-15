@@ -98,16 +98,8 @@ class ElasticsearchConfig(BaseModel):
                     # Inside Docker container - use service name for internal communication
                     payload["hosts"] = ["http://elasticsearch:9200"]
                 else:
-                    # Local development - check if we can detect production server
-                    hostname = socket.gethostname()
-                    local_ip = socket.gethostbyname(hostname)
-
-                    if local_ip == "95.217.84.234":
-                        # On production server but outside Docker - use external IP
-                        payload["hosts"] = ["http://95.217.84.234:9200"]
-                    else:
-                        # Local development environment
-                        payload["hosts"] = ["http://localhost:9200"]
+                    # Local development - use localhost
+                    payload["hosts"] = ["http://localhost:9200"]
             except Exception:
                 # Fallback for any detection issues
                 payload["hosts"] = ["http://localhost:9200"]
