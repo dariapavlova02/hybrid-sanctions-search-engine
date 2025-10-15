@@ -48,7 +48,6 @@ curl -X POST http://localhost:8000/process \
 ### Option 2: Quick Restart (No Code Changes)
 
 ```bash
-ssh root@95.217.84.234
 cd /opt/ai-service
 docker-compose -f docker-compose.prod.yml restart ai-service
 docker logs ai-service-prod --tail 30
@@ -57,7 +56,7 @@ docker logs ai-service-prod --tail 30
 ### Option 3: One-Line Remote Deploy
 
 ```bash
-ssh root@95.217.84.234 'cd /opt/ai-service && git pull origin main && cp .env.production .env && docker-compose -f docker-compose.prod.yml down && docker-compose -f docker-compose.prod.yml build --no-cache && docker-compose -f docker-compose.prod.yml up -d'
+'cd /opt/ai-service && git pull origin main && cp .env.production .env && docker-compose -f docker-compose.prod.yml down && docker-compose -f docker-compose.prod.yml build --no-cache && docker-compose -f docker-compose.prod.yml up -d'
 ```
 
 ## Verification Commands

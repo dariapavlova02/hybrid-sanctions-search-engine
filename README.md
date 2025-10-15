@@ -1,17 +1,17 @@
-# 🚀 AI Service
+# AI Service
 
 Multilingual text normalization and structured extraction system with advanced search capabilities.
 
-## ✨ Features
+## Features
 
-- **🌍 Multilingual Support**: English, Russian, Ukrainian with mixed-script handling
-- **🔍 Smart Processing**: 9-layer architecture for comprehensive text analysis
-- **⚡ High Performance**: Sub-100ms processing with intelligent caching
-- **🎯 Structured Extraction**: Persons, organizations, dates, IDs with confidence scores
-- **🔎 Hybrid Search**: Combined AC (Aho-Corasick) and vector search
-- **📊 Comprehensive Monitoring**: Prometheus metrics and Grafana dashboards
+- **Multilingual Support**: English, Russian, Ukrainian with mixed-script handling
+- **Smart Processing**: 9-layer architecture for comprehensive text analysis
+- **High Performance**: Sub-100ms processing with intelligent caching
+- **Structured Extraction**: Persons, organizations, dates, IDs with confidence scores
+- **Hybrid Search**: Combined AC (Aho-Corasick) and vector search
+- **Comprehensive Monitoring**: Prometheus metrics and Grafana dashboards
 
-## 🏗️ Architecture
+## Architecture
 
 Clean 9-layer processing pipeline:
 
@@ -27,7 +27,7 @@ Clean 9-layer processing pipeline:
 9. Decision & Response       → Result assembly
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -60,7 +60,7 @@ make docker-run
 docker-compose up ai-service
 ```
 
-## 🔍 Elasticsearch Deployment
+## Elasticsearch Deployment
 
 ### Quick Start
 
@@ -92,7 +92,7 @@ docker logs ai-service
 **Option 1: Automatic (Docker Entrypoint)** - Simplest for production
 ```bash
 docker-compose down && docker-compose up -d
-# ✅ docker-entrypoint.sh automatically loads data on startup
+# docker-entrypoint.sh automatically loads data on startup
 ```
 
 **Option 2: Manual Pipeline** - Full control over deployment
@@ -126,9 +126,9 @@ curl -X POST http://localhost:8000/search \
   -d '{"query": "Петров", "search_type": "hybrid"}'
 ```
 
-📖 **Full Guide**: See [ELASTICSEARCH_DEPLOYMENT.md](./ELASTICSEARCH_DEPLOYMENT.md) for detailed deployment instructions, troubleshooting, and configuration options.
+**Full Guide**: See [ELASTICSEARCH_DEPLOYMENT.md](./ELASTICSEARCH_DEPLOYMENT.md) for detailed deployment instructions, troubleshooting, and configuration options.
 
-## 📚 API Documentation
+## API Documentation
 
 ### Core Endpoints
 
@@ -173,7 +173,7 @@ curl http://localhost:8000/health
 }
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -205,7 +205,7 @@ FEATURE_FLAGS = {
 }
 ```
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # Run all tests
@@ -220,7 +220,7 @@ poetry run pytest -m integration -v
 poetry run pytest -m performance -v
 ```
 
-## 📊 Monitoring
+## Monitoring
 
 ### Health & Metrics
 
@@ -244,7 +244,7 @@ Access at `http://localhost:3000` (admin/admin)
 - Error rates and language distribution
 - Search performance metrics
 
-## 🐳 Docker Production
+## Docker Production
 
 ### Production Deployment
 
@@ -258,7 +258,7 @@ docker-compose down
 docker-compose build --no-cache
 docker-compose up -d
 
-# ✅ docker-entrypoint.sh will automatically:
+# docker-entrypoint.sh will automatically:
 #    1. Wait for Elasticsearch to be ready
 #    2. Find data files in output/sanctions/
 #    3. Create indices: sanctions_ac_patterns, sanctions_vectors
@@ -294,7 +294,7 @@ docker-compose -f docker-compose.prod.yml \
   -f monitoring/docker-compose.monitoring.yml up -d
 ```
 
-## ☸️ Kubernetes
+## Kubernetes
 
 ```bash
 # Deploy to Kubernetes
@@ -306,7 +306,7 @@ kubectl get pods -l app=ai-service
 kubectl logs -f deployment/ai-service
 ```
 
-## 📖 Documentation
+## Documentation
 
 - **[API Reference](./docs/API.md)** - Complete API documentation
 - **[Architecture](./docs/ARCHITECTURE.md)** - System architecture and design
@@ -314,7 +314,7 @@ kubectl logs -f deployment/ai-service
 - **[Configuration](./docs/CONFIGURATION.md)** - Configuration options
 - **[Monitoring](./docs/MONITORING.md)** - Monitoring and observability
 
-## 🔒 Security
+## Security
 
 - **API Authentication**: Bearer token for admin endpoints
 - **Input Validation**: Comprehensive validation and sanitization
@@ -322,7 +322,7 @@ kubectl logs -f deployment/ai-service
 - **TLS Encryption**: Secure communications
 - **Secrets Management**: Secure credential storage
 
-## ⚡ Performance
+## Performance
 
 ### Benchmarks
 
@@ -339,7 +339,7 @@ kubectl logs -f deployment/ai-service
 - **Connection Pooling**: Efficient resource usage
 - **Batch Processing**: Optimized for throughput
 
-## 🛠️ Development
+## Development
 
 ### Code Quality
 
@@ -372,10 +372,6 @@ tests/
 ├── e2e/                    # End-to-end tests
 └── performance/            # Performance tests
 ```
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 - **Documentation**: [./docs/](./docs/)
 - **Issues**: [GitHub Issues](https://github.com/your-org/ai-service/issues)
